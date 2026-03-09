@@ -446,83 +446,132 @@ export default function Reservations() {
       })()}
 
       {/* ── DESKTOP TABLE ──────────────────────────────────────────────── */}
-      {reservations.length > 0 && (
-        <div className="hidden sm:block bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-100">
-                  <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Cliente</th>
-                  <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Hora</th>
-                  <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Pax</th>
-                  <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Sala</th>
-                  <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Mesa</th>
-                  <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Estado</th>
-                  <th className="px-4 py-3.5"></th>
-                </tr>
-              </thead>
-              <tbody>
-                {reservations.map((r, i) => {
-                  const s = statusConfig[r.status];
-                  return (
-                    <tr key={r._id}
-                      className={`hover:bg-gray-50/60 transition-colors ${i < reservations.length - 1 ? 'border-b border-gray-50' : ''}`}
-                    >
-                      <td className="px-5 py-3.5">
-                        <div className="flex items-center gap-3">
-                          <Avatar name={r.guestName} />
-                          <div>
-                            <div className="flex items-center gap-1.5">
-                              <p className="font-semibold text-gray-900 leading-tight">{r.guestName}</p>
-                              {r.customerId && <span title="Cliente registrado" className="w-1.5 h-1.5 rounded-full bg-indigo-400 shrink-0" />}
-                            </div>
-                            <p className="text-xs text-gray-400 mt-0.5">{r.guestPhone || r.guestEmail || '—'}</p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3.5"><span className="font-semibold text-gray-800">{r.time}</span></td>
-                      <td className="px-4 py-3.5">
-                        <div className="flex items-center gap-1 text-gray-600">
-                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5 text-gray-400">
-                            <path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM12.735 14c.618 0 1.093-.561.872-1.139a6.002 6.002 0 0 0-11.215 0c-.22.578.254 1.139.872 1.139h9.47Z" />
-                          </svg>
-                          {r.people}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3.5">
-                        {r.roomId ? (
-                          <span className="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded-lg font-medium">{r.roomId.name}</span>
-                        ) : r.tableId?.roomId ? (
-                          <span className="text-xs text-gray-400">{r.tableId.roomId.name}</span>
-                        ) : (
-                          <span className="text-gray-300 text-xs">—</span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3.5">
-                        <TableCell reservation={r} tables={tables} onAssign={assignTable} />
-                      </td>
-                      <td className="px-4 py-3.5">
-                        <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${s.cls}`}>{s.label}</span>
-                      </td>
-                      <td className="px-4 py-3.5">
-                        <div className="flex items-center gap-0.5">
-                          <ActionBtn onClick={() => setModal({ mode: 'edit', reservation: r })} color="blue">Editar</ActionBtn>
-                          {r.status !== 'cancelled' && <ActionBtn onClick={() => quickStatus(r._id, 'cancelled')} color="red">Cancelar</ActionBtn>}
-                          <ActionBtn onClick={() => handleDelete(r._id)} color="gray">
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
-                              <path fillRule="evenodd" d="M5 3.25V4H2.75a.75.75 0 0 0 0 1.5h.3l.815 8.15A1.5 1.5 0 0 0 5.357 15h5.285a1.5 1.5 0 0 0 1.493-1.35l.815-8.15h.3a.75.75 0 0 0 0-1.5H11v-.75A2.25 2.25 0 0 0 8.75 1h-1.5A2.25 2.25 0 0 0 5 3.25Zm2.25-.75a.75.75 0 0 0-.75.75V4h3v-.75a.75.75 0 0 0-.75-.75h-1.5ZM6.05 6a.75.75 0 0 1 .787.713l.275 5.5a.75.75 0 0 1-1.498.075l-.275-5.5A.75.75 0 0 1 6.05 6Zm3.9 0a.75.75 0 0 1 .712.787l-.275 5.5a.75.75 0 0 1-1.498-.075l.275-5.5a.75.75 0 0 1 .786-.711Z" clipRule="evenodd" />
-                            </svg>
-                          </ActionBtn>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+      {reservations.length > 0 && (() => {
+        const groups  = groupedByShift();
+        const thead = (
+          <thead>
+            <tr className="border-b border-gray-100">
+              <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Cliente</th>
+              <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Hora</th>
+              <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Pax</th>
+              <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Sala</th>
+              <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Mesa</th>
+              <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Estado</th>
+              <th className="px-4 py-3.5"></th>
+            </tr>
+          </thead>
+        );
+
+        const renderDesktopRow = (r, i, arr) => {
+          const s = statusConfig[r.status];
+          return (
+            <tr key={r._id}
+              className={`hover:bg-gray-50/60 transition-colors ${i < arr.length - 1 ? 'border-b border-gray-50' : ''}`}
+            >
+              <td className="px-5 py-3.5">
+                <div className="flex items-center gap-3">
+                  <Avatar name={r.guestName} />
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <p className="font-semibold text-gray-900 leading-tight">{r.guestName}</p>
+                      {r.customerId && <span title="Cliente registrado" className="w-1.5 h-1.5 rounded-full bg-indigo-400 shrink-0" />}
+                    </div>
+                    <p className="text-xs text-gray-400 mt-0.5">{r.guestPhone || r.guestEmail || '—'}</p>
+                  </div>
+                </div>
+              </td>
+              <td className="px-4 py-3.5"><span className="font-semibold text-gray-800">{r.time}</span></td>
+              <td className="px-4 py-3.5">
+                <div className="flex items-center gap-1 text-gray-600">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5 text-gray-400">
+                    <path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM12.735 14c.618 0 1.093-.561.872-1.139a6.002 6.002 0 0 0-11.215 0c-.22.578.254 1.139.872 1.139h9.47Z" />
+                  </svg>
+                  {r.people}
+                </div>
+              </td>
+              <td className="px-4 py-3.5">
+                {r.roomId ? (
+                  <span className="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded-lg font-medium">{r.roomId.name}</span>
+                ) : r.tableId?.roomId ? (
+                  <span className="text-xs text-gray-400">{r.tableId.roomId.name}</span>
+                ) : (
+                  <span className="text-gray-300 text-xs">—</span>
+                )}
+              </td>
+              <td className="px-4 py-3.5">
+                <TableCell reservation={r} tables={tables} onAssign={assignTable} />
+              </td>
+              <td className="px-4 py-3.5">
+                <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${s.cls}`}>{s.label}</span>
+              </td>
+              <td className="px-4 py-3.5">
+                <div className="flex items-center gap-0.5">
+                  <ActionBtn onClick={() => setModal({ mode: 'edit', reservation: r })} color="blue">Editar</ActionBtn>
+                  {r.status !== 'cancelled' && <ActionBtn onClick={() => quickStatus(r._id, 'cancelled')} color="red">Cancelar</ActionBtn>}
+                  <ActionBtn onClick={() => handleDelete(r._id)} color="gray">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
+                      <path fillRule="evenodd" d="M5 3.25V4H2.75a.75.75 0 0 0 0 1.5h.3l.815 8.15A1.5 1.5 0 0 0 5.357 15h5.285a1.5 1.5 0 0 0 1.493-1.35l.815-8.15h.3a.75.75 0 0 0 0-1.5H11v-.75A2.25 2.25 0 0 0 8.75 1h-1.5A2.25 2.25 0 0 0 5 3.25Zm2.25-.75a.75.75 0 0 0-.75.75V4h3v-.75a.75.75 0 0 0-.75-.75h-1.5ZM6.05 6a.75.75 0 0 1 .787.713l.275 5.5a.75.75 0 0 1-1.498.075l-.275-5.5A.75.75 0 0 1 6.05 6Zm3.9 0a.75.75 0 0 1 .712.787l-.275 5.5a.75.75 0 0 1-1.498-.075l.275-5.5a.75.75 0 0 1 .786-.711Z" clipRule="evenodd" />
+                    </svg>
+                  </ActionBtn>
+                </div>
+              </td>
+            </tr>
+          );
+        };
+
+        // Single / no shift → one table
+        if (!groups) {
+          return (
+            <div className="hidden sm:block bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  {thead}
+                  <tbody>{reservations.map((r, i, a) => renderDesktopRow(r, i, a))}</tbody>
+                </table>
+              </div>
+            </div>
+          );
+        }
+
+        // Multiple shifts → one table per shift with a header row
+        return (
+          <div className="hidden sm:block space-y-4">
+            {Object.entries(groups).map(([shiftName, rows]) => {
+              if (rows.length === 0) return null;
+              const active = rows.filter(r => r.status !== 'cancelled').length;
+              const label  = shiftName === '__otros__' ? 'Sin turno' : shiftName;
+              const totalPax = rows.filter(r => r.status !== 'cancelled').reduce((s, r) => s + (r.people || 0), 0);
+              return (
+                <div key={shiftName} className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+                  {/* Shift header bar */}
+                  <div className="flex items-center justify-between px-5 py-3 bg-gray-50 border-b border-gray-100">
+                    <div className="flex items-center gap-3">
+                      <h3 className="text-sm font-bold text-gray-700">{label}</h3>
+                      <span className="text-xs font-semibold bg-white border border-gray-200 text-gray-500 px-2 py-0.5 rounded-full">
+                        {active} reserva{active !== 1 ? 's' : ''} activa{active !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-4 text-xs text-gray-400">
+                      <span className="flex items-center gap-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
+                          <path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM12.735 14c.618 0 1.093-.561.872-1.139a6.002 6.002 0 0 0-11.215 0c-.22.578.254 1.139.872 1.139h9.47Z" />
+                        </svg>
+                        {totalPax} pax
+                      </span>
+                    </div>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      {thead}
+                      <tbody>{rows.map((r, i, a) => renderDesktopRow(r, i, a))}</tbody>
+                    </table>
+                  </div>
+                </div>
+              );
+            })}
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {modal && (
         <Modal

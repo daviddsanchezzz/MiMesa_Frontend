@@ -217,6 +217,7 @@ function MobileRow({ r, tables, onEdit, onCancel, onDelete, onAssign, onQuickSta
 export default function Reservations() {
   const [reservations, setReservations] = useState([]);
   const [tables,       setTables]       = useState([]);
+  const [slots,        setSlots]        = useState([]);   // [{time, shiftName}]
   const [dateFilter,   setDateFilter]   = useState(new Date().toISOString().slice(0, 10));
   const [modal,        setModal]        = useState(null);
 
@@ -225,8 +226,37 @@ export default function Reservations() {
     api.get(`/reservations${q}`).then(r => setReservations(r.data));
   };
 
-  useEffect(() => { load(); }, [dateFilter]);
+  useEffect(() => {
+    load();
+    api.get(`/shifts/slots?date=${dateFilter}`)
+      .then(r => setSlots(r.data))
+      .catch(() => setSlots([]));
+  }, [dateFilter]);
   useEffect(() => { api.get('/tables').then(r => setTables(r.data)); }, []);
+
+  // Build time→shiftName map and ordered shift list from slots
+  const timeToShift = {};
+  const shiftOrder  = [];  // preserves slot order
+  slots.forEach(s => {
+    timeToShift[s.time] = s.shiftName;
+    if (!shiftOrder.includes(s.shiftName)) shiftOrder.push(s.shiftName);
+  });
+
+  // Group reservations by shift; unmatched times go to last group "Otros"
+  const groupedByShift = () => {
+    if (shiftOrder.length <= 1) return null;   // no need to group for 1 or 0 shifts
+    const groups = {};
+    shiftOrder.forEach(n => { groups[n] = []; });
+    groups['__otros__'] = [];
+    reservations.forEach(r => {
+      const name = timeToShift[r.time];
+      if (name) groups[name].push(r);
+      else      groups['__otros__'].push(r);
+    });
+    // remove empty __otros__
+    if (groups['__otros__'].length === 0) delete groups['__otros__'];
+    return groups;
+  };
 
   const quickStatus = async (id, status) => {
     await api.put(`/reservations/${id}`, { status }); load();
@@ -359,22 +389,61 @@ export default function Reservations() {
       )}
 
       {/* ── MOBILE LIST ────────────────────────────────────────────────── */}
-      {reservations.length > 0 && (
-        <div className="sm:hidden bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden divide-y divide-gray-100">
-          {reservations.map((r) => (
-            <MobileRow
-              key={r._id}
-              r={r}
-              tables={tables}
-              onEdit={() => setModal({ mode: 'edit', reservation: r })}
-              onCancel={() => quickStatus(r._id, 'cancelled')}
-              onDelete={() => handleDelete(r._id)}
-              onAssign={assignTable}
-              onQuickStatus={quickStatus}
-            />
-          ))}
-        </div>
-      )}
+      {reservations.length > 0 && (() => {
+        const groups = groupedByShift();
+
+        const renderRow = (r) => (
+          <MobileRow
+            key={r._id}
+            r={r}
+            tables={tables}
+            onEdit={() => setModal({ mode: 'edit', reservation: r })}
+            onCancel={() => quickStatus(r._id, 'cancelled')}
+            onDelete={() => handleDelete(r._id)}
+            onAssign={assignTable}
+            onQuickStatus={quickStatus}
+          />
+        );
+
+        // No shifts or single shift → flat list
+        if (!groups) {
+          return (
+            <div className="sm:hidden bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden divide-y divide-gray-100">
+              {reservations.map(renderRow)}
+            </div>
+          );
+        }
+
+        // Multiple shifts → grouped sections
+        return (
+          <div className="sm:hidden space-y-3">
+            {Object.entries(groups).map(([shiftName, rows]) => {
+              if (rows.length === 0) return null;
+              const active  = rows.filter(r => r.status !== 'cancelled').length;
+              const label   = shiftName === '__otros__' ? 'Sin turno' : shiftName;
+              return (
+                <div key={shiftName}>
+                  {/* Shift header */}
+                  <div className="flex items-center gap-2 px-1 mb-1.5">
+                    <div className="h-px flex-1 bg-gray-200" />
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <span className="text-xs font-bold text-gray-500 uppercase tracking-wide">{label}</span>
+                      <span className="text-[10px] font-semibold bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full">
+                        {active} activa{active !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+                    <div className="h-px flex-1 bg-gray-200" />
+                  </div>
+                  {/* Rows */}
+                  <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden divide-y divide-gray-100">
+                    {rows.map(renderRow)}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        );
+      })()}
 
       {/* ── DESKTOP TABLE ──────────────────────────────────────────────── */}
       {reservations.length > 0 && (

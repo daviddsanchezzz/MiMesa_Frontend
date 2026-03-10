@@ -238,9 +238,9 @@ export default function PublicReservation() {
               <>
                 {/* Date + people */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
-                  <div>
+                  <div className="min-w-0">
                     <label className={labelCls}>{tr.date} *</label>
-                    <input type="date" required value={form.date} onChange={field('date')} className={inputCls} />
+                    <input type="date" required value={form.date} onChange={field('date')} className={inputCls + ' min-w-0'} />
                   </div>
                   <div>
                     <label className={labelCls}>{tr.people} *</label>

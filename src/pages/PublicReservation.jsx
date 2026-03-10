@@ -258,10 +258,13 @@ export default function PublicReservation() {
                         +
                       </button>
                     </div>
-                    {business?.maxReservationPeople && (
+                  </div>
+                </div>
+
+                <div className="mb-4">
+                                                        {business?.maxReservationPeople && (
                       <p className="text-xs text-gray-500 mt-1">{tr.maxPeople(business.maxReservationPeople)}</p>
                     )}
-                  </div>
                 </div>
 
                 {/* Room */}

@@ -7,7 +7,7 @@ const ca = {
   stepWho: 'Qui',
   date: 'Data',
   people: 'Persones',
-  maxPeople: (n) => `Màxim ${n} persones per reserva`,
+  maxPeople: (n) => `Màxim ${n} persones per reserva, contacta amb l'establiment per a grups més grans`,
   person: 'persona',
   persons: 'persones',
   room: 'Sala',

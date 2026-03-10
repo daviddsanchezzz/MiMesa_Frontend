@@ -7,7 +7,7 @@ const en = {
   stepWho: 'Who',
   date: 'Date',
   people: 'People',
-  maxPeople: (n) => `Maximum ${n} people per booking`,
+  maxPeople: (n) => `Maximum ${n} people per booking, contact the establishment for larger groups `,
   person: 'person',
   persons: 'people',
   room: 'Room',

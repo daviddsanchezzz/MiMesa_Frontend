@@ -213,7 +213,7 @@ export default function PublicReservation() {
         <div className="flex justify-end mb-2">
           <LangSelector />
         </div>
-        <div className="bg-white rounded-2xl shadow-lg p-6">
+        <div className="bg-white rounded-2xl shadow-lg p-6 overflow-hidden">
           {/* Header */}
           <div className="text-center mb-6">
             <h1 className="text-2xl font-bold text-gray-900">{business?.name}</h1>

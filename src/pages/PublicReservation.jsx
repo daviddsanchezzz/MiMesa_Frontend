@@ -318,6 +318,7 @@ export default function PublicReservation() {
                       {business?.name && <span className="font-medium text-gray-800">{business.name}</span>}
                       {business?.name && business?.phone && <span className="mx-1.5 text-gray-300">·</span>}
                       {business?.phone && <span>{business.phone}</span>}
+                      {business?.email && <><span className="mx-1.5 text-gray-300">·</span><span>{business.email}</span></>}
                     </div>
                   </div>
                 )}

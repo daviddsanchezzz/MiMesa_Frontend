@@ -240,7 +240,14 @@ export default function PublicReservation() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
                   <div className="min-w-0">
                     <label className={labelCls}>{tr.date} *</label>
-                    <input type="date" required value={form.date} onChange={field('date')} className={inputCls + ' text-center'} />
+                    <input
+                      type="date"
+                      required
+                      value={form.date}
+                      onChange={field('date')}
+                      className={inputCls + ' text-center'}
+                      style={{ maxWidth: 'min(100%, calc(100vw - 80px))' }}
+                    />
                   </div>
                   <div>
                     <label className={labelCls}>{tr.people} *</label>

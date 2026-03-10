@@ -208,22 +208,17 @@ export default function PublicReservation() {
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4">
-      <div className="max-w-md mx-auto bg-white rounded-2xl shadow-lg p-6">
-        {/* Header */}
-        <div className="flex items-start justify-between mb-6">
-          <div className="text-center flex-1">
-            <h1 className="text-2xl font-bold text-gray-900">{business?.name}</h1>
-            {(business?.phone || business?.email) && (
-              <p className="text-sm text-gray-500 mt-1">
-                {business?.phone}
-                {business?.phone && business?.email && ' · '}
-                {business?.email}
-              </p>
-            )}
-            <p className="text-gray-600 mt-1">{tr.bookTable}</p>
-          </div>
+      <div className="max-w-md mx-auto">
+        {/* Language selector above the card */}
+        <div className="flex justify-end mb-2">
           <LangSelector />
         </div>
+        <div className="bg-white rounded-2xl shadow-lg p-6">
+          {/* Header */}
+          <div className="text-center mb-6">
+            <h1 className="text-2xl font-bold text-gray-900">{business?.name}</h1>
+            <p className="text-gray-600 mt-1">{tr.bookTable}</p>
+          </div>
 
         {success ? (
           <div className="text-center">
@@ -436,6 +431,15 @@ export default function PublicReservation() {
               </>
             )}
           </form>
+        )}
+      </div>
+        {/* Contact info below the card */}
+        {(business?.phone || business?.email) && (
+          <p className="text-center text-sm text-gray-400 mt-3">
+            {business?.phone}
+            {business?.phone && business?.email && ' · '}
+            {business?.email}
+          </p>
         )}
       </div>
     </div>

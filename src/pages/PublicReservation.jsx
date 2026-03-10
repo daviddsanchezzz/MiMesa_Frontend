@@ -245,7 +245,7 @@ export default function PublicReservation() {
                       className={inputCls + ' text-center cursor-pointer relative'}
                       onClick={() => dateInputRef.current?.showPicker?.()}
                     >
-                      {new Date(form.date + 'T00:00:00').toLocaleDateString(tr.dateLocale, { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' })}
+                      {new Date(form.date + 'T00:00:00').toLocaleDateString(tr.dateLocale, { day: 'numeric', month: 'long', year: 'numeric' })}
                       <input
                         ref={dateInputRef}
                         type="date"
@@ -396,21 +396,6 @@ export default function PublicReservation() {
 
                 {/* Privacy + contact */}
                 <div className="bg-gray-50 rounded-xl p-4 space-y-3">
-                  <div className="flex items-start gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-gray-200 flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 text-gray-600">
-                        <path fillRule="evenodd" d="M8 2a.75.75 0 0 1 .75.75v1.5a.75.75 0 0 1-1.5 0v-1.5A.75.75 0 0 1 8 2Zm-.75 6a.75.75 0 1 0 1.5 0v3.5a.75.75 0 1 0 1.5 0V6A2.25 2.25 0 0 0 8 3.75h-.25A2.25 2.25 0 0 0 5.5 6v.25a.75.75 0 0 1-1.5 0V6c0-1.518 1.232-2.75 2.75-2.75h.25Zm2.25 6.5a.75.75 0 0 0 0-1.5h-3a.75.75 0 0 0 0 1.5h3Z" clipRule="evenodd" />
-                      </svg>
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-semibold text-gray-900">{tr.contactInfo}</h4>
-                      <div className="text-sm text-gray-600 mt-1">
-                        {business?.name && <p className="font-medium">{business.name}</p>}
-                        {business?.phone && <p>📞 {business.phone}</p>}
-                      </div>
-                    </div>
-                  </div>
-
                   <div className="border-t border-gray-200 pt-3">
                     <label className="flex items-start gap-3 cursor-pointer">
                       <input

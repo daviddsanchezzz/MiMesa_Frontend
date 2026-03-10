@@ -306,6 +306,22 @@ export default function PublicReservation() {
                   )}
                 </div>
 
+                {/* Business contact info */}
+                {(business?.name || business?.phone) && (
+                  <div className="flex items-center gap-3 bg-gray-50 rounded-xl px-3 py-2.5 mb-4">
+                    <div className="w-7 h-7 rounded-lg bg-gray-200 flex items-center justify-center shrink-0">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5 text-gray-500">
+                        <path fillRule="evenodd" d="M4 3a2 2 0 0 0-2 2v1.161l4.857 3.048a2 2 0 0 0 2.286 0L14 6.161V5a2 2 0 0 0-2-2H4Zm10 4.094-3.429 2.15A3.5 3.5 0 0 1 6.429 9.244L2 7.094V11a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7.094Z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                    <div className="text-sm text-gray-600 leading-tight">
+                      {business?.name && <span className="font-medium text-gray-800">{business.name}</span>}
+                      {business?.name && business?.phone && <span className="mx-1.5 text-gray-300">·</span>}
+                      {business?.phone && <span>{business.phone}</span>}
+                    </div>
+                  </div>
+                )}
+
                 <button
                   type="button"
                   onClick={goNext}

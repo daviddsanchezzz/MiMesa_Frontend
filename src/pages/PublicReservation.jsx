@@ -396,7 +396,6 @@ export default function PublicReservation() {
 
                 {/* Privacy + contact */}
                 <div className="bg-gray-50 rounded-xl p-4 space-y-3">
-                  <div className="border-t border-gray-200 pt-3">
                     <label className="flex items-start gap-3 cursor-pointer">
                       <input
                         type="checkbox"
@@ -410,7 +409,6 @@ export default function PublicReservation() {
                         <p className="mt-1">{tr.privacyRights}</p>
                       </div>
                     </label>
-                  </div>
                 </div>
 
                 <div className="flex gap-3 mt-4">

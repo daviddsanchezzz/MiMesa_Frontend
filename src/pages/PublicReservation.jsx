@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import publicApi from '../services/publicApi';
 import TRANSLATIONS from '../i18n';
@@ -10,6 +10,7 @@ const labelCls = 'block text-sm font-medium text-gray-700 mb-1.5';
 export default function PublicReservation() {
   const { businessId } = useParams();
   const navigate = useNavigate();
+  const dateInputRef = useRef(null);
   const [lang, setLang] = useState(() => localStorage.getItem('pr_lang') || 'es');
   const [business, setBusiness] = useState(null);
   const [rooms, setRooms] = useState([]);
@@ -240,14 +241,21 @@ export default function PublicReservation() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
                   <div className="min-w-0">
                     <label className={labelCls}>{tr.date} *</label>
-                    <input
-                      type="date"
-                      required
-                      value={form.date}
-                      onChange={field('date')}
-                      className={inputCls + ' text-center'}
-                      style={{ maxWidth: 'min(100%, calc(100vw - 80px))' }}
-                    />
+                    <div
+                      className={inputCls + ' text-center cursor-pointer relative'}
+                      onClick={() => dateInputRef.current?.showPicker?.()}
+                    >
+                      {new Date(form.date + 'T00:00:00').toLocaleDateString(tr.dateLocale, { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' })}
+                      <input
+                        ref={dateInputRef}
+                        type="date"
+                        required
+                        value={form.date}
+                        onChange={field('date')}
+                        className="absolute inset-0 opacity-0 w-full h-full cursor-pointer"
+                        style={{ fontSize: '16px' }}
+                      />
+                    </div>
                   </div>
                   <div>
                     <label className={labelCls}>{tr.people} *</label>

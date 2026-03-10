@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
-import api from '../services/api';
+import api, { setAccessToken } from '../services/api';
 
 const AuthContext = createContext(null);
 
@@ -8,26 +8,35 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      api.get('/auth/me')
-        .then((res) => setBusiness(res.data))
-        .catch(() => localStorage.removeItem('token'))
-        .finally(() => setLoading(false));
-    } else {
-      setLoading(false);
-    }
+    // Try to restore session using the refresh token cookie
+    api.post('/auth/refresh')
+      .then(({ data }) => {
+        setAccessToken(data.accessToken);
+        return api.get('/auth/me');
+      })
+      .then(({ data }) => setBusiness(data))
+      .catch(() => {}) // No session, user needs to log in
+      .finally(() => setLoading(false));
+  }, []);
+
+  useEffect(() => {
+    const handleForceLogout = () => {
+      setAccessToken(null);
+      setBusiness(null);
+    };
+    window.addEventListener('auth:logout', handleForceLogout);
+    return () => window.removeEventListener('auth:logout', handleForceLogout);
   }, []);
 
   const login = async (email, password) => {
     const { data } = await api.post('/auth/login', { email, password });
-    localStorage.setItem('token', data.token);
+    setAccessToken(data.accessToken);
     setBusiness(data.business);
   };
 
   const register = async (name, email, password, phone) => {
     const { data } = await api.post('/auth/register', { name, email, password, phone });
-    localStorage.setItem('token', data.token);
+    setAccessToken(data.accessToken);
     setBusiness(data.business);
   };
 
@@ -40,8 +49,9 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const logout = () => {
-    localStorage.removeItem('token');
+  const logout = async () => {
+    try { await api.post('/auth/logout'); } catch {}
+    setAccessToken(null);
     setBusiness(null);
   };
 

@@ -231,7 +231,7 @@ export default function PublicReservation() {
             {step === 1 ? (
               <>
                 {/* Date + people row */}
-                <div className="grid grid-cols-2 gap-3 mb-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
                   <div>
                     <label className={labelCls}>Fecha *</label>
                     <input type="date" required value={form.date} onChange={field('date')} className={inputCls} />
@@ -328,6 +328,36 @@ export default function PublicReservation() {
               </>
             ) : (
               <>
+                {/* Reservation summary */}
+                <div className="bg-gray-50 rounded-xl p-3 mb-5 flex items-center gap-3 flex-wrap">
+                  <div className="flex items-center gap-1.5 text-sm font-medium text-gray-700">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 text-gray-400 shrink-0">
+                      <path fillRule="evenodd" d="M4 1.75a.75.75 0 0 1 1.5 0V3h5V1.75a.75.75 0 0 1 1.5 0V3a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2V1.75ZM4.5 6a.5.5 0 0 0 0 1h7a.5.5 0 0 0 0-1h-7Z" clipRule="evenodd" />
+                    </svg>
+                    {new Date(form.date + 'T00:00:00').toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' })}
+                  </div>
+                  <div className="w-px h-4 bg-gray-300 hidden sm:block" />
+                  <div className="flex items-center gap-1.5 text-sm font-medium text-gray-700">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 text-gray-400 shrink-0">
+                      <path fillRule="evenodd" d="M1 8a7 7 0 1 1 14 0A7 7 0 0 1 1 8Zm7.75-4.25a.75.75 0 0 0-1.5 0V8c0 .414.336.75.75.75h3.25a.75.75 0 0 0 0-1.5h-2.5v-3.5Z" clipRule="evenodd" />
+                    </svg>
+                    {form.time}
+                  </div>
+                  <div className="w-px h-4 bg-gray-300 hidden sm:block" />
+                  <div className="flex items-center gap-1.5 text-sm font-medium text-gray-700">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 text-gray-400 shrink-0">
+                      <path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM12.735 14c.618 0 1.093-.561.872-1.139a6.002 6.002 0 0 0-11.215 0c-.22.578.254 1.139.872 1.139h9.47Z" />
+                    </svg>
+                    {form.people} {form.people === 1 ? 'persona' : 'personas'}
+                  </div>
+                  {form.roomId && rooms.find(r => r._id === form.roomId) && (
+                    <>
+                      <div className="w-px h-4 bg-gray-300 hidden sm:block" />
+                      <div className="text-sm font-medium text-gray-700">{rooms.find(r => r._id === form.roomId).name}</div>
+                    </>
+                  )}
+                </div>
+
                 {/* Guest info */}
                 <div className="space-y-4 mb-6">
                   <div>

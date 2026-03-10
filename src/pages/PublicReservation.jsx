@@ -56,8 +56,7 @@ export default function PublicReservation() {
           publicApi.get(`/rooms/public/${businessId}`),
         ]);
         setBusiness(businessRes.data);
-        setRooms(roomsRes.data);
-      } catch (err) {
+      setRooms(Array.isArray(roomsRes.data) ? roomsRes.data : roomsRes.data?.rooms || []);      } catch (err) {
         setError('Negocio no encontrado');
       } finally {
         setLoading(false);
@@ -74,20 +73,30 @@ export default function PublicReservation() {
   }, [business?.maxReservationPeople, form.people]);
 
   useEffect(() => {
-    if (!form.date || !businessId) return;
-    setSlots(null);
-    setVacation(null);
-    Promise.all([
-      publicApi.get(`/shifts/public/slots?date=${form.date}&businessId=${businessId}`),
-      publicApi.get(`/vacations/public/check?date=${form.date}&businessId=${businessId}`),
-    ]).then(([slotsRes, vacRes]) => {
+  if (!form.date || !businessId) return;
+  setSlots(null);
+  setVacation(null);
+
+  Promise.all([
+    publicApi.get(`/shifts/public/slots?date=${form.date}&businessId=${businessId}`),
+    publicApi.get(`/vacations/public/check?date=${form.date}&businessId=${businessId}`),
+  ])
+    .then(([slotsRes, vacRes]) => {
+      const slotsData = Array.isArray(slotsRes.data)
+        ? slotsRes.data
+        : Array.isArray(slotsRes.data?.slots)
+        ? slotsRes.data.slots
+        : [];
+
       setVacation(vacRes.data.closed ? vacRes.data : false);
+
       if (!vacRes.data.closed) {
-        setSlots(slotsRes.data);
-        if (slotsRes.data.length > 0) {
-          setForm(f => {
-            if (!slotsRes.data.find(s => s.time === f.time)) {
-              return { ...f, time: slotsRes.data[0].time };
+        setSlots(slotsData);
+
+        if (slotsData.length > 0) {
+          setForm((f) => {
+            if (!slotsData.find((s) => s.time === f.time)) {
+              return { ...f, time: slotsData[0].time };
             }
             return f;
           });
@@ -95,8 +104,12 @@ export default function PublicReservation() {
       } else {
         setSlots([]);
       }
-    }).catch(() => { setSlots([]); setVacation(false); });
-  }, [form.date, businessId]);
+    })
+    .catch(() => {
+      setSlots([]);
+      setVacation(false);
+    });
+}, [form.date, businessId]);
 
   const isClosed = vacation && vacation.closed;
   const isBlocked = isClosed || (slots !== null && slots.length === 0);

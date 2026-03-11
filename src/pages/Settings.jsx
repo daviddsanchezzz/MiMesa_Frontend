@@ -818,6 +818,7 @@ function PublicoSection() {
   const [brandColor, setBrandColor] = useState(business?.brandColor || '#3B82F6');
   const [maxReservationPeople, setMaxReservationPeople] = useState(business?.maxReservationPeople || 20);
   const [maxPeoplePerSlot, setMaxPeoplePerSlot] = useState(business?.maxPeoplePerSlot || '');
+  const [reservationDuration, setReservationDuration] = useState(business?.reservationDuration || '');
   const [saving, setSaving] = useState(false);
   const publicUrl = `${window.location.origin}/public/${business?.id}/reserve`;
 
@@ -825,6 +826,7 @@ function PublicoSection() {
     if (business?.brandColor) setBrandColor(business.brandColor);
     if (business?.maxReservationPeople) setMaxReservationPeople(business.maxReservationPeople);
     setMaxPeoplePerSlot(business?.maxPeoplePerSlot || '');
+    setReservationDuration(business?.reservationDuration || '');
   }, [business]);
 
   const copyToClipboard = () => {
@@ -874,6 +876,22 @@ function PublicoSection() {
     } catch (err) {
       console.error('Error updating max people per slot:', err);
       setMaxPeoplePerSlot(business?.maxPeoplePerSlot || '');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDurationChange = async (newVal) => {
+    const val = newVal === '' ? null : Number(newVal);
+    if (val !== null && val < 1) return;
+    setReservationDuration(newVal);
+    setSaving(true);
+    try {
+      await api.put('/auth/settings', { reservationDuration: val });
+      await refreshBusiness();
+    } catch (err) {
+      console.error('Error updating reservation duration:', err);
+      setReservationDuration(business?.reservationDuration || '');
     } finally {
       setSaving(false);
     }
@@ -977,6 +995,45 @@ function PublicoSection() {
             <div>
               <p className="text-sm font-medium text-gray-900">personas máximo</p>
               <p className="text-xs text-gray-500">Por franja horaria simultánea</p>
+            </div>
+          </div>
+          {saving && (
+            <div className="flex items-center gap-2 text-sm text-gray-500">
+              <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin"></div>
+              Guardando...
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Reservation Duration */}
+      <div className="bg-white rounded-2xl p-6 border border-gray-200">
+        <div className="flex items-center gap-2 mb-2">
+          <h3 className="text-lg font-semibold text-gray-900">Duración por Mesa</h3>
+          <div className="relative group">
+            <span className="w-5 h-5 rounded-full bg-gray-200 text-gray-600 text-xs flex items-center justify-center cursor-default select-none font-bold">i</span>
+            <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-64 bg-gray-800 text-white text-xs rounded-lg px-3 py-2 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-10 text-center">
+              Tiempo en minutos que una mesa permanece bloqueada tras el inicio de una reserva. Por ejemplo, con 60 minutos, una reserva a las 12:00 bloquea capacidad hasta las 13:00.
+            </div>
+          </div>
+        </div>
+        <p className="text-sm text-gray-600 mb-4">
+          Deja vacío para no bloquear franjas posteriores.
+        </p>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
+            <input
+              type="number"
+              min="1"
+              placeholder="Sin bloqueo"
+              value={reservationDuration}
+              onChange={(e) => handleDurationChange(e.target.value)}
+              className="w-24 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              disabled={saving}
+            />
+            <div>
+              <p className="text-sm font-medium text-gray-900">minutos</p>
+              <p className="text-xs text-gray-500">Tiempo bloqueado por reserva</p>
             </div>
           </div>
           {saving && (

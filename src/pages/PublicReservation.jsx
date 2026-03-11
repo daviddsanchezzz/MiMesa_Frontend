@@ -259,20 +259,29 @@ export default function PublicReservation() {
                   </div>
                   <div>
                     <label className={labelCls}>{tr.people} *</label>
-                    <div className="flex items-center gap-2">
-                      <button type="button"
-                        onClick={() => setForm(f => ({ ...f, people: Math.max(1, Number(f.people) - 1) }))}
-                        className="w-10 h-10 rounded-xl border border-gray-300 bg-white text-gray-600 hover:bg-gray-50 text-lg font-semibold flex items-center justify-center shrink-0 transition-colors">
-                        −
-                      </button>
-                      <span className="flex-1 text-center text-lg font-bold text-gray-900">{form.people}</span>
-                      <button type="button"
-                        onClick={() => setForm(f => ({ ...f, people: Math.min(business?.maxReservationPeople || 20, Number(f.people) + 1) }))}
-                        disabled={form.people >= (business?.maxReservationPeople || 20)}
-                        className="w-10 h-10 rounded-xl border border-gray-300 bg-white text-gray-600 hover:bg-gray-50 disabled:bg-gray-100 disabled:text-gray-400 text-lg font-semibold flex items-center justify-center shrink-0 transition-colors">
-                        +
-                      </button>
-                    </div>
+                    {(() => {
+                      const selectedSlot = slots?.find(s => s.time === form.time);
+                      const maxPeople = Math.min(
+                        business?.maxReservationPeople || 20,
+                        selectedSlot?.remaining ?? (business?.maxReservationPeople || 20)
+                      );
+                      return (
+                        <div className="flex items-center gap-2">
+                          <button type="button"
+                            onClick={() => setForm(f => ({ ...f, people: Math.max(1, Number(f.people) - 1) }))}
+                            className="w-10 h-10 rounded-xl border border-gray-300 bg-white text-gray-600 hover:bg-gray-50 text-lg font-semibold flex items-center justify-center shrink-0 transition-colors">
+                            −
+                          </button>
+                          <span className="flex-1 text-center text-lg font-bold text-gray-900">{form.people}</span>
+                          <button type="button"
+                            onClick={() => setForm(f => ({ ...f, people: Math.min(maxPeople, Number(f.people) + 1) }))}
+                            disabled={form.people >= maxPeople}
+                            className="w-10 h-10 rounded-xl border border-gray-300 bg-white text-gray-600 hover:bg-gray-50 disabled:bg-gray-100 disabled:text-gray-400 text-lg font-semibold flex items-center justify-center shrink-0 transition-colors">
+                            +
+                          </button>
+                        </div>
+                      );
+                    })()}
                   </div>
                 </div>
 
@@ -312,7 +321,13 @@ export default function PublicReservation() {
                               <button
                                 key={s.time}
                                 type="button"
-                                onClick={() => setForm(f => ({ ...f, time: s.time }))}
+                                onClick={() => setForm(f => {
+                                  const maxP = Math.min(
+                                    business?.maxReservationPeople || 20,
+                                    s.remaining ?? (business?.maxReservationPeople || 20)
+                                  );
+                                  return { ...f, time: s.time, people: Math.min(f.people, maxP) };
+                                })}
                                 className={`px-3 py-2 text-sm rounded-lg border transition-colors ${
                                   form.time === s.time
                                     ? 'text-white border-transparent'

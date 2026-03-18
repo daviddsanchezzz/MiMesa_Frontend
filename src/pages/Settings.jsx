@@ -973,7 +973,7 @@ function PublicoSection() {
           <h3 className="text-lg font-semibold text-gray-900">Máximo de Personas por Turno</h3>
           <div className="relative group">
             <span className="w-5 h-5 rounded-full bg-gray-200 text-gray-600 text-xs flex items-center justify-center cursor-default select-none font-bold">i</span>
-            <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-64 bg-gray-800 text-white text-xs rounded-lg px-3 py-2 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-10 text-center">
+            <div className="absolute right-0 bottom-full mb-2 w-64 bg-gray-800 text-white text-xs rounded-lg px-3 py-2 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-10 text-center">
               Número máximo de personas que pueden tener reserva en el mismo horario. Si se alcanza este límite, ese turno no aparecerá en la reserva pública.
             </div>
           </div>
@@ -1012,7 +1012,7 @@ function PublicoSection() {
           <h3 className="text-lg font-semibold text-gray-900">Duración por Mesa</h3>
           <div className="relative group">
             <span className="w-5 h-5 rounded-full bg-gray-200 text-gray-600 text-xs flex items-center justify-center cursor-default select-none font-bold">i</span>
-            <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-64 bg-gray-800 text-white text-xs rounded-lg px-3 py-2 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-10 text-center">
+            <div className="absolute right-0 bottom-full mb-2 w-64 bg-gray-800 text-white text-xs rounded-lg px-3 py-2 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-10 text-center">
               Tiempo en minutos que una mesa permanece bloqueada tras el inicio de una reserva. Por ejemplo, con 60 minutos, una reserva a las 12:00 bloquea capacidad hasta las 13:00.
             </div>
           </div>

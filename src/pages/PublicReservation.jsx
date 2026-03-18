@@ -160,7 +160,6 @@ export default function PublicReservation() {
     try {
       await publicApi.post('/reservations/public', { businessId, ...form, roomId: form.roomId || null });
       setSuccess(tr.successMsg);
-      setTimeout(() => navigate('/'), 3000);
     } catch (err) {
       setError(err.response?.data?.message || tr.errorSave);
     }

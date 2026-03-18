@@ -34,14 +34,17 @@ api.interceptors.response.use(
       original._retry = true;
       isRefreshing = true;
       try {
-        const { data } = await axios.post(`${BASE_URL}/auth/refresh`, {}, { withCredentials: true });
+        const storedRefresh = localStorage.getItem('refreshToken');
+        const { data } = await axios.post(`${BASE_URL}/auth/refresh`, storedRefresh ? { refreshToken: storedRefresh } : {}, { withCredentials: true });
         accessToken = data.accessToken;
+        if (data.refreshToken) localStorage.setItem('refreshToken', data.refreshToken);
         processQueue(null, accessToken);
         original.headers.Authorization = `Bearer ${accessToken}`;
         return api(original);
       } catch (refreshError) {
         processQueue(refreshError, null);
         accessToken = null;
+        localStorage.removeItem('refreshToken');
         window.dispatchEvent(new Event('auth:logout'));
         return Promise.reject(refreshError);
       } finally {

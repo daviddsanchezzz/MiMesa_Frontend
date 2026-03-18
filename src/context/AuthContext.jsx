@@ -8,14 +8,16 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Try to restore session using the refresh token cookie
-    api.post('/auth/refresh')
+    // Try to restore session — send stored refresh token as body fallback for mobile/Safari
+    const storedRefresh = localStorage.getItem('refreshToken');
+    api.post('/auth/refresh', storedRefresh ? { refreshToken: storedRefresh } : {})
       .then(({ data }) => {
         setAccessToken(data.accessToken);
+        if (data.refreshToken) localStorage.setItem('refreshToken', data.refreshToken);
         return api.get('/auth/me');
       })
       .then(({ data }) => setBusiness(data))
-      .catch(() => {}) // No session, user needs to log in
+      .catch(() => { localStorage.removeItem('refreshToken'); })
       .finally(() => setLoading(false));
   }, []);
 
@@ -31,12 +33,14 @@ export function AuthProvider({ children }) {
   const login = async (email, password) => {
     const { data } = await api.post('/auth/login', { email, password });
     setAccessToken(data.accessToken);
+    if (data.refreshToken) localStorage.setItem('refreshToken', data.refreshToken);
     setBusiness(data.business);
   };
 
   const register = async (name, email, password, phone) => {
     const { data } = await api.post('/auth/register', { name, email, password, phone });
     setAccessToken(data.accessToken);
+    if (data.refreshToken) localStorage.setItem('refreshToken', data.refreshToken);
     setBusiness(data.business);
   };
 
@@ -52,6 +56,7 @@ export function AuthProvider({ children }) {
   const logout = async () => {
     try { await api.post('/auth/logout'); } catch {}
     setAccessToken(null);
+    localStorage.removeItem('refreshToken');
     setBusiness(null);
   };
 

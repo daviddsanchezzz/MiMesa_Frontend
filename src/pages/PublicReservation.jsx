@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import publicApi from '../services/publicApi';
 import TRANSLATIONS from '../i18n';
 
@@ -44,6 +44,8 @@ function ChevronRight() {
 export default function PublicReservation() {
   const { businessId } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const isEmbed = searchParams.get('embed') === '1';
   const [lang, setLang] = useState(() => localStorage.getItem('pr_lang') || 'es');
   const [business, setBusiness] = useState(null);
   const [rooms, setRooms] = useState([]);
@@ -167,8 +169,19 @@ export default function PublicReservation() {
 
   const changeLang = (l) => { setLang(l); localStorage.setItem('pr_lang', l); };
 
+  // postMessage height for iframe embed
+  useEffect(() => {
+    if (!isEmbed) return;
+    const sendHeight = () => {
+      window.parent.postMessage({ type: 'MIMESA_HEIGHT', height: document.documentElement.scrollHeight }, '*');
+    };
+    sendHeight();
+    window.addEventListener('resize', sendHeight);
+    return () => window.removeEventListener('resize', sendHeight);
+  }, [isEmbed, step, success, slots, loading]);
+
   if (loading) return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+    <div className={`${isEmbed ? 'p-8' : 'min-h-screen bg-gray-50'} flex items-center justify-center`}>
       <div className="text-center">
         <div className="w-10 h-10 rounded-xl animate-pulse mx-auto mb-3" style={bs} />
         <p className="text-gray-600">{tr.loading}</p>
@@ -176,10 +189,12 @@ export default function PublicReservation() {
     </div>
   );
   if (error && !business) return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+    <div className={`${isEmbed ? 'p-8' : 'min-h-screen bg-gray-50'} flex items-center justify-center`}>
       <div className="text-center">
         <p className="text-red-600 mb-4">{error}</p>
-        <button onClick={() => navigate('/')} className="text-indigo-600 hover:underline">{tr.backHome}</button>
+        {!isEmbed && (
+          <button onClick={() => navigate('/')} className="text-indigo-600 hover:underline">{tr.backHome}</button>
+        )}
       </div>
     </div>
   );
@@ -192,8 +207,8 @@ export default function PublicReservation() {
   const multiShift = Object.keys(slotsByShift).length > 1;
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8 px-4">
-      <div className="max-w-sm mx-auto">
+    <div className={isEmbed ? 'p-3 w-full' : 'min-h-screen bg-gray-50 py-8 px-4'}>
+      <div className={`max-w-sm ${isEmbed ? 'w-full' : 'mx-auto'}`}>
         {/* Lang selector */}
         <div className="flex justify-end mb-2">
           {['es', 'ca', 'en'].map(l => (
@@ -483,7 +498,7 @@ export default function PublicReservation() {
           )}
         </div>
 
-        {(business?.phone || business?.email) && (
+        {!isEmbed && (business?.phone || business?.email) && (
           <p className="text-center text-sm text-gray-400 mt-3">
             {business?.phone}{business?.phone && business?.email && ' · '}{business?.email}
           </p>

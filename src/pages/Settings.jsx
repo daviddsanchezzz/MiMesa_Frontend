@@ -820,7 +820,9 @@ function PublicoSection() {
   const [maxPeoplePerSlot, setMaxPeoplePerSlot] = useState(business?.maxPeoplePerSlot || '');
   const [reservationDuration, setReservationDuration] = useState(business?.reservationDuration || '');
   const [saving, setSaving] = useState(false);
+  const [copied, setCopied] = useState(null); // 'url' | 'embed'
   const publicUrl = `${window.location.origin}/public/${business?.id}/reserve`;
+  const embedCode = `<iframe\n  id="mimesa-frame"\n  src="${publicUrl}?embed=1"\n  style="width:100%; border:none; min-height:500px;"\n></iframe>\n<script>\n  window.addEventListener("message", function(e) {\n    if (e.data.type === "MIMESA_HEIGHT")\n      document.getElementById("mimesa-frame").style.height = e.data.height + "px";\n  });\n<\/script>`;
 
   useEffect(() => {
     if (business?.brandColor) setBrandColor(business.brandColor);
@@ -829,9 +831,10 @@ function PublicoSection() {
     setReservationDuration(business?.reservationDuration || '');
   }, [business]);
 
-  const copyToClipboard = () => {
-    navigator.clipboard.writeText(publicUrl);
-    // Podrías añadir un toast aquí
+  const copyToClipboard = (text, key) => {
+    navigator.clipboard.writeText(text);
+    setCopied(key);
+    setTimeout(() => setCopied(null), 2000);
   };
 
   const handleColorChange = async (newColor) => {
@@ -1021,15 +1024,32 @@ function PublicoSection() {
             className="flex-1 border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm bg-gray-50"
           />
           <button
-            onClick={copyToClipboard}
+            onClick={() => copyToClipboard(publicUrl, 'url')}
             className="px-4 py-2.5 bg-indigo-600 text-white text-sm font-medium rounded-xl hover:bg-indigo-700 transition-colors"
           >
-            Copiar
+            {copied === 'url' ? '¡Copiado!' : 'Copiar'}
           </button>
         </div>
         <p className="text-xs text-gray-500 mt-2">
           Los clientes podrán seleccionar fecha, hora, número de personas y proporcionar sus datos de contacto.
         </p>
+      </div>
+
+      {/* Embed iframe */}
+      <div className="bg-white rounded-2xl p-6 border border-gray-200">
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">Integrar en tu web (iframe)</h3>
+        <p className="text-sm text-gray-600 mb-4">
+          Copia este código y pégalo en la web de tu restaurante para que los clientes puedan reservar sin salir de tu página.
+        </p>
+        <pre className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-xs text-gray-700 font-mono overflow-x-auto whitespace-pre-wrap break-all leading-relaxed mb-3">
+{embedCode}
+        </pre>
+        <button
+          onClick={() => copyToClipboard(embedCode, 'embed')}
+          className="px-4 py-2.5 bg-indigo-600 text-white text-sm font-medium rounded-xl hover:bg-indigo-700 transition-colors"
+        >
+          {copied === 'embed' ? '¡Copiado!' : 'Copiar código'}
+        </button>
       </div>
     </div>
   );

@@ -62,6 +62,7 @@ export default function PublicReservation() {
   const todayStr = `${todayDate.getFullYear()}-${String(todayDate.getMonth()+1).padStart(2,'0')}-${String(todayDate.getDate()).padStart(2,'0')}`;
   const [calYear, setCalYear] = useState(todayDate.getFullYear());
   const [calMonth, setCalMonth] = useState(todayDate.getMonth());
+  const [monthAvail, setMonthAvail] = useState({ closedDays: [], noSlotDays: [] });
 
   const tr = TRANSLATIONS[lang];
   const brandColor = business?.brandColor || '#3B82F6';
@@ -83,6 +84,13 @@ export default function PublicReservation() {
       }
     })();
   }, [businessId]);
+
+  useEffect(() => {
+    if (!businessId) return;
+    publicApi.get(`/shifts/public/month-availability?year=${calYear}&month=${calMonth + 1}&businessId=${businessId}`)
+      .then(res => setMonthAvail(res.data))
+      .catch(() => setMonthAvail({ closedDays: [], noSlotDays: [] }));
+  }, [calYear, calMonth, businessId]);
 
   useEffect(() => {
     if (!form.date || !businessId) return;
@@ -289,16 +297,19 @@ export default function PublicReservation() {
                     {calDays.map((day, i) => {
                       if (!day) return <div key={`e-${i}`} />;
                       const past = isDatePast(day);
+                      const closed = !past && monthAvail.closedDays.includes(day);
+                      const noSlot = !past && !closed && monthAvail.noSlotDays.includes(day);
+                      const unavailable = past || closed || noSlot;
                       const sel = form.date === fmtDay(day);
                       return (
                         <button key={day} type="button"
-                          onClick={() => !past && selectDate(day)}
-                          className={`aspect-square flex items-center justify-center rounded-xl text-sm font-medium transition-colors ${
-                            past ? 'text-gray-300 cursor-default' :
-                            sel ? 'text-white' : 'text-gray-700 hover:bg-gray-100'
-                          }`}
+                          onClick={() => !unavailable && selectDate(day)}
+                          className={`aspect-square flex flex-col items-center justify-center rounded-xl text-sm font-medium transition-colors ${
+                            unavailable ? 'cursor-default' : sel ? 'text-white' : 'text-gray-700 hover:bg-gray-100'
+                          } ${past || noSlot ? 'text-gray-300' : closed ? 'text-red-300' : ''}`}
                           style={sel ? bs : {}}>
                           {day}
+                          {closed && <span className="w-1 h-1 rounded-full bg-red-300 mt-0.5" />}
                         </button>
                       );
                     })}

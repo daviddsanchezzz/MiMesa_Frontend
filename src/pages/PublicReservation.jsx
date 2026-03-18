@@ -150,7 +150,7 @@ export default function PublicReservation() {
     setForm(f => ({ ...f, time: s.time, people: Math.min(f.people, maxP) }));
     setStep(3);
   };
-  const selectPeople = (n) => { setForm(f => ({ ...f, people: n })); setStep(4); };
+  const selectPeople = (n) => { setForm(f => ({ ...f, people: n })); };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -415,6 +415,11 @@ export default function PublicReservation() {
                           </div>
                         </div>
                       )}
+                      <button type="button" onClick={() => setStep(4)}
+                        className="w-full mt-5 py-3 rounded-xl text-white font-medium transition-colors"
+                        style={bs}>
+                        {tr.continue}
+                      </button>
                     </>
                   )}
                 </div>

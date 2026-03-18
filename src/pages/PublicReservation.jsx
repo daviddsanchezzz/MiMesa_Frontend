@@ -219,33 +219,33 @@ export default function PublicReservation() {
           ) : (
             <div className="p-6">
               {/* Step bar */}
-              <div className="flex items-center gap-1 mb-7 overflow-x-auto pb-0.5">
+              <div className="flex items-center justify-between mb-7">
                 {/* Step 1 */}
                 <button type="button" onClick={() => step > 1 && setStep(1)}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors shrink-0 ${
-                    step === 1 ? 'text-white' : step > 1 ? 'bg-gray-100 text-gray-700 hover:bg-gray-200 cursor-pointer' : 'text-gray-400 cursor-default'
+                  className={`flex items-center gap-1.5 text-sm font-medium whitespace-nowrap transition-colors shrink-0 ${
+                    step === 1 ? 'text-white px-3 py-1.5 rounded-full' : step > 1 ? 'text-gray-600 hover:text-gray-900 cursor-pointer' : 'text-gray-300 cursor-default'
                   }`}
                   style={step === 1 ? bs : {}}>
-                  {step === 1 && <CalIcon />}
+                  <CalIcon />
                   {step === 1 ? 'Fecha' : (dateLabel || 'Fecha')}
                 </button>
                 <ChevronRight />
                 {/* Step 2 */}
                 <button type="button" onClick={() => step > 2 && setStep(2)}
                   disabled={step < 2}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors shrink-0 ${
-                    step === 2 ? 'text-white' : step > 2 ? 'bg-gray-100 text-gray-700 hover:bg-gray-200 cursor-pointer' : 'text-gray-400 cursor-default'
+                  className={`flex items-center gap-1.5 text-sm font-medium whitespace-nowrap transition-colors shrink-0 ${
+                    step === 2 ? 'text-white px-3 py-1.5 rounded-full' : step > 2 ? 'text-gray-600 hover:text-gray-900 cursor-pointer' : 'text-gray-300 cursor-default'
                   }`}
                   style={step === 2 ? bs : {}}>
-                  {step <= 2 && <ClockIcon />}
+                  <ClockIcon />
                   {step > 2 ? form.time : 'Hora'}
                 </button>
                 <ChevronRight />
                 {/* Step 3 */}
                 <button type="button" onClick={() => step > 3 && setStep(3)}
                   disabled={step < 3}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors shrink-0 ${
-                    step === 3 ? 'text-white' : step > 3 ? 'bg-gray-100 text-gray-700 hover:bg-gray-200 cursor-pointer' : 'text-gray-400 cursor-default'
+                  className={`flex items-center gap-1.5 text-sm font-medium whitespace-nowrap transition-colors shrink-0 ${
+                    step === 3 ? 'text-white px-3 py-1.5 rounded-full' : step > 3 ? 'text-gray-600 hover:text-gray-900 cursor-pointer' : 'text-gray-300 cursor-default'
                   }`}
                   style={step === 3 ? bs : {}}>
                   <PersonIcon />
@@ -253,8 +253,8 @@ export default function PublicReservation() {
                 </button>
                 <ChevronRight />
                 {/* Step 4 */}
-                <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium whitespace-nowrap shrink-0 ${
-                  step === 4 ? 'text-white' : 'text-gray-400'
+                <div className={`flex items-center gap-1.5 text-sm font-medium whitespace-nowrap shrink-0 ${
+                  step === 4 ? 'text-white px-3 py-1.5 rounded-full' : 'text-gray-300'
                 }`} style={step === 4 ? bs : {}}>
                   <BellIcon />
                   {step === 4 && 'Datos'}
@@ -337,16 +337,11 @@ export default function PublicReservation() {
                         <div className="grid grid-cols-3 gap-2">
                           {shiftSlots.map(s => (
                             <button key={s.time} type="button" onClick={() => selectSlot(s)}
-                              className={`py-3 rounded-xl border text-center transition-colors ${
-                                form.time === s.time ? 'text-white border-transparent' : 'bg-white text-gray-700 border-gray-200 hover:border-gray-400'
+                              className={`px-3 py-2 text-sm rounded-lg border transition-colors ${
+                                form.time === s.time ? 'text-white border-transparent' : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'
                               }`}
                               style={form.time === s.time ? bs : {}}>
-                              <div className="text-sm font-semibold">{s.label || s.time}</div>
-                              {s.remaining != null && (
-                                <div className={`text-xs mt-0.5 ${form.time === s.time ? 'text-white/70' : 'text-emerald-600'}`}>
-                                  {s.remaining} {s.remaining === 1 ? 'libre' : 'libres'}
-                                </div>
-                              )}
+                              {s.label || s.time}
                             </button>
                           ))}
                         </div>

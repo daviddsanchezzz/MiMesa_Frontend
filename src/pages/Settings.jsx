@@ -849,49 +849,20 @@ function PublicoSection() {
     }
   };
 
-  const handleMaxPeopleChange = async (newMax) => {
-    const numValue = Number(newMax);
-    if (numValue < 1) return;
-    setMaxReservationPeople(numValue);
+  const handleSavePublicNumbers = async () => {
     setSaving(true);
     try {
-      await api.put('/auth/settings', { maxReservationPeople: numValue });
+      const maxPpl = maxReservationPeople === '' ? null : Number(maxReservationPeople);
+      const perSlot = maxPeoplePerSlot === '' ? null : Number(maxPeoplePerSlot);
+      const duration = reservationDuration === '' ? null : Number(reservationDuration);
+      await api.put('/auth/settings', {
+        maxReservationPeople: maxPpl,
+        maxPeoplePerSlot: perSlot,
+        reservationDuration: duration,
+      });
       await refreshBusiness();
     } catch (err) {
-      console.error('Error updating max reservation people:', err);
-      setMaxReservationPeople(business?.maxReservationPeople || 20);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleMaxPeoplePerSlotChange = async (newMax) => {
-    const val = newMax === '' ? null : Number(newMax);
-    if (val !== null && val < 1) return;
-    setMaxPeoplePerSlot(newMax);
-    setSaving(true);
-    try {
-      await api.put('/auth/settings', { maxPeoplePerSlot: val });
-      await refreshBusiness();
-    } catch (err) {
-      console.error('Error updating max people per slot:', err);
-      setMaxPeoplePerSlot(business?.maxPeoplePerSlot || '');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleDurationChange = async (newVal) => {
-    const val = newVal === '' ? null : Number(newVal);
-    if (val !== null && val < 1) return;
-    setReservationDuration(newVal);
-    setSaving(true);
-    try {
-      await api.put('/auth/settings', { reservationDuration: val });
-      await refreshBusiness();
-    } catch (err) {
-      console.error('Error updating reservation duration:', err);
-      setReservationDuration(business?.reservationDuration || '');
+      console.error('Error saving public settings:', err);
     } finally {
       setSaving(false);
     }
@@ -943,27 +914,19 @@ function PublicoSection() {
         <p className="text-sm text-gray-600 mb-4">
           Establece el número máximo de personas que pueden hacer una reserva en una sola solicitud.
         </p>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-3">
-            <input
-              type="number"
-              min="1"
-              value={maxReservationPeople}
-              onChange={(e) => handleMaxPeopleChange(e.target.value)}
-              className="w-20 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              disabled={saving}
-            />
-            <div>
-              <p className="text-sm font-medium text-gray-900">personas máximo</p>
-              <p className="text-xs text-gray-500">Por reserva individual</p>
-            </div>
+        <div className="flex items-center gap-3">
+          <input
+            type="number"
+            min="1"
+            value={maxReservationPeople}
+            onChange={(e) => setMaxReservationPeople(e.target.value)}
+            className="w-20 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            disabled={saving}
+          />
+          <div>
+            <p className="text-sm font-medium text-gray-900">personas máximo</p>
+            <p className="text-xs text-gray-500">Por reserva individual</p>
           </div>
-          {saving && (
-            <div className="flex items-center gap-2 text-sm text-gray-500">
-              <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin"></div>
-              Guardando...
-            </div>
-          )}
         </div>
       </div>
 
@@ -981,28 +944,20 @@ function PublicoSection() {
         <p className="text-sm text-gray-600 mb-4">
           Deja vacío para no establecer límite por turno.
         </p>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-3">
-            <input
-              type="number"
-              min="1"
-              placeholder="Sin límite"
-              value={maxPeoplePerSlot}
-              onChange={(e) => handleMaxPeoplePerSlotChange(e.target.value)}
-              className="w-24 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              disabled={saving}
-            />
-            <div>
-              <p className="text-sm font-medium text-gray-900">personas máximo</p>
-              <p className="text-xs text-gray-500">Por franja horaria simultánea</p>
-            </div>
+        <div className="flex items-center gap-3">
+          <input
+            type="number"
+            min="1"
+            placeholder="Sin límite"
+            value={maxPeoplePerSlot}
+            onChange={(e) => setMaxPeoplePerSlot(e.target.value)}
+            className="w-24 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            disabled={saving}
+          />
+          <div>
+            <p className="text-sm font-medium text-gray-900">personas máximo</p>
+            <p className="text-xs text-gray-500">Por franja horaria simultánea</p>
           </div>
-          {saving && (
-            <div className="flex items-center gap-2 text-sm text-gray-500">
-              <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin"></div>
-              Guardando...
-            </div>
-          )}
         </div>
       </div>
 
@@ -1020,29 +975,36 @@ function PublicoSection() {
         <p className="text-sm text-gray-600 mb-4">
           Deja vacío para no bloquear franjas posteriores.
         </p>
-        <div className="flex items-center gap-4">
-          <div className="flex items-center gap-3">
-            <input
-              type="number"
-              min="1"
-              placeholder="Sin bloqueo"
-              value={reservationDuration}
-              onChange={(e) => handleDurationChange(e.target.value)}
-              className="w-24 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-              disabled={saving}
-            />
-            <div>
-              <p className="text-sm font-medium text-gray-900">minutos</p>
-              <p className="text-xs text-gray-500">Tiempo bloqueado por reserva</p>
-            </div>
+        <div className="flex items-center gap-3">
+          <input
+            type="number"
+            min="1"
+            placeholder="Sin bloqueo"
+            value={reservationDuration}
+            onChange={(e) => setReservationDuration(e.target.value)}
+            className="w-24 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            disabled={saving}
+          />
+          <div>
+            <p className="text-sm font-medium text-gray-900">minutos</p>
+            <p className="text-xs text-gray-500">Tiempo bloqueado por reserva</p>
           </div>
-          {saving && (
-            <div className="flex items-center gap-2 text-sm text-gray-500">
-              <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin"></div>
-              Guardando...
-            </div>
-          )}
         </div>
+      </div>
+
+      {/* Save button */}
+      <div className="flex items-center gap-3">
+        <button
+          type="button"
+          onClick={handleSavePublicNumbers}
+          disabled={saving}
+          className="px-5 py-2.5 bg-indigo-600 text-white text-sm font-medium rounded-xl hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+        >
+          {saving ? 'Guardando...' : 'Guardar cambios'}
+        </button>
+        {saving && (
+          <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
+        )}
       </div>
 
       {/* Public URL */}

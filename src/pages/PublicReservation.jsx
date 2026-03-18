@@ -388,6 +388,33 @@ export default function PublicReservation() {
                       {business?.maxReservationPeople && (
                         <p className="text-xs text-gray-400 mt-3">{tr.maxPeople(business.maxReservationPeople)}</p>
                       )}
+                      {rooms.length > 0 && (
+                        <div className="mt-5">
+                          <label className="block text-sm font-medium text-gray-700 mb-2">
+                            {tr.room} <span className="text-gray-400 font-normal">{tr.roomOptional}</span>
+                          </label>
+                          <div className="grid grid-cols-2 gap-2">
+                            <button type="button"
+                              onClick={() => setForm(f => ({ ...f, roomId: '' }))}
+                              className={`px-3 py-2 text-sm rounded-lg border transition-colors ${
+                                form.roomId === '' ? 'text-white border-transparent' : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'
+                              }`}
+                              style={form.roomId === '' ? bs : {}}>
+                              {tr.noPreference}
+                            </button>
+                            {rooms.map(r => (
+                              <button key={r._id} type="button"
+                                onClick={() => setForm(f => ({ ...f, roomId: r._id }))}
+                                className={`px-3 py-2 text-sm rounded-lg border transition-colors ${
+                                  form.roomId === r._id ? 'text-white border-transparent' : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'
+                                }`}
+                                style={form.roomId === r._id ? bs : {}}>
+                                {r.name}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </>
                   )}
                 </div>
@@ -416,17 +443,6 @@ export default function PublicReservation() {
                         onChange={e => setForm(f => ({ ...f, guestEmail: e.target.value }))}
                         className={inputCls} placeholder="tu@email.com" />
                     </div>
-                    {rooms.length > 0 && (
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                          {tr.room} <span className="text-gray-400 font-normal">{tr.roomOptional}</span>
-                        </label>
-                        <select value={form.roomId} onChange={e => setForm(f => ({ ...f, roomId: e.target.value }))} className={inputCls}>
-                          <option value="">{tr.noPreference}</option>
-                          {rooms.map(r => <option key={r._id} value={r._id}>{r.name}</option>)}
-                        </select>
-                      </div>
-                    )}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1.5">{tr.notes}</label>
                       <textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}

@@ -4,8 +4,6 @@ import publicApi from '../services/publicApi';
 import TRANSLATIONS from '../i18n';
 
 
-const MONTH_NAMES = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Septiembre','Octubre','Noviembre','Diciembre'];
-const DAY_NAMES = ['lun','mar','mié','jue','vie','sáb','dom'];
 
 function CalIcon() {
   return (
@@ -180,7 +178,7 @@ export default function PublicReservation() {
   );
 
   const dateLabel = form.date
-    ? (form.date === todayStr ? 'Hoy' : new Date(form.date + 'T00:00:00').toLocaleDateString(tr.dateLocale, { day: 'numeric', month: 'short' }))
+    ? (form.date === todayStr ? tr.today : new Date(form.date + 'T00:00:00').toLocaleDateString(tr.dateLocale, { day: 'numeric', month: 'short' }))
     : null;
   const peopleOptions = Array.from({ length: Math.min(maxPeople, 20) }, (_, i) => i + 1);
   const inputCls = 'w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white';
@@ -227,7 +225,7 @@ export default function PublicReservation() {
                   }`}
                   style={step === 1 ? bs : {}}>
                   <CalIcon />
-                  {step === 1 ? 'Fecha' : (dateLabel || 'Fecha')}
+                  {step === 1 ? tr.stepDate : (dateLabel || tr.stepDate)}
                 </button>
                 <ChevronRight />
                 {/* Step 2 */}
@@ -238,7 +236,7 @@ export default function PublicReservation() {
                   }`}
                   style={step === 2 ? bs : {}}>
                   <ClockIcon />
-                  {step > 2 ? form.time : 'Hora'}
+                  {step > 2 ? form.time : tr.stepTime}
                 </button>
                 <ChevronRight />
                 {/* Step 3 */}
@@ -249,7 +247,7 @@ export default function PublicReservation() {
                   }`}
                   style={step === 3 ? bs : {}}>
                   <PersonIcon />
-                  {step > 3 ? `${form.people} pers.` : 'Personas'}
+                  {step > 3 ? tr.persShort(form.people) : tr.stepPeople}
                 </button>
                 <ChevronRight />
                 {/* Step 4 */}
@@ -257,14 +255,14 @@ export default function PublicReservation() {
                   step === 4 ? 'text-white px-3 py-1.5 rounded-full' : 'text-gray-300'
                 }`} style={step === 4 ? bs : {}}>
                   <BellIcon />
-                  {step === 4 && 'Datos'}
+                  {step === 4 && tr.stepConfirm}
                 </div>
               </div>
 
               {/* STEP 1: Calendar */}
               {step === 1 && (
                 <div>
-                  <h2 className="text-xl font-bold text-gray-900 mb-5">Elige el día que desees</h2>
+                  <h2 className="text-xl font-bold text-gray-900 mb-5">{tr.pickDate}</h2>
                   <div className="flex items-center justify-between mb-4">
                     <button type="button" onClick={prevMonth} disabled={!canGoPrev}
                       className="w-8 h-8 flex items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
@@ -273,7 +271,7 @@ export default function PublicReservation() {
                       </svg>
                     </button>
                     <span className="font-semibold text-gray-800 text-sm">
-                      {MONTH_NAMES[calMonth]} De {calYear}
+                      {tr.monthNames[calMonth]} {calYear}
                     </span>
                     <button type="button" onClick={nextMonth}
                       className="w-8 h-8 flex items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 transition-colors">
@@ -283,7 +281,7 @@ export default function PublicReservation() {
                     </button>
                   </div>
                   <div className="grid grid-cols-7 mb-1">
-                    {DAY_NAMES.map(d => (
+                    {tr.dayNames.map(d => (
                       <div key={d} className="text-center text-xs font-medium text-gray-400 py-1">{d}</div>
                     ))}
                   </div>
@@ -311,7 +309,7 @@ export default function PublicReservation() {
               {/* STEP 2: Time slots */}
               {step === 2 && (
                 <div>
-                  <h2 className="text-xl font-bold text-gray-900 mb-5">Elige la hora que desees</h2>
+                  <h2 className="text-xl font-bold text-gray-900 mb-5">{tr.pickTime}</h2>
                   {slots === null ? (
                     <div className="text-gray-500 text-sm">{tr.loadingSlots}</div>
                   ) : vacation?.closed ? (
@@ -319,7 +317,7 @@ export default function PublicReservation() {
                       <div className="text-red-600 text-sm">{tr.closed(vacation.reason || tr.noReason)}</div>
                       <button type="button" onClick={() => setStep(1)}
                         className="text-sm font-medium hover:underline" style={{ color: brandColor }}>
-                        ← Cambiar fecha
+                        {tr.changeDate}
                       </button>
                     </div>
                   ) : slots.length === 0 ? (
@@ -327,7 +325,7 @@ export default function PublicReservation() {
                       <div className="text-gray-500 text-sm">{tr.noSlots}</div>
                       <button type="button" onClick={() => setStep(1)}
                         className="text-sm font-medium hover:underline" style={{ color: brandColor }}>
-                        ← Cambiar fecha
+                        {tr.changeDate}
                       </button>
                     </div>
                   ) : (
@@ -354,13 +352,13 @@ export default function PublicReservation() {
               {/* STEP 3: People */}
               {step === 3 && (
                 <div>
-                  <h2 className="text-xl font-bold text-gray-900 mb-5">Número de personas</h2>
+                  <h2 className="text-xl font-bold text-gray-900 mb-5">{tr.pickPeople}</h2>
                   {peopleOptions.length === 0 ? (
                     <div className="space-y-3">
-                      <p className="text-gray-500 text-sm">No hay capacidad disponible en este horario.</p>
+                      <p className="text-gray-500 text-sm">{tr.noCapacity}</p>
                       <button type="button" onClick={() => setStep(2)}
                         className="text-sm font-medium hover:underline" style={{ color: brandColor }}>
-                        ← Cambiar hora
+                        {tr.changeTime}
                       </button>
                     </div>
                   ) : (
@@ -368,8 +366,8 @@ export default function PublicReservation() {
                       <div className="grid grid-cols-4 gap-2">
                         {peopleOptions.map(n => (
                           <button key={n} type="button" onClick={() => selectPeople(n)}
-                            className={`py-5 rounded-xl border text-xl font-bold transition-colors ${
-                              form.people === n ? 'text-white border-transparent' : 'bg-white text-gray-700 border-gray-200 hover:border-gray-400'
+                            className={`px-3 py-2 text-sm rounded-lg border transition-colors ${
+                              form.people === n ? 'text-white border-transparent' : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'
                             }`}
                             style={form.people === n ? bs : {}}>
                             {n}
@@ -387,7 +385,7 @@ export default function PublicReservation() {
               {/* STEP 4: Contact form */}
               {step === 4 && (
                 <form onSubmit={handleSubmit}>
-                  <h2 className="text-xl font-bold text-gray-900 mb-5">Tus datos</h2>
+                  <h2 className="text-xl font-bold text-gray-900 mb-5">{tr.yourData}</h2>
                   <div className="space-y-4 mb-6">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1.5">{tr.name} *</label>

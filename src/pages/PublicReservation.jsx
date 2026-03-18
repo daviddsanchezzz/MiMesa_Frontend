@@ -181,7 +181,7 @@ export default function PublicReservation() {
   }, [isEmbed, step, success, slots, loading]);
 
   if (loading) return (
-    <div className={`${isEmbed ? 'p-8' : 'min-h-screen bg-gray-50'} flex items-center justify-center`}>
+    <div className={`w-full flex items-center justify-center ${isEmbed ? 'py-12' : 'min-h-screen bg-gray-50'}`}>
       <div className="text-center">
         <div className="w-10 h-10 rounded-xl animate-pulse mx-auto mb-3" style={bs} />
         <p className="text-gray-600">{tr.loading}</p>
@@ -189,7 +189,7 @@ export default function PublicReservation() {
     </div>
   );
   if (error && !business) return (
-    <div className={`${isEmbed ? 'p-8' : 'min-h-screen bg-gray-50'} flex items-center justify-center`}>
+    <div className={`w-full flex items-center justify-center ${isEmbed ? 'py-12' : 'min-h-screen bg-gray-50'}`}>
       <div className="text-center">
         <p className="text-red-600 mb-4">{error}</p>
         {!isEmbed && (
@@ -207,8 +207,8 @@ export default function PublicReservation() {
   const multiShift = Object.keys(slotsByShift).length > 1;
 
   return (
-    <div className={isEmbed ? 'p-3 w-full' : 'min-h-screen bg-gray-50 py-8 px-4'}>
-      <div className={`max-w-sm ${isEmbed ? 'w-full' : 'mx-auto'}`}>
+    <div className={isEmbed ? 'w-full flex justify-center px-4 py-6 box-border' : 'min-h-screen bg-gray-50 py-8 px-4'}>
+      <div className={isEmbed ? 'w-full max-w-sm' : 'max-w-sm mx-auto'}>
         {/* Lang selector */}
         <div className="flex justify-end mb-2">
           {['es', 'ca', 'en'].map(l => (

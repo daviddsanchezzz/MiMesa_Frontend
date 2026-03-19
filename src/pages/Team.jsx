@@ -159,7 +159,7 @@ export default function Team() {
 
   return (
     <>
-      <div className="max-w-2xl space-y-6">
+      <div className="space-y-6">
 
         {/* ── Page header ─────────────────────────────────────────────── */}
         <div className="flex items-start justify-between">

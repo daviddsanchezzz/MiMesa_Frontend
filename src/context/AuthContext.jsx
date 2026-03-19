@@ -66,11 +66,26 @@ export function AuthProvider({ children }) {
     }
   };
 
+  // Convenience helpers derived from business data
+  const role               = business?.role ?? null;
+  const plan               = business?.plan ?? 'free';
+  const subscriptionStatus = business?.subscriptionStatus ?? null;
+
+  /** Returns true if the current user has at least the given role level */
+  const HIERARCHY = { owner: 3, manager: 2, staff: 1 };
+  const hasRole = (minRole) => (HIERARCHY[role] ?? 0) >= (HIERARCHY[minRole] ?? 0);
+
+  /** Returns true if the subscription is currently active */
+  const isSubscribed = subscriptionStatus === 'active' || subscriptionStatus === 'trialing';
+
   return (
     <AuthContext.Provider value={{
       business, loading,
       login, register, logout, refreshBusiness,
-      // Expose session for pages that need raw user info (e.g. Profile)
+      // Role / plan helpers
+      role, plan, subscriptionStatus,
+      hasRole, isSubscribed,
+      // Raw Better Auth session (for Profile / 2FA pages)
       session: session ?? null,
     }}>
       {children}

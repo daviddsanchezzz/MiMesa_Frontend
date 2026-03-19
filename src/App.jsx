@@ -12,6 +12,7 @@ import Tables from './pages/Tables';
 import Reservations from './pages/Reservations';
 import Customers from './pages/Customers';
 import Settings from './pages/Settings';
+import Team from './pages/Team';
 import PublicReservation from './pages/PublicReservation';
 import PublicCancel from './pages/PublicCancel';
 import Sidebar from './components/Sidebar';
@@ -129,6 +130,7 @@ export default function App() {
           <Route path="/reservations" element={<PrivateLayout><Reservations /></PrivateLayout>} />
           <Route path="/customers"    element={<PrivateLayout><Customers /></PrivateLayout>} />
           <Route path="/settings"     element={<PrivateLayout><Settings /></PrivateLayout>} />
+          <Route path="/team"         element={<PrivateLayout><Team /></PrivateLayout>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>

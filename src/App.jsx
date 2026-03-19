@@ -13,6 +13,7 @@ import Reservations from './pages/Reservations';
 import Customers from './pages/Customers';
 import Settings from './pages/Settings';
 import Team from './pages/Team';
+import AcceptInvite from './pages/AcceptInvite';
 import PublicReservation from './pages/PublicReservation';
 import PublicCancel from './pages/PublicCancel';
 import Sidebar from './components/Sidebar';
@@ -124,6 +125,7 @@ export default function App() {
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password"  element={<ResetPassword />} />
           <Route path="/verify-email"    element={<VerifyEmail />} />
+          <Route path="/invite"          element={<AcceptInvite />} />
           <Route path="/"             element={<PrivateLayout><Dashboard /></PrivateLayout>} />
           <Route path="/rooms"        element={<PrivateLayout><Rooms /></PrivateLayout>} />
           <Route path="/tables"       element={<FullBleedLayout><Tables /></FullBleedLayout>} />

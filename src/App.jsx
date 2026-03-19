@@ -3,6 +3,9 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Login from './pages/Login';
 import Register from './pages/Register';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
+import VerifyEmail from './pages/VerifyEmail';
 import Dashboard from './pages/Dashboard';
 import Rooms from './pages/Rooms';
 import Tables from './pages/Tables';
@@ -113,8 +116,13 @@ export default function App() {
         <Routes>
           <Route path="/public/:businessId/reserve" element={<PublicReservation />} />
           <Route path="/public/cancel" element={<PublicCancel />} />
-          <Route path="/login"    element={<PublicRoute><Login /></PublicRoute>} />
-          <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
+          {/* Auth — public only (redirect to / if already logged in) */}
+          <Route path="/login"           element={<PublicRoute><Login /></PublicRoute>} />
+          <Route path="/register"        element={<PublicRoute><Register /></PublicRoute>} />
+          {/* Auth flows — always public */}
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password"  element={<ResetPassword />} />
+          <Route path="/verify-email"    element={<VerifyEmail />} />
           <Route path="/"             element={<PrivateLayout><Dashboard /></PrivateLayout>} />
           <Route path="/rooms"        element={<PrivateLayout><Rooms /></PrivateLayout>} />
           <Route path="/tables"       element={<FullBleedLayout><Tables /></FullBleedLayout>} />

@@ -412,7 +412,7 @@ export default function Reservations() {
             type="date"
             value={dateFilter}
             onChange={e => setDateFilter(e.target.value)}
-            className="mt-2 w-full border border-gray-300 rounded-xl px-3 py-2 text-sm text-center [text-align-last:center] focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+            className="mt-2 w-full max-w-full min-w-0 box-border border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
           />
         )}
 
@@ -463,7 +463,7 @@ export default function Reservations() {
           {filterMode === 'day' && (
             <input type="date" value={dateFilter}
               onChange={e => setDateFilter(e.target.value)}
-              className="border border-gray-300 rounded-xl px-3 py-2 text-sm text-center [text-align-last:center] focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+              className="w-44 max-w-full min-w-0 box-border border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
             />
           )}
           <button

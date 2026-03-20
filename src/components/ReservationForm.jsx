@@ -131,7 +131,7 @@ export default function ReservationForm({ reservation, onSave, onCancel, initial
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label className={labelCls}>Fecha *</label>
-            <input type="date" required value={form.date} onChange={field('date')} className={`${inputCls} text-center`} />
+            <input type="date" required value={form.date} onChange={field('date')} className={`${inputCls} max-w-full min-w-0 box-border`} />
           </div>
           <div>
             <label className={labelCls}>Personas *</label>

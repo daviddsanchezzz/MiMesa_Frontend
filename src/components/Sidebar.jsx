@@ -76,14 +76,14 @@ export default function Sidebar({ isOpen, onClose }) {
     <aside
       className={`
         fixed lg:relative inset-y-0 left-0 z-50 lg:z-auto
-        w-64 lg:w-56 bg-zinc-900 flex flex-col shrink-0 select-none
+        w-64 lg:w-56 bg-slate-900 flex flex-col shrink-0 select-none
         transform transition-transform duration-200 ease-in-out
         ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}
     >
-      <div className="px-4 py-5 border-b border-zinc-800">
+      <div className="px-4 py-5 border-b border-slate-700/50">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-zinc-600 to-zinc-800 flex items-center justify-center shrink-0 shadow-lg shadow-zinc-950/40">
+          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-700 flex items-center justify-center shrink-0 shadow-lg shadow-indigo-900/40">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="white" className="w-4 h-4">
               <path d="M3 2a1 1 0 0 0-1 1v1a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1H3ZM2 9a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V9ZM1 15a1 1 0 0 1 1-1h6a1 1 0 0 1 0 2H2a1 1 0 0 1-1-1Z" />
             </svg>
@@ -94,16 +94,16 @@ export default function Sidebar({ isOpen, onClose }) {
               <select
                 value={business?.id ?? ''}
                 onChange={(e) => { switchBusiness(e.target.value); handleNavClick(); }}
-                className="mt-0.5 w-full bg-transparent text-zinc-400 text-xs focus:outline-none cursor-pointer truncate"
+                className="mt-0.5 w-full bg-transparent text-slate-400 text-xs focus:outline-none cursor-pointer truncate"
               >
                 {memberships.map((m) => (
-                  <option key={m.businessId} value={m.businessId} className="bg-zinc-800 text-zinc-200">
+                  <option key={m.businessId} value={m.businessId} className="bg-slate-800 text-slate-200">
                     {m.businessName}
                   </option>
                 ))}
               </select>
             ) : (
-              <p className="text-zinc-400 text-xs truncate leading-tight mt-0.5">{business?.name}</p>
+              <p className="text-slate-400 text-xs truncate leading-tight mt-0.5">{business?.name}</p>
             )}
           </div>
         </div>
@@ -111,7 +111,7 @@ export default function Sidebar({ isOpen, onClose }) {
 
       <nav className="flex-1 px-3 py-4 flex flex-col gap-4 overflow-y-auto">
         <div className="space-y-0.5">
-          <p className="text-zinc-500 text-[10px] font-semibold uppercase tracking-widest px-2 pb-2">Menu</p>
+          <p className="text-slate-500 text-[10px] font-semibold uppercase tracking-widest px-2 pb-2">Menu</p>
           {links.map((link) => (
             <NavLink
               key={link.to}
@@ -120,7 +120,7 @@ export default function Sidebar({ isOpen, onClose }) {
               onClick={handleNavClick}
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3 py-3 lg:py-2 rounded-lg text-sm font-medium transition-all duration-100 ${
-                  isActive ? 'bg-zinc-700 text-white shadow-sm' : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100'
+                  isActive ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100'
                 }`
               }
             >
@@ -130,7 +130,7 @@ export default function Sidebar({ isOpen, onClose }) {
           ))}
         </div>
         <div className="space-y-0.5">
-          <p className="text-zinc-500 text-[10px] font-semibold uppercase tracking-widest px-2 pb-2">Sistema</p>
+          <p className="text-slate-500 text-[10px] font-semibold uppercase tracking-widest px-2 pb-2">Sistema</p>
           {[...(hasRole('manager') ? [{ to: '/team', label: 'Equipo', icon: <IconTeam /> }] : [])].map((link) => (
             <NavLink
               key={link.to}
@@ -138,7 +138,7 @@ export default function Sidebar({ isOpen, onClose }) {
               onClick={handleNavClick}
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3 py-3 lg:py-2 rounded-lg text-sm font-medium transition-all duration-100 ${
-                  isActive ? 'bg-zinc-700 text-white shadow-sm' : 'text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100'
+                  isActive ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100'
                 }`
               }
             >
@@ -149,7 +149,7 @@ export default function Sidebar({ isOpen, onClose }) {
         </div>
       </nav>
 
-      <div className="px-3 pb-4 border-t border-zinc-800 pt-3">
+      <div className="px-3 pb-4 border-t border-slate-700/50 pt-3">
         {configLinks.map((link) => (
           <NavLink
             key={link.to}
@@ -158,8 +158,8 @@ export default function Sidebar({ isOpen, onClose }) {
             className={({ isActive }) =>
               `mb-2 flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-100 ${
                 isActive
-                  ? 'bg-zinc-700 text-white shadow-sm'
-                  : 'text-zinc-300 hover:bg-zinc-800 hover:text-zinc-100'
+                  ? 'bg-indigo-600 text-white shadow-sm'
+                  : 'text-slate-300 hover:bg-slate-800 hover:text-slate-100'
               }`
             }
           >
@@ -171,25 +171,25 @@ export default function Sidebar({ isOpen, onClose }) {
         <div ref={menuRef} className="relative">
           <button
             onClick={() => setMenuOpen((v) => !v)}
-            className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg hover:bg-zinc-800 transition-colors"
+            className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg hover:bg-slate-800 transition-colors"
           >
-            <div className="w-8 h-8 rounded-full bg-zinc-700 flex items-center justify-center text-white text-xs font-bold shrink-0">
+            <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white text-xs font-bold shrink-0">
               {initial}
             </div>
             <div className="min-w-0 flex-1 text-left">
-              <p className="text-zinc-200 text-xs font-medium truncate">{userName}</p>
-              <p className="text-zinc-400 text-xs truncate">{userEmail}</p>
+              <p className="text-slate-200 text-xs font-medium truncate">{userName}</p>
+              <p className="text-slate-400 text-xs truncate">{userEmail}</p>
             </div>
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 text-zinc-500 shrink-0">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 text-slate-500 shrink-0">
               <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.168l3.71-3.938a.75.75 0 1 1 1.08 1.04l-4.25 4.5a.75.75 0 0 1-1.08 0l-4.25-4.5a.75.75 0 0 1 .02-1.06Z" clipRule="evenodd" />
             </svg>
           </button>
 
           {menuOpen && (
-            <div className="absolute left-0 right-0 bottom-full mb-2 bg-zinc-800 border border-zinc-700 rounded-lg p-1 shadow-lg">
+            <div className="absolute left-0 right-0 bottom-full mb-2 bg-slate-800 border border-slate-700 rounded-lg p-1 shadow-lg">
               <button
                 onClick={() => { navigate('/profile'); handleNavClick(); }}
-                className="w-full text-left px-3 py-2 rounded-md text-sm text-zinc-200 hover:bg-zinc-700 transition-colors"
+                className="w-full text-left px-3 py-2 rounded-md text-sm text-slate-200 hover:bg-slate-700 transition-colors"
               >
                 Perfil
               </button>

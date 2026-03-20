@@ -2,7 +2,6 @@ import { createContext, useContext, useState, useEffect, useCallback } from 'rea
 import { authClient } from '../lib/authClient';
 import { setStoredToken, getStoredToken } from '../lib/authClient';
 import api, { setActiveBusinessId } from '../services/api';
-import { applyBrandTheme, DEFAULT_BRAND } from '../lib/theme';
 
 const AuthContext = createContext(null);
 
@@ -46,11 +45,6 @@ export function AuthProvider({ children }) {
     window.addEventListener('auth:logout', handle);
     return () => window.removeEventListener('auth:logout', handle);
   }, []);
-
-  // Global brand theme tokens: make business color the dominant app accent.
-  useEffect(() => {
-    applyBrandTheme(business?.brandColor || DEFAULT_BRAND);
-  }, [business?.brandColor]);
 
   // ── Login ──────────────────────────────────────────────────────────────────
   const login = async (email, password) => {

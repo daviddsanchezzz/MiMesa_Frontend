@@ -238,7 +238,9 @@ export default function Profile() {
       </div>
 
       <section className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
-        <h2 className="text-base font-semibold text-gray-900 mb-4">Notificaciones por negocio</h2>
+        <h2 className="text-base font-semibold text-gray-900 mb-4">
+          {memberships.length <= 1 ? 'Notificaciones' : 'Notificaciones por negocio'}
+        </h2>
 
         {memberships.length === 0 ? (
           <div className="text-center py-12 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
@@ -246,13 +248,46 @@ export default function Profile() {
           </div>
         ) : (
           <div className="space-y-3">
-            {memberships.map((m) => (
-              <MembershipCard
-                key={m.id}
-                membership={m}
-                onToggle={(patch) => updateMembershipPreference(m.id, patch)}
-              />
-            ))}
+            {memberships.length === 1 ? (
+              <div className="border border-gray-200 rounded-2xl p-4 bg-white">
+                <div className="space-y-2">
+                  <label className="flex items-start justify-between gap-3 p-3 rounded-xl border border-gray-200 bg-gray-50/50 cursor-pointer">
+                    <span className="text-sm text-gray-700">Avisarme por email cuando se crea una reserva</span>
+                    <span className="relative inline-flex h-6 w-11 shrink-0 items-center">
+                      <input
+                        type="checkbox"
+                        className="peer sr-only"
+                        checked={!!memberships[0].notificationPreferences?.newReservationEmail}
+                        onChange={(e) => updateMembershipPreference(memberships[0].id, { newReservationEmail: e.target.checked })}
+                      />
+                      <span className="absolute inset-0 rounded-full bg-gray-300 peer-checked:bg-indigo-500 transition-colors" />
+                      <span className="absolute left-0.5 h-5 w-5 rounded-full bg-white shadow-sm peer-checked:translate-x-5 transition-transform" />
+                    </span>
+                  </label>
+                  <label className="flex items-start justify-between gap-3 p-3 rounded-xl border border-gray-200 bg-gray-50/50 cursor-pointer">
+                    <span className="text-sm text-gray-700">Avisarme por email cuando se cancela una reserva</span>
+                    <span className="relative inline-flex h-6 w-11 shrink-0 items-center">
+                      <input
+                        type="checkbox"
+                        className="peer sr-only"
+                        checked={!!memberships[0].notificationPreferences?.cancelledReservationEmail}
+                        onChange={(e) => updateMembershipPreference(memberships[0].id, { cancelledReservationEmail: e.target.checked })}
+                      />
+                      <span className="absolute inset-0 rounded-full bg-gray-300 peer-checked:bg-indigo-500 transition-colors" />
+                      <span className="absolute left-0.5 h-5 w-5 rounded-full bg-white shadow-sm peer-checked:translate-x-5 transition-transform" />
+                    </span>
+                  </label>
+                </div>
+              </div>
+            ) : (
+              memberships.map((m) => (
+                <MembershipCard
+                  key={m.id}
+                  membership={m}
+                  onToggle={(patch) => updateMembershipPreference(m.id, patch)}
+                />
+              ))
+            )}
           </div>
         )}
       </section>

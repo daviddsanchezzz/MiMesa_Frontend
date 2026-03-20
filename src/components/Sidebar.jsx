@@ -131,7 +131,7 @@ export default function Sidebar({ isOpen, onClose }) {
         </div>
         <div className="space-y-0.5">
           <p className="text-slate-500 text-[10px] font-semibold uppercase tracking-widest px-2 pb-2">Sistema</p>
-          {[...configLinks, ...(hasRole('manager') ? [{ to: '/team', label: 'Equipo', icon: <IconTeam /> }] : [])].map((link) => (
+          {[...(hasRole('manager') ? [{ to: '/team', label: 'Equipo', icon: <IconTeam /> }] : [])].map((link) => (
             <NavLink
               key={link.to}
               to={link.to}
@@ -150,6 +150,24 @@ export default function Sidebar({ isOpen, onClose }) {
       </nav>
 
       <div className="px-3 pb-4 border-t border-slate-700/50 pt-3">
+        {configLinks.map((link) => (
+          <NavLink
+            key={link.to}
+            to={link.to}
+            onClick={handleNavClick}
+            className={({ isActive }) =>
+              `mb-2 flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-100 ${
+                isActive
+                  ? 'bg-indigo-600 text-white shadow-sm'
+                  : 'text-slate-300 hover:bg-slate-800 hover:text-slate-100'
+              }`
+            }
+          >
+            {link.icon}
+            {link.label}
+          </NavLink>
+        ))}
+
         <div ref={menuRef} className="relative">
           <button
             onClick={() => setMenuOpen((v) => !v)}

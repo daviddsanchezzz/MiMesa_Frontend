@@ -53,7 +53,8 @@ export default function DevDashboard() {
   const [inviteForm, setInviteForm]       = useState({ name: '', email: '' });
   const [inviting, setInviting]           = useState(false);
   const [inviteError, setInviteError]     = useState('');
-  const [inviteSuccess, setInviteSuccess] = useState('');
+  const [inviteResult, setInviteResult]   = useState(null); // { email, inviteLink }
+  const [copied, setCopied]               = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -110,11 +111,12 @@ export default function DevDashboard() {
   const handleInviteUser = async (e) => {
     e.preventDefault();
     setInviteError('');
-    setInviteSuccess('');
+    setInviteResult(null);
+    setCopied(false);
     setInviting(true);
     try {
-      await api.post('/dev/invite-user', inviteForm);
-      setInviteSuccess(`Invitación enviada a ${inviteForm.email}`);
+      const { data } = await api.post('/dev/invite-user', inviteForm);
+      setInviteResult({ email: data.email, inviteLink: data.inviteLink });
       setInviteForm({ name: '', email: '' });
     } catch (err) {
       setInviteError(err.response?.data?.message || err.message);
@@ -313,9 +315,30 @@ export default function DevDashboard() {
                 {inviteError}
               </div>
             )}
-            {inviteSuccess && (
-              <div className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-xl px-4 py-3 mb-4">
-                {inviteSuccess}
+            {inviteResult && (
+              <div className="bg-green-50 border border-green-200 rounded-xl px-4 py-4 mb-4">
+                <p className="text-sm font-semibold text-green-800 mb-2">
+                  Invitación creada para {inviteResult.email}
+                </p>
+                <p className="text-xs text-green-700 mb-2">Copia el enlace y envíalo por WhatsApp o email:</p>
+                <div className="flex items-center gap-2">
+                  <input
+                    readOnly
+                    value={inviteResult.inviteLink}
+                    className="flex-1 text-xs bg-white border border-green-300 rounded-lg px-3 py-2 text-gray-700 focus:outline-none truncate"
+                    onClick={e => e.target.select()}
+                  />
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(inviteResult.inviteLink);
+                      setCopied(true);
+                      setTimeout(() => setCopied(false), 2000);
+                    }}
+                    className="shrink-0 bg-green-600 hover:bg-green-700 text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors"
+                  >
+                    {copied ? '¡Copiado!' : 'Copiar'}
+                  </button>
+                </div>
               </div>
             )}
 

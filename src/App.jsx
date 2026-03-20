@@ -129,6 +129,14 @@ function DevRedirect({ children }) {
   return children;
 }
 
+function OnboardingRoute({ children }) {
+  const { business, loading, session } = useAuth();
+  if (loading) return <LoadingScreen />;
+  if (!session) return <Navigate to="/login" replace />;
+  if (business?.id || business?.isDev) return <Navigate to="/" replace />;
+  return children;
+}
+
 export default function App() {
   return (
     <AuthProvider>
@@ -144,6 +152,7 @@ export default function App() {
           <Route path="/reset-password"  element={<ResetPassword />} />
           <Route path="/verify-email"    element={<VerifyEmail />} />
           <Route path="/invite"          element={<AcceptInvite />} />
+          <Route path="/onboarding" element={<OnboardingRoute><Onboarding /></OnboardingRoute>} />
           <Route path="/dev"        element={<DevRoute><DevDashboard /></DevRoute>} />
           <Route path="/"             element={<DevRedirect><PrivateLayout><Dashboard /></PrivateLayout></DevRedirect>} />
           <Route path="/rooms"        element={<PrivateLayout><Rooms /></PrivateLayout>} />

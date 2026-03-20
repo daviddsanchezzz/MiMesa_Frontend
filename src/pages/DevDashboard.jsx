@@ -30,6 +30,8 @@ function StatCard({ label, value, sub }) {
 export default function DevDashboard() {
   const { session, logout } = useAuth();
 
+  const [tab, setTab] = useState('businesses');
+
   const [businesses, setBusinesses] = useState([]);
   const [loading, setLoading]       = useState(true);
   const [search, setSearch]         = useState('');
@@ -46,6 +48,12 @@ export default function DevDashboard() {
 
   // Delete confirm
   const [deleting, setDeleting] = useState(null); // businessId
+
+  // Invite user form
+  const [inviteForm, setInviteForm]       = useState({ name: '', email: '' });
+  const [inviting, setInviting]           = useState(false);
+  const [inviteError, setInviteError]     = useState('');
+  const [inviteSuccess, setInviteSuccess] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -98,6 +106,23 @@ export default function DevDashboard() {
     }
   };
 
+  // ── Invite user ────────────────────────────────────────────────────────
+  const handleInviteUser = async (e) => {
+    e.preventDefault();
+    setInviteError('');
+    setInviteSuccess('');
+    setInviting(true);
+    try {
+      await api.post('/dev/invite-user', inviteForm);
+      setInviteSuccess(`Invitación enviada a ${inviteForm.email}`);
+      setInviteForm({ name: '', email: '' });
+    } catch (err) {
+      setInviteError(err.response?.data?.message || err.message);
+    } finally {
+      setInviting(false);
+    }
+  };
+
   // ── Delete ─────────────────────────────────────────────────────────────
   const handleDelete = async (id) => {
     setDeleting(id);
@@ -129,126 +154,199 @@ export default function DevDashboard() {
         </div>
       </header>
 
+      {/* Tabs */}
+      <div className="bg-slate-800 border-b border-slate-700 px-6">
+        <div className="max-w-7xl mx-auto flex gap-1">
+          {[
+            { id: 'businesses', label: 'Negocios' },
+            { id: 'users',      label: 'Usuarios' },
+          ].map(t => (
+            <button
+              key={t.id}
+              onClick={() => setTab(t.id)}
+              className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+                tab === t.id
+                  ? 'border-amber-400 text-amber-400'
+                  : 'border-transparent text-slate-400 hover:text-slate-200'
+              }`}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* ── Content ────────────────────────────────────────────────────── */}
       <main className="flex-1 px-4 sm:px-8 py-8 max-w-7xl mx-auto w-full">
 
-        {/* Stats */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <StatCard label="Negocios totales"   value={businesses.length} />
-          <StatCard label="Con plan de pago"   value={paidCount} sub={`${businesses.length - paidCount} en free`} />
-          <StatCard label="Reservas (30 días)" value={totalReservations30d} />
-          <StatCard label="Total reservas"     value={businesses.reduce((s, b) => s + b.totalReservations, 0)} />
-        </div>
-
-        {/* Toolbar */}
-        <div className="flex flex-col sm:flex-row gap-3 mb-5">
-          <input
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Buscar por nombre o email..."
-            className="flex-1 border border-gray-300 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white"
-          />
-          <select
-            value={planFilter}
-            onChange={e => setPlanFilter(e.target.value)}
-            className="border border-gray-300 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-400"
-          >
-            <option value="all">Todos los planes</option>
-            <option value="free">Free</option>
-            <option value="basic">Basic</option>
-            <option value="pro">Pro</option>
-          </select>
-          <button
-            onClick={() => setShowModal(true)}
-            className="flex items-center gap-2 bg-amber-400 hover:bg-amber-300 text-slate-900 font-semibold text-sm px-4 py-2 rounded-xl transition-colors shrink-0"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
-              <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z"/>
-            </svg>
-            Nuevo negocio
-          </button>
-        </div>
-
-        {/* Table */}
-        <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
-          {loading ? (
-            <div className="py-20 text-center text-sm text-gray-400">Cargando...</div>
-          ) : filtered.length === 0 ? (
-            <div className="py-20 text-center text-sm text-gray-400">Sin resultados</div>
-          ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-gray-100 bg-gray-50">
-                    <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Negocio</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Plan</th>
-                    <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Miembros</th>
-                    <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Reservas 30d</th>
-                    <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Total</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Alta</th>
-                    <th className="px-4 py-3" />
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-50">
-                  {filtered.map(b => (
-                    <tr key={b.id} className="hover:bg-gray-50 transition-colors">
-                      {/* Name + email */}
-                      <td className="px-5 py-3.5">
-                        <p className="font-semibold text-gray-900 truncate max-w-[180px]">{b.name}</p>
-                        <p className="text-xs text-gray-400 truncate max-w-[180px]">{b.email}</p>
-                      </td>
-
-                      {/* Plan select */}
-                      <td className="px-4 py-3.5">
-                        <select
-                          value={b.plan}
-                          disabled={changingPlan === b.id}
-                          onChange={e => handlePlanChange(b.id, e.target.value)}
-                          className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 disabled:opacity-50"
-                        >
-                          <option value="free">Free</option>
-                          <option value="basic">Basic</option>
-                          <option value="pro">Pro</option>
-                        </select>
-                      </td>
-
-                      <td className="px-4 py-3.5 text-center text-gray-700">{b.memberCount}</td>
-                      <td className="px-4 py-3.5 text-center text-gray-700">{b.reservationsLast30d}</td>
-                      <td className="px-4 py-3.5 text-center text-gray-500">{b.totalReservations}</td>
-
-                      {/* Created */}
-                      <td className="px-4 py-3.5 text-xs text-gray-400 whitespace-nowrap">
-                        {new Date(b.createdAt).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
-                      </td>
-
-                      {/* Delete */}
-                      <td className="px-4 py-3.5 text-right">
-                        {deleting === b.id ? (
-                          <span className="text-xs text-gray-400">Eliminando...</span>
-                        ) : (
-                          <button
-                            onClick={() => {
-                              if (window.confirm(`¿Eliminar "${b.name}"? Esta acción no se puede deshacer.`)) {
-                                handleDelete(b.id);
-                              }
-                            }}
-                            className="text-gray-300 hover:text-red-500 transition-colors"
-                            title="Eliminar negocio"
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
-                              <path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5Zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5Z" clipRule="evenodd"/>
-                            </svg>
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+        {tab === 'businesses' && (
+          <>
+            {/* Stats */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+              <StatCard label="Negocios totales"   value={businesses.length} />
+              <StatCard label="Con plan de pago"   value={paidCount} sub={`${businesses.length - paidCount} en free`} />
+              <StatCard label="Reservas (30 días)" value={totalReservations30d} />
+              <StatCard label="Total reservas"     value={businesses.reduce((s, b) => s + b.totalReservations, 0)} />
             </div>
-          )}
-        </div>
-        <p className="text-xs text-gray-400 mt-3 text-right">{filtered.length} de {businesses.length} negocios</p>
+
+            {/* Toolbar */}
+            <div className="flex flex-col sm:flex-row gap-3 mb-5">
+              <input
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Buscar por nombre o email..."
+                className="flex-1 border border-gray-300 rounded-xl px-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400 bg-white"
+              />
+              <select
+                value={planFilter}
+                onChange={e => setPlanFilter(e.target.value)}
+                className="border border-gray-300 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-400"
+              >
+                <option value="all">Todos los planes</option>
+                <option value="free">Free</option>
+                <option value="basic">Basic</option>
+                <option value="pro">Pro</option>
+              </select>
+              <button
+                onClick={() => setShowModal(true)}
+                className="flex items-center gap-2 bg-amber-400 hover:bg-amber-300 text-slate-900 font-semibold text-sm px-4 py-2 rounded-xl transition-colors shrink-0"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                  <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z"/>
+                </svg>
+                Nuevo negocio
+              </button>
+            </div>
+
+            {/* Table */}
+            <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+              {loading ? (
+                <div className="py-20 text-center text-sm text-gray-400">Cargando...</div>
+              ) : filtered.length === 0 ? (
+                <div className="py-20 text-center text-sm text-gray-400">Sin resultados</div>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-100 bg-gray-50">
+                        <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Negocio</th>
+                        <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Plan</th>
+                        <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Miembros</th>
+                        <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Reservas 30d</th>
+                        <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Total</th>
+                        <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Alta</th>
+                        <th className="px-4 py-3" />
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {filtered.map(b => (
+                        <tr key={b.id} className="hover:bg-gray-50 transition-colors">
+                          {/* Name + email */}
+                          <td className="px-5 py-3.5">
+                            <p className="font-semibold text-gray-900 truncate max-w-[180px]">{b.name}</p>
+                            <p className="text-xs text-gray-400 truncate max-w-[180px]">{b.email}</p>
+                          </td>
+
+                          {/* Plan select */}
+                          <td className="px-4 py-3.5">
+                            <select
+                              value={b.plan}
+                              disabled={changingPlan === b.id}
+                              onChange={e => handlePlanChange(b.id, e.target.value)}
+                              className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 disabled:opacity-50"
+                            >
+                              <option value="free">Free</option>
+                              <option value="basic">Basic</option>
+                              <option value="pro">Pro</option>
+                            </select>
+                          </td>
+
+                          <td className="px-4 py-3.5 text-center text-gray-700">{b.memberCount}</td>
+                          <td className="px-4 py-3.5 text-center text-gray-700">{b.reservationsLast30d}</td>
+                          <td className="px-4 py-3.5 text-center text-gray-500">{b.totalReservations}</td>
+
+                          {/* Created */}
+                          <td className="px-4 py-3.5 text-xs text-gray-400 whitespace-nowrap">
+                            {new Date(b.createdAt).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
+                          </td>
+
+                          {/* Delete */}
+                          <td className="px-4 py-3.5 text-right">
+                            {deleting === b.id ? (
+                              <span className="text-xs text-gray-400">Eliminando...</span>
+                            ) : (
+                              <button
+                                onClick={() => {
+                                  if (window.confirm(`¿Eliminar "${b.name}"? Esta acción no se puede deshacer.`)) {
+                                    handleDelete(b.id);
+                                  }
+                                }}
+                                className="text-gray-300 hover:text-red-500 transition-colors"
+                                title="Eliminar negocio"
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                                  <path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5Zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5Z" clipRule="evenodd"/>
+                                </svg>
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+            <p className="text-xs text-gray-400 mt-3 text-right">{filtered.length} de {businesses.length} negocios</p>
+          </>
+        )}
+
+        {tab === 'users' && (
+          <div className="max-w-md">
+            <h2 className="text-lg font-bold text-gray-900 mb-1">Invitar usuario</h2>
+            <p className="text-sm text-gray-500 mb-5">
+              El usuario recibirá un email para activar su cuenta y crear su restaurante.
+            </p>
+
+            {inviteError && (
+              <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4">
+                {inviteError}
+              </div>
+            )}
+            {inviteSuccess && (
+              <div className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-xl px-4 py-3 mb-4">
+                {inviteSuccess}
+              </div>
+            )}
+
+            <form onSubmit={handleInviteUser} className="bg-white border border-gray-200 rounded-2xl p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Nombre *</label>
+                <input
+                  required value={inviteForm.name}
+                  onChange={e => setInviteForm(f => ({ ...f, name: e.target.value }))}
+                  placeholder="Juan García"
+                  className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 mb-1">Email *</label>
+                <input
+                  required type="email" value={inviteForm.email}
+                  onChange={e => setInviteForm(f => ({ ...f, email: e.target.value }))}
+                  placeholder="juan@restaurante.com"
+                  className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                />
+              </div>
+              <button
+                type="submit" disabled={inviting}
+                className="w-full bg-amber-400 hover:bg-amber-300 disabled:opacity-60 text-slate-900 py-2.5 rounded-xl text-sm font-semibold transition-colors"
+              >
+                {inviting ? 'Enviando invitación...' : 'Enviar invitación'}
+              </button>
+            </form>
+          </div>
+        )}
       </main>
 
       {/* ── New business modal ──────────────────────────────────────────── */}

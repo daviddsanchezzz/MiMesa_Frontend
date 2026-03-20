@@ -185,16 +185,22 @@ function MobileRow({ r, tables, onEdit, onCancel, onDelete, onAssign, onQuickSta
 
           {/* Quick status buttons */}
           <div className="flex gap-2 flex-wrap">
-            {r.status !== 'confirmed' && r.status !== 'cancelled' && (
+            {r.status === 'pending' && (
               <button onClick={() => onQuickStatus(r._id, 'confirmed')}
                 className="flex-1 text-xs font-semibold py-2 rounded-xl bg-indigo-600 text-white active:bg-indigo-700 transition-colors">
                 Confirmar
               </button>
             )}
-            {r.status !== 'seated' && r.status !== 'cancelled' && (
+            {r.status === 'pending' && (
               <button onClick={() => onQuickStatus(r._id, 'seated')}
                 className="flex-1 text-xs font-semibold py-2 rounded-xl bg-emerald-600 text-white active:bg-emerald-700 transition-colors">
-                Sentar
+                Sentar directo
+              </button>
+            )}
+            {r.status === 'confirmed' && (
+              <button onClick={() => onQuickStatus(r._id, 'seated')}
+                className="flex-1 text-xs font-semibold py-2 rounded-xl bg-emerald-600 text-white active:bg-emerald-700 transition-colors">
+                Pasar a sentada
               </button>
             )}
             <button onClick={onEdit}
@@ -313,12 +319,17 @@ export default function Reservations() {
     await api.put(`/reservations/${id}`, { status }); load();
   };
 
+  const handleCancel = async (id) => {
+    if (!confirm('¿Seguro que quieres cancelar esta reserva?')) return;
+    await quickStatus(id, 'cancelled');
+  };
+
   const assignTable = async (id, tableId) => {
     await api.put(`/reservations/${id}`, { tableId }); load();
   };
 
   const handleDelete = async (id) => {
-    if (!confirm('¿Eliminar esta reserva?')) return;
+    if (!confirm('¿Seguro que quieres eliminar esta reserva?')) return;
     await api.delete(`/reservations/${id}`); load();
   };
 
@@ -467,7 +478,7 @@ export default function Reservations() {
             r={r}
             tables={tables}
             onEdit={() => setModal({ mode: 'edit', reservation: r })}
-            onCancel={() => quickStatus(r._id, 'cancelled')}
+            onCancel={() => handleCancel(r._id)}
             onDelete={() => handleDelete(r._id)}
             onAssign={assignTable}
             onQuickStatus={quickStatus}
@@ -606,14 +617,38 @@ export default function Reservations() {
                 <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${s.cls}`}>{s.label}</span>
               </td>
               <td className="px-4 py-3.5 whitespace-nowrap">
-                <div className="flex items-center gap-0.5">
-                  <ActionBtn onClick={() => setModal({ mode: 'edit', reservation: r })} color="blue">Editar</ActionBtn>
-                  {r.status !== 'cancelled' && <ActionBtn onClick={() => quickStatus(r._id, 'cancelled')} color="red">Cancelar</ActionBtn>}
-                  <ActionBtn onClick={() => handleDelete(r._id)} color="gray">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
+                <div className="flex items-center justify-end gap-1">
+                  {r.status === 'pending' && (
+                    <ActionBtn onClick={() => quickStatus(r._id, 'confirmed')} color="blue">Confirmar</ActionBtn>
+                  )}
+                  {r.status === 'confirmed' && (
+                    <ActionBtn onClick={() => quickStatus(r._id, 'seated')} color="green">Sentar</ActionBtn>
+                  )}
+                  {r.status !== 'cancelled' && (
+                    <ActionBtn onClick={() => handleCancel(r._id)} color="red">Cancelar</ActionBtn>
+                  )}
+
+                  <button
+                    onClick={() => setModal({ mode: 'edit', reservation: r })}
+                    className="p-1.5 rounded-lg text-indigo-600 hover:bg-indigo-50 transition-colors"
+                    title="Editar"
+                    aria-label="Editar"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
+                      <path d="M11.013 1.427a1.75 1.75 0 0 1 2.474 2.475l-7.75 7.75a1.75 1.75 0 0 1-.777.445l-2.19.627a.75.75 0 0 1-.927-.927l.626-2.19a1.75 1.75 0 0 1 .446-.777l7.75-7.75Zm1.414 1.06a.25.25 0 0 0-.354 0L11.03 3.53l1.44 1.44 1.043-1.043a.25.25 0 0 0 0-.354l-1.086-1.086ZM11.41 6.03 9.97 4.59 3.975 10.586a.25.25 0 0 0-.064.11l-.33 1.152 1.151-.33a.25.25 0 0 0 .111-.064L11.41 6.03Z" />
+                    </svg>
+                  </button>
+
+                  <button
+                    onClick={() => handleDelete(r._id)}
+                    className="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
+                    title="Eliminar"
+                    aria-label="Eliminar"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
                       <path fillRule="evenodd" d="M5 3.25V4H2.75a.75.75 0 0 0 0 1.5h.3l.815 8.15A1.5 1.5 0 0 0 5.357 15h5.285a1.5 1.5 0 0 0 1.493-1.35l.815-8.15h.3a.75.75 0 0 0 0-1.5H11v-.75A2.25 2.25 0 0 0 8.75 1h-1.5A2.25 2.25 0 0 0 5 3.25Zm2.25-.75a.75.75 0 0 0-.75.75V4h3v-.75a.75.75 0 0 0-.75-.75h-1.5ZM6.05 6a.75.75 0 0 1 .787.713l.275 5.5a.75.75 0 0 1-1.498.075l-.275-5.5A.75.75 0 0 1 6.05 6Zm3.9 0a.75.75 0 0 1 .712.787l-.275 5.5a.75.75 0 0 1-1.498-.075l.275-5.5a.75.75 0 0 1 .786-.711Z" clipRule="evenodd" />
                     </svg>
-                  </ActionBtn>
+                  </button>
                 </div>
               </td>
             </tr>

@@ -51,14 +51,19 @@ export function AuthProvider({ children }) {
 
   // ── Login ──────────────────────────────────────────────────────────────────
   const login = async (email, password) => {
-    const { error } = await authClient.signIn.email({ email, password });
+    const { data, error } = await authClient.signIn.email({ email, password });
     if (error) throw new Error(error.message || 'Credenciales incorrectas');
+    // onSuccess in authClient stores the token; also trigger business fetch directly
+    // so we don't depend on useSession() re-syncing (cross-origin cookies are unreliable)
+    if (data?.token) setStoredToken(data.token);
+    await refreshBusiness();
   };
 
   // ── Register ───────────────────────────────────────────────────────────────
   const register = async (name, email, password, phone = '') => {
-    const { error } = await authClient.signUp.email({ name, email, password, phone });
+    const { data, error } = await authClient.signUp.email({ name, email, password, phone });
     if (error) throw new Error(error.message || 'Error al crear la cuenta');
+    if (data?.token) setStoredToken(data.token);
   };
 
   // ── Logout ─────────────────────────────────────────────────────────────────

@@ -17,9 +17,12 @@ export const authClient = createAuthClient({
   // On every request, attach it as Authorization: Bearer so Better Auth
   // can validate the session without relying on cross-origin cookies.
   fetchOptions: {
-    onResponse: (ctx) => {
+    // After sign-in / sign-up: capture the session token from the response body
+    // so we can use it as Bearer for cross-origin requests (cookies don't work cross-origin).
+    onSuccess: (ctx) => {
       try {
-        const token = ctx.response?.headers?.get?.('set-auth-token');
+        const token = ctx.data?.token
+          ?? ctx.response?.headers?.get?.('set-auth-token');
         if (token) setStoredToken(token);
       } catch { /* ignore */ }
     },

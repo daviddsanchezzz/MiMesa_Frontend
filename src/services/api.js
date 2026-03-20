@@ -22,6 +22,11 @@ api.interceptors.request.use(config => {
   if (_activeBusinessId) {
     config.headers['X-Business-Id'] = _activeBusinessId;
   }
+  // Send Better Auth session token as Bearer for cross-origin setups
+  const token = localStorage.getItem('ba_session_token');
+  if (token) {
+    config.headers['Authorization'] = `Bearer ${token}`;
+  }
   return config;
 });
 

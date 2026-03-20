@@ -143,7 +143,7 @@ export default function DevDashboard() {
       <header className="bg-slate-900 text-white px-6 py-3 flex items-center justify-between shrink-0 sticky top-0 z-30">
         <div className="flex items-center gap-3">
           <span className="text-xs font-mono font-bold bg-amber-400 text-slate-900 px-2 py-0.5 rounded">DEV</span>
-          <span className="text-sm font-semibold tracking-tight">MiMesa Console</span>
+          <span className="text-sm font-semibold tracking-tight">Tableo Console</span>
         </div>
         <div className="flex items-center gap-5">
           <span className="text-xs text-slate-400 hidden sm:block">{session?.user?.email}</span>

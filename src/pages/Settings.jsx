@@ -819,7 +819,7 @@ function PublicoSection() {
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(null); // 'url' | 'embed'
   const publicUrl = `${window.location.origin}/public/${business?.id}/reserve`;
-  const embedCode = `<iframe\n  id="mimesa-frame"\n  src="${publicUrl}?embed=1"\n  style="width:100%; border:none; min-height:500px;"\n></iframe>\n<script>\n  window.addEventListener("message", function(e) {\n    if (e.data.type === "MIMESA_HEIGHT")\n      document.getElementById("mimesa-frame").style.height = e.data.height + "px";\n  });\n<\/script>`;
+  const embedCode = `<iframe\n  id="tableo-frame"\n  src="${publicUrl}?embed=1"\n  style="width:100%; border:none; min-height:500px;"\n></iframe>\n<script>\n  window.addEventListener("message", function(e) {\n    if (e.data.type === "TABLEO_HEIGHT")\n      document.getElementById("tableo-frame").style.height = e.data.height + "px";\n  });\n<\/script>`;
 
   useEffect(() => {
     if (business?.brandColor) setBrandColor(business.brandColor);

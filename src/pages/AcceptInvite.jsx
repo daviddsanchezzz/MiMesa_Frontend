@@ -150,7 +150,7 @@ export default function AcceptInvite() {
                   <path d="M3 2a1 1 0 0 0-1 1v1a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1H3ZM2 9a1 1 0 0 1 1-1h18a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V9ZM1 15a1 1 0 0 1 1-1h8a1 1 0 1 1 0 2H2a1 1 0 0 1-1-1Z" />
                 </svg>
               </div>
-              <h1 className="text-xl font-bold text-gray-900">MiMesa</h1>
+              <h1 className="text-xl font-bold text-gray-900">Tableo</h1>
               <p className="text-sm text-gray-500 mt-1">Te han dado acceso a la plataforma</p>
             </>
           ) : (

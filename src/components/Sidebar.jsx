@@ -89,7 +89,7 @@ export default function Sidebar({ isOpen, onClose }) {
             </svg>
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-white text-sm font-semibold leading-tight">MiMesa</p>
+            <p className="text-white text-sm font-semibold leading-tight">Tableo</p>
             {memberships.length > 1 ? (
               <select
                 value={business?.id ?? ''}

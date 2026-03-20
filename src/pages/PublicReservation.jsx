@@ -173,7 +173,7 @@ export default function PublicReservation() {
   useEffect(() => {
     if (!isEmbed) return;
     const sendHeight = () => {
-      window.parent.postMessage({ type: 'MIMESA_HEIGHT', height: document.documentElement.scrollHeight }, '*');
+      window.parent.postMessage({ type: 'TABLEO_HEIGHT', height: document.documentElement.scrollHeight }, '*');
     };
     sendHeight();
     window.addEventListener('resize', sendHeight);

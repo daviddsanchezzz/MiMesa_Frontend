@@ -1,35 +1,47 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { authClient } from '../lib/authClient';
-import api from '../services/api';
+import api, { setActiveBusinessId } from '../services/api';
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  // Better Auth session (user identity + session metadata)
+  // Better Auth session (user identity)
   const { data: session, isPending: sessionLoading } = authClient.useSession();
 
-  // Business data (restaurant settings linked to the logged-in user)
-  const [business, setBusiness]         = useState(null);
+  // Business data for the currently active context
+  const [business, setBusiness]               = useState(null);
   const [businessLoading, setBusinessLoading] = useState(false);
+
+  // All businesses this user belongs to (for multi-business switching)
+  const [memberships, setMemberships] = useState([]);
 
   const userId = session?.user?.id;
 
-  // Whenever the Better Auth session changes, (re)load the Business
+  const applyMeResponse = useCallback((data) => {
+    setBusiness(data);
+    setMemberships(data.memberships ?? []);
+    // Keep the header in sync with the active business
+    if (data.id) setActiveBusinessId(data.id);
+  }, []);
+
+  // Reload business context whenever the session changes
   useEffect(() => {
     if (!userId) {
       setBusiness(null);
+      setMemberships([]);
+      setActiveBusinessId(null);
       return;
     }
     setBusinessLoading(true);
     api.get('/auth/me')
-      .then(({ data }) => setBusiness(data))
+      .then(({ data }) => applyMeResponse(data))
       .catch(() => setBusiness(null))
       .finally(() => setBusinessLoading(false));
-  }, [userId]);
+  }, [userId, applyMeResponse]);
 
   // Force-logout event dispatched by the axios interceptor on unrecoverable 401
   useEffect(() => {
-    const handle = () => setBusiness(null);
+    const handle = () => { setBusiness(null); setMemberships([]); setActiveBusinessId(null); };
     window.addEventListener('auth:logout', handle);
     return () => window.removeEventListener('auth:logout', handle);
   }, []);
@@ -40,52 +52,59 @@ export function AuthProvider({ children }) {
   const login = async (email, password) => {
     const { error } = await authClient.signIn.email({ email, password });
     if (error) throw new Error(error.message || 'Credenciales incorrectas');
-    // session state updates automatically via useSession()
   };
 
   // ── Register ───────────────────────────────────────────────────────────────
   const register = async (name, email, password, phone = '') => {
     const { error } = await authClient.signUp.email({ name, email, password, phone });
     if (error) throw new Error(error.message || 'Error al crear la cuenta');
-    // Business is auto-created on the backend via databaseHook
   };
 
   // ── Logout ─────────────────────────────────────────────────────────────────
   const logout = async () => {
     await authClient.signOut();
     setBusiness(null);
+    setMemberships([]);
+    setActiveBusinessId(null);
   };
 
-  // ── Refresh business data (used after settings updates) ───────────────────
+  // ── Refresh current business data ─────────────────────────────────────────
   const refreshBusiness = async () => {
     try {
       const { data } = await api.get('/auth/me');
-      setBusiness(data);
-    } catch {
-      // silently ignore
+      applyMeResponse(data);
+    } catch { /* silently ignore */ }
+  };
+
+  // ── Switch active business ─────────────────────────────────────────────────
+  // Sets the X-Business-Id header and reloads context from the server.
+  const switchBusiness = async (businessId) => {
+    setActiveBusinessId(businessId);
+    setBusinessLoading(true);
+    try {
+      const { data } = await api.get('/auth/me');
+      applyMeResponse(data);
+    } catch { /* silently ignore */ } finally {
+      setBusinessLoading(false);
     }
   };
 
-  // Convenience helpers derived from business data
+  // Convenience helpers derived from active business
+  const isDev              = business?.isDev ?? false;
   const role               = business?.role ?? null;
   const plan               = business?.plan ?? 'free';
   const subscriptionStatus = business?.subscriptionStatus ?? null;
 
-  /** Returns true if the current user has at least the given role level */
   const HIERARCHY = { owner: 3, manager: 2, staff: 1 };
-  const hasRole = (minRole) => (HIERARCHY[role] ?? 0) >= (HIERARCHY[minRole] ?? 0);
-
-  /** Returns true if the subscription is currently active */
+  const hasRole   = (minRole) => (HIERARCHY[role] ?? 0) >= (HIERARCHY[minRole] ?? 0);
   const isSubscribed = subscriptionStatus === 'active' || subscriptionStatus === 'trialing';
 
   return (
     <AuthContext.Provider value={{
-      business, loading,
-      login, register, logout, refreshBusiness,
-      // Role / plan helpers
-      role, plan, subscriptionStatus,
+      business, loading, memberships,
+      login, register, logout, refreshBusiness, switchBusiness,
+      isDev, role, plan, subscriptionStatus,
       hasRole, isSubscribed,
-      // Raw Better Auth session (for Profile / 2FA pages)
       session: session ?? null,
     }}>
       {children}

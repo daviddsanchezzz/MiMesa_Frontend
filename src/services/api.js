@@ -6,12 +6,26 @@ const BASE_URL = import.meta.env.VITE_API_URL
 
 const api = axios.create({
   baseURL: BASE_URL,
-  withCredentials: true, // sends Better Auth session cookie on every request
+  withCredentials: true,
+});
+
+// ── Active business context ───────────────────────────────────────────────────
+// Set by AuthContext when the user switches between businesses.
+// Sent as X-Business-Id header so the backend knows which business to operate on.
+let _activeBusinessId = null;
+
+export function setActiveBusinessId(id) {
+  _activeBusinessId = id || null;
+}
+
+api.interceptors.request.use(config => {
+  if (_activeBusinessId) {
+    config.headers['X-Business-Id'] = _activeBusinessId;
+  }
+  return config;
 });
 
 // ── 401 handler ──────────────────────────────────────────────────────────────
-// If the session is invalid or expired, dispatch logout event so AuthContext
-// can clear state and redirect to login.
 api.interceptors.response.use(
   (response) => response,
   (error) => {

@@ -51,7 +51,7 @@ const configLinks = [
 ];
 
 export default function Sidebar({ isOpen, onClose }) {
-  const { business, logout, hasRole } = useAuth();
+  const { business, memberships, logout, hasRole, switchBusiness } = useAuth();
   const initial = business?.name?.[0]?.toUpperCase() || 'R';
 
   const handleNavClick = () => {
@@ -67,7 +67,7 @@ export default function Sidebar({ isOpen, onClose }) {
         ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}
     >
-      {/* Brand */}
+      {/* Brand + Business switcher */}
       <div className="px-4 py-5 border-b border-slate-700/50">
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-700 flex items-center justify-center shrink-0 shadow-lg shadow-indigo-900/40">
@@ -75,9 +75,23 @@ export default function Sidebar({ isOpen, onClose }) {
               <path d="M3 2a1 1 0 0 0-1 1v1a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1H3ZM2 9a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V9ZM1 15a1 1 0 0 1 1-1h6a1 1 0 0 1 0 2H2a1 1 0 0 1-1-1Z" />
             </svg>
           </div>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <p className="text-white text-sm font-semibold leading-tight">MiMesa</p>
-            <p className="text-slate-400 text-xs truncate leading-tight mt-0.5">{business?.name}</p>
+            {memberships.length > 1 ? (
+              <select
+                value={business?.id ?? ''}
+                onChange={e => { switchBusiness(e.target.value); handleNavClick(); }}
+                className="mt-0.5 w-full bg-transparent text-slate-400 text-xs focus:outline-none cursor-pointer truncate"
+              >
+                {memberships.map(m => (
+                  <option key={m.businessId} value={m.businessId} className="bg-slate-800 text-slate-200">
+                    {m.businessName}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <p className="text-slate-400 text-xs truncate leading-tight mt-0.5">{business?.name}</p>
+            )}
           </div>
         </div>
       </div>

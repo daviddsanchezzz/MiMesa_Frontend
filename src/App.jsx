@@ -14,6 +14,7 @@ import Customers from './pages/Customers';
 import Settings from './pages/Settings';
 import Team from './pages/Team';
 import AcceptInvite from './pages/AcceptInvite';
+import DevDashboard from './pages/DevDashboard';
 import PublicReservation from './pages/PublicReservation';
 import PublicCancel from './pages/PublicCancel';
 import Sidebar from './components/Sidebar';
@@ -111,6 +112,20 @@ function PublicRoute({ children }) {
   return children;
 }
 
+function DevRoute({ children }) {
+  const { isDev, loading } = useAuth();
+  if (loading) return <LoadingScreen />;
+  if (!isDev) return <Navigate to="/" replace />;
+  return children;
+}
+
+function DevRedirect({ children }) {
+  const { isDev, loading } = useAuth();
+  if (loading) return <LoadingScreen />;
+  if (isDev) return <Navigate to="/dev" replace />;
+  return children;
+}
+
 export default function App() {
   return (
     <AuthProvider>
@@ -126,7 +141,8 @@ export default function App() {
           <Route path="/reset-password"  element={<ResetPassword />} />
           <Route path="/verify-email"    element={<VerifyEmail />} />
           <Route path="/invite"          element={<AcceptInvite />} />
-          <Route path="/"             element={<PrivateLayout><Dashboard /></PrivateLayout>} />
+          <Route path="/dev"        element={<DevRoute><DevDashboard /></DevRoute>} />
+          <Route path="/"             element={<DevRedirect><PrivateLayout><Dashboard /></PrivateLayout></DevRedirect>} />
           <Route path="/rooms"        element={<PrivateLayout><Rooms /></PrivateLayout>} />
           <Route path="/tables"       element={<FullBleedLayout><Tables /></FullBleedLayout>} />
           <Route path="/reservations" element={<PrivateLayout><Reservations /></PrivateLayout>} />

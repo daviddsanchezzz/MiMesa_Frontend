@@ -28,7 +28,7 @@ function Avatar({ name, email }) {
   );
 }
 
-function MembershipCard({ membership, onToggle }) {
+function MembershipCard({ membership, onToggle, disabled = false }) {
   const prefs = membership.notificationPreferences || {};
 
   return (
@@ -42,26 +42,28 @@ function MembershipCard({ membership, onToggle }) {
       </div>
 
       <div className="space-y-2">
-        <label className="flex items-start justify-between gap-3 p-3 rounded-xl border border-gray-200 bg-gray-50/50 cursor-pointer">
+        <label className={`flex items-start justify-between gap-3 p-3 rounded-xl border border-gray-200 bg-gray-50/50 ${disabled ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'}`}>
           <span className="text-sm text-gray-700">Avisarme por email cuando se crea una reserva</span>
           <span className="relative inline-flex h-6 w-11 shrink-0 items-center">
             <input
               type="checkbox"
               className="peer sr-only"
               checked={!!prefs.newReservationEmail}
+              disabled={disabled}
               onChange={(e) => onToggle({ newReservationEmail: e.target.checked })}
             />
             <span className="absolute inset-0 rounded-full bg-gray-300 peer-checked:bg-indigo-500 transition-colors" />
             <span className="absolute left-0.5 h-5 w-5 rounded-full bg-white shadow-sm peer-checked:translate-x-5 transition-transform" />
           </span>
         </label>
-        <label className="flex items-start justify-between gap-3 p-3 rounded-xl border border-gray-200 bg-gray-50/50 cursor-pointer">
+        <label className={`flex items-start justify-between gap-3 p-3 rounded-xl border border-gray-200 bg-gray-50/50 ${disabled ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'}`}>
           <span className="text-sm text-gray-700">Avisarme por email cuando se cancela una reserva</span>
           <span className="relative inline-flex h-6 w-11 shrink-0 items-center">
             <input
               type="checkbox"
               className="peer sr-only"
               checked={!!prefs.cancelledReservationEmail}
+              disabled={disabled}
               onChange={(e) => onToggle({ cancelledReservationEmail: e.target.checked })}
             />
             <span className="absolute inset-0 rounded-full bg-gray-300 peer-checked:bg-indigo-500 transition-colors" />
@@ -74,7 +76,7 @@ function MembershipCard({ membership, onToggle }) {
 }
 
 export default function Profile() {
-  const { business, switchBusiness, refreshBusiness } = useAuth();
+  const { business, switchBusiness, refreshBusiness, role } = useAuth();
   const [loading, setLoading] = useState(true);
   const [pageError, setPageError] = useState('');
   const [savingProfile, setSavingProfile] = useState(false);
@@ -101,6 +103,7 @@ export default function Profile() {
     () => memberships.filter((m) => m.role === 'owner'),
     [memberships]
   );
+  const isStaff = role === 'staff';
   const isOwnerAnyBusiness = ownerMemberships.length > 0;
 
   const load = async () => {
@@ -159,6 +162,8 @@ export default function Profile() {
   };
 
   const updateMembershipPreference = async (membershipId, patch) => {
+    if (isStaff) return;
+
     const prev = memberships;
     const optimistic = memberships.map((m) =>
       m.id === membershipId
@@ -311,6 +316,11 @@ export default function Profile() {
         <h2 className="text-sm font-semibold text-gray-900 mb-4">
           {memberships.length <= 1 ? 'Notificaciones' : 'Notificaciones por negocio'}
         </h2>
+        {isStaff && (
+          <p className="text-xs text-gray-500 mb-4">
+            Tu rol de staff no permite activar notificaciones de reserva.
+          </p>
+        )}
 
         {memberships.length === 0 ? (
           <div className="text-center py-12 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
@@ -321,26 +331,28 @@ export default function Profile() {
             {memberships.length === 1 ? (
               <div className="border border-gray-200 rounded-2xl p-4 bg-white">
                 <div className="space-y-2">
-                  <label className="flex items-start justify-between gap-3 p-3 rounded-xl border border-gray-200 bg-gray-50/50 cursor-pointer">
+                  <label className={`flex items-start justify-between gap-3 p-3 rounded-xl border border-gray-200 bg-gray-50/50 ${isStaff ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'}`}>
                     <span className="text-sm text-gray-700">Avisarme por email cuando se crea una reserva</span>
                     <span className="relative inline-flex h-6 w-11 shrink-0 items-center">
                       <input
                         type="checkbox"
                         className="peer sr-only"
                         checked={!!memberships[0].notificationPreferences?.newReservationEmail}
+                        disabled={isStaff}
                         onChange={(e) => updateMembershipPreference(memberships[0].id, { newReservationEmail: e.target.checked })}
                       />
                       <span className="absolute inset-0 rounded-full bg-gray-300 peer-checked:bg-indigo-500 transition-colors" />
                       <span className="absolute left-0.5 h-5 w-5 rounded-full bg-white shadow-sm peer-checked:translate-x-5 transition-transform" />
                     </span>
                   </label>
-                  <label className="flex items-start justify-between gap-3 p-3 rounded-xl border border-gray-200 bg-gray-50/50 cursor-pointer">
+                  <label className={`flex items-start justify-between gap-3 p-3 rounded-xl border border-gray-200 bg-gray-50/50 ${isStaff ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'}`}>
                     <span className="text-sm text-gray-700">Avisarme por email cuando se cancela una reserva</span>
                     <span className="relative inline-flex h-6 w-11 shrink-0 items-center">
                       <input
                         type="checkbox"
                         className="peer sr-only"
                         checked={!!memberships[0].notificationPreferences?.cancelledReservationEmail}
+                        disabled={isStaff}
                         onChange={(e) => updateMembershipPreference(memberships[0].id, { cancelledReservationEmail: e.target.checked })}
                       />
                       <span className="absolute inset-0 rounded-full bg-gray-300 peer-checked:bg-indigo-500 transition-colors" />
@@ -354,6 +366,7 @@ export default function Profile() {
                 <MembershipCard
                   key={m.id}
                   membership={m}
+                  disabled={isStaff}
                   onToggle={(patch) => updateMembershipPreference(m.id, patch)}
                 />
               ))

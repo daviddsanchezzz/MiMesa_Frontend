@@ -138,6 +138,13 @@ function OnboardingRoute({ children }) {
   return children;
 }
 
+function RoleRoute({ minRole, children }) {
+  const { loading, hasRole } = useAuth();
+  if (loading) return <LoadingScreen />;
+  if (!hasRole(minRole)) return <Navigate to="/" replace />;
+  return children;
+}
+
 export default function App() {
   return (
     <AuthProvider>
@@ -156,14 +163,14 @@ export default function App() {
           <Route path="/onboarding" element={<OnboardingRoute><Onboarding /></OnboardingRoute>} />
           <Route path="/dev"        element={<DevRoute><DevDashboard /></DevRoute>} />
           <Route path="/"             element={<DevRedirect><PrivateLayout><Dashboard /></PrivateLayout></DevRedirect>} />
-          <Route path="/rooms"        element={<PrivateLayout><Rooms /></PrivateLayout>} />
-          <Route path="/tables"       element={<FullBleedLayout><Tables /></FullBleedLayout>} />
+          <Route path="/rooms"        element={<RoleRoute minRole="manager"><PrivateLayout><Rooms /></PrivateLayout></RoleRoute>} />
+          <Route path="/tables"       element={<RoleRoute minRole="manager"><FullBleedLayout><Tables /></FullBleedLayout></RoleRoute>} />
           <Route path="/reservations" element={<PrivateLayout><Reservations /></PrivateLayout>} />
-          <Route path="/customers"    element={<PrivateLayout><Customers /></PrivateLayout>} />
-          <Route path="/configuracion" element={<PrivateLayout><Settings /></PrivateLayout>} />
+          <Route path="/customers"    element={<RoleRoute minRole="manager"><PrivateLayout><Customers /></PrivateLayout></RoleRoute>} />
+          <Route path="/configuracion" element={<RoleRoute minRole="manager"><PrivateLayout><Settings /></PrivateLayout></RoleRoute>} />
           <Route path="/settings"      element={<Navigate to="/configuracion" replace />} />
           <Route path="/profile"       element={<PrivateLayout><Profile /></PrivateLayout>} />
-          <Route path="/team"         element={<PrivateLayout><Team /></PrivateLayout>} />
+          <Route path="/team"         element={<RoleRoute minRole="manager"><PrivateLayout><Team /></PrivateLayout></RoleRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>

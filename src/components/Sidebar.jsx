@@ -57,6 +57,13 @@ export default function Sidebar({ isOpen, onClose }) {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
+  const isStaff = business?.role === 'staff';
+
+  const mainLinks = isStaff ? links.filter((link) => link.to !== '/customers') : links;
+  const lowerLinks = isStaff
+    ? []
+    : [...secondaryLinks, ...(hasRole('manager') ? [{ to: '/team', label: 'Equipo', icon: <IconTeam /> }] : [])];
+  const visibleConfigLinks = isStaff ? [] : configLinks;
 
   const userName = session?.user?.name || business?.userName || business?.name || 'Usuario';
   const userEmail = session?.user?.email || business?.userEmail || business?.email || '';
@@ -115,7 +122,7 @@ export default function Sidebar({ isOpen, onClose }) {
       <nav className="flex-1 px-3 py-4 flex flex-col gap-4 overflow-y-auto">
         <div className="space-y-0.5">
           <p className="text-slate-500 text-[10px] font-semibold uppercase tracking-widest px-2 pb-2">Menu</p>
-          {links.map((link) => (
+          {mainLinks.map((link) => (
             <NavLink
               key={link.to}
               to={link.to}
@@ -133,7 +140,7 @@ export default function Sidebar({ isOpen, onClose }) {
           ))}
         </div>
         <div className="space-y-0.5">
-          {[...secondaryLinks, ...(hasRole('manager') ? [{ to: '/team', label: 'Equipo', icon: <IconTeam /> }] : [])].map((link) => (
+          {lowerLinks.map((link) => (
             <NavLink
               key={link.to}
               to={link.to}
@@ -152,7 +159,7 @@ export default function Sidebar({ isOpen, onClose }) {
       </nav>
 
       <div className="px-3 pb-4 border-t border-slate-700/50 pt-3">
-        {configLinks.map((link) => (
+        {visibleConfigLinks.map((link) => (
           <NavLink
             key={link.to}
             to={link.to}

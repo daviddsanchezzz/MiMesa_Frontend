@@ -18,12 +18,18 @@ export const authClient = createAuthClient({
   // can validate the session without relying on cross-origin cookies.
   fetchOptions: {
     onResponse: (ctx) => {
-      const token = ctx.response?.headers?.get('set-auth-token');
-      if (token) setStoredToken(token);
+      try {
+        const token = ctx.response?.headers?.get?.('set-auth-token');
+        if (token) setStoredToken(token);
+      } catch { /* ignore */ }
     },
     onRequest: (ctx) => {
-      const token = getStoredToken();
-      if (token) ctx.options.headers = { ...ctx.options.headers, Authorization: `Bearer ${token}` };
+      try {
+        const token = getStoredToken();
+        if (token && ctx.options) {
+          ctx.options.headers = { ...ctx.options.headers, Authorization: `Bearer ${token}` };
+        }
+      } catch { /* ignore */ }
     },
   },
 

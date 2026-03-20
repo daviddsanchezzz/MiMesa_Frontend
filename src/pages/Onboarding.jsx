@@ -4,19 +4,20 @@ import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 
 export default function Onboarding() {
-  const navigate       = useNavigate();
+  const navigate = useNavigate();
   const { refreshBusiness, session } = useAuth();
-  const [name, setName]       = useState('');
-  const [phone, setPhone]     = useState('');
-  const [error, setError]     = useState('');
+  const [form, setForm] = useState({ name: '', email: '', phone: '', cif: '' });
+  const [error, setError]   = useState('');
   const [loading, setLoading] = useState(false);
+
+  const set = (field) => (e) => setForm(f => ({ ...f, [field]: e.target.value }));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
     try {
-      await api.post('/businesses', { name, phone });
+      await api.post('/businesses', form);
       await refreshBusiness();
       navigate('/');
     } catch (err) {
@@ -37,9 +38,11 @@ export default function Onboarding() {
             </svg>
           </div>
           <h1 className="text-2xl font-bold text-gray-900">Crea tu restaurante</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Hola, <strong>{session?.user?.name}</strong>. Configura tu negocio para empezar.
-          </p>
+          {session?.user?.name && (
+            <p className="text-sm text-gray-500 mt-1">
+              Hola, <strong>{session.user.name}</strong>. Configura tu negocio para empezar.
+            </p>
+          )}
         </div>
 
         <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
@@ -55,9 +58,22 @@ export default function Onboarding() {
               </label>
               <input
                 required
-                value={name}
-                onChange={e => setName(e.target.value)}
+                value={form.name}
+                onChange={set('name')}
                 placeholder="Restaurante El Patio"
+                className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                Correo del restaurante *
+              </label>
+              <input
+                required
+                type="email"
+                value={form.email}
+                onChange={set('email')}
+                placeholder="info@mirestaurante.com"
                 className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
               />
             </div>
@@ -66,9 +82,20 @@ export default function Onboarding() {
                 Teléfono <span className="text-gray-400 font-normal">(opcional)</span>
               </label>
               <input
-                value={phone}
-                onChange={e => setPhone(e.target.value)}
+                value={form.phone}
+                onChange={set('phone')}
                 placeholder="+34 600 000 000"
+                className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                CIF / NIF <span className="text-gray-400 font-normal">(opcional)</span>
+              </label>
+              <input
+                value={form.cif}
+                onChange={set('cif')}
+                placeholder="B12345678"
                 className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
               />
             </div>

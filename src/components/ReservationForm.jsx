@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import api from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 const inputCls = 'w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white';
 const labelCls = 'block text-sm font-medium text-gray-700 mb-1.5';
@@ -67,6 +68,7 @@ function BellIcon() {
 }
 
 export default function ReservationForm({ reservation, onSave, onCancel, initialContext = null }) {
+  const { business } = useAuth();
   const isEdit = Boolean(reservation?._id);
   const initialDate = reservation?.date || initialContext?.date || new Date().toISOString().slice(0, 10);
   const [rooms, setRooms] = useState(initialContext?.rooms || []);
@@ -148,7 +150,9 @@ export default function ReservationForm({ reservation, onSave, onCancel, initial
     [slots]
   );
   const multiShift = Object.keys(slotsByShift).length > 1;
-  const peopleOptions = Array.from({ length: 20 }, (_, i) => i + 1);
+  const restaurantMaxPeople = Math.max(1, Number(business?.maxReservationPeople) || 20);
+  const peopleOptions = Array.from({ length: restaurantMaxPeople }, (_, i) => i + 1);
+  const [customPeopleOpen, setCustomPeopleOpen] = useState(form.people > restaurantMaxPeople);
 
   const isDatePast = (day) => new Date(calYear, calMonth, day) < today;
   const fmtDay = (day) => `${calYear}-${String(calMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
@@ -296,7 +300,10 @@ export default function ReservationForm({ reservation, onSave, onCancel, initial
               <button
                 key={n}
                 type="button"
-                onClick={() => setForm((f) => ({ ...f, people: n }))}
+                onClick={() => {
+                  setCustomPeopleOpen(false);
+                  setForm((f) => ({ ...f, people: n }));
+                }}
                 className={`px-3 py-2 text-sm rounded-lg border transition-colors ${
                   form.people === n ? 'bg-indigo-600 text-white border-transparent' : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'
                 }`}
@@ -304,7 +311,34 @@ export default function ReservationForm({ reservation, onSave, onCancel, initial
                 {n}
               </button>
             ))}
+            <button
+              type="button"
+              onClick={() => setCustomPeopleOpen(true)}
+              className={`px-3 py-2 text-sm rounded-lg border transition-colors ${
+                customPeopleOpen ? 'bg-indigo-600 text-white border-transparent' : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'
+              }`}
+            >
+              Otro
+            </button>
           </div>
+          {customPeopleOpen && (
+            <div className="mt-3">
+              <label className={`${labelCls} mb-1`}>Numero personalizado</label>
+              <input
+                type="number"
+                min={1}
+                value={form.people}
+                onChange={(e) =>
+                  setForm((f) => ({
+                    ...f,
+                    people: Math.min(restaurantMaxPeople, Math.max(1, Number(e.target.value) || 1)),
+                  }))
+                }
+                className={inputCls}
+              />
+              <p className="text-xs text-gray-400 mt-1">Maximo permitido: {restaurantMaxPeople}</p>
+            </div>
+          )}
           {rooms.length > 0 && (
             <div className="mt-5">
               <label className={`${labelCls} mb-2`}>Sala <span className="text-gray-400 font-normal">(opcional)</span></label>

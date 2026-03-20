@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import api from '../services/api';
+import Modal from '../components/Modal';
 
 const inputCls = 'w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white';
 const labelCls = 'block text-sm font-medium text-gray-700 mb-1.5';
@@ -76,10 +77,11 @@ export default function Profile() {
   const [pageError, setPageError] = useState('');
   const [savingProfile, setSavingProfile] = useState(false);
   const [savingPassword, setSavingPassword] = useState(false);
-  const [user, setUser] = useState({ id: '', name: '', email: '', phone: '' });
+  const [user, setUser] = useState({ id: '', name: '', email: '' });
   const [memberships, setMemberships] = useState([]);
-  const [profileForm, setProfileForm] = useState({ name: '', phone: '' });
+  const [profileForm, setProfileForm] = useState({ name: '' });
   const [passwordForm, setPasswordForm] = useState({ newPassword: '', confirmPassword: '' });
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
 
   const summary = useMemo(() => ({
     businesses: memberships.length,
@@ -94,10 +96,9 @@ export default function Profile() {
   const load = async () => {
     try {
       const { data } = await api.get('/users/me');
-      setUser(data.user || { id: '', name: '', email: '', phone: '' });
+      setUser(data.user || { id: '', name: '', email: '' });
       setProfileForm({
         name: data.user?.name || '',
-        phone: data.user?.phone || '',
       });
       setMemberships(data.memberships || []);
     } catch (err) {
@@ -139,6 +140,7 @@ export default function Profile() {
     try {
       await api.put('/users/me/password', { newPassword: passwordForm.newPassword });
       setPasswordForm({ newPassword: '', confirmPassword: '' });
+      setShowPasswordModal(false);
     } catch (err) {
       setPageError(err.response?.data?.message || 'No se pudo actualizar la contrasena');
     } finally {
@@ -198,23 +200,13 @@ export default function Profile() {
         <section className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
           <h2 className="text-base font-semibold text-gray-900 mb-4">Informacion personal</h2>
           <form onSubmit={saveProfile} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className={labelCls}>Nombre</label>
-                <input
-                  className={inputCls}
-                  value={profileForm.name}
-                  onChange={(e) => setProfileForm((f) => ({ ...f, name: e.target.value }))}
-                />
-              </div>
-              <div>
-                <label className={labelCls}>Telefono</label>
-                <input
-                  className={inputCls}
-                  value={profileForm.phone}
-                  onChange={(e) => setProfileForm((f) => ({ ...f, phone: e.target.value }))}
-                />
-              </div>
+            <div>
+              <label className={labelCls}>Nombre</label>
+              <input
+                className={inputCls}
+                value={profileForm.name}
+                onChange={(e) => setProfileForm((f) => ({ ...f, name: e.target.value }))}
+              />
             </div>
 
             <div>
@@ -234,34 +226,14 @@ export default function Profile() {
 
         <section className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
           <h2 className="text-base font-semibold text-gray-900 mb-4">Seguridad</h2>
-          <form onSubmit={savePassword} className="space-y-4">
-            <div>
-              <label className={labelCls}>Nueva contrasena</label>
-              <input
-                type="password"
-                className={inputCls}
-                value={passwordForm.newPassword}
-                onChange={(e) => setPasswordForm((f) => ({ ...f, newPassword: e.target.value }))}
-              />
-            </div>
-            <div>
-              <label className={labelCls}>Confirmar nueva contrasena</label>
-              <input
-                type="password"
-                className={inputCls}
-                value={passwordForm.confirmPassword}
-                onChange={(e) => setPasswordForm((f) => ({ ...f, confirmPassword: e.target.value }))}
-              />
-            </div>
-
-            <button
-              type="submit"
-              disabled={savingPassword}
-              className="px-4 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 disabled:opacity-50"
-            >
-              {savingPassword ? 'Actualizando...' : 'Actualizar contrasena'}
-            </button>
-          </form>
+          <p className="text-sm text-gray-500 mb-4">Actualiza tu clave de acceso cuando lo necesites.</p>
+          <button
+            type="button"
+            onClick={() => setShowPasswordModal(true)}
+            className="px-4 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700"
+          >
+            Cambiar contrasena
+          </button>
         </section>
       </div>
 
@@ -284,6 +256,45 @@ export default function Profile() {
           </div>
         )}
       </section>
+
+      {showPasswordModal && (
+        <Modal
+          title="Cambiar contrasena"
+          subtitle="Introduce tu nueva contrasena"
+          onClose={() => {
+            setShowPasswordModal(false);
+            setPasswordForm({ newPassword: '', confirmPassword: '' });
+          }}
+        >
+          <form onSubmit={savePassword} className="space-y-4">
+            <div>
+              <label className={labelCls}>Nueva contrasena</label>
+              <input
+                type="password"
+                className={inputCls}
+                value={passwordForm.newPassword}
+                onChange={(e) => setPasswordForm((f) => ({ ...f, newPassword: e.target.value }))}
+              />
+            </div>
+            <div>
+              <label className={labelCls}>Confirmar nueva contrasena</label>
+              <input
+                type="password"
+                className={inputCls}
+                value={passwordForm.confirmPassword}
+                onChange={(e) => setPasswordForm((f) => ({ ...f, confirmPassword: e.target.value }))}
+              />
+            </div>
+            <button
+              type="submit"
+              disabled={savingPassword}
+              className="w-full px-4 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 disabled:opacity-50"
+            >
+              {savingPassword ? 'Actualizando...' : 'Guardar nueva contrasena'}
+            </button>
+          </form>
+        </Modal>
+      )}
     </div>
   );
 }

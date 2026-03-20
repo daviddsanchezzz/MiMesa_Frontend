@@ -1,47 +1,65 @@
 import { useEffect, useMemo, useState } from 'react';
 import api from '../services/api';
 
-const inputCls = 'w-full border border-slate-300 bg-white rounded-xl px-3.5 py-2.5 text-sm text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-cyan-500 focus:border-transparent';
-const labelCls = 'block text-xs font-semibold tracking-wide uppercase text-slate-500 mb-1.5';
+const inputCls = 'w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white';
+const labelCls = 'block text-sm font-medium text-gray-700 mb-1.5';
 
 function ErrorBanner({ msg }) {
   if (!msg) return null;
   return (
-    <div className="bg-rose-50 border border-rose-200 text-rose-700 text-sm rounded-xl px-3.5 py-2.5">
+    <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3">
       {msg}
     </div>
   );
 }
 
-function SectionCard({ title, subtitle, children, tone = 'default' }) {
-  const toneClass = tone === 'soft'
-    ? 'bg-gradient-to-br from-cyan-50 via-white to-blue-50 border-cyan-100'
-    : 'bg-white border-slate-200';
+function Avatar({ name, email }) {
+  const colors = ['bg-indigo-500', 'bg-violet-500', 'bg-rose-500', 'bg-amber-500', 'bg-emerald-500', 'bg-cyan-500'];
+  const base = (name || email || 'U').trim();
+  const idx = (base.charCodeAt(0) || 0) % colors.length;
+  const initials = base.slice(0, 2).toUpperCase();
 
   return (
-    <section className={`rounded-3xl border shadow-sm ${toneClass}`}>
-      <div className="px-6 pt-6 pb-4 border-b border-slate-100">
-        <h2 className="text-base font-semibold text-slate-900">{title}</h2>
-        {subtitle && <p className="text-sm text-slate-500 mt-1">{subtitle}</p>}
-      </div>
-      <div className="p-6">{children}</div>
-    </section>
+    <div className={`w-12 h-12 rounded-xl ${colors[idx]} flex items-center justify-center text-white font-semibold shrink-0`}>
+      {initials}
+    </div>
   );
 }
 
-function Toggle({ checked, onChange, label, description }) {
+function MembershipCard({ membership, onToggle }) {
+  const prefs = membership.notificationPreferences || {};
+
   return (
-    <label className="flex items-start justify-between gap-3 p-3 rounded-2xl border border-slate-200 bg-white hover:border-slate-300 transition-colors cursor-pointer">
-      <div>
-        <p className="text-sm font-medium text-slate-800">{label}</p>
-        <p className="text-xs text-slate-500 mt-0.5">{description}</p>
+    <div className="border border-gray-200 rounded-2xl p-4 bg-white">
+      <div className="flex items-start justify-between gap-3 mb-3">
+        <div>
+          <p className="text-sm font-semibold text-gray-900">{membership.businessName}</p>
+          <p className="text-xs text-gray-400 mt-0.5">Rol: {membership.role}</p>
+        </div>
+        <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-gray-100 text-gray-600">Notificaciones</span>
       </div>
-      <span className="relative inline-flex h-6 w-11 shrink-0 items-center">
-        <input type="checkbox" className="peer sr-only" checked={checked} onChange={onChange} />
-        <span className="absolute inset-0 rounded-full bg-slate-300 peer-checked:bg-cyan-500 transition-colors" />
-        <span className="absolute left-0.5 h-5 w-5 rounded-full bg-white shadow-sm peer-checked:translate-x-5 transition-transform" />
-      </span>
-    </label>
+
+      <div className="space-y-2">
+        <label className="flex items-center gap-2 text-sm text-gray-700">
+          <input
+            type="checkbox"
+            className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+            checked={!!prefs.newReservationEmail}
+            onChange={(e) => onToggle({ newReservationEmail: e.target.checked })}
+          />
+          Avisarme por email cuando se crea una reserva
+        </label>
+        <label className="flex items-center gap-2 text-sm text-gray-700">
+          <input
+            type="checkbox"
+            className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+            checked={!!prefs.cancelledReservationEmail}
+            onChange={(e) => onToggle({ cancelledReservationEmail: e.target.checked })}
+          />
+          Avisarme por email cuando se cancela una reserva
+        </label>
+      </div>
+    </div>
   );
 }
 
@@ -55,10 +73,15 @@ export default function Profile() {
   const [profileForm, setProfileForm] = useState({ name: '', phone: '' });
   const [passwordForm, setPasswordForm] = useState({ newPassword: '', confirmPassword: '' });
 
-  const initials = useMemo(() => {
-    const text = (profileForm.name || user.email || 'U').trim();
-    return text.slice(0, 2).toUpperCase();
-  }, [profileForm.name, user.email]);
+  const summary = useMemo(() => ({
+    businesses: memberships.length,
+    notificationsEnabled: memberships.reduce((acc, m) => {
+      const p = m.notificationPreferences || {};
+      if (p.newReservationEmail) acc += 1;
+      if (p.cancelledReservationEmail) acc += 1;
+      return acc;
+    }, 0),
+  }), [memberships]);
 
   const load = async () => {
     try {
@@ -123,6 +146,7 @@ export default function Profile() {
         : m
     );
     setMemberships(optimistic);
+
     try {
       await api.put(`/users/me/memberships/${membershipId}/notifications`, patch);
     } catch (err) {
@@ -133,40 +157,46 @@ export default function Profile() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-56">
-        <div className="w-10 h-10 rounded-2xl bg-cyan-500 animate-pulse" />
+      <div className="flex items-center justify-center h-48">
+        <div className="w-8 h-8 rounded-xl bg-indigo-600 animate-pulse" />
       </div>
     );
   }
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
-      <div className="relative overflow-hidden rounded-3xl border border-slate-200 bg-gradient-to-br from-slate-900 via-slate-800 to-cyan-900 px-6 py-7 text-white shadow-lg">
-        <div className="absolute -top-14 -right-10 w-44 h-44 rounded-full bg-cyan-400/20 blur-2xl" />
-        <div className="relative flex items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-white/15 border border-white/20 flex items-center justify-center text-xl font-semibold">
-            {initials}
-          </div>
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight">Perfil</h1>
-            <p className="text-sm text-cyan-100/90 mt-1">Gestiona tus datos personales, seguridad y alertas por negocio.</p>
-          </div>
+    <div className="space-y-6">
+      <div className="flex items-start justify-between gap-3 flex-wrap">
+        <div>
+          <h1 className="text-xl font-bold text-gray-900">Perfil</h1>
+          <p className="text-sm text-gray-500 mt-0.5">Gestiona tus datos personales, seguridad y notificaciones.</p>
         </div>
       </div>
 
       <ErrorBanner msg={pageError} />
 
+      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 flex items-center gap-4">
+        <Avatar name={profileForm.name} email={user.email} />
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold text-gray-900 truncate">{profileForm.name || 'Sin nombre'}</p>
+          <p className="text-xs text-gray-400 truncate mt-0.5">{user.email || '-'}</p>
+        </div>
+        <div className="hidden sm:flex items-center gap-2 text-xs text-gray-500">
+          <span className="px-2.5 py-1 rounded-full bg-gray-100">{summary.businesses} negocios</span>
+          <span className="px-2.5 py-1 rounded-full bg-gray-100">{summary.notificationsEnabled} alertas activas</span>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
-        <SectionCard title="Informacion personal" subtitle="Estos datos se usan dentro del equipo y en comunicaciones internas." tone="soft">
+        <section className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+          <h2 className="text-base font-semibold text-gray-900 mb-4">Informacion personal</h2>
           <form onSubmit={saveProfile} className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
                 <label className={labelCls}>Nombre</label>
                 <input
                   className={inputCls}
                   value={profileForm.name}
                   onChange={(e) => setProfileForm((f) => ({ ...f, name: e.target.value }))}
-                  placeholder="Tu nombre"
                 />
               </div>
               <div>
@@ -175,27 +205,27 @@ export default function Profile() {
                   className={inputCls}
                   value={profileForm.phone}
                   onChange={(e) => setProfileForm((f) => ({ ...f, phone: e.target.value }))}
-                  placeholder="+34 ..."
                 />
               </div>
             </div>
+
             <div>
               <label className={labelCls}>Email</label>
-              <input className={`${inputCls} bg-slate-100 text-slate-500`} value={user.email} disabled />
+              <input className={`${inputCls} bg-gray-50 text-gray-500`} value={user.email} disabled />
             </div>
-            <div className="pt-1">
-              <button
-                type="submit"
-                disabled={savingProfile}
-                className="inline-flex items-center justify-center px-4 py-2.5 rounded-xl bg-slate-900 text-white text-sm font-medium hover:bg-black disabled:opacity-50"
-              >
-                {savingProfile ? 'Guardando...' : 'Guardar perfil'}
-              </button>
-            </div>
-          </form>
-        </SectionCard>
 
-        <SectionCard title="Seguridad" subtitle="Cambia tu contrasena de acceso.">
+            <button
+              type="submit"
+              disabled={savingProfile}
+              className="px-4 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 disabled:opacity-50"
+            >
+              {savingProfile ? 'Guardando...' : 'Guardar perfil'}
+            </button>
+          </form>
+        </section>
+
+        <section className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+          <h2 className="text-base font-semibold text-gray-900 mb-4">Seguridad</h2>
           <form onSubmit={savePassword} className="space-y-4">
             <div>
               <label className={labelCls}>Nueva contrasena</label>
@@ -204,7 +234,6 @@ export default function Profile() {
                 className={inputCls}
                 value={passwordForm.newPassword}
                 onChange={(e) => setPasswordForm((f) => ({ ...f, newPassword: e.target.value }))}
-                placeholder="Minimo 8 caracteres"
               />
             </div>
             <div>
@@ -216,57 +245,37 @@ export default function Profile() {
                 onChange={(e) => setPasswordForm((f) => ({ ...f, confirmPassword: e.target.value }))}
               />
             </div>
-            <div className="pt-1">
-              <button
-                type="submit"
-                disabled={savingPassword}
-                className="inline-flex items-center justify-center px-4 py-2.5 rounded-xl bg-cyan-600 text-white text-sm font-medium hover:bg-cyan-700 disabled:opacity-50"
-              >
-                {savingPassword ? 'Actualizando...' : 'Actualizar contrasena'}
-              </button>
-            </div>
+
+            <button
+              type="submit"
+              disabled={savingPassword}
+              className="px-4 py-2.5 rounded-xl bg-indigo-600 text-white text-sm font-semibold hover:bg-indigo-700 disabled:opacity-50"
+            >
+              {savingPassword ? 'Actualizando...' : 'Actualizar contrasena'}
+            </button>
           </form>
-        </SectionCard>
+        </section>
       </div>
 
-      <SectionCard title="Notificaciones por negocio" subtitle="Activa o desactiva alertas de reservas para cada membresia.">
+      <section className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
+        <h2 className="text-base font-semibold text-gray-900 mb-4">Notificaciones por negocio</h2>
+
         {memberships.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-4 py-8 text-center text-sm text-slate-500">
-            No tienes membresias activas.
+          <div className="text-center py-12 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
+            <p className="text-sm text-gray-500">No tienes membresias activas.</p>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {memberships.map((m) => (
-              <div key={m.id} className="rounded-2xl border border-slate-200 p-4 bg-gradient-to-br from-white to-slate-50">
-                <div className="flex items-center justify-between gap-3 mb-3">
-                  <div>
-                    <p className="text-sm font-semibold text-slate-900">{m.businessName}</p>
-                    <p className="text-xs text-slate-500 mt-0.5">Rol: {m.role}</p>
-                  </div>
-                  <span className="text-[11px] font-medium px-2.5 py-1 rounded-full bg-cyan-100 text-cyan-700 border border-cyan-200">
-                    Alertas
-                  </span>
-                </div>
-
-                <div className="space-y-2">
-                  <Toggle
-                    checked={!!m.notificationPreferences?.newReservationEmail}
-                    onChange={(e) => updateMembershipPreference(m.id, { newReservationEmail: e.target.checked })}
-                    label="Nueva reserva"
-                    description="Recibir email cuando entra una reserva nueva"
-                  />
-                  <Toggle
-                    checked={!!m.notificationPreferences?.cancelledReservationEmail}
-                    onChange={(e) => updateMembershipPreference(m.id, { cancelledReservationEmail: e.target.checked })}
-                    label="Reserva cancelada"
-                    description="Recibir email cuando una reserva se cancela"
-                  />
-                </div>
-              </div>
+              <MembershipCard
+                key={m.id}
+                membership={m}
+                onToggle={(patch) => updateMembershipPreference(m.id, patch)}
+              />
             ))}
           </div>
         )}
-      </SectionCard>
+      </section>
     </div>
   );
 }

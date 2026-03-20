@@ -40,9 +40,12 @@ const IconSettings = () => (
 
 const links = [
   { to: '/', label: 'Dashboard', icon: <IconHome /> },
-  { to: '/tables', label: 'Mesas', icon: <IconTable /> },
   { to: '/reservations', label: 'Reservas', icon: <IconCalendar /> },
   { to: '/customers', label: 'Clientes', icon: <IconUsers /> },
+];
+
+const secondaryLinks = [
+  { to: '/tables', label: 'Mesas', icon: <IconTable /> },
 ];
 
 const configLinks = [
@@ -130,8 +133,7 @@ export default function Sidebar({ isOpen, onClose }) {
           ))}
         </div>
         <div className="space-y-0.5">
-          <p className="text-slate-500 text-[10px] font-semibold uppercase tracking-widest px-2 pb-2">Sistema</p>
-          {[...(hasRole('manager') ? [{ to: '/team', label: 'Equipo', icon: <IconTeam /> }] : [])].map((link) => (
+          {[...secondaryLinks, ...(hasRole('manager') ? [{ to: '/team', label: 'Equipo', icon: <IconTeam /> }] : [])].map((link) => (
             <NavLink
               key={link.to}
               to={link.to}

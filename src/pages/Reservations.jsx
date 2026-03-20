@@ -328,7 +328,7 @@ export default function Reservations() {
           >
             <option value="today">Hoy</option>
             <option value="week">Esta semana</option>
-            <option value="upcoming">Siguientes (max 20)</option>
+          <option value="upcoming">Todas (proximas 20)</option>
             <option value="day">Dia concreto</option>
           </select>
           <button onClick={() => setModal({ mode: 'create' })}
@@ -355,7 +355,7 @@ export default function Reservations() {
           </div>
         )}
 
-        {/* Stats strip */}}
+        {/* Stats strip */}
         {reservations.length > 0 && (
           <div className="mt-3 grid grid-cols-4 gap-1.5">
             {[
@@ -378,7 +378,7 @@ export default function Reservations() {
           <h2 className="text-xl font-bold text-gray-900">Reservas</h2>
           <p className="text-sm text-gray-400 mt-0.5">
             {reservations.length} reserva{reservations.length !== 1 ? 's' : ''}
-            {(filterMode === 'today' || filterMode === 'day') ? ` · ${labelDate}` : ''}
+            {(filterMode === 'today' || filterMode === 'day') ? ` ï¿½ ${labelDate}` : ''}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -389,7 +389,7 @@ export default function Reservations() {
           >
             <option value="today">Hoy</option>
             <option value="week">Esta semana</option>
-            <option value="upcoming">Siguientes (max 20)</option>
+            <option value="upcoming">Todas (proximas 20)</option>
             <option value="day">Dia concreto</option>
           </select>
           {filterMode === 'day' && (
@@ -408,7 +408,7 @@ export default function Reservations() {
         </div>
       </div>
 
-      {/* Desktop mini stats */}}
+      {/* Desktop mini stats */}
       {reservations.length > 0 && (
         <div className="hidden sm:flex gap-2 flex-wrap">
           {[

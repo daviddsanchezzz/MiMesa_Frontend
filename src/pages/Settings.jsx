@@ -1058,48 +1058,122 @@ function PublicoSection() {
 // ═══════════════════════════════════════════════════════════════════════════
 // MAIN PAGE
 // ═══════════════════════════════════════════════════════════════════════════
+
+function NegocioSection() {
+  const { business, refreshBusiness, hasRole } = useAuth();
+  const canEdit = hasRole('manager');
+  const [form, setForm] = useState({
+    name: business?.name || '',
+    email: business?.email || '',
+    phone: business?.phone || '',
+    cif: business?.cif || '',
+  });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    setForm({
+      name: business?.name || '',
+      email: business?.email || '',
+      phone: business?.phone || '',
+      cif: business?.cif || '',
+    });
+  }, [business]);
+
+  const onSubmit = async (e) => {
+    e.preventDefault();
+    if (!canEdit) return;
+    setSaving(true);
+    setError('');
+    try {
+      await api.put('/auth/settings', form);
+      await refreshBusiness();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Error al guardar');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-white rounded-2xl p-6 border border-gray-200">
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">Datos del negocio</h3>
+        <p className="text-sm text-gray-500 mb-4">Nombre, contacto y datos fiscales del restaurante.</p>
+        <ErrorBanner msg={error} />
+        <form onSubmit={onSubmit} className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className={labelCls}>Nombre</label>
+              <input className={inputCls} value={form.name} disabled={!canEdit || saving} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
+            </div>
+            <div>
+              <label className={labelCls}>Email</label>
+              <input type="email" className={inputCls} value={form.email} disabled={!canEdit || saving} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
+            </div>
+            <div>
+              <label className={labelCls}>Telefono</label>
+              <input className={inputCls} value={form.phone} disabled={!canEdit || saving} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} />
+            </div>
+            <div>
+              <label className={labelCls}>CIF</label>
+              <input className={inputCls} value={form.cif} disabled={!canEdit || saving} onChange={(e) => setForm((f) => ({ ...f, cif: e.target.value }))} />
+            </div>
+          </div>
+          {canEdit && (
+            <button type="submit" disabled={saving} className="px-5 py-2.5 bg-indigo-600 text-white text-sm font-medium rounded-xl hover:bg-indigo-700 disabled:opacity-50">
+              {saving ? 'Guardando...' : 'Guardar cambios'}
+            </button>
+          )}
+        </form>
+      </div>
+    </div>
+  );
+}
+
 const TABS = [
-  { key: 'salas',      label: 'Salas'      },
-  { key: 'mesas',      label: 'Mesas'      },
-  { key: 'turnos',     label: 'Turnos'     },
+  { key: 'negocio', label: 'Negocio' },
+  { key: 'salas', label: 'Salas' },
+  { key: 'mesas', label: 'Mesas' },
+  { key: 'turnos', label: 'Turnos' },
   { key: 'vacaciones', label: 'Vacaciones' },
-  { key: 'publico',    label: 'Público'    },
+  { key: 'publico', label: 'Publico' },
 ];
 
 export default function Settings() {
-  const [tab, setTab] = useState('salas');
+  const [tab, setTab] = useState('negocio');
 
   return (
     <div className="space-y-5">
-      {/* Header */}
       <div>
-        <h2 className="text-xl font-bold text-gray-900">Configuración</h2>
-        <p className="text-sm text-gray-400 mt-0.5">Gestiona las salas, mesas, turnos y cierres de tu restaurante</p>
+        <h2 className="text-xl font-bold text-gray-900">Configuracion</h2>
+        <p className="text-sm text-gray-400 mt-0.5">Administra la operativa y ajustes publicos del negocio.</p>
       </div>
 
-      {/* Tabs — scrollable on mobile */}
-      <div className="overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
-        <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-max sm:w-fit min-w-full sm:min-w-0">
-          {TABS.map(t => (
+      <div className="grid grid-cols-1 lg:grid-cols-[220px_1fr] gap-4 items-start">
+        <div className="bg-white border border-gray-200 rounded-2xl p-2 lg:sticky lg:top-6">
+          {TABS.map((t) => (
             <button
               key={t.key}
               onClick={() => setTab(t.key)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all duration-100 whitespace-nowrap ${
-                tab === t.key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+              className={`w-full text-left px-3 py-2 rounded-xl text-sm font-medium transition-colors ${
+                tab === t.key ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100'
               }`}
             >
               {t.label}
             </button>
           ))}
         </div>
-      </div>
 
-      {/* Content */}
-      {tab === 'salas'      && <SalasSection />}
-      {tab === 'mesas'      && <MesasSection />}
-      {tab === 'turnos'     && <TurnosSection />}
-      {tab === 'vacaciones' && <VacacionesSection />}
-      {tab === 'publico'    && <PublicoSection />}
+        <div>
+          {tab === 'negocio' && <NegocioSection />}
+          {tab === 'salas' && <SalasSection />}
+          {tab === 'mesas' && <MesasSection />}
+          {tab === 'turnos' && <TurnosSection />}
+          {tab === 'vacaciones' && <VacacionesSection />}
+          {tab === 'publico' && <PublicoSection />}
+        </div>
+      </div>
     </div>
   );
 }

@@ -13,6 +13,7 @@ import Reservations from './pages/Reservations';
 import Customers from './pages/Customers';
 import Settings from './pages/Settings';
 import Team from './pages/Team';
+import Profile from './pages/Profile';
 import AcceptInvite from './pages/AcceptInvite';
 import DevDashboard from './pages/DevDashboard';
 import Onboarding from './pages/Onboarding';
@@ -159,7 +160,9 @@ export default function App() {
           <Route path="/tables"       element={<FullBleedLayout><Tables /></FullBleedLayout>} />
           <Route path="/reservations" element={<PrivateLayout><Reservations /></PrivateLayout>} />
           <Route path="/customers"    element={<PrivateLayout><Customers /></PrivateLayout>} />
-          <Route path="/settings"     element={<PrivateLayout><Settings /></PrivateLayout>} />
+          <Route path="/configuracion" element={<PrivateLayout><Settings /></PrivateLayout>} />
+          <Route path="/settings"      element={<Navigate to="/configuracion" replace />} />
+          <Route path="/profile"       element={<PrivateLayout><Profile /></PrivateLayout>} />
           <Route path="/team"         element={<PrivateLayout><Team /></PrivateLayout>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

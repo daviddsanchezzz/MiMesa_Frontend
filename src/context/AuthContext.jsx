@@ -14,6 +14,7 @@ export function AuthProvider({ children }) {
     setBusiness(data);
     setMemberships(data.memberships ?? []);
     if (data.id) setActiveBusinessId(data.id);
+    else setActiveBusinessId(null);
   }, []);
 
   // ── Initial load: restore session from stored token ────────────────────────
@@ -98,7 +99,13 @@ export function AuthProvider({ children }) {
 
   // Minimal session object for pages that need the logged-in user's identity
   const session = business
-    ? { user: { email: business.userEmail ?? business.email ?? '', name: business.name ?? '' } }
+    ? {
+        user: {
+          id: business.userId ?? '',
+          email: business.userEmail ?? business.email ?? '',
+          name: business.userName ?? '',
+        },
+      }
     : null;
 
   return (

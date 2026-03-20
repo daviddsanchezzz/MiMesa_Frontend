@@ -816,9 +816,6 @@ function VacacionesSection() {
 function PublicoSection() {
   const { business, refreshBusiness } = useAuth();
   const [brandColor, setBrandColor] = useState(business?.brandColor || '#3B82F6');
-  const [maxReservationPeople, setMaxReservationPeople] = useState(business?.maxReservationPeople || 20);
-  const [maxPeoplePerSlot, setMaxPeoplePerSlot] = useState(business?.maxPeoplePerSlot || '');
-  const [reservationDuration, setReservationDuration] = useState(business?.reservationDuration || '');
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(null); // 'url' | 'embed'
   const publicUrl = `${window.location.origin}/public/${business?.id}/reserve`;
@@ -826,9 +823,6 @@ function PublicoSection() {
 
   useEffect(() => {
     if (business?.brandColor) setBrandColor(business.brandColor);
-    if (business?.maxReservationPeople) setMaxReservationPeople(business.maxReservationPeople);
-    setMaxPeoplePerSlot(business?.maxPeoplePerSlot || '');
-    setReservationDuration(business?.reservationDuration || '');
   }, [business]);
 
   const copyToClipboard = (text, key) => {
@@ -842,30 +836,10 @@ function PublicoSection() {
     setSaving(true);
     try {
       await api.put('/auth/settings', { brandColor: newColor });
-      await refreshBusiness(); // Refresh business data after successful update
-    } catch (err) {
-      console.error('Error updating brand color:', err);
-      // Revert on error
-      setBrandColor(business?.brandColor || '#3B82F6');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleSavePublicNumbers = async () => {
-    setSaving(true);
-    try {
-      const maxPpl = maxReservationPeople === '' ? null : Number(maxReservationPeople);
-      const perSlot = maxPeoplePerSlot === '' ? null : Number(maxPeoplePerSlot);
-      const duration = reservationDuration === '' ? null : Number(reservationDuration);
-      await api.put('/auth/settings', {
-        maxReservationPeople: maxPpl,
-        maxPeoplePerSlot: perSlot,
-        reservationDuration: duration,
-      });
       await refreshBusiness();
     } catch (err) {
-      console.error('Error saving public settings:', err);
+      console.error('Error updating brand color:', err);
+      setBrandColor(business?.brandColor || '#3B82F6');
     } finally {
       setSaving(false);
     }
@@ -873,11 +847,10 @@ function PublicoSection() {
 
   return (
     <div className="space-y-6">
-      {/* Brand Color Configuration */}
       <div className="bg-white rounded-2xl p-6 border border-gray-200">
         <h3 className="text-sm font-semibold text-gray-900 mb-2">Color Corporativo</h3>
         <p className="text-sm text-gray-600 mb-4">
-          Personaliza el color principal que se mostrará en la página de reservas públicas.
+          Personaliza el color principal que se mostrara en la pagina de reservas publicas.
         </p>
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-3">
@@ -911,11 +884,84 @@ function PublicoSection() {
         </div>
       </div>
 
-      {/* Maximum Reservation People Configuration */}
       <div className="bg-white rounded-2xl p-6 border border-gray-200">
-        <h3 className="text-sm font-semibold text-gray-900 mb-2">Máximo de Personas por Reserva</h3>
+        <h3 className="text-sm font-semibold text-gray-900 mb-2">URL Publica para Reservas</h3>
         <p className="text-sm text-gray-600 mb-4">
-          Establece el número máximo de personas que pueden hacer una reserva en una sola solicitud.
+          Comparte esta URL con tus clientes para que puedan hacer reservas online directamente.
+        </p>
+        <div className="flex gap-3">
+          <input
+            type="text"
+            value={publicUrl}
+            readOnly
+            className="flex-1 border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm bg-gray-50"
+          />
+          <button
+            onClick={() => copyToClipboard(publicUrl, 'url')}
+            className="px-4 py-2.5 bg-indigo-600 text-white text-sm font-medium rounded-xl hover:bg-indigo-700 transition-colors"
+          >
+            {copied === 'url' ? 'Copiado' : 'Copiar'}
+          </button>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-2xl p-6 border border-gray-200">
+        <h3 className="text-sm font-semibold text-gray-900 mb-2">Integrar en tu web (iframe)</h3>
+        <p className="text-sm text-gray-600 mb-4">
+          Copia este codigo y pegalo en la web de tu restaurante para que los clientes puedan reservar sin salir de tu pagina.
+        </p>
+        <pre className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-xs text-gray-700 font-mono overflow-x-auto whitespace-pre-wrap break-all leading-relaxed mb-3">
+{embedCode}
+        </pre>
+        <button
+          onClick={() => copyToClipboard(embedCode, 'embed')}
+          className="px-4 py-2.5 bg-indigo-600 text-white text-sm font-medium rounded-xl hover:bg-indigo-700 transition-colors"
+        >
+          {copied === 'embed' ? 'Copiado' : 'Copiar codigo'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function LimitesSection() {
+  const { business, refreshBusiness } = useAuth();
+  const [maxReservationPeople, setMaxReservationPeople] = useState(business?.maxReservationPeople || 20);
+  const [maxPeoplePerSlot, setMaxPeoplePerSlot] = useState(business?.maxPeoplePerSlot || '');
+  const [reservationDuration, setReservationDuration] = useState(business?.reservationDuration || '');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (business?.maxReservationPeople) setMaxReservationPeople(business.maxReservationPeople);
+    setMaxPeoplePerSlot(business?.maxPeoplePerSlot || '');
+    setReservationDuration(business?.reservationDuration || '');
+  }, [business]);
+
+  const handleSaveLimits = async () => {
+    setSaving(true);
+    try {
+      const maxPpl = maxReservationPeople === '' ? null : Number(maxReservationPeople);
+      const perSlot = maxPeoplePerSlot === '' ? null : Number(maxPeoplePerSlot);
+      const duration = reservationDuration === '' ? null : Number(reservationDuration);
+      await api.put('/auth/settings', {
+        maxReservationPeople: maxPpl,
+        maxPeoplePerSlot: perSlot,
+        reservationDuration: duration,
+      });
+      await refreshBusiness();
+    } catch (err) {
+      console.error('Error saving limits settings:', err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-white rounded-2xl p-6 border border-gray-200">
+        <h3 className="text-sm font-semibold text-gray-900 mb-2">Maximo de Personas por Reserva</h3>
+        <p className="text-sm text-gray-600 mb-4">
+          Establece el numero maximo de personas que pueden hacer una reserva en una sola solicitud.
         </p>
         <div className="flex items-center gap-3">
           <input
@@ -927,56 +973,42 @@ function PublicoSection() {
             disabled={saving}
           />
           <div>
-            <p className="text-sm font-medium text-gray-900">personas máximo</p>
+            <p className="text-sm font-medium text-gray-900">personas maximo</p>
             <p className="text-xs text-gray-500">Por reserva individual</p>
           </div>
         </div>
       </div>
 
-      {/* Max People Per Slot */}
       <div className="bg-white rounded-2xl p-6 border border-gray-200">
         <div className="flex items-center gap-2 mb-2">
-          <h3 className="text-sm font-semibold text-gray-900">Máximo de Personas por Turno</h3>
-          <div className="relative group">
-            <span className="w-5 h-5 rounded-full bg-gray-200 text-gray-600 text-xs flex items-center justify-center cursor-default select-none font-bold">i</span>
-            <div className="absolute right-0 bottom-full mb-2 w-64 bg-gray-800 text-white text-xs rounded-lg px-3 py-2 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-10 text-center">
-              Número máximo de personas que pueden tener reserva en el mismo horario. Si se alcanza este límite, ese turno no aparecerá en la reserva pública.
-            </div>
-          </div>
+          <h3 className="text-sm font-semibold text-gray-900">Maximo de Personas por Turno</h3>
         </div>
         <p className="text-sm text-gray-600 mb-4">
-          Deja vacío para no establecer límite por turno.
+          Deja vacio para no establecer limite por turno.
         </p>
         <div className="flex items-center gap-3">
           <input
             type="number"
             min="1"
-            placeholder="Sin límite"
+            placeholder="Sin limite"
             value={maxPeoplePerSlot}
             onChange={(e) => setMaxPeoplePerSlot(e.target.value)}
             className="w-24 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
             disabled={saving}
           />
           <div>
-            <p className="text-sm font-medium text-gray-900">personas máximo</p>
-            <p className="text-xs text-gray-500">Por franja horaria simultánea</p>
+            <p className="text-sm font-medium text-gray-900">personas maximo</p>
+            <p className="text-xs text-gray-500">Por franja horaria simultanea</p>
           </div>
         </div>
       </div>
 
-      {/* Reservation Duration */}
       <div className="bg-white rounded-2xl p-6 border border-gray-200">
         <div className="flex items-center gap-2 mb-2">
-          <h3 className="text-sm font-semibold text-gray-900">Duración por Mesa</h3>
-          <div className="relative group">
-            <span className="w-5 h-5 rounded-full bg-gray-200 text-gray-600 text-xs flex items-center justify-center cursor-default select-none font-bold">i</span>
-            <div className="absolute right-0 bottom-full mb-2 w-64 bg-gray-800 text-white text-xs rounded-lg px-3 py-2 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-10 text-center">
-              Tiempo en minutos que una mesa permanece bloqueada tras el inicio de una reserva. Por ejemplo, con 60 minutos, una reserva a las 12:00 bloquea capacidad hasta las 13:00.
-            </div>
-          </div>
+          <h3 className="text-sm font-semibold text-gray-900">Duracion por Mesa</h3>
         </div>
         <p className="text-sm text-gray-600 mb-4">
-          Deja vacío para no bloquear franjas posteriores.
+          Deja vacio para no bloquear franjas posteriores.
         </p>
         <div className="flex items-center gap-3">
           <input
@@ -995,11 +1027,10 @@ function PublicoSection() {
         </div>
       </div>
 
-      {/* Save button */}
       <div className="flex items-center gap-3">
         <button
           type="button"
-          onClick={handleSavePublicNumbers}
+          onClick={handleSaveLimits}
           disabled={saving}
           className="px-5 py-2.5 bg-indigo-600 text-white text-sm font-medium rounded-xl hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
@@ -1009,53 +1040,9 @@ function PublicoSection() {
           <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
         )}
       </div>
-
-      {/* Public URL */}
-      <div className="bg-white rounded-2xl p-6 border border-gray-200">
-        <h3 className="text-sm font-semibold text-gray-900 mb-2">URL Pública para Reservas</h3>
-        <p className="text-sm text-gray-600 mb-4">
-          Comparte esta URL con tus clientes para que puedan hacer reservas online directamente.
-        </p>
-        <div className="flex gap-3">
-          <input
-            type="text"
-            value={publicUrl}
-            readOnly
-            className="flex-1 border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm bg-gray-50"
-          />
-          <button
-            onClick={() => copyToClipboard(publicUrl, 'url')}
-            className="px-4 py-2.5 bg-indigo-600 text-white text-sm font-medium rounded-xl hover:bg-indigo-700 transition-colors"
-          >
-            {copied === 'url' ? '¡Copiado!' : 'Copiar'}
-          </button>
-        </div>
-        <p className="text-xs text-gray-500 mt-2">
-          Los clientes podrán seleccionar fecha, hora, número de personas y proporcionar sus datos de contacto.
-        </p>
-      </div>
-
-      {/* Embed iframe */}
-      <div className="bg-white rounded-2xl p-6 border border-gray-200">
-        <h3 className="text-sm font-semibold text-gray-900 mb-2">Integrar en tu web (iframe)</h3>
-        <p className="text-sm text-gray-600 mb-4">
-          Copia este código y pégalo en la web de tu restaurante para que los clientes puedan reservar sin salir de tu página.
-        </p>
-        <pre className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-xs text-gray-700 font-mono overflow-x-auto whitespace-pre-wrap break-all leading-relaxed mb-3">
-{embedCode}
-        </pre>
-        <button
-          onClick={() => copyToClipboard(embedCode, 'embed')}
-          className="px-4 py-2.5 bg-indigo-600 text-white text-sm font-medium rounded-xl hover:bg-indigo-700 transition-colors"
-        >
-          {copied === 'embed' ? '¡Copiado!' : 'Copiar código'}
-        </button>
-      </div>
     </div>
   );
 }
-
-// ═══════════════════════════════════════════════════════════════════════════
 // MAIN PAGE
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -1137,6 +1124,7 @@ const TABS = [
   { key: 'mesas', label: 'Mesas' },
   { key: 'turnos', label: 'Turnos' },
   { key: 'vacaciones', label: 'Vacaciones' },
+  { key: 'limites', label: 'Limites' },
   { key: 'publico', label: 'Publico' },
 ];
 
@@ -1171,10 +1159,12 @@ export default function Settings() {
           {tab === 'mesas' && <MesasSection />}
           {tab === 'turnos' && <TurnosSection />}
           {tab === 'vacaciones' && <VacacionesSection />}
+          {tab === 'limites' && <LimitesSection />}
           {tab === 'publico' && <PublicoSection />}
         </div>
       </div>
     </div>
   );
 }
+
 

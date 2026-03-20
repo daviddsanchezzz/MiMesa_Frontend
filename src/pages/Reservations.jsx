@@ -270,6 +270,13 @@ export default function Reservations() {
   useEffect(() => { api.get('/tables').then(r => setTables(r.data)); }, []);
 
   // Build time→shiftName map and ordered shift list from slots
+  const isSingleDayFilter = filterMode === 'today' || filterMode === 'day';
+  const sortByTime = (a, b) => (a.time || '').localeCompare(b.time || '');
+  const sortByDateTime = (a, b) => `${a.date} ${a.time || ''}`.localeCompare(`${b.date} ${b.time || ''}`);
+  const displayReservations = [...reservations].sort(isSingleDayFilter ? sortByTime : sortByDateTime);
+  const uniqueDates = [...new Set(displayReservations.map(r => r.date))];
+  const shouldGroupByDay = !isSingleDayFilter && uniqueDates.length > 1;
+
   const timeToShift = {};
   const shiftOrder  = [];  // preserves slot order
   slots.forEach(s => {
@@ -283,13 +290,22 @@ export default function Reservations() {
     const groups = {};
     shiftOrder.forEach(n => { groups[n] = []; });
     groups['__otros__'] = [];
-    reservations.forEach(r => {
+    displayReservations.forEach(r => {
       const name = timeToShift[r.time];
       if (name) groups[name].push(r);
       else      groups['__otros__'].push(r);
     });
     // remove empty __otros__
     if (groups['__otros__'].length === 0) delete groups['__otros__'];
+    return groups;
+  };
+
+  const groupedByDate = () => {
+    const groups = {};
+    displayReservations.forEach((r) => {
+      if (!groups[r.date]) groups[r.date] = [];
+      groups[r.date].push(r);
+    });
     return groups;
   };
 
@@ -307,15 +323,16 @@ export default function Reservations() {
   };
 
   const counts = {
-    confirmed: reservations.filter(r => r.status === 'confirmed').length,
-    seated:    reservations.filter(r => r.status === 'seated').length,
-    pending:   reservations.filter(r => r.status === 'pending').length,
-    cancelled: reservations.filter(r => r.status === 'cancelled').length,
+    confirmed: displayReservations.filter(r => r.status === 'confirmed').length,
+    seated:    displayReservations.filter(r => r.status === 'seated').length,
+    pending:   displayReservations.filter(r => r.status === 'pending').length,
+    cancelled: displayReservations.filter(r => r.status === 'cancelled').length,
   };
 
   const labelDate = filterMode === 'today' ? todayStr : dateFilter;
   const isToday = labelDate === todayStr;
   const dateLabel = new Date(labelDate + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+  const dayHeaderLabel = (date) => new Date(`${date}T12:00:00`).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
 
   return (
     <div className="space-y-4">
@@ -378,7 +395,7 @@ export default function Reservations() {
           <h2 className="text-xl font-bold text-gray-900">Reservas</h2>
           <p className="text-sm text-gray-400 mt-0.5">
             {reservations.length} reserva{reservations.length !== 1 ? 's' : ''}
-            {(filterMode === 'today' || filterMode === 'day') ? ` � ${labelDate}` : ''}
+            {(filterMode === 'today' || filterMode === 'day') ? `  ${labelDate}` : ''}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -442,6 +459,7 @@ export default function Reservations() {
       {/* ── MOBILE LIST ────────────────────────────────────────────────── */}
       {reservations.length > 0 && (() => {
         const groups = groupedByShift();
+        const dateGroups = groupedByDate();
 
         const renderRow = (r) => (
           <MobileRow
@@ -457,10 +475,30 @@ export default function Reservations() {
         );
 
         // No shifts or single shift → flat list
+        if (shouldGroupByDay) {
+          return (
+            <div className="sm:hidden space-y-3">
+              {Object.entries(dateGroups).map(([date, rows]) => (
+                <div key={date}>
+                  <div className="flex items-center justify-between px-1 mb-1.5">
+                    <span className="text-xs font-bold text-gray-600 uppercase tracking-wide">{dayHeaderLabel(date)}</span>
+                    <span className="text-[10px] font-semibold bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full">
+                      {rows.length} reserva{rows.length !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+                  <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden divide-y divide-gray-100">
+                    {rows.map(renderRow)}
+                  </div>
+                </div>
+              ))}
+            </div>
+          );
+        }
+
         if (!groups) {
           return (
             <div className="sm:hidden bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden divide-y divide-gray-100">
-              {reservations.map(renderRow)}
+              {displayReservations.map(renderRow)}
             </div>
           );
         }
@@ -499,6 +537,7 @@ export default function Reservations() {
       {/* ── DESKTOP TABLE ──────────────────────────────────────────────── */}
       {reservations.length > 0 && (() => {
         const groups  = groupedByShift();
+        const dateGroups = groupedByDate();
         const thead = (
           <thead>
             <tr className="border-b border-gray-100">
@@ -571,13 +610,39 @@ export default function Reservations() {
         };
 
         // Single / no shift → one table
+        if (shouldGroupByDay) {
+          return (
+            <div className="hidden sm:block space-y-4">
+              {Object.entries(dateGroups).map(([date, rows]) => {
+                const active = rows.filter(r => r.status !== 'cancelled').length;
+                return (
+                  <div key={date} className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+                    <div className="flex items-center justify-between px-5 py-3 bg-gray-50 border-b border-gray-100">
+                      <h3 className="text-sm font-bold text-gray-700 capitalize">{dayHeaderLabel(date)}</h3>
+                      <span className="text-xs font-semibold bg-white border border-gray-200 text-gray-500 px-2 py-0.5 rounded-full">
+                        {active} reserva{active !== 1 ? 's' : ''} activa{active !== 1 ? 's' : ''}
+                      </span>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        {thead}
+                        <tbody>{rows.map((r, i, a) => renderDesktopRow(r, i, a))}</tbody>
+                      </table>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          );
+        }
+
         if (!groups) {
           return (
             <div className="hidden sm:block bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   {thead}
-                  <tbody>{reservations.map((r, i, a) => renderDesktopRow(r, i, a))}</tbody>
+                  <tbody>{displayReservations.map((r, i, a) => renderDesktopRow(r, i, a))}</tbody>
                 </table>
               </div>
             </div>
@@ -640,6 +705,3 @@ export default function Reservations() {
     </div>
   );
 }
-
-
-

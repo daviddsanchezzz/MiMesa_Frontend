@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import api from '../services/api';
 
 const inputCls = 'w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white';
@@ -22,7 +22,7 @@ export default function ReservationForm({ reservation, onSave, onCancel, initial
   const [error, setError] = useState('');
   const [slots, setSlots] = useState(initialContext?.slots ?? null);
   const [vacation, setVacation] = useState(initialContext?.vacation ?? null);
-  const [skipInitialFetch, setSkipInitialFetch] = useState(
+  const skipInitialFetchRef = useRef(
     Boolean(initialContext && !reservation && initialContext?.date === initialDate)
   );
 
@@ -33,8 +33,8 @@ export default function ReservationForm({ reservation, onSave, onCancel, initial
 
   useEffect(() => {
     if (!form.date) return;
-    if (skipInitialFetch && form.date === initialDate) {
-      setSkipInitialFetch(false);
+    if (skipInitialFetchRef.current && form.date === initialDate) {
+      skipInitialFetchRef.current = false;
       return;
     }
     setSlots(null);
@@ -59,7 +59,7 @@ export default function ReservationForm({ reservation, onSave, onCancel, initial
       }
     }).catch(() => { setSlots([]); setVacation(false); });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form.date, initialDate, skipInitialFetch]);
+  }, [form.date, initialDate]);
 
   const isClosed  = vacation && vacation.closed;
   const isBlocked = isClosed || (slots !== null && slots.length === 0);

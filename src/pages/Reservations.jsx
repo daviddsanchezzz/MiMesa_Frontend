@@ -228,12 +228,14 @@ export default function Reservations() {
   const [dateFilter,   setDateFilter]   = useState(new Date().toISOString().slice(0, 10));
   const [modal,        setModal]        = useState(null);
   const [openingCreateModal, setOpeningCreateModal] = useState(false);
+  const [createModalError, setCreateModalError] = useState('');
   const todayStr = new Date().toISOString().slice(0, 10);
 
   const resolveCreateDate = () => (filterMode === 'day' ? dateFilter : todayStr);
 
   const openCreateModal = async () => {
     const targetDate = resolveCreateDate();
+    setCreateModalError('');
     setOpeningCreateModal(true);
     try {
       const [roomsRes, slotsRes, vacRes] = await Promise.all([
@@ -254,7 +256,7 @@ export default function Reservations() {
         },
       });
     } catch {
-      setModal({ mode: 'create' });
+      setCreateModalError('No se pudo preparar el formulario. Reintenta.');
     } finally {
       setOpeningCreateModal(false);
     }
@@ -383,7 +385,7 @@ export default function Reservations() {
           <select
             value={filterMode}
             onChange={e => setFilterMode(e.target.value)}
-            className="flex-1 border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+            className="flex-1 border border-gray-300 rounded-xl px-3 py-2 text-sm text-center [text-align-last:center] focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
           >
             <option value="today">Hoy</option>
             <option value="week">Esta semana</option>
@@ -410,7 +412,7 @@ export default function Reservations() {
             type="date"
             value={dateFilter}
             onChange={e => setDateFilter(e.target.value)}
-            className="mt-2 w-full border border-gray-300 rounded-xl px-3 py-2 text-sm text-center focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+            className="mt-2 w-full border border-gray-300 rounded-xl px-3 py-2 text-sm text-center [text-align-last:center] focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
           />
         )}
 
@@ -451,7 +453,7 @@ export default function Reservations() {
           <select
             value={filterMode}
             onChange={e => setFilterMode(e.target.value)}
-            className="border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+            className="border border-gray-300 rounded-xl px-3 py-2 text-sm text-center [text-align-last:center] focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
           >
             <option value="today">Hoy</option>
             <option value="week">Esta semana</option>
@@ -461,7 +463,7 @@ export default function Reservations() {
           {filterMode === 'day' && (
             <input type="date" value={dateFilter}
               onChange={e => setDateFilter(e.target.value)}
-              className="border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+              className="border border-gray-300 rounded-xl px-3 py-2 text-sm text-center [text-align-last:center] focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
             />
           )}
           <button
@@ -487,6 +489,12 @@ export default function Reservations() {
       </div>
 
       {/* Desktop mini stats */}
+      {createModalError && (
+        <div className="bg-rose-50 border border-rose-200 text-rose-700 text-sm rounded-xl px-4 py-2.5">
+          {createModalError}
+        </div>
+      )}
+
       {reservations.length > 0 && (
         <div className="hidden sm:flex gap-2 flex-wrap">
           {[

@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { authClient } from '../lib/authClient';
 import api, { setActiveBusinessId } from '../services/api';
+import { setStoredToken } from '../lib/authClient';
 
 const AuthContext = createContext(null);
 
@@ -63,6 +64,7 @@ export function AuthProvider({ children }) {
   // ── Logout ─────────────────────────────────────────────────────────────────
   const logout = async () => {
     await authClient.signOut();
+    setStoredToken(null);
     setBusiness(null);
     setMemberships([]);
     setActiveBusinessId(null);

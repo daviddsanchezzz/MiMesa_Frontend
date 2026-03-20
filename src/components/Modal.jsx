@@ -20,7 +20,7 @@ export default function Modal({ title, subtitle, children, onClose, size = 'sm' 
             </svg>
           </button>
         </div>
-        <div className="px-5 py-5 overflow-y-auto">{children}</div>
+        <div className="px-5 py-5 overflow-y-auto overflow-x-hidden">{children}</div>
       </div>
     </div>
   );

@@ -588,7 +588,7 @@ function TurnosSection() {
             {/* Days */}
             <div>
               <label className={labelCls}>Días activos *</label>
-              <div className="flex gap-1.5">
+              <div className="flex flex-wrap gap-1.5">
                 {DAYS.map(d => (
                   <button key={d.value} type="button" onClick={() => toggleDay(d.value)} title={d.full}
                     className={`w-9 h-9 rounded-xl text-xs font-bold transition-all ${

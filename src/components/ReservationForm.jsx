@@ -95,28 +95,42 @@ export default function ReservationForm({ reservation, onSave, onCancel, initial
 
   // ── STEP INDICATOR ─────────────────────────────────────────────────────
   const StepBar = () => (
-    <div className="flex items-center gap-2 mb-5">
-      {[1, 2].map((s) => (
-        <div key={s} className="flex items-center gap-2">
-          {s > 1 && <div className={`h-px flex-1 w-8 ${step >= s ? 'bg-indigo-400' : 'bg-gray-200'}`} />}
-          <button
-            type="button"
-            onClick={() => s < step && setStep(s)}
-            className={`w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center transition-colors ${
-              step === s
-                ? 'bg-indigo-600 text-white'
-                : step > s
-                ? 'bg-indigo-100 text-indigo-600 cursor-pointer hover:bg-indigo-200'
-                : 'bg-gray-100 text-gray-400'
-            }`}
-          >
-            {s}
-          </button>
-          <span className={`text-xs font-medium ${step === s ? 'text-gray-700' : 'text-gray-400'}`}>
-            {s === 1 ? 'Cuándo' : 'Quién'}
-          </span>
-        </div>
-      ))}
+    <div className="mb-5 rounded-2xl border border-gray-200 bg-gray-50 p-1.5">
+      <div className="grid grid-cols-2 gap-1.5">
+        {[{ key: 1, label: 'Cuando' }, { key: 2, label: 'Quien' }].map((item) => {
+          const s = item.key;
+          const isActive = step === s;
+          const isCompleted = step > s;
+          const buttonClass = [
+            'flex items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold transition-all',
+            isActive
+              ? 'bg-white text-indigo-700 shadow-sm ring-1 ring-indigo-100'
+              : isCompleted
+              ? 'text-indigo-600 hover:bg-indigo-50'
+              : 'text-gray-400',
+            s <= step ? 'cursor-pointer' : 'cursor-default',
+          ].join(' ');
+          const badgeClass = [
+            'w-5 h-5 rounded-full text-[11px] font-bold flex items-center justify-center',
+            isActive
+              ? 'bg-indigo-600 text-white'
+              : isCompleted
+              ? 'bg-indigo-100 text-indigo-700'
+              : 'bg-gray-200 text-gray-500',
+          ].join(' ');
+          return (
+            <button
+              key={s}
+              type="button"
+              onClick={() => s <= step && setStep(s)}
+              className={buttonClass}
+            >
+              <span className={badgeClass}>{s}</span>
+              <span className="tracking-tight">{item.label}</span>
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 

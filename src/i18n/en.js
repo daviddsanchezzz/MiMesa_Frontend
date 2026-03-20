@@ -50,6 +50,8 @@ const en = {
   book: 'Book',
   successMsg: 'Reservation created successfully! We will contact you soon.',
   errorName: 'Name is required',
+  errorPhone: 'Phone is required',
+  errorEmail: 'Email is required',
   errorConsent: 'You must accept the privacy policy to continue',
   errorClosed: 'The restaurant is closed that day',
   errorNoSlots: 'No time slots for this day',

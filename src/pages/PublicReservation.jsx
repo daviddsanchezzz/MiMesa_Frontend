@@ -158,6 +158,8 @@ export default function PublicReservation() {
     e.preventDefault();
     setError('');
     if (!form.guestName.trim()) { setError(tr.errorName); return; }
+    if (!form.guestPhone.trim()) { setError(tr.errorPhone); return; }
+    if (!form.guestEmail.trim()) { setError(tr.errorEmail); return; }
     if (!form.consent) { setError(tr.errorConsent); return; }
     try {
       await publicApi.post('/reservations/public', { businessId, ...form, roomId: form.roomId || null });
@@ -451,14 +453,14 @@ export default function PublicReservation() {
                         className={inputCls} placeholder={tr.namePlaceholder} />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1.5">{tr.phone}</label>
-                      <input type="tel" value={form.guestPhone}
+                      <label className="block text-sm font-medium text-gray-700 mb-1.5">{tr.phone} *</label>
+                      <input type="tel" required value={form.guestPhone}
                         onChange={e => setForm(f => ({ ...f, guestPhone: e.target.value }))}
                         className={inputCls} placeholder="+34 600 000 000" />
                     </div>
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1.5">{tr.email}</label>
-                      <input type="email" value={form.guestEmail}
+                      <label className="block text-sm font-medium text-gray-700 mb-1.5">{tr.email} *</label>
+                      <input type="email" required value={form.guestEmail}
                         onChange={e => setForm(f => ({ ...f, guestEmail: e.target.value }))}
                         className={inputCls} placeholder="tu@email.com" />
                     </div>

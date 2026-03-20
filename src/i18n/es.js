@@ -50,6 +50,8 @@ const es = {
   book: 'Reservar',
   successMsg: '¡Reserva creada exitosamente! Te contactaremos pronto.',
   errorName: 'El nombre es obligatorio',
+  errorPhone: 'El telÃ©fono es obligatorio',
+  errorEmail: 'El email es obligatorio',
   errorConsent: 'Debes aceptar la política de privacidad para continuar',
   errorClosed: 'El restaurante está cerrado ese día',
   errorNoSlots: 'No hay turnos para este día',

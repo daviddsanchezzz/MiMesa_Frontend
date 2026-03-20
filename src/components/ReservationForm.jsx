@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import api from '../services/api';
-import { useAuth } from '../context/AuthContext';
 
 const inputCls = 'w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white';
 const labelCls = 'block text-sm font-medium text-gray-700 mb-1.5';
@@ -68,7 +67,6 @@ function BellIcon() {
 }
 
 export default function ReservationForm({ reservation, onSave, onCancel, initialContext = null }) {
-  const { business } = useAuth();
   const isEdit = Boolean(reservation?._id);
   const initialDate = reservation?.date || initialContext?.date || new Date().toISOString().slice(0, 10);
   const [rooms, setRooms] = useState(initialContext?.rooms || []);
@@ -150,9 +148,9 @@ export default function ReservationForm({ reservation, onSave, onCancel, initial
     [slots]
   );
   const multiShift = Object.keys(slotsByShift).length > 1;
-  const restaurantMaxPeople = Math.max(1, Number(business?.maxReservationPeople) || 20);
-  const peopleOptions = Array.from({ length: restaurantMaxPeople }, (_, i) => i + 1);
-  const [customPeopleOpen, setCustomPeopleOpen] = useState(form.people > restaurantMaxPeople);
+  const quickPeopleMax = 20;
+  const peopleOptions = Array.from({ length: quickPeopleMax }, (_, i) => i + 1);
+  const [customPeopleOpen, setCustomPeopleOpen] = useState(form.people > quickPeopleMax);
 
   const isDatePast = (day) => new Date(calYear, calMonth, day) < today;
   const fmtDay = (day) => `${calYear}-${String(calMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
@@ -327,16 +325,18 @@ export default function ReservationForm({ reservation, onSave, onCancel, initial
               <input
                 type="number"
                 min={1}
+                inputMode="numeric"
+                pattern="[0-9]*"
                 value={form.people}
                 onChange={(e) =>
                   setForm((f) => ({
                     ...f,
-                    people: Math.min(restaurantMaxPeople, Math.max(1, Number(e.target.value) || 1)),
+                    people: Math.max(1, Number(e.target.value) || 1),
                   }))
                 }
                 className={inputCls}
               />
-              <p className="text-xs text-gray-400 mt-1">Maximo permitido: {restaurantMaxPeople}</p>
+              <p className="text-xs text-gray-400 mt-1">Sin limite maximo en este formulario.</p>
             </div>
           )}
           {rooms.length > 0 && (

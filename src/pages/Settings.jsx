@@ -574,14 +574,14 @@ function TurnosSection() {
             {/* Time range */}
             <div>
               <label className={labelCls}>Horario *</label>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                 <input type="time" required value={form.startTime}
                   onChange={e => setForm(f => ({ ...f, startTime: e.target.value }))}
-                  className={`${inputCls} flex-1`} />
-                <span className="text-gray-400 text-sm font-medium shrink-0">hasta</span>
+                  className={`${inputCls} flex-1 min-w-0`} />
+                <span className="text-gray-400 text-sm font-medium text-center shrink-0">hasta</span>
                 <input type="time" required value={form.endTime}
                   onChange={e => setForm(f => ({ ...f, endTime: e.target.value }))}
-                  className={`${inputCls} flex-1`} />
+                  className={`${inputCls} flex-1 min-w-0`} />
               </div>
             </div>
 
@@ -608,14 +608,14 @@ function TurnosSection() {
                 Rango de fechas
                 <span className="text-gray-400 font-normal ml-1 text-xs">(opcional — deja vacío para turno general)</span>
               </label>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                 <input type="date" value={form.startDate}
                   onChange={e => setForm(f => ({ ...f, startDate: e.target.value }))}
-                  className={`${inputCls} flex-1`} />
-                <span className="text-gray-400 text-sm font-medium shrink-0">hasta</span>
+                  className={`${inputCls} flex-1 min-w-0`} />
+                <span className="text-gray-400 text-sm font-medium text-center shrink-0">hasta</span>
                 <input type="date" value={form.endDate}
                   onChange={e => setForm(f => ({ ...f, endDate: e.target.value }))}
-                  className={`${inputCls} flex-1`} />
+                  className={`${inputCls} flex-1 min-w-0`} />
               </div>
               <p className="text-xs text-gray-400 mt-1.5">
                 Un turno específico tiene prioridad sobre el turno general con el mismo nombre en ese período.

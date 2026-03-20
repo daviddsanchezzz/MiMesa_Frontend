@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import Modal from '../components/Modal';
 
 const inputCls = 'w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent';
-const labelCls = 'block text-sm font-medium text-gray-700 mb-1.5';
+const labelCls = 'block text-xs font-medium text-gray-600 mb-1.5';
 
 // ─── Icons ──────────────────────────────────────────────────────────────────
 const IconPlus = () => (
@@ -875,7 +875,7 @@ function PublicoSection() {
     <div className="space-y-6">
       {/* Brand Color Configuration */}
       <div className="bg-white rounded-2xl p-6 border border-gray-200">
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">Color Corporativo</h3>
+        <h3 className="text-sm font-semibold text-gray-900 mb-2">Color Corporativo</h3>
         <p className="text-sm text-gray-600 mb-4">
           Personaliza el color principal que se mostrará en la página de reservas públicas.
         </p>
@@ -913,7 +913,7 @@ function PublicoSection() {
 
       {/* Maximum Reservation People Configuration */}
       <div className="bg-white rounded-2xl p-6 border border-gray-200">
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">Máximo de Personas por Reserva</h3>
+        <h3 className="text-sm font-semibold text-gray-900 mb-2">Máximo de Personas por Reserva</h3>
         <p className="text-sm text-gray-600 mb-4">
           Establece el número máximo de personas que pueden hacer una reserva en una sola solicitud.
         </p>
@@ -936,7 +936,7 @@ function PublicoSection() {
       {/* Max People Per Slot */}
       <div className="bg-white rounded-2xl p-6 border border-gray-200">
         <div className="flex items-center gap-2 mb-2">
-          <h3 className="text-lg font-semibold text-gray-900">Máximo de Personas por Turno</h3>
+          <h3 className="text-sm font-semibold text-gray-900">Máximo de Personas por Turno</h3>
           <div className="relative group">
             <span className="w-5 h-5 rounded-full bg-gray-200 text-gray-600 text-xs flex items-center justify-center cursor-default select-none font-bold">i</span>
             <div className="absolute right-0 bottom-full mb-2 w-64 bg-gray-800 text-white text-xs rounded-lg px-3 py-2 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-10 text-center">
@@ -967,7 +967,7 @@ function PublicoSection() {
       {/* Reservation Duration */}
       <div className="bg-white rounded-2xl p-6 border border-gray-200">
         <div className="flex items-center gap-2 mb-2">
-          <h3 className="text-lg font-semibold text-gray-900">Duración por Mesa</h3>
+          <h3 className="text-sm font-semibold text-gray-900">Duración por Mesa</h3>
           <div className="relative group">
             <span className="w-5 h-5 rounded-full bg-gray-200 text-gray-600 text-xs flex items-center justify-center cursor-default select-none font-bold">i</span>
             <div className="absolute right-0 bottom-full mb-2 w-64 bg-gray-800 text-white text-xs rounded-lg px-3 py-2 opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-10 text-center">
@@ -1012,7 +1012,7 @@ function PublicoSection() {
 
       {/* Public URL */}
       <div className="bg-white rounded-2xl p-6 border border-gray-200">
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">URL Pública para Reservas</h3>
+        <h3 className="text-sm font-semibold text-gray-900 mb-2">URL Pública para Reservas</h3>
         <p className="text-sm text-gray-600 mb-4">
           Comparte esta URL con tus clientes para que puedan hacer reservas online directamente.
         </p>
@@ -1037,7 +1037,7 @@ function PublicoSection() {
 
       {/* Embed iframe */}
       <div className="bg-white rounded-2xl p-6 border border-gray-200">
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">Integrar en tu web (iframe)</h3>
+        <h3 className="text-sm font-semibold text-gray-900 mb-2">Integrar en tu web (iframe)</h3>
         <p className="text-sm text-gray-600 mb-4">
           Copia este código y pégalo en la web de tu restaurante para que los clientes puedan reservar sin salir de tu página.
         </p>
@@ -1098,7 +1098,7 @@ function NegocioSection() {
   return (
     <div className="space-y-4">
       <div className="bg-white rounded-2xl p-6 border border-gray-200">
-        <h3 className="text-lg font-semibold text-gray-900 mb-2">Datos del negocio</h3>
+        <h3 className="text-sm font-semibold text-gray-900 mb-2">Datos del negocio</h3>
         <p className="text-sm text-gray-500 mb-4">Nombre, contacto y datos fiscales del restaurante.</p>
         <ErrorBanner msg={error} />
         <form onSubmit={onSubmit} className="space-y-4">
@@ -1177,3 +1177,4 @@ export default function Settings() {
     </div>
   );
 }
+

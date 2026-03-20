@@ -4,7 +4,7 @@ import Modal from '../components/Modal';
 import { useAuth } from '../context/AuthContext';
 
 const inputCls = 'w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white';
-const labelCls = 'block text-sm font-medium text-gray-700 mb-1.5';
+const labelCls = 'block text-xs font-medium text-gray-600 mb-1.5';
 
 function ErrorBanner({ msg }) {
   if (!msg) return null;
@@ -250,7 +250,7 @@ export default function Profile() {
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
         <section className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
-          <h2 className="text-base font-semibold text-gray-900 mb-4">Informacion personal</h2>
+          <h2 className="text-sm font-semibold text-gray-900 mb-4">Informacion personal</h2>
           <form onSubmit={saveProfile} className="space-y-4">
             <div>
               <label className={labelCls}>Nombre</label>
@@ -277,7 +277,7 @@ export default function Profile() {
         </section>
 
         <section className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
-          <h2 className="text-base font-semibold text-gray-900 mb-4">Seguridad</h2>
+          <h2 className="text-sm font-semibold text-gray-900 mb-4">Seguridad</h2>
 
           <div className="rounded-2xl border border-gray-200 overflow-hidden">
             <div className="p-4 flex items-center justify-between gap-3">
@@ -308,7 +308,7 @@ export default function Profile() {
       </div>
 
       <section className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
-        <h2 className="text-base font-semibold text-gray-900 mb-4">
+        <h2 className="text-sm font-semibold text-gray-900 mb-4">
           {memberships.length <= 1 ? 'Notificaciones' : 'Notificaciones por negocio'}
         </h2>
 
@@ -366,7 +366,7 @@ export default function Profile() {
         <section className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
           <div className="flex items-center justify-between gap-3 mb-4">
             <div>
-              <h2 className="text-base font-semibold text-gray-900">Mis negocios</h2>
+              <h2 className="text-sm font-semibold text-gray-900">Mis negocios</h2>
               <p className="text-sm text-gray-500 mt-0.5">Gestiona tus negocios como propietario.</p>
             </div>
             <button

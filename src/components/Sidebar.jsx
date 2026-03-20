@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 
 const IconTeam = () => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 shrink-0">
-    <path d="M10 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM6 8a2 2 0 1 1-4 0 2 2 0 0 1 4 0ZM1.49 15.326a.78.78 0 0 1-.358-.442 3 3 0 0 1 4.308-3.516 6.484 6.484 0 0 0-1.905 3.959c-.023.222-.014.442.025.654a4.97 4.97 0 0 1-2.07-.655ZM16.44 15.98a4.97 4.97 0 0 0 2.07-.654.78.78 0 0 0 .357-.442 3 3 0 0 0-4.308-3.517 6.484 6.484 0 0 1 1.907 3.96 2.32 2.32 0 0 1-.026.654ZM18 8a2 2 0 1 1-4 0 2 2 0 0 1 4 0ZM5.304 16.19a.844.844 0 0 1-.277-.71 5 5 0 0 1 9.947 0 .843.843 0 0 1-.277.71A6.975 6.975 0 0 1 10 18a6.974 6.974 0 0 1-4.696-1.81Z" />
+    <path fillRule="evenodd" d="M10 1.75a.75.75 0 0 1 .33.077l6.5 3.25a.75.75 0 0 1 .42.673v4.786a8.25 8.25 0 1 1-16.5 0V5.75a.75.75 0 0 1 .42-.673l6.5-3.25A.75.75 0 0 1 10 1.75Zm3.03 6.72a.75.75 0 1 0-1.06-1.06L9.25 10.13l-1.22-1.22a.75.75 0 1 0-1.06 1.06l1.75 1.75a.75.75 0 0 0 1.06 0l3.25-3.25Z" clipRule="evenodd" />
   </svg>
 );
 
@@ -64,6 +64,7 @@ export default function Sidebar({ isOpen, onClose }) {
     ? []
     : [...secondaryLinks, ...(hasRole('manager') ? [{ to: '/team', label: 'Equipo', icon: <IconTeam /> }] : [])];
   const visibleConfigLinks = isStaff ? [] : configLinks;
+  const navLinks = [...mainLinks, ...lowerLinks];
 
   const userName = session?.user?.name || business?.userName || business?.name || 'Usuario';
   const userEmail = session?.user?.email || business?.userEmail || business?.email || '';
@@ -119,31 +120,14 @@ export default function Sidebar({ isOpen, onClose }) {
         </div>
       </div>
 
-      <nav className="flex-1 px-3 py-4 flex flex-col gap-4 overflow-y-auto">
+      <nav className="flex-1 px-3 py-4 overflow-y-auto">
         <div className="space-y-0.5">
           <p className="text-slate-500 text-[10px] font-semibold uppercase tracking-widest px-2 pb-2">Menu</p>
-          {mainLinks.map((link) => (
+          {navLinks.map((link) => (
             <NavLink
               key={link.to}
               to={link.to}
               end={link.to === '/'}
-              onClick={handleNavClick}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-3 lg:py-2 rounded-lg text-sm font-medium transition-all duration-100 ${
-                  isActive ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100'
-                }`
-              }
-            >
-              {link.icon}
-              {link.label}
-            </NavLink>
-          ))}
-        </div>
-        <div className="space-y-0.5">
-          {lowerLinks.map((link) => (
-            <NavLink
-              key={link.to}
-              to={link.to}
               onClick={handleNavClick}
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3 py-3 lg:py-2 rounded-lg text-sm font-medium transition-all duration-100 ${

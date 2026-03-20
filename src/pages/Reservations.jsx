@@ -381,7 +381,7 @@ export default function Reservations() {
   return (
     <div className="space-y-4">
       {/* ── MOBILE HEADER ──────────────────────────────────────────────── */}      <div className="sm:hidden">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap justify-end max-w-full">
           <select
             value={filterMode}
             onChange={e => setFilterMode(e.target.value)}
@@ -408,12 +408,14 @@ export default function Reservations() {
         </div>
 
         {filterMode === 'day' && (
-          <input
-            type="date"
-            value={dateFilter}
-            onChange={e => setDateFilter(e.target.value)}
-            className="mt-2 w-full max-w-full min-w-0 box-border border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
-          />
+          <div className="mt-2 w-full overflow-hidden">
+            <input
+              type="date"
+              value={dateFilter}
+              onChange={e => setDateFilter(e.target.value)}
+              className="block w-full max-w-full min-w-0 box-border border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+            />
+          </div>
         )}
 
         {(filterMode === 'today' || filterMode === 'day') && (
@@ -463,7 +465,7 @@ export default function Reservations() {
           {filterMode === 'day' && (
             <input type="date" value={dateFilter}
               onChange={e => setDateFilter(e.target.value)}
-              className="w-44 max-w-full min-w-0 box-border border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+              className="block w-44 max-w-full min-w-0 box-border border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
             />
           )}
           <button

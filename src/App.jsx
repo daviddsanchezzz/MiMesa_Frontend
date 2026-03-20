@@ -15,6 +15,7 @@ import Settings from './pages/Settings';
 import Team from './pages/Team';
 import AcceptInvite from './pages/AcceptInvite';
 import DevDashboard from './pages/DevDashboard';
+import Onboarding from './pages/Onboarding';
 import PublicReservation from './pages/PublicReservation';
 import PublicCancel from './pages/PublicCancel';
 import Sidebar from './components/Sidebar';
@@ -60,6 +61,7 @@ function PrivateLayout({ children }) {
 
   if (loading) return <LoadingScreen />;
   if (!business) return <Navigate to="/login" replace />;
+  if (!business.id && !business.isDev) return <Navigate to="/onboarding" replace />;
 
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">
@@ -86,6 +88,7 @@ function FullBleedLayout({ children }) {
 
   if (loading) return <LoadingScreen />;
   if (!business) return <Navigate to="/login" replace />;
+  if (!business.id && !business.isDev) return <Navigate to="/onboarding" replace />;
 
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">

@@ -144,10 +144,6 @@ export default function Login() {
             </button>
           </form>
 
-          <p className="text-center text-sm text-gray-500 mt-6">
-            ¿No tienes cuenta?{' '}
-            <Link to="/register" className="text-indigo-600 hover:text-indigo-700 font-semibold">Regístrate gratis</Link>
-          </p>
         </div>
       </div>
     </div>

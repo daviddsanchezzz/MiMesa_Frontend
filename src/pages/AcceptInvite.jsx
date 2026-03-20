@@ -67,7 +67,7 @@ export default function AcceptInvite() {
       }
       await acceptToken();
       setPhase('done');
-      setTimeout(() => navigate('/'), 2000);
+      setTimeout(() => navigate(invite.type === 'platform' ? '/onboarding' : '/'), 2000);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -88,7 +88,7 @@ export default function AcceptInvite() {
       if (signInError) throw new Error(signInError.message || 'Credenciales incorrectas');
       await acceptToken();
       setPhase('done');
-      setTimeout(() => navigate('/'), 2000);
+      setTimeout(() => navigate(invite.type === 'platform' ? '/onboarding' : '/'), 2000);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -125,8 +125,13 @@ export default function AcceptInvite() {
             <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clipRule="evenodd"/>
           </svg>
         </div>
-        <h2 className="text-xl font-bold text-gray-900 mb-1">¡Bienvenido al equipo!</h2>
-        <p className="text-sm text-gray-500">Te has unido a <strong>{invite.business?.name}</strong>. Redirigiendo...</p>
+        <h2 className="text-xl font-bold text-gray-900 mb-1">¡Cuenta activada!</h2>
+        <p className="text-sm text-gray-500">
+          {invite.type === 'platform'
+            ? 'Redirigiendo para configurar tu restaurante...'
+            : <>Te has unido a <strong>{invite.business?.name}</strong>. Redirigiendo...</>
+          }
+        </p>
       </div>
     </div>
   );
@@ -136,19 +141,33 @@ export default function AcceptInvite() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-6 py-12">
       <div className="w-full max-w-sm">
-        {/* Business header */}
+        {/* Header */}
         <div className="text-center mb-8">
-          <div
-            className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4 text-white text-xl font-bold shadow-lg"
-            style={{ background: brandColor }}
-          >
-            {invite.business?.name?.[0]?.toUpperCase() || 'R'}
-          </div>
-          <h1 className="text-xl font-bold text-gray-900">{invite.business?.name}</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            Te han invitado como{' '}
-            <span className="font-semibold text-gray-700">{ROLE_LABELS[invite.role] || invite.role}</span>
-          </p>
+          {invite.type === 'platform' || !invite.business ? (
+            <>
+              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-indigo-700 flex items-center justify-center mx-auto mb-4 text-white shadow-lg">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" className="w-7 h-7">
+                  <path d="M3 2a1 1 0 0 0-1 1v1a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1H3ZM2 9a1 1 0 0 1 1-1h18a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V9ZM1 15a1 1 0 0 1 1-1h8a1 1 0 1 1 0 2H2a1 1 0 0 1-1-1Z" />
+                </svg>
+              </div>
+              <h1 className="text-xl font-bold text-gray-900">MiMesa</h1>
+              <p className="text-sm text-gray-500 mt-1">Te han dado acceso a la plataforma</p>
+            </>
+          ) : (
+            <>
+              <div
+                className="w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4 text-white text-xl font-bold shadow-lg"
+                style={{ background: brandColor }}
+              >
+                {invite.business?.name?.[0]?.toUpperCase() || 'R'}
+              </div>
+              <h1 className="text-xl font-bold text-gray-900">{invite.business?.name}</h1>
+              <p className="text-sm text-gray-500 mt-1">
+                Te han invitado como{' '}
+                <span className="font-semibold text-gray-700">{ROLE_LABELS[invite.role] || invite.role}</span>
+              </p>
+            </>
+          )}
         </div>
 
         <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
@@ -205,7 +224,9 @@ export default function AcceptInvite() {
             >
               {loading
                 ? (phase === 'login' ? 'Iniciando sesión...' : 'Activando cuenta...')
-                : (phase === 'login' ? 'Iniciar sesión y unirme' : 'Activar cuenta y unirme')}
+                : phase === 'login'
+                  ? 'Iniciar sesión'
+                  : invite.type === 'platform' ? 'Activar mi cuenta' : 'Activar cuenta y unirme'}
             </button>
           </form>
 

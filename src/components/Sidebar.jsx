@@ -56,6 +56,7 @@ export default function Sidebar({ isOpen, onClose }) {
   const { business, memberships, logout, hasRole, switchBusiness, session } = useAuth();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [isSmallScreen, setIsSmallScreen] = useState(false);
   const menuRef = useRef(null);
   const isStaff = business?.role === 'staff';
 
@@ -64,7 +65,7 @@ export default function Sidebar({ isOpen, onClose }) {
     ? []
     : [...secondaryLinks, ...(hasRole('manager') ? [{ to: '/team', label: 'Equipo', icon: <IconTeam /> }] : [])];
   const visibleConfigLinks = isStaff ? [] : configLinks;
-  const navLinks = [...mainLinks, ...lowerLinks];
+  const navLinks = [...mainLinks, ...lowerLinks].filter((link) => !(isSmallScreen && link.to === '/tables'));
 
   const userName = session?.user?.name || business?.userName || business?.name || 'Usuario';
   const userEmail = session?.user?.email || business?.userEmail || business?.email || '';
@@ -81,6 +82,14 @@ export default function Sidebar({ isOpen, onClose }) {
     };
     document.addEventListener('click', onDocumentClick);
     return () => document.removeEventListener('click', onDocumentClick);
+  }, []);
+
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 767px)');
+    const sync = () => setIsSmallScreen(media.matches);
+    sync();
+    media.addEventListener('change', sync);
+    return () => media.removeEventListener('change', sync);
   }, []);
 
   return (

@@ -40,23 +40,31 @@ function MembershipCard({ membership, onToggle }) {
       </div>
 
       <div className="space-y-2">
-        <label className="flex items-center gap-2 text-sm text-gray-700">
-          <input
-            type="checkbox"
-            className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-            checked={!!prefs.newReservationEmail}
-            onChange={(e) => onToggle({ newReservationEmail: e.target.checked })}
-          />
-          Avisarme por email cuando se crea una reserva
+        <label className="flex items-start justify-between gap-3 p-3 rounded-xl border border-gray-200 bg-gray-50/50 cursor-pointer">
+          <span className="text-sm text-gray-700">Avisarme por email cuando se crea una reserva</span>
+          <span className="relative inline-flex h-6 w-11 shrink-0 items-center">
+            <input
+              type="checkbox"
+              className="peer sr-only"
+              checked={!!prefs.newReservationEmail}
+              onChange={(e) => onToggle({ newReservationEmail: e.target.checked })}
+            />
+            <span className="absolute inset-0 rounded-full bg-gray-300 peer-checked:bg-indigo-500 transition-colors" />
+            <span className="absolute left-0.5 h-5 w-5 rounded-full bg-white shadow-sm peer-checked:translate-x-5 transition-transform" />
+          </span>
         </label>
-        <label className="flex items-center gap-2 text-sm text-gray-700">
-          <input
-            type="checkbox"
-            className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
-            checked={!!prefs.cancelledReservationEmail}
-            onChange={(e) => onToggle({ cancelledReservationEmail: e.target.checked })}
-          />
-          Avisarme por email cuando se cancela una reserva
+        <label className="flex items-start justify-between gap-3 p-3 rounded-xl border border-gray-200 bg-gray-50/50 cursor-pointer">
+          <span className="text-sm text-gray-700">Avisarme por email cuando se cancela una reserva</span>
+          <span className="relative inline-flex h-6 w-11 shrink-0 items-center">
+            <input
+              type="checkbox"
+              className="peer sr-only"
+              checked={!!prefs.cancelledReservationEmail}
+              onChange={(e) => onToggle({ cancelledReservationEmail: e.target.checked })}
+            />
+            <span className="absolute inset-0 rounded-full bg-gray-300 peer-checked:bg-indigo-500 transition-colors" />
+            <span className="absolute left-0.5 h-5 w-5 rounded-full bg-white shadow-sm peer-checked:translate-x-5 transition-transform" />
+          </span>
         </label>
       </div>
     </div>

@@ -119,7 +119,7 @@ export default function ReservationForm({ reservation, onSave, onCancel }) {
         {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-3 py-2">{error}</div>}
 
         {/* Date + people row */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label className={labelCls}>Fecha *</label>
             <input type="date" required value={form.date} onChange={field('date')} className={inputCls} />

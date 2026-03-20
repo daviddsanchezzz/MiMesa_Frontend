@@ -4,30 +4,39 @@ import api from '../services/api';
 const inputCls = 'w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white';
 const labelCls = 'block text-sm font-medium text-gray-700 mb-1.5';
 
-export default function ReservationForm({ reservation, onSave, onCancel }) {
-  const [rooms, setRooms] = useState([]);
+export default function ReservationForm({ reservation, onSave, onCancel, initialContext = null }) {
+  const initialDate = initialContext?.date || new Date().toISOString().slice(0, 10);
+  const [rooms, setRooms] = useState(initialContext?.rooms || []);
   const [step, setStep] = useState(1); // 1 = when/how many, 2 = who
   const [form, setForm] = useState({
     guestName:  reservation?.guestName  || '',
     guestPhone: reservation?.guestPhone || '',
     guestEmail: reservation?.guestEmail || '',
     roomId:     reservation?.roomId?._id || reservation?.roomId || '',
-    date:       reservation?.date  || new Date().toISOString().slice(0, 10),
-    time:       reservation?.time  || '',
+    date:       reservation?.date  || initialDate,
+    time:       reservation?.time  || initialContext?.slots?.[0]?.time || '',
     people:     reservation?.people || 2,
     status:     reservation?.status || 'pending',
     notes:      reservation?.notes  || '',
   });
   const [error, setError] = useState('');
-  const [slots, setSlots] = useState(null);
-  const [vacation, setVacation] = useState(null);
+  const [slots, setSlots] = useState(initialContext?.slots ?? null);
+  const [vacation, setVacation] = useState(initialContext?.vacation ?? null);
+  const [skipInitialFetch, setSkipInitialFetch] = useState(
+    Boolean(initialContext && !reservation && initialContext?.date === initialDate)
+  );
 
   useEffect(() => {
+    if (rooms.length > 0) return;
     api.get('/rooms').then(r => setRooms(r.data));
-  }, []);
+  }, [rooms.length]);
 
   useEffect(() => {
     if (!form.date) return;
+    if (skipInitialFetch && form.date === initialDate) {
+      setSkipInitialFetch(false);
+      return;
+    }
     setSlots(null);
     setVacation(null);
     Promise.all([
@@ -50,7 +59,7 @@ export default function ReservationForm({ reservation, onSave, onCancel }) {
       }
     }).catch(() => { setSlots([]); setVacation(false); });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [form.date]);
+  }, [form.date, initialDate, skipInitialFetch]);
 
   const isClosed  = vacation && vacation.closed;
   const isBlocked = isClosed || (slots !== null && slots.length === 0);
@@ -122,7 +131,7 @@ export default function ReservationForm({ reservation, onSave, onCancel }) {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label className={labelCls}>Fecha *</label>
-            <input type="date" required value={form.date} onChange={field('date')} className={inputCls} />
+            <input type="date" required value={form.date} onChange={field('date')} className={`${inputCls} text-center`} />
           </div>
           <div>
             <label className={labelCls}>Personas *</label>

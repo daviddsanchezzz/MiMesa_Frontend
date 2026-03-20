@@ -227,7 +227,38 @@ export default function Reservations() {
   const [filterMode,   setFilterMode]   = useState('today'); // today | week | upcoming | day
   const [dateFilter,   setDateFilter]   = useState(new Date().toISOString().slice(0, 10));
   const [modal,        setModal]        = useState(null);
+  const [openingCreateModal, setOpeningCreateModal] = useState(false);
   const todayStr = new Date().toISOString().slice(0, 10);
+
+  const resolveCreateDate = () => (filterMode === 'day' ? dateFilter : todayStr);
+
+  const openCreateModal = async () => {
+    const targetDate = resolveCreateDate();
+    setOpeningCreateModal(true);
+    try {
+      const [roomsRes, slotsRes, vacRes] = await Promise.all([
+        api.get('/rooms'),
+        api.get(`/shifts/slots?date=${targetDate}`),
+        api.get(`/vacations/check?date=${targetDate}`),
+      ]);
+      const vacation = vacRes.data.closed ? vacRes.data : false;
+      const availableSlots = vacation ? [] : slotsRes.data;
+
+      setModal({
+        mode: 'create',
+        preloaded: {
+          date: targetDate,
+          rooms: roomsRes.data,
+          slots: availableSlots,
+          vacation,
+        },
+      });
+    } catch {
+      setModal({ mode: 'create' });
+    } finally {
+      setOpeningCreateModal(false);
+    }
+  };
 
   const load = () => {
     if (filterMode === 'today') {
@@ -359,11 +390,18 @@ export default function Reservations() {
           <option value="upcoming">Todas (proximas 20)</option>
             <option value="day">Dia concreto</option>
           </select>
-          <button onClick={() => setModal({ mode: 'create' })}
-            className="w-10 h-10 flex items-center justify-center rounded-xl bg-indigo-600 text-white active:bg-indigo-700 shrink-0 shadow-sm">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-5 h-5">
-              <path d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z" />
-            </svg>
+          <button
+            onClick={openCreateModal}
+            disabled={openingCreateModal}
+            className="w-10 h-10 flex items-center justify-center rounded-xl bg-indigo-600 text-white active:bg-indigo-700 shrink-0 shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {openingCreateModal ? (
+              <span className="w-4 h-4 border-2 border-white/50 border-t-white rounded-full animate-spin" />
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-5 h-5">
+                <path d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z" />
+              </svg>
+            )}
           </button>
         </div>
 
@@ -372,7 +410,7 @@ export default function Reservations() {
             type="date"
             value={dateFilter}
             onChange={e => setDateFilter(e.target.value)}
-            className="mt-2 w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+            className="mt-2 w-full border border-gray-300 rounded-xl px-3 py-2 text-sm text-center focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
           />
         )}
 
@@ -426,12 +464,24 @@ export default function Reservations() {
               className="border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
             />
           )}
-          <button onClick={() => setModal({ mode: 'create' })}
-            className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors shadow-sm">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
-              <path d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z" />
-            </svg>
-            Nueva reserva
+          <button
+            onClick={openCreateModal}
+            disabled={openingCreateModal}
+            className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {openingCreateModal ? (
+              <>
+                <span className="w-4 h-4 border-2 border-white/50 border-t-white rounded-full animate-spin" />
+                Cargando...
+              </>
+            ) : (
+              <>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
+                  <path d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z" />
+                </svg>
+                Nueva reserva
+              </>
+            )}
           </button>
         </div>
       </div>
@@ -461,7 +511,7 @@ export default function Reservations() {
             </svg>
           </div>
           <p className="text-gray-500 font-medium">Sin reservas para este día</p>
-          <button onClick={() => setModal({ mode: 'create' })} className="mt-4 text-sm text-indigo-600 hover:underline font-medium">
+          <button onClick={openCreateModal} className="mt-4 text-sm text-indigo-600 hover:underline font-medium">
             Crear la primera reserva →
           </button>
         </div>
@@ -743,6 +793,7 @@ export default function Reservations() {
         >
           <ReservationForm
             reservation={modal.reservation}
+            initialContext={modal.preloaded || null}
             onSave={() => { setModal(null); load(); }}
             onCancel={() => setModal(null)}
           />

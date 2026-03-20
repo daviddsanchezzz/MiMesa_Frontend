@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import Modal from '../components/Modal';
+import ReservationForm from '../components/ReservationForm';
 
 // ─── Status Badges ──────────────────────────────────────────────────────────
 const statusBadge = {
@@ -59,17 +61,32 @@ function Avatar({ name }) {
 }
 
 export default function Dashboard() {
+  const navigate = useNavigate();
   const { business } = useAuth();
   const [reservations, setReservations] = useState([]);
   const [tables, setTables] = useState([]);
+  const [showCreateModal, setShowCreateModal] = useState(false);
 
   const today = new Date().toISOString().slice(0, 10);
   const dateLabel = new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
 
-  useEffect(() => {
+  const loadData = () => {
     api.get(`/reservations?date=${today}`).then(r => setReservations(r.data));
     api.get('/tables').then(r => setTables(r.data));
+  };
+
+  useEffect(() => {
+    loadData();
   }, []);
+
+  const handleNewReservationClick = () => {
+    const isSmallScreen = typeof window !== 'undefined' && window.matchMedia('(max-width: 639px)').matches;
+    if (isSmallScreen) {
+      setShowCreateModal(true);
+      return;
+    }
+    navigate('/reservations');
+  };
 
   const free     = tables.filter(t => t.status === 'free').length;
   const occupied = tables.filter(t => t.status === 'occupied').length;
@@ -91,8 +108,9 @@ export default function Dashboard() {
           </h2>
           <p className="text-sm text-gray-400 mt-0.5 capitalize">{dateLabel}</p>
         </div>
-        <Link
-          to="/reservations"
+        <button
+          type="button"
+          onClick={handleNewReservationClick}
           className="shrink-0 flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors shadow-sm"
         >
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
@@ -100,7 +118,7 @@ export default function Dashboard() {
           </svg>
           <span className="hidden sm:inline">Nueva reserva</span>
           <span className="sm:hidden">Nueva</span>
-        </Link>
+        </button>
       </div>
 
       {/* Stats */}
@@ -177,6 +195,22 @@ export default function Dashboard() {
           </div>
         )}
       </div>
+
+      {showCreateModal && (
+        <Modal
+          title="Nueva reserva"
+          subtitle="Crea una nueva reserva"
+          onClose={() => setShowCreateModal(false)}
+        >
+          <ReservationForm
+            onSave={() => {
+              setShowCreateModal(false);
+              loadData();
+            }}
+            onCancel={() => setShowCreateModal(false)}
+          />
+        </Modal>
+      )}
     </div>
   );
 }

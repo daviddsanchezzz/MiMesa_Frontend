@@ -539,17 +539,28 @@ export default function Reservations() {
         const groups  = groupedByShift();
         const dateGroups = groupedByDate();
         const thead = (
-          <thead>
-            <tr className="border-b border-gray-100">
-              <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Cliente</th>
-              <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Hora</th>
-              <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Pax</th>
-              <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Sala</th>
-              <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Mesa</th>
-              <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Estado</th>
-              <th className="px-4 py-3.5"></th>
-            </tr>
-          </thead>
+          <>
+            <colgroup>
+              <col style={{ width: '30%' }} />
+              <col style={{ width: '9%' }} />
+              <col style={{ width: '8%' }} />
+              <col style={{ width: '10%' }} />
+              <col style={{ width: '12%' }} />
+              <col style={{ width: '13%' }} />
+              <col style={{ width: '18%' }} />
+            </colgroup>
+            <thead>
+              <tr className="border-b border-gray-100">
+                <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Cliente</th>
+                <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Hora</th>
+                <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Pax</th>
+                <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Sala</th>
+                <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Mesa</th>
+                <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Estado</th>
+                <th className="px-4 py-3.5"></th>
+              </tr>
+            </thead>
+          </>
         );
 
         const renderDesktopRow = (r, i, arr) => {
@@ -594,7 +605,7 @@ export default function Reservations() {
               <td className="px-4 py-3.5">
                 <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${s.cls}`}>{s.label}</span>
               </td>
-              <td className="px-4 py-3.5">
+              <td className="px-4 py-3.5 whitespace-nowrap">
                 <div className="flex items-center gap-0.5">
                   <ActionBtn onClick={() => setModal({ mode: 'edit', reservation: r })} color="blue">Editar</ActionBtn>
                   {r.status !== 'cancelled' && <ActionBtn onClick={() => quickStatus(r._id, 'cancelled')} color="red">Cancelar</ActionBtn>}
@@ -624,7 +635,7 @@ export default function Reservations() {
                       </span>
                     </div>
                     <div className="overflow-x-auto">
-                      <table className="w-full text-sm">
+                      <table className="w-full table-fixed text-sm">
                         {thead}
                         <tbody>{rows.map((r, i, a) => renderDesktopRow(r, i, a))}</tbody>
                       </table>
@@ -640,7 +651,7 @@ export default function Reservations() {
           return (
             <div className="hidden sm:block bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+                <table className="w-full table-fixed text-sm">
                   {thead}
                   <tbody>{displayReservations.map((r, i, a) => renderDesktopRow(r, i, a))}</tbody>
                 </table>
@@ -677,7 +688,7 @@ export default function Reservations() {
                     </div>
                   </div>
                   <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
+                    <table className="w-full table-fixed text-sm">
                       {thead}
                       <tbody>{rows.map((r, i, a) => renderDesktopRow(r, i, a))}</tbody>
                     </table>

@@ -1,60 +1,54 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { authClient } from '../lib/authClient';
+import { setStoredToken, getStoredToken } from '../lib/authClient';
 import api, { setActiveBusinessId } from '../services/api';
-import { setStoredToken } from '../lib/authClient';
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
-  // Better Auth session (user identity)
-  const { data: session, isPending: sessionLoading } = authClient.useSession();
-
-  // Business data for the currently active context
-  const [business, setBusiness]               = useState(null);
-  const [businessLoading, setBusinessLoading] = useState(false);
-
-  // All businesses this user belongs to (for multi-business switching)
+  const [business, setBusiness]   = useState(null);
+  const [loading, setLoading]     = useState(true);   // starts true until first load
   const [memberships, setMemberships] = useState([]);
-
-  const userId = session?.user?.id;
 
   const applyMeResponse = useCallback((data) => {
     setBusiness(data);
     setMemberships(data.memberships ?? []);
-    // Keep the header in sync with the active business
     if (data.id) setActiveBusinessId(data.id);
   }, []);
 
-  // Reload business context whenever the session changes
+  // ── Initial load: restore session from stored token ────────────────────────
+  // This is the primary session source for cross-origin setups (Netlify/Vercel → Render).
+  // useSession() from Better Auth relies on cookies which don't work cross-origin.
   useEffect(() => {
-    if (!userId) {
-      setBusiness(null);
-      setMemberships([]);
-      setActiveBusinessId(null);
-      return;
-    }
-    setBusinessLoading(true);
+    const token = getStoredToken();
+    if (!token) { setLoading(false); return; }
+
     api.get('/auth/me')
       .then(({ data }) => applyMeResponse(data))
-      .catch(() => setBusiness(null))
-      .finally(() => setBusinessLoading(false));
-  }, [userId, applyMeResponse]);
+      .catch(() => {
+        // Token invalid or expired — clear it
+        setStoredToken(null);
+        setActiveBusinessId(null);
+      })
+      .finally(() => setLoading(false));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Force-logout event dispatched by the axios interceptor on unrecoverable 401
   useEffect(() => {
-    const handle = () => { setBusiness(null); setMemberships([]); setActiveBusinessId(null); };
+    const handle = () => {
+      setStoredToken(null);
+      setBusiness(null);
+      setMemberships([]);
+      setActiveBusinessId(null);
+    };
     window.addEventListener('auth:logout', handle);
     return () => window.removeEventListener('auth:logout', handle);
   }, []);
-
-  const loading = sessionLoading || businessLoading;
 
   // ── Login ──────────────────────────────────────────────────────────────────
   const login = async (email, password) => {
     const { data, error } = await authClient.signIn.email({ email, password });
     if (error) throw new Error(error.message || 'Credenciales incorrectas');
-    // onSuccess in authClient stores the token; also trigger business fetch directly
-    // so we don't depend on useSession() re-syncing (cross-origin cookies are unreliable)
     if (data?.token) setStoredToken(data.token);
     await refreshBusiness();
   };
@@ -68,7 +62,7 @@ export function AuthProvider({ children }) {
 
   // ── Logout ─────────────────────────────────────────────────────────────────
   const logout = async () => {
-    await authClient.signOut();
+    await authClient.signOut().catch(() => {});
     setStoredToken(null);
     setBusiness(null);
     setMemberships([]);
@@ -84,19 +78,15 @@ export function AuthProvider({ children }) {
   };
 
   // ── Switch active business ─────────────────────────────────────────────────
-  // Sets the X-Business-Id header and reloads context from the server.
   const switchBusiness = async (businessId) => {
     setActiveBusinessId(businessId);
-    setBusinessLoading(true);
     try {
       const { data } = await api.get('/auth/me');
       applyMeResponse(data);
-    } catch { /* silently ignore */ } finally {
-      setBusinessLoading(false);
-    }
+    } catch { /* silently ignore */ }
   };
 
-  // Convenience helpers derived from active business
+  // Convenience helpers
   const isDev              = business?.isDev ?? false;
   const role               = business?.role ?? null;
   const plan               = business?.plan ?? 'free';
@@ -106,13 +96,18 @@ export function AuthProvider({ children }) {
   const hasRole   = (minRole) => (HIERARCHY[role] ?? 0) >= (HIERARCHY[minRole] ?? 0);
   const isSubscribed = subscriptionStatus === 'active' || subscriptionStatus === 'trialing';
 
+  // Minimal session object for pages that need the logged-in user's identity
+  const session = business
+    ? { user: { email: business.userEmail ?? business.email ?? '', name: business.name ?? '' } }
+    : null;
+
   return (
     <AuthContext.Provider value={{
       business, loading, memberships,
       login, register, logout, refreshBusiness, switchBusiness,
       isDev, role, plan, subscriptionStatus,
       hasRole, isSubscribed,
-      session: session ?? null,
+      session,
     }}>
       {children}
     </AuthContext.Provider>

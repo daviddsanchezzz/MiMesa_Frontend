@@ -45,11 +45,7 @@ function MobileHeader({ onMenuOpen }) {
         </svg>
       </button>
       <div className="flex items-center gap-2">
-        <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-violet-500 to-violet-700 flex items-center justify-center shrink-0">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="white" className="w-3.5 h-3.5">
-            <path d="M3 2a1 1 0 0 0-1 1v1a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1H3ZM2 9a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V9ZM1 15a1 1 0 0 1 1-1h6a1 1 0 0 1 0 2H2a1 1 0 0 1-1-1Z" />
-          </svg>
-        </div>
+        <img src="/logo.svg" alt="Tableo" className="w-6 h-6 shrink-0" />
         <p className="text-sm font-semibold text-gray-900">Tableo</p>
       </div>
     </div>

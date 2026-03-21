@@ -47,9 +47,20 @@ function TableCell({ reservation, tables, onAssign }) {
     return () => document.removeEventListener('mousedown', handler);
   }, [open]);
 
-  const roomId = reservation.roomId?._id || reservation.roomId;
-  const available = tables.filter(t => !roomId || t.roomId?._id === roomId || t.roomId === roomId);
+  const roomId    = reservation.roomId?._id || reservation.roomId;
+  const available = tables
+    .filter(t => !roomId || t.roomId?._id === roomId || t.roomId === roomId)
+    .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
   const assigned  = reservation.tableId;
+
+  // Group by room for optgroup display
+  const grouped = available.reduce((acc, t) => {
+    const key = t.roomId?.name || 'Sin sala';
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(t);
+    return acc;
+  }, {});
+  const hasGroups = Object.keys(grouped).length > 1 || !Object.keys(grouped)[0]?.match(/^Sin sala$/);
 
   if (!open) {
     return (
@@ -82,11 +93,14 @@ function TableCell({ reservation, tables, onAssign }) {
         className="text-xs border border-violet-300 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-violet-400 bg-white shadow-md min-w-[140px]"
       >
         <option value="">Sin mesa</option>
-        {available.map(t => (
-          <option key={t._id} value={t._id}>
-            {t.name} ({t.capacity} px){t.roomId?.name ? ` · ${t.roomId.name}` : ''}
-          </option>
-        ))}
+        {hasGroups
+          ? Object.entries(grouped).map(([roomName, roomTables]) => (
+              <optgroup key={roomName} label={roomName}>
+                {roomTables.map(t => <option key={t._id} value={t._id}>{t.name}</option>)}
+              </optgroup>
+            ))
+          : available.map(t => <option key={t._id} value={t._id}>{t.name}</option>)
+        }
       </select>
     </div>
   );

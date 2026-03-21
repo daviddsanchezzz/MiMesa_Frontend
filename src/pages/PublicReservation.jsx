@@ -532,6 +532,21 @@ export default function PublicReservation() {
             {business?.phone}{business?.phone && business?.email && ' · '}{business?.email}
           </p>
         )}
+
+        <div className="mt-6 flex items-center justify-center gap-1.5">
+          <img src={`${import.meta.env.VITE_LANDING_URL || 'https://tableo.app'}/logo.svg`} alt="" className="w-4 h-4 opacity-40" />
+          <p className="text-xs text-gray-300">
+            Powered by{' '}
+            <a
+              href={import.meta.env.VITE_LANDING_URL || 'https://tableo.app'}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-violet-400 hover:text-violet-500 font-medium transition-colors"
+            >
+              Tableo
+            </a>
+          </p>
+        </div>
       </div>
     </div>
   );

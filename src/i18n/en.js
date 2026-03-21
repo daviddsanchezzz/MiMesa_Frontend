@@ -41,11 +41,10 @@ const en = {
   namePlaceholder: 'Your full name',
   notesPlaceholder: 'Allergies, special preferences...',
   contactInfo: 'Contact information',
-  privacyTitle: 'Privacy and data protection policy',
-  privacyText: (name) =>
-    `By making this reservation, I agree that my personal data will be processed by ${name} solely to manage my booking and related communications. My data will not be shared with third parties without my explicit consent.`,
-  privacyRights:
-    'You can exercise your rights of access, rectification, erasure and portability by contacting the establishment directly.',
+  consentPrivacyPre:  'I have read and accept the',
+  consentPrivacyLink: 'privacy policy',
+  consentPrivacyPost: '',
+  consentMarketing:   'I want to receive communications and offers from the establishment',
   back: 'Back',
   book: 'Book',
   successMsg: 'Reservation created successfully! We will contact you soon.',

@@ -41,11 +41,10 @@ const ca = {
   namePlaceholder: 'El teu nom complet',
   notesPlaceholder: "AlÂ·lÃ¨rgies, preferÃ¨ncies especials...",
   contactInfo: 'InformaciÃ³ de contacte',
-  privacyTitle: 'PolÃ­tica de privacitat i protecciÃ³ de dades',
-  privacyText: (name) =>
-    `En fer aquesta reserva, accepto que les meves dades personals siguin tractades per ${name} Ãºnicament per gestionar la meva reserva i possibles comunicacions relacionades. Les meves dades no seran cedides a tercers sense el meu consentiment exprÃ©s.`,
-  privacyRights:
-    "Pots exercir els teus drets d'accÃ©s, rectificaciÃ³, supressiÃ³ i portabilitat contactant directament amb l'establiment.",
+  consentPrivacyPre:  'He llegit i accepto la',
+  consentPrivacyLink: 'política de privacitat',
+  consentPrivacyPost: '',
+  consentMarketing:   "Vull rebre comunicacions i ofertes de l'establiment",
   back: 'Enrere',
   book: 'Reservar',
   successMsg: 'Reserva creada correctament! Et contactarem aviat.',

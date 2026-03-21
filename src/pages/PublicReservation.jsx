@@ -52,7 +52,7 @@ export default function PublicReservation() {
   const [step, setStep] = useState(1);
   const [form, setForm] = useState({
     guestName: '', guestPhone: '', guestEmail: '',
-    roomId: '', date: '', time: '', people: 2, notes: '', consent: false,
+    roomId: '', date: '', time: '', people: 2, notes: '', consent: false, marketing: false,
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -162,7 +162,11 @@ export default function PublicReservation() {
     if (!form.guestEmail.trim()) { setError(tr.errorEmail); return; }
     if (!form.consent) { setError(tr.errorConsent); return; }
     try {
-      await publicApi.post('/reservations/public', { businessId, ...form, roomId: form.roomId || null });
+      await publicApi.post('/reservations/public', {
+        businessId, ...form,
+        roomId: form.roomId || null,
+        marketingConsent: form.marketing,
+      });
       setSuccess(tr.successMsg);
     } catch (err) {
       setError(err.response?.data?.message || tr.errorSave);
@@ -470,16 +474,39 @@ export default function PublicReservation() {
                         className={inputCls} rows={3} placeholder={tr.notesPlaceholder} />
                     </div>
                   </div>
-                  <div className="bg-gray-50 rounded-xl p-4 mb-5">
-                    <label className="flex items-start gap-3 cursor-pointer">
-                      <input type="checkbox" checked={form.consent}
+                  <div className="space-y-3 mb-5">
+                    {/* Required: privacy consent */}
+                    <label className="flex items-start gap-2.5 cursor-pointer group">
+                      <input
+                        type="checkbox"
+                        checked={form.consent}
                         onChange={e => setForm(f => ({ ...f, consent: e.target.checked }))}
-                        className="mt-0.5 w-4 h-4 rounded" />
-                      <div className="text-xs text-gray-600 leading-relaxed">
-                        <p className="font-medium mb-1">{tr.privacyTitle}</p>
-                        <p>{tr.privacyText(business?.name || 'este establecimiento')}</p>
-                        <p className="mt-1">{tr.privacyRights}</p>
-                      </div>
+                        className="mt-0.5 w-4 h-4 rounded shrink-0 accent-indigo-600"
+                      />
+                      <span className="text-sm text-gray-600 leading-snug">
+                        {tr.consentPrivacyPre}{' '}
+                        <a
+                          href={`${import.meta.env.VITE_LANDING_URL || ''}/privacy.html`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="underline underline-offset-2 font-medium"
+                          style={{ color: brandColor }}
+                        >
+                          {tr.consentPrivacyLink}
+                        </a>
+                        {tr.consentPrivacyPost}
+                        {' '}<span className="text-gray-400">*</span>
+                      </span>
+                    </label>
+                    {/* Optional: marketing */}
+                    <label className="flex items-start gap-2.5 cursor-pointer group">
+                      <input
+                        type="checkbox"
+                        checked={form.marketing}
+                        onChange={e => setForm(f => ({ ...f, marketing: e.target.checked }))}
+                        className="mt-0.5 w-4 h-4 rounded shrink-0 accent-indigo-600"
+                      />
+                      <span className="text-sm text-gray-500 leading-snug">{tr.consentMarketing}</span>
                     </label>
                   </div>
                   {error && (

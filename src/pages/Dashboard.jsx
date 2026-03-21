@@ -8,7 +8,7 @@ import ReservationForm from '../components/ReservationForm';
 // ─── Status Badges ──────────────────────────────────────────────────────────
 const statusBadge = {
   pending:   { label: 'Pendiente',  cls: 'bg-gradient-to-r from-amber-400 to-amber-500 text-white shadow-sm' },
-  confirmed: { label: 'Confirmada', cls: 'bg-gradient-to-r from-indigo-400 to-indigo-500 text-white shadow-sm' },
+  confirmed: { label: 'Confirmada', cls: 'bg-gradient-to-r from-violet-400 to-violet-500 text-white shadow-sm' },
   seated:    { label: 'Sentada',    cls: 'bg-gradient-to-r from-emerald-400 to-emerald-500 text-white shadow-sm' },
   cancelled: { label: 'Cancelada',  cls: 'bg-gradient-to-r from-gray-400 to-gray-500 text-white shadow-sm' },
 };
@@ -51,7 +51,7 @@ function StatCard({ label, value, icon, color, bg, to }) {
 }
 
 function Avatar({ name }) {
-  const colors = ['bg-indigo-500','bg-violet-500','bg-rose-500','bg-amber-500','bg-emerald-500','bg-cyan-500'];
+  const colors = ['bg-violet-500','bg-violet-500','bg-rose-500','bg-amber-500','bg-emerald-500','bg-cyan-500'];
   const idx = (name?.charCodeAt(0) || 0) % colors.length;
   return (
     <div className={`w-8 h-8 rounded-full ${colors[idx]} flex items-center justify-center text-white text-xs font-semibold shrink-0`}>
@@ -104,14 +104,14 @@ export default function Dashboard() {
       <div className="flex items-start justify-between gap-3">
         <div>
           <h2 className="text-xl font-bold text-gray-900">
-            Hola, <span className="text-indigo-600">{business?.name}</span>
+            Hola, <span className="text-violet-600">{business?.name}</span>
           </h2>
           <p className="text-sm text-gray-400 mt-0.5 capitalize">{dateLabel}</p>
         </div>
         <button
           type="button"
           onClick={handleNewReservationClick}
-          className="shrink-0 flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors shadow-sm"
+          className="shrink-0 flex items-center gap-2 bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors shadow-sm"
         >
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
             <path d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z" />
@@ -123,7 +123,7 @@ export default function Dashboard() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <StatCard label="Reservas hoy"     value={reservations.length} icon={<IcoCalendar />} color="text-indigo-600"  bg="bg-indigo-50"  to="/reservations" />
+        <StatCard label="Reservas hoy"     value={reservations.length} icon={<IcoCalendar />} color="text-violet-600"  bg="bg-violet-50"  to="/reservations" />
         <StatCard label="Mesas libres"     value={free}                icon={<IcoCheck />}    color="text-emerald-600" bg="bg-emerald-50" to="/tables" />
         <StatCard label="Mesas ocupadas"   value={occupied}            icon={<IcoTable />}    color="text-rose-600"    bg="bg-rose-50"    to="/tables" />
         <StatCard label="Mesas reservadas" value={reserved}            icon={<IcoLock />}     color="text-amber-600"   bg="bg-amber-50"   to="/tables" />
@@ -160,7 +160,7 @@ export default function Dashboard() {
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
         <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
           <h3 className="text-sm font-semibold text-gray-900">Próximas reservas de hoy</h3>
-          <Link to="/reservations" className="text-xs text-indigo-600 hover:text-indigo-700 font-medium">Ver todas →</Link>
+          <Link to="/reservations" className="text-xs text-violet-600 hover:text-violet-700 font-medium">Ver todas →</Link>
         </div>
 
         {upcoming.length === 0 ? (
@@ -185,7 +185,7 @@ export default function Dashboard() {
                     <p className="text-xs text-gray-400 mt-0.5">
                       {r.time} · {r.people} {r.people === 1 ? 'persona' : 'personas'}
                       {r.tableId && <span className="text-gray-300"> · </span>}
-                      {r.tableId && <span className="text-indigo-500">{r.tableId.name}</span>}
+                      {r.tableId && <span className="text-violet-500">{r.tableId.name}</span>}
                     </p>
                   </div>
                   <span className={`shrink-0 text-xs px-2.5 py-1 rounded-full font-medium ${s.cls}`}>{s.label}</span>

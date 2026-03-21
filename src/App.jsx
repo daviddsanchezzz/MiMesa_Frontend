@@ -25,7 +25,7 @@ function LoadingScreen() {
   return (
     <div className="flex items-center justify-center h-screen bg-slate-900">
       <div className="flex flex-col items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-indigo-600 animate-pulse" />
+        <div className="w-10 h-10 rounded-xl bg-violet-600 animate-pulse" />
         <p className="text-slate-400 text-sm">Cargando...</p>
       </div>
     </div>
@@ -45,7 +45,7 @@ function MobileHeader({ onMenuOpen }) {
         </svg>
       </button>
       <div className="flex items-center gap-2">
-        <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-indigo-500 to-indigo-700 flex items-center justify-center shrink-0">
+        <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-violet-500 to-violet-700 flex items-center justify-center shrink-0">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="white" className="w-3.5 h-3.5">
             <path d="M3 2a1 1 0 0 0-1 1v1a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1H3ZM2 9a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V9ZM1 15a1 1 0 0 1 1-1h6a1 1 0 0 1 0 2H2a1 1 0 0 1-1-1Z" />
           </svg>

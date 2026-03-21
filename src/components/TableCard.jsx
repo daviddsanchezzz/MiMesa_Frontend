@@ -55,7 +55,7 @@ export default function TableCard({ table, onEdit, onDelete, onStatusChange }) {
       <div className="px-4 py-3 border-t border-gray-100 flex gap-2">
         <button
           onClick={() => onEdit(table)}
-          className="flex-1 text-xs py-1.5 rounded-lg bg-gray-50 hover:bg-indigo-50 hover:text-indigo-600 text-gray-500 font-medium transition-colors"
+          className="flex-1 text-xs py-1.5 rounded-lg bg-gray-50 hover:bg-violet-50 hover:text-violet-600 text-gray-500 font-medium transition-colors"
         >
           Editar
         </button>

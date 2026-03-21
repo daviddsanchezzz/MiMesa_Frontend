@@ -281,7 +281,7 @@ export default function FloorPlan({ tables, rooms, onStatusChange, onRefresh, fu
               >
                 {tab.label}
                 <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-semibold ${
-                  roomFilter === tab.id ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-200 text-gray-500'
+                  roomFilter === tab.id ? 'bg-violet-100 text-violet-700' : 'bg-gray-200 text-gray-500'
                 }`}>{tab.count}</span>
               </button>
             ))}
@@ -293,7 +293,7 @@ export default function FloorPlan({ tables, rooms, onStatusChange, onRefresh, fu
           {editMode && (
             <button
               onClick={handleAutoArrange}
-              className="flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-indigo-600 px-3 py-2 rounded-xl hover:bg-indigo-50 border border-gray-200 hover:border-indigo-200 transition-all"
+              className="flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-violet-600 px-3 py-2 rounded-xl hover:bg-violet-50 border border-gray-200 hover:border-violet-200 transition-all"
             >
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
                 <path fillRule="evenodd" d="M3 3a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1V4a1 1 0 0 0-1-1H3Zm0 6a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1H3Zm6-6a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1V4a1 1 0 0 0-1-1H9Zm0 6a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1H9Z" clipRule="evenodd" />
@@ -307,8 +307,8 @@ export default function FloorPlan({ tables, rooms, onStatusChange, onRefresh, fu
             onClick={() => { setEditMode(m => !m); setActiveId(null); }}
             className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold border transition-all ${
               editMode
-                ? 'bg-indigo-600 text-white border-indigo-600 shadow-sm shadow-indigo-200'
-                : 'bg-white text-gray-600 border-gray-200 hover:border-indigo-300 hover:text-indigo-600'
+                ? 'bg-violet-600 text-white border-violet-600 shadow-sm shadow-violet-200'
+                : 'bg-white text-gray-600 border-gray-200 hover:border-violet-300 hover:text-violet-600'
             }`}
           >
             {editMode ? (
@@ -332,11 +332,11 @@ export default function FloorPlan({ tables, rooms, onStatusChange, onRefresh, fu
 
       {/* Edit mode banner */}
       {editMode && (
-        <div className="flex items-center gap-2 bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-2.5 mx-3">
+        <div className="flex items-center gap-2 bg-violet-50 border border-violet-200 rounded-xl px-4 py-2.5 mx-3">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="#6366f1" className="w-4 h-4 shrink-0">
             <path fillRule="evenodd" d="M15 8A7 7 0 1 1 1 8a7 7 0 0 1 14 0ZM9 5a1 1 0 1 1-2 0 1 1 0 0 1 2 0ZM6.75 8a.75.75 0 0 0 0 1.5h.75v1.75a.75.75 0 0 0 1.5 0v-2.5A.75.75 0 0 0 8.25 8h-1.5Z" clipRule="evenodd" />
           </svg>
-          <p className="text-xs text-indigo-700 font-medium">
+          <p className="text-xs text-violet-700 font-medium">
             Modo edición activo — <span className="font-semibold">arrastra las mesas</span> para reposicionarlas. Los cambios de estado están desactivados.
           </p>
         </div>
@@ -347,7 +347,7 @@ export default function FloorPlan({ tables, rooms, onStatusChange, onRefresh, fu
         ref={canvasRef}
         className={`relative w-full overflow-hidden transition-all ${
           fullHeight ? 'flex-1 min-h-0' : 'rounded-2xl'
-        } ${editMode ? 'border-2 border-indigo-300' : 'border border-gray-200'}`}
+        } ${editMode ? 'border-2 border-violet-300' : 'border border-gray-200'}`}
         style={{
           height: fullHeight ? undefined : CANVAS_H,
           backgroundImage:
@@ -391,7 +391,7 @@ export default function FloorPlan({ tables, rooms, onStatusChange, onRefresh, fu
 
         {/* Edit mode overlay hint when empty drag */}
         {editMode && (
-          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-indigo-600/80 text-white text-[11px] font-medium px-3 py-1.5 rounded-full pointer-events-none select-none backdrop-blur-sm">
+          <div className="absolute bottom-3 left-1/2 -translate-x-1/2 bg-violet-600/80 text-white text-[11px] font-medium px-3 py-1.5 rounded-full pointer-events-none select-none backdrop-blur-sm">
             Arrastra las mesas para reposicionarlas
           </div>
         )}

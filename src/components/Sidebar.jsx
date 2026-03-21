@@ -103,11 +103,7 @@ export default function Sidebar({ isOpen, onClose }) {
     >
       <div className="px-4 py-5 border-b border-slate-700/50">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-700 flex items-center justify-center shrink-0 shadow-lg shadow-indigo-900/40">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="white" className="w-4 h-4">
-              <path d="M3 2a1 1 0 0 0-1 1v1a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1H3ZM2 9a1 1 0 0 1 1-1h14a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V9ZM1 15a1 1 0 0 1 1-1h6a1 1 0 0 1 0 2H2a1 1 0 0 1-1-1Z" />
-            </svg>
-          </div>
+          <img src="/logo.svg" alt="Tableo" className="w-8 h-8 shrink-0" />
           <div className="min-w-0 flex-1">
             <p className="text-white text-sm font-semibold leading-tight">Tableo</p>
             {memberships.length > 1 ? (
@@ -140,7 +136,7 @@ export default function Sidebar({ isOpen, onClose }) {
               onClick={handleNavClick}
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3 py-3 lg:py-2 rounded-lg text-sm font-medium transition-all duration-100 ${
-                  isActive ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100'
+                  isActive ? 'bg-violet-600 text-white shadow-sm' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100'
                 }`
               }
             >
@@ -160,7 +156,7 @@ export default function Sidebar({ isOpen, onClose }) {
             className={({ isActive }) =>
               `mb-2 flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-100 ${
                 isActive
-                  ? 'bg-indigo-600 text-white shadow-sm'
+                  ? 'bg-violet-600 text-white shadow-sm'
                   : 'text-slate-300 hover:bg-slate-800 hover:text-slate-100'
               }`
             }
@@ -175,7 +171,7 @@ export default function Sidebar({ isOpen, onClose }) {
             onClick={() => setMenuOpen((v) => !v)}
             className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg hover:bg-slate-800 transition-colors"
           >
-            <div className="w-8 h-8 rounded-full bg-indigo-600 flex items-center justify-center text-white text-xs font-bold shrink-0">
+            <div className="w-8 h-8 rounded-full bg-violet-600 flex items-center justify-center text-white text-xs font-bold shrink-0">
               {initial}
             </div>
             <div className="min-w-0 flex-1 text-left">

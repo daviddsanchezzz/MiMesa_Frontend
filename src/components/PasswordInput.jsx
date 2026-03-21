@@ -3,7 +3,7 @@ import { useState } from 'react';
 export default function PasswordInput({ className = '', ...props }) {
   const [show, setShow] = useState(false);
 
-  const base = 'w-full border border-gray-300 rounded-xl px-3.5 py-2.5 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white transition-shadow';
+  const base = 'w-full border border-gray-300 rounded-xl px-3.5 py-2.5 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-white transition-shadow';
 
   return (
     <div className="relative">

@@ -3,7 +3,7 @@ import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import Modal from '../components/Modal';
 
-const inputCls = 'w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent';
+const inputCls = 'w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent';
 const labelCls = 'block text-xs font-medium text-gray-600 mb-1.5';
 
 // ─── Icons ──────────────────────────────────────────────────────────────────
@@ -52,7 +52,7 @@ function EmptyState({ onAction, actionLabel, text }) {
       </div>
       <p className="text-gray-500 text-sm font-medium">{text}</p>
       {onAction && (
-        <button onClick={onAction} className="mt-3 text-sm text-indigo-600 hover:underline font-medium">
+        <button onClick={onAction} className="mt-3 text-sm text-violet-600 hover:underline font-medium">
           {actionLabel} →
         </button>
       )}
@@ -107,7 +107,7 @@ function SalasSection() {
         </p>
         <button
           onClick={openCreate}
-          className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white px-3.5 py-2 rounded-xl text-sm font-semibold transition-colors shadow-sm"
+          className="flex items-center gap-1.5 bg-violet-600 hover:bg-violet-700 text-white px-3.5 py-2 rounded-xl text-sm font-semibold transition-colors shadow-sm"
         >
           <IconPlus /> Nueva sala
         </button>
@@ -129,7 +129,7 @@ function SalasSection() {
                       <p className="text-xs text-gray-400 mt-0.5 line-clamp-2">{room.description}</p>
                     )}
                   </div>
-                  <span className="text-xs bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-lg font-semibold shrink-0 ml-2">
+                  <span className="text-xs bg-violet-50 text-violet-700 px-2 py-0.5 rounded-lg font-semibold shrink-0 ml-2">
                     {room.capacity} plazas
                   </span>
                 </div>
@@ -139,13 +139,13 @@ function SalasSection() {
                     <span>{pct}%</span>
                   </div>
                   <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                    <div className="h-full bg-indigo-400 rounded-full transition-all" style={{ width: `${pct}%` }} />
+                    <div className="h-full bg-violet-400 rounded-full transition-all" style={{ width: `${pct}%` }} />
                   </div>
                 </div>
                 <div className="flex gap-2 pt-1 border-t border-gray-100">
                   <button
                     onClick={() => openEdit(room)}
-                    className="flex-1 flex items-center justify-center gap-1.5 text-xs py-1.5 rounded-lg bg-gray-50 hover:bg-indigo-50 hover:text-indigo-600 text-gray-500 font-medium transition-colors"
+                    className="flex-1 flex items-center justify-center gap-1.5 text-xs py-1.5 rounded-lg bg-gray-50 hover:bg-violet-50 hover:text-violet-600 text-gray-500 font-medium transition-colors"
                   >
                     <IconEdit /> Editar
                   </button>
@@ -193,7 +193,7 @@ function SalasSection() {
                 className={inputCls} />
             </div>
             <div className="flex gap-3 pt-1">
-              <button type="submit" className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 rounded-xl text-sm font-semibold transition-colors">
+              <button type="submit" className="flex-1 bg-violet-600 hover:bg-violet-700 text-white py-2.5 rounded-xl text-sm font-semibold transition-colors">
                 {modal === 'create' ? 'Crear sala' : 'Guardar cambios'}
               </button>
               <button type="button" onClick={() => setModal(null)} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-2.5 rounded-xl text-sm font-medium transition-colors">
@@ -268,12 +268,12 @@ function MesasSection() {
           <input
             value={search} onChange={e => setSearch(e.target.value)}
             placeholder="Buscar mesa o sala..."
-            className="w-full border border-gray-300 rounded-xl pl-9 pr-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            className="w-full border border-gray-300 rounded-xl pl-9 pr-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
           />
         </div>
         <button
           onClick={openCreate}
-          className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white px-3.5 py-2 rounded-xl text-sm font-semibold transition-colors shadow-sm shrink-0"
+          className="flex items-center gap-1.5 bg-violet-600 hover:bg-violet-700 text-white px-3.5 py-2 rounded-xl text-sm font-semibold transition-colors shadow-sm shrink-0"
         >
           <IconPlus /> Nueva mesa
         </button>
@@ -299,7 +299,7 @@ function MesasSection() {
                 {group.rows.map(t => (
                   <div key={t._id} className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors">
                     <div className="flex items-center gap-3">
-                      <div className="w-7 h-7 rounded-lg bg-indigo-50 flex items-center justify-center shrink-0">
+                      <div className="w-7 h-7 rounded-lg bg-violet-50 flex items-center justify-center shrink-0">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 14 14" fill="#6366f1" className="w-3.5 h-3.5">
                           <path fillRule="evenodd" d="M1 2.75A.75.75 0 0 1 1.75 2h10.5a.75.75 0 0 1 0 1.5H12v5.75A2.75 2.75 0 0 1 9.25 12H4.75A2.75 2.75 0 0 1 2 9.25V3.5h-.25A.75.75 0 0 1 1 2.75Z" clipRule="evenodd" />
                         </svg>
@@ -312,7 +312,7 @@ function MesasSection() {
                     <div className="flex items-center gap-1">
                       <button
                         onClick={() => openEdit(t)}
-                        className="flex items-center gap-1 text-xs py-1.5 px-2.5 rounded-lg hover:bg-indigo-50 hover:text-indigo-600 text-gray-400 font-medium transition-colors"
+                        className="flex items-center gap-1 text-xs py-1.5 px-2.5 rounded-lg hover:bg-violet-50 hover:text-violet-600 text-gray-400 font-medium transition-colors"
                       >
                         <IconEdit /> Editar
                       </button>
@@ -366,7 +366,7 @@ function MesasSection() {
               </div>
             </div>
             <div className="flex gap-3 pt-1">
-              <button type="submit" className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 rounded-xl text-sm font-semibold transition-colors">
+              <button type="submit" className="flex-1 bg-violet-600 hover:bg-violet-700 text-white py-2.5 rounded-xl text-sm font-semibold transition-colors">
                 {modal === 'create' ? 'Crear mesa' : 'Guardar cambios'}
               </button>
               <button type="button" onClick={() => setModal(null)} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-2.5 rounded-xl text-sm font-medium transition-colors">
@@ -395,7 +395,7 @@ const DAYS = [
 
 const SHIFT_COLORS = [
   { bg: 'bg-amber-50',   text: 'text-amber-700',   border: 'border-amber-200',   dot: 'bg-amber-400'   },
-  { bg: 'bg-indigo-50',  text: 'text-indigo-700',  border: 'border-indigo-200',  dot: 'bg-indigo-400'  },
+  { bg: 'bg-violet-50',  text: 'text-violet-700',  border: 'border-violet-200',  dot: 'bg-violet-400'  },
   { bg: 'bg-rose-50',    text: 'text-rose-700',     border: 'border-rose-200',    dot: 'bg-rose-400'    },
   { bg: 'bg-emerald-50', text: 'text-emerald-700',  border: 'border-emerald-200', dot: 'bg-emerald-400' },
   { bg: 'bg-violet-50',  text: 'text-violet-700',   border: 'border-violet-200',  dot: 'bg-violet-400'  },
@@ -472,7 +472,7 @@ function TurnosSection() {
           {shifts.length} turno{shifts.length !== 1 ? 's' : ''} configurado{shifts.length !== 1 ? 's' : ''}
         </p>
         <button onClick={openCreate}
-          className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white px-3.5 py-2 rounded-xl text-sm font-semibold transition-colors shadow-sm">
+          className="flex items-center gap-1.5 bg-violet-600 hover:bg-violet-700 text-white px-3.5 py-2 rounded-xl text-sm font-semibold transition-colors shadow-sm">
           <IconPlus /> Nuevo turno
         </button>
       </div>
@@ -540,7 +540,7 @@ function TurnosSection() {
 
                 <div className="flex gap-2 pt-1 border-t border-gray-100">
                   <button onClick={() => openEdit(shift)}
-                    className="flex-1 flex items-center justify-center gap-1.5 text-xs py-1.5 rounded-lg bg-gray-50 hover:bg-indigo-50 hover:text-indigo-600 text-gray-500 font-medium transition-colors">
+                    className="flex-1 flex items-center justify-center gap-1.5 text-xs py-1.5 rounded-lg bg-gray-50 hover:bg-violet-50 hover:text-violet-600 text-gray-500 font-medium transition-colors">
                     <IconEdit /> Editar
                   </button>
                   <button onClick={() => handleDelete(shift._id)}
@@ -593,7 +593,7 @@ function TurnosSection() {
                   <button key={d.value} type="button" onClick={() => toggleDay(d.value)} title={d.full}
                     className={`w-9 h-9 rounded-xl text-xs font-bold transition-all ${
                       form.days.includes(d.value)
-                        ? 'bg-indigo-600 text-white shadow-sm'
+                        ? 'bg-violet-600 text-white shadow-sm'
                         : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
                     }`}>
                     {d.label}
@@ -632,7 +632,7 @@ function TurnosSection() {
                   </p>
                 </div>
                 <button type="button" onClick={addSubShift}
-                  className="flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-700 font-semibold shrink-0 ml-2 mt-0.5">
+                  className="flex items-center gap-1 text-xs text-violet-600 hover:text-violet-700 font-semibold shrink-0 ml-2 mt-0.5">
                   <IconPlus /> Añadir
                 </button>
               </div>
@@ -662,7 +662,7 @@ function TurnosSection() {
             </div>
 
             <div className="flex gap-3 pt-1">
-              <button type="submit" className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 rounded-xl text-sm font-semibold transition-colors">
+              <button type="submit" className="flex-1 bg-violet-600 hover:bg-violet-700 text-white py-2.5 rounded-xl text-sm font-semibold transition-colors">
                 {modal === 'create' ? 'Crear turno' : 'Guardar cambios'}
               </button>
               <button type="button" onClick={() => setModal(null)} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-2.5 rounded-xl text-sm font-medium transition-colors">
@@ -742,7 +742,7 @@ function VacacionesSection() {
               className={inputCls} />
           </div>
           <button type="submit" disabled={saving}
-            className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors disabled:opacity-50">
+            className="flex items-center gap-1.5 bg-violet-600 hover:bg-violet-700 text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors disabled:opacity-50">
             <IconPlus /> Añadir cierre
           </button>
         </form>
@@ -898,7 +898,7 @@ function PublicoSection() {
           />
           <button
             onClick={() => copyToClipboard(publicUrl, 'url')}
-            className="px-4 py-2.5 bg-indigo-600 text-white text-sm font-medium rounded-xl hover:bg-indigo-700 transition-colors"
+            className="px-4 py-2.5 bg-violet-600 text-white text-sm font-medium rounded-xl hover:bg-violet-700 transition-colors"
           >
             {copied === 'url' ? 'Copiado' : 'Copiar'}
           </button>
@@ -915,7 +915,7 @@ function PublicoSection() {
         </pre>
         <button
           onClick={() => copyToClipboard(embedCode, 'embed')}
-          className="px-4 py-2.5 bg-indigo-600 text-white text-sm font-medium rounded-xl hover:bg-indigo-700 transition-colors"
+          className="px-4 py-2.5 bg-violet-600 text-white text-sm font-medium rounded-xl hover:bg-violet-700 transition-colors"
         >
           {copied === 'embed' ? 'Copiado' : 'Copiar codigo'}
         </button>
@@ -969,7 +969,7 @@ function LimitesSection() {
             min="1"
             value={maxReservationPeople}
             onChange={(e) => setMaxReservationPeople(e.target.value)}
-            className="w-20 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            className="w-20 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
             disabled={saving}
           />
           <div>
@@ -993,7 +993,7 @@ function LimitesSection() {
             placeholder="Sin limite"
             value={maxPeoplePerSlot}
             onChange={(e) => setMaxPeoplePerSlot(e.target.value)}
-            className="w-24 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            className="w-24 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
             disabled={saving}
           />
           <div>
@@ -1017,7 +1017,7 @@ function LimitesSection() {
             placeholder="Sin bloqueo"
             value={reservationDuration}
             onChange={(e) => setReservationDuration(e.target.value)}
-            className="w-24 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            className="w-24 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
             disabled={saving}
           />
           <div>
@@ -1032,7 +1032,7 @@ function LimitesSection() {
           type="button"
           onClick={handleSaveLimits}
           disabled={saving}
-          className="px-5 py-2.5 bg-indigo-600 text-white text-sm font-medium rounded-xl hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="px-5 py-2.5 bg-violet-600 text-white text-sm font-medium rounded-xl hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           {saving ? 'Guardando...' : 'Guardar cambios'}
         </button>
@@ -1108,7 +1108,7 @@ function NegocioSection() {
             </div>
           </div>
           {canEdit && (
-            <button type="submit" disabled={saving} className="px-5 py-2.5 bg-indigo-600 text-white text-sm font-medium rounded-xl hover:bg-indigo-700 disabled:opacity-50">
+            <button type="submit" disabled={saving} className="px-5 py-2.5 bg-violet-600 text-white text-sm font-medium rounded-xl hover:bg-violet-700 disabled:opacity-50">
               {saving ? 'Guardando...' : 'Guardar cambios'}
             </button>
           )}
@@ -1145,7 +1145,7 @@ export default function Settings() {
               key={t.key}
               onClick={() => setTab(t.key)}
               className={`w-full text-left px-3 py-2 rounded-xl text-sm font-medium transition-colors ${
-                tab === t.key ? 'bg-indigo-600 text-white' : 'text-gray-600 hover:bg-gray-100'
+                tab === t.key ? 'bg-violet-600 text-white' : 'text-gray-600 hover:bg-gray-100'
               }`}
             >
               {t.label}

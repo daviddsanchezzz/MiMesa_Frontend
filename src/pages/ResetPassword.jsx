@@ -43,7 +43,7 @@ export default function ResetPassword() {
       <div className="min-h-screen flex items-center justify-center bg-gray-50 px-6">
         <div className="text-center">
           <p className="text-red-600 font-medium">Enlace inválido o expirado.</p>
-          <a href="/forgot-password" className="mt-3 inline-block text-sm text-indigo-600 hover:underline">
+          <a href="/forgot-password" className="mt-3 inline-block text-sm text-violet-600 hover:underline">
             Solicitar un nuevo enlace
           </a>
         </div>
@@ -89,7 +89,7 @@ export default function ResetPassword() {
           </div>
           <button
             type="submit" disabled={loading}
-            className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white py-2.5 rounded-xl text-sm font-semibold transition-colors"
+            className="w-full bg-violet-600 hover:bg-violet-700 disabled:opacity-60 text-white py-2.5 rounded-xl text-sm font-semibold transition-colors"
           >
             {loading ? 'Guardando...' : 'Establecer nueva contraseña'}
           </button>

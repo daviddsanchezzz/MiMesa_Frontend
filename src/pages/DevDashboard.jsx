@@ -181,7 +181,7 @@ function PricingTab() {
                 <span className="font-semibold text-gray-800 text-sm">{plan.name || 'Sin nombre'}</span>
                 <span className="text-xs text-gray-400 font-mono">#{plan.id}</span>
                 {plan.featured && (
-                  <span className="text-xs bg-indigo-50 text-indigo-600 ring-1 ring-indigo-200 px-2 py-0.5 rounded-full font-semibold">
+                  <span className="text-xs bg-violet-50 text-violet-600 ring-1 ring-violet-200 px-2 py-0.5 rounded-full font-semibold">
                     Destacado
                   </span>
                 )}
@@ -316,7 +316,7 @@ function PricingTab() {
                   <label className="text-xs font-medium text-gray-500">Características</label>
                   <button
                     onClick={() => addFeature(pi)}
-                    className="text-xs text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-1"
+                    className="text-xs text-violet-600 hover:text-violet-800 font-medium flex items-center gap-1"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
                       <path d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z"/>

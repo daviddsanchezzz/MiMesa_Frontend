@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import api from '../services/api';
 
-const inputCls = 'w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white';
+const inputCls = 'w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-white';
 const labelCls = 'block text-sm font-medium text-gray-700 mb-1.5';
 
 export default function CustomerForm({ customer, onSave, onCancel }) {
@@ -69,7 +69,7 @@ export default function CustomerForm({ customer, onSave, onCancel }) {
 
       <div className="flex gap-3 pt-1">
         <button type="submit"
-          className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 rounded-xl text-sm font-semibold transition-colors">
+          className="flex-1 bg-violet-600 hover:bg-violet-700 text-white py-2.5 rounded-xl text-sm font-semibold transition-colors">
           {customer ? 'Guardar cambios' : 'Crear cliente'}
         </button>
         <button type="button" onClick={onCancel}

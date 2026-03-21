@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
-const inputCls = 'w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white';
+const inputCls = 'w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-white';
 const labelCls = 'block text-sm font-medium text-gray-700 mb-1.5';
 
 const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
@@ -15,7 +15,7 @@ function StepPill({ active, enabled, onClick, label, value, icon }) {
       onClick={enabled ? onClick : undefined}
       className={`flex items-center gap-1.5 text-sm font-medium whitespace-nowrap transition-colors shrink-0 ${
         active
-          ? 'text-white px-3 py-1.5 rounded-full bg-indigo-600'
+          ? 'text-white px-3 py-1.5 rounded-full bg-violet-600'
           : enabled
           ? 'text-gray-600 hover:text-gray-900 cursor-pointer'
           : 'text-gray-300 cursor-default'
@@ -248,7 +248,7 @@ export default function ReservationForm({ reservation, onSave, onCancel, initial
                   type="button"
                   onClick={() => !past && selectDate(day)}
                   className={`aspect-square flex items-center justify-center rounded-xl text-sm font-medium transition-colors ${
-                    past ? 'text-gray-300 cursor-default' : selected ? 'bg-indigo-600 text-white' : 'text-gray-700 hover:bg-gray-100'
+                    past ? 'text-gray-300 cursor-default' : selected ? 'bg-violet-600 text-white' : 'text-gray-700 hover:bg-gray-100'
                   }`}
                 >
                   {day}
@@ -279,7 +279,7 @@ export default function ReservationForm({ reservation, onSave, onCancel, initial
                       type="button"
                       onClick={() => selectSlot(slot.time)}
                       className={`px-3 py-2 text-sm rounded-lg border transition-colors ${
-                        form.time === slot.time ? 'bg-indigo-600 text-white border-transparent' : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'
+                        form.time === slot.time ? 'bg-violet-600 text-white border-transparent' : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'
                       }`}
                     >
                       {slot.label || slot.time}
@@ -305,7 +305,7 @@ export default function ReservationForm({ reservation, onSave, onCancel, initial
                   setForm((f) => ({ ...f, people: n }));
                 }}
                 className={`px-3 py-2 text-sm rounded-lg border transition-colors ${
-                  form.people === n ? 'bg-indigo-600 text-white border-transparent' : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'
+                  form.people === n ? 'bg-violet-600 text-white border-transparent' : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'
                 }`}
               >
                 {n}
@@ -315,7 +315,7 @@ export default function ReservationForm({ reservation, onSave, onCancel, initial
               type="button"
               onClick={() => setCustomPeopleOpen(true)}
               className={`px-3 py-2 text-sm rounded-lg border transition-colors ${
-                customPeopleOpen ? 'bg-indigo-600 text-white border-transparent' : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'
+                customPeopleOpen ? 'bg-violet-600 text-white border-transparent' : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'
               }`}
             >
               Otro
@@ -349,7 +349,7 @@ export default function ReservationForm({ reservation, onSave, onCancel, initial
                   type="button"
                   onClick={() => setForm((f) => ({ ...f, roomId: '' }))}
                   className={`px-3 py-2 text-sm rounded-lg border transition-colors ${
-                    form.roomId === '' ? 'bg-indigo-600 text-white border-transparent' : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'
+                    form.roomId === '' ? 'bg-violet-600 text-white border-transparent' : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'
                   }`}
                 >
                   Sin preferencia
@@ -360,7 +360,7 @@ export default function ReservationForm({ reservation, onSave, onCancel, initial
                     type="button"
                     onClick={() => setForm((f) => ({ ...f, roomId: r._id }))}
                     className={`px-3 py-2 text-sm rounded-lg border transition-colors ${
-                      form.roomId === r._id ? 'bg-indigo-600 text-white border-transparent' : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'
+                      form.roomId === r._id ? 'bg-violet-600 text-white border-transparent' : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'
                     }`}
                   >
                     {r.name}
@@ -369,7 +369,7 @@ export default function ReservationForm({ reservation, onSave, onCancel, initial
               </div>
             </div>
           )}
-          <button type="button" onClick={() => setStep(4)} className="w-full mt-5 py-3 rounded-xl text-white font-medium bg-indigo-600 hover:bg-indigo-700 transition-colors">
+          <button type="button" onClick={() => setStep(4)} className="w-full mt-5 py-3 rounded-xl text-white font-medium bg-violet-600 hover:bg-violet-700 transition-colors">
             Continuar
           </button>
         </div>
@@ -377,7 +377,7 @@ export default function ReservationForm({ reservation, onSave, onCancel, initial
 
       {step === 4 && (
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="rounded-xl bg-indigo-50 border border-indigo-100 px-3.5 py-2.5 text-sm text-indigo-700 font-medium">
+          <div className="rounded-xl bg-violet-50 border border-violet-100 px-3.5 py-2.5 text-sm text-violet-700 font-medium">
             {form.date} · {form.time} · {form.people} {form.people === 1 ? 'persona' : 'personas'}
           </div>
 
@@ -420,7 +420,7 @@ export default function ReservationForm({ reservation, onSave, onCancel, initial
             <button type="button" onClick={() => setStep(3)} className="px-4 py-2.5 rounded-xl text-sm font-medium text-gray-500 hover:bg-gray-100 transition-colors">
               Atras
             </button>
-            <button type="submit" className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white py-2.5 rounded-xl text-sm font-semibold transition-colors">
+            <button type="submit" className="flex-1 bg-violet-600 hover:bg-violet-700 text-white py-2.5 rounded-xl text-sm font-semibold transition-colors">
               {isEdit ? 'Guardar cambios' : 'Crear reserva'}
             </button>
             <button type="button" onClick={onCancel} className="px-4 py-2.5 rounded-xl text-sm font-medium text-gray-500 hover:bg-gray-100 transition-colors">

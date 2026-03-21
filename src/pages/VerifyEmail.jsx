@@ -35,7 +35,7 @@ export default function VerifyEmail() {
       <div className="w-full max-w-sm text-center">
         {status === 'loading' && (
           <div className="flex flex-col items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-indigo-600 animate-pulse" />
+            <div className="w-10 h-10 rounded-xl bg-violet-600 animate-pulse" />
             <p className="text-gray-500 text-sm">Verificando tu email...</p>
           </div>
         )}
@@ -49,7 +49,7 @@ export default function VerifyEmail() {
             </div>
             <h2 className="text-xl font-bold text-gray-900 mb-2">Email verificado</h2>
             <p className="text-gray-500 text-sm mb-6">Tu cuenta está activa. Ya puedes acceder al panel.</p>
-            <Link to="/" className="inline-block bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-xl text-sm font-semibold transition-colors">
+            <Link to="/" className="inline-block bg-violet-600 hover:bg-violet-700 text-white px-6 py-2.5 rounded-xl text-sm font-semibold transition-colors">
               Ir al panel
             </Link>
           </div>
@@ -59,7 +59,7 @@ export default function VerifyEmail() {
           <div className="bg-red-50 border border-red-200 rounded-2xl p-8">
             <h2 className="text-xl font-bold text-gray-900 mb-2">Error de verificación</h2>
             <p className="text-red-600 text-sm mb-6">{message}</p>
-            <Link to="/login" className="inline-block text-sm text-indigo-600 hover:underline font-medium">
+            <Link to="/login" className="inline-block text-sm text-violet-600 hover:underline font-medium">
               Volver al inicio de sesión
             </Link>
           </div>

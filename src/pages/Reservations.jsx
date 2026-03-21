@@ -5,13 +5,13 @@ import Modal from '../components/Modal';
 
 const statusConfig = {
   pending:   { label: 'Pendiente',  cls: 'bg-amber-50 text-amber-700 ring-1 ring-amber-200',   dot: 'bg-amber-400',   bar: 'bg-amber-400' },
-  confirmed: { label: 'Confirmada', cls: 'bg-indigo-50 text-indigo-700 ring-1 ring-indigo-200', dot: 'bg-indigo-500',  bar: 'bg-indigo-500' },
+  confirmed: { label: 'Confirmada', cls: 'bg-violet-50 text-violet-700 ring-1 ring-violet-200', dot: 'bg-violet-500',  bar: 'bg-violet-500' },
   seated:    { label: 'Sentada',    cls: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200', dot: 'bg-emerald-500', bar: 'bg-emerald-500' },
   cancelled: { label: 'Cancelada',  cls: 'bg-gray-100 text-gray-400 ring-1 ring-gray-200',      dot: 'bg-gray-300',    bar: 'bg-gray-300' },
 };
 
 function Avatar({ name }) {
-  const colors = ['bg-indigo-500','bg-violet-500','bg-rose-500','bg-amber-500','bg-emerald-500','bg-cyan-500'];
+  const colors = ['bg-violet-500','bg-violet-500','bg-rose-500','bg-amber-500','bg-emerald-500','bg-cyan-500'];
   const idx = (name?.charCodeAt(0) || 0) % colors.length;
   return (
     <div className={`w-9 h-9 rounded-full ${colors[idx]} flex items-center justify-center text-white text-sm font-semibold shrink-0`}>
@@ -26,7 +26,7 @@ function ActionBtn({ onClick, children, color = 'gray' }) {
     green:  'text-emerald-600 hover:bg-emerald-50',
     purple: 'text-violet-600 hover:bg-violet-50',
     red:    'text-rose-600 hover:bg-rose-50',
-    blue:   'text-indigo-600 hover:bg-indigo-50',
+    blue:   'text-violet-600 hover:bg-violet-50',
   }[color];
   return (
     <button onClick={onClick} className={`text-xs font-medium px-2 py-1 rounded-lg transition-colors ${cls}`}>
@@ -57,12 +57,12 @@ function TableCell({ reservation, tables, onAssign }) {
         onClick={() => setOpen(true)}
         className={`flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg border transition-colors ${
           assigned
-            ? 'bg-slate-50 border-slate-200 text-slate-700 hover:border-indigo-300 hover:bg-indigo-50 hover:text-indigo-600 font-medium'
-            : 'border-dashed border-gray-300 text-gray-400 hover:border-indigo-300 hover:text-indigo-500 hover:bg-indigo-50'
+            ? 'bg-slate-50 border-slate-200 text-slate-700 hover:border-violet-300 hover:bg-violet-50 hover:text-violet-600 font-medium'
+            : 'border-dashed border-gray-300 text-gray-400 hover:border-violet-300 hover:text-violet-500 hover:bg-violet-50'
         }`}
       >
         {assigned ? (
-          <><span className="w-1.5 h-1.5 rounded-full bg-indigo-400 shrink-0" />{assigned.name}</>
+          <><span className="w-1.5 h-1.5 rounded-full bg-violet-400 shrink-0" />{assigned.name}</>
         ) : (
           <><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3 h-3">
             <path d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z" />
@@ -79,7 +79,7 @@ function TableCell({ reservation, tables, onAssign }) {
         defaultValue={assigned?._id || ''}
         onChange={e => { onAssign(reservation._id, e.target.value || null); setOpen(false); }}
         onBlur={() => setOpen(false)}
-        className="text-xs border border-indigo-300 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-indigo-400 bg-white shadow-md min-w-[140px]"
+        className="text-xs border border-violet-300 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-violet-400 bg-white shadow-md min-w-[140px]"
       >
         <option value="">Sin mesa</option>
         {available.map(t => (
@@ -112,7 +112,7 @@ function MobileRow({ r, tables, onEdit, onCancel, onDelete, onAssign, onQuickSta
         <div className="shrink-0 w-14 text-center">
           <p className="text-lg font-bold text-gray-900 leading-none">{r.time}</p>
           <p className={`text-[10px] font-semibold mt-1 ${
-            r.status === 'confirmed' ? 'text-indigo-500' :
+            r.status === 'confirmed' ? 'text-violet-500' :
             r.status === 'seated'    ? 'text-emerald-500' :
             r.status === 'pending'   ? 'text-amber-500' : 'text-gray-400'
           }`}>{s.label}</p>
@@ -129,7 +129,7 @@ function MobileRow({ r, tables, onEdit, onCancel, onDelete, onAssign, onQuickSta
               {r.people} pax
             </span>
             {r.tableId && (
-              <span className="text-xs text-indigo-600 font-medium bg-indigo-50 px-1.5 py-0.5 rounded-md">{r.tableId.name}</span>
+              <span className="text-xs text-violet-600 font-medium bg-violet-50 px-1.5 py-0.5 rounded-md">{r.tableId.name}</span>
             )}
             {!r.tableId && (
               <span className="text-xs text-gray-300">sin mesa</span>
@@ -156,7 +156,7 @@ function MobileRow({ r, tables, onEdit, onCancel, onDelete, onAssign, onQuickSta
           {(r.guestPhone || r.guestEmail || r.notes) && (
             <div className="pt-2 space-y-1">
               {r.guestPhone && (
-                <a href={`tel:${r.guestPhone}`} className="flex items-center gap-2 text-sm text-indigo-600 font-medium">
+                <a href={`tel:${r.guestPhone}`} className="flex items-center gap-2 text-sm text-violet-600 font-medium">
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 shrink-0">
                     <path fillRule="evenodd" d="M3.5 2A1.5 1.5 0 0 0 2 3.5V5c0 1.149.15 2.263.43 3.326a13.022 13.022 0 0 0 8.244 8.243c1.063.28 2.177.431 3.326.431h1.5a1.5 1.5 0 0 0 1.5-1.5V13.5a1.5 1.5 0 0 0-1.5-1.5h-2.042a1.5 1.5 0 0 0-1.066.44l-.44.44a11.516 11.516 0 0 1-5.332-5.332l.44-.44A1.5 1.5 0 0 0 7.5 5.542V3.5A1.5 1.5 0 0 0 6 2H3.5Z" clipRule="evenodd" />
                   </svg>
@@ -187,7 +187,7 @@ function MobileRow({ r, tables, onEdit, onCancel, onDelete, onAssign, onQuickSta
           <div className="flex gap-2 flex-wrap">
             {r.status === 'pending' && (
               <button onClick={() => onQuickStatus(r._id, 'confirmed')}
-                className="flex-1 text-xs font-semibold py-2 rounded-xl bg-indigo-600 text-white active:bg-indigo-700 transition-colors">
+                className="flex-1 text-xs font-semibold py-2 rounded-xl bg-violet-600 text-white active:bg-violet-700 transition-colors">
                 Confirmar
               </button>
             )}
@@ -385,7 +385,7 @@ export default function Reservations() {
           <select
             value={filterMode}
             onChange={e => setFilterMode(e.target.value)}
-            className="flex-1 border border-gray-300 rounded-xl px-3 py-2 text-sm text-center [text-align-last:center] focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+            className="flex-1 border border-gray-300 rounded-xl px-3 py-2 text-sm text-center [text-align-last:center] focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white"
           >
             <option value="today">Hoy</option>
             <option value="week">Esta semana</option>
@@ -395,7 +395,7 @@ export default function Reservations() {
           <button
             onClick={openCreateModal}
             disabled={openingCreateModal}
-            className="w-10 h-10 flex items-center justify-center rounded-xl bg-indigo-600 text-white active:bg-indigo-700 shrink-0 shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
+            className="w-10 h-10 flex items-center justify-center rounded-xl bg-violet-600 text-white active:bg-violet-700 shrink-0 shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {openingCreateModal ? (
               <span className="w-4 h-4 border-2 border-white/50 border-t-white rounded-full animate-spin" />
@@ -413,7 +413,7 @@ export default function Reservations() {
               type="date"
               value={dateFilter}
               onChange={e => setDateFilter(e.target.value)}
-              className="block w-full max-w-full min-w-0 box-border border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+              className="block w-full max-w-full min-w-0 box-border border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white"
             />
           </div>
         )}
@@ -421,7 +421,7 @@ export default function Reservations() {
         {(filterMode === 'today' || filterMode === 'day') && (
           <div className="mt-2 text-center">
             <p className="text-sm font-bold text-gray-900 capitalize">{dateLabel}</p>
-            {isToday && <p className="text-xs text-indigo-500 font-medium">Hoy</p>}
+            {isToday && <p className="text-xs text-violet-500 font-medium">Hoy</p>}
           </div>
         )}
 
@@ -431,7 +431,7 @@ export default function Reservations() {
             {[
               { label: 'Total',    count: reservations.length,  cls: 'bg-gray-50 text-gray-700 border-gray-200' },
               { label: 'Pend.',    count: counts.pending,       cls: 'bg-amber-50 text-amber-700 border-amber-200' },
-              { label: 'Conf.',    count: counts.confirmed,     cls: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
+              { label: 'Conf.',    count: counts.confirmed,     cls: 'bg-violet-50 text-violet-700 border-violet-200' },
               { label: 'Sentadas', count: counts.seated,        cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
             ].map(s => (
               <div key={s.label} className={`flex flex-col items-center py-2 rounded-xl border text-xs font-medium ${s.cls}`}>
@@ -455,7 +455,7 @@ export default function Reservations() {
           <select
             value={filterMode}
             onChange={e => setFilterMode(e.target.value)}
-            className="border border-gray-300 rounded-xl px-3 py-2 text-sm text-center [text-align-last:center] focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+            className="border border-gray-300 rounded-xl px-3 py-2 text-sm text-center [text-align-last:center] focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white"
           >
             <option value="today">Hoy</option>
             <option value="week">Esta semana</option>
@@ -465,13 +465,13 @@ export default function Reservations() {
           {filterMode === 'day' && (
             <input type="date" value={dateFilter}
               onChange={e => setDateFilter(e.target.value)}
-              className="block w-44 max-w-full min-w-0 box-border border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+              className="block w-44 max-w-full min-w-0 box-border border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white"
             />
           )}
           <button
             onClick={openCreateModal}
             disabled={openingCreateModal}
-            className="flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
+            className="flex items-center gap-1.5 bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
           >
             {openingCreateModal ? (
               <>
@@ -500,7 +500,7 @@ export default function Reservations() {
       {reservations.length > 0 && (
         <div className="hidden sm:flex gap-2 flex-wrap">
           {[
-            { label: 'Confirmadas', count: counts.confirmed, cls: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
+            { label: 'Confirmadas', count: counts.confirmed, cls: 'bg-violet-50 text-violet-700 border-violet-200' },
             { label: 'Sentadas',    count: counts.seated,    cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
             { label: 'Canceladas',  count: counts.cancelled, cls: 'bg-gray-50 text-gray-700 border-gray-200' },
           ].map(s => (
@@ -521,7 +521,7 @@ export default function Reservations() {
             </svg>
           </div>
           <p className="text-gray-500 font-medium">Sin reservas para este día</p>
-          <button onClick={openCreateModal} className="mt-4 text-sm text-indigo-600 hover:underline font-medium">
+          <button onClick={openCreateModal} className="mt-4 text-sm text-violet-600 hover:underline font-medium">
             Crear la primera reserva →
           </button>
         </div>
@@ -646,7 +646,7 @@ export default function Reservations() {
                   <div>
                     <div className="flex items-center gap-1.5">
                       <p className="font-semibold text-gray-900 leading-tight">{r.guestName}</p>
-                      {r.customerId && <span title="Cliente registrado" className="w-1.5 h-1.5 rounded-full bg-indigo-400 shrink-0" />}
+                      {r.customerId && <span title="Cliente registrado" className="w-1.5 h-1.5 rounded-full bg-violet-400 shrink-0" />}
                     </div>
                     <p className="text-xs text-gray-400 mt-0.5">{r.guestPhone || r.guestEmail || '—'}</p>
                   </div>
@@ -690,7 +690,7 @@ export default function Reservations() {
 
                   <button
                     onClick={() => setModal({ mode: 'edit', reservation: r })}
-                    className="p-1.5 rounded-lg text-indigo-600 hover:bg-indigo-50 transition-colors"
+                    className="p-1.5 rounded-lg text-violet-600 hover:bg-violet-50 transition-colors"
                     title="Editar"
                     aria-label="Editar"
                   >

@@ -6,13 +6,13 @@ import { useAuth } from '../context/AuthContext';
 const ROLE_LABELS = { owner: 'Propietario', manager: 'Manager', staff: 'Staff' };
 
 const ROLE_STYLE = {
-  owner:   { pill: 'bg-indigo-50 text-indigo-700 ring-indigo-200',   dot: 'bg-indigo-500' },
+  owner:   { pill: 'bg-violet-50 text-violet-700 ring-violet-200',   dot: 'bg-violet-500' },
   manager: { pill: 'bg-amber-50  text-amber-700  ring-amber-200',    dot: 'bg-amber-500'  },
   staff:   { pill: 'bg-gray-100  text-gray-600   ring-gray-200',     dot: 'bg-gray-400'   },
 };
 
 const AVATAR_PALETTE = [
-  'from-indigo-500 to-indigo-700',
+  'from-violet-500 to-violet-700',
   'from-violet-500 to-purple-700',
   'from-rose-500   to-pink-700',
   'from-amber-500  to-orange-600',
@@ -153,7 +153,7 @@ export default function Team() {
   /* ── Loading / error ─────────────────────────────────────────────────── */
   if (loading) return (
     <div className="flex items-center justify-center h-48">
-      <div className="w-8 h-8 rounded-xl bg-indigo-600 animate-pulse" />
+      <div className="w-8 h-8 rounded-xl bg-violet-600 animate-pulse" />
     </div>
   );
 
@@ -170,7 +170,7 @@ export default function Team() {
           {isManager && (
             <button
               onClick={() => setShowModal(true)}
-              className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors shadow-sm shadow-indigo-200"
+              className="flex items-center gap-2 bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors shadow-sm shadow-violet-200"
             >
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
                 <path d="M11 5a3 3 0 1 1-6 0 3 3 0 0 1 6 0ZM2.046 15.253c-.058.468.172.92.57 1.175A9.953 9.953 0 0 0 8 18c1.982 0 3.83-.573 5.384-1.573.398-.254.628-.707.57-1.175a7 7 0 0 0-13.908 0ZM15.75 7.5a.75.75 0 0 0-1.5 0v2.25H12a.75.75 0 0 0 0 1.5h2.25v2.25a.75.75 0 0 0 1.5 0v-2.25H18a.75.75 0 0 0 0-1.5h-2.25V7.5Z"/>
@@ -225,7 +225,7 @@ export default function Team() {
                         <select
                           value={member.role}
                           onChange={e => handleRoleChange(member._id, e.target.value)}
-                          className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-indigo-400 cursor-pointer hover:border-gray-300 transition-colors"
+                          className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-violet-400 cursor-pointer hover:border-gray-300 transition-colors"
                         >
                           <option value="staff">Staff</option>
                           <option value="manager">Manager</option>
@@ -326,7 +326,7 @@ export default function Team() {
                 <p className="text-sm text-gray-500 mb-2">
                   Le hemos enviado un email a <strong>{invForm.email}</strong> con el enlace para activar su cuenta.
                 </p>
-                <button onClick={closeModal} className="mt-4 text-sm text-indigo-600 font-medium hover:underline">
+                <button onClick={closeModal} className="mt-4 text-sm text-violet-600 font-medium hover:underline">
                   Cerrar
                 </button>
               </div>
@@ -352,7 +352,7 @@ export default function Team() {
                       value={invForm.name}
                       onChange={e => setInvForm(f => ({ ...f, name: e.target.value }))}
                       placeholder="María García"
-                      className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                      className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white"
                     />
                   </div>
                   <div>
@@ -362,7 +362,7 @@ export default function Team() {
                       value={invForm.email}
                       onChange={e => setInvForm(f => ({ ...f, email: e.target.value }))}
                       placeholder="maria@email.com"
-                      className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
+                      className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white"
                     />
                   </div>
                   <div>
@@ -376,7 +376,7 @@ export default function Team() {
                           key={opt.value}
                           className={`flex flex-col gap-0.5 border rounded-xl px-4 py-3 cursor-pointer transition-all ${
                             invForm.role === opt.value
-                              ? 'border-indigo-500 bg-indigo-50 ring-2 ring-indigo-300'
+                              ? 'border-violet-500 bg-violet-50 ring-2 ring-violet-300'
                               : 'border-gray-200 hover:border-gray-300'
                           }`}
                         >
@@ -400,7 +400,7 @@ export default function Team() {
                   <div className="flex gap-2 pt-1">
                     <button
                       type="submit" disabled={invLoading}
-                      className="flex-1 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-60 text-white text-sm font-semibold py-2.5 rounded-xl transition-colors"
+                      className="flex-1 bg-violet-600 hover:bg-violet-700 disabled:opacity-60 text-white text-sm font-semibold py-2.5 rounded-xl transition-colors"
                     >
                       {invLoading ? 'Enviando...' : 'Enviar invitación'}
                     </button>

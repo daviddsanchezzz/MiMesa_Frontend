@@ -199,7 +199,7 @@ export default function PublicReservation() {
       <div className="text-center">
         <p className="text-red-600 mb-4">{error}</p>
         {!isEmbed && (
-          <button onClick={() => navigate('/')} className="text-indigo-600 hover:underline">{tr.backHome}</button>
+          <button onClick={() => navigate('/')} className="text-violet-600 hover:underline">{tr.backHome}</button>
         )}
       </div>
     </div>
@@ -209,7 +209,7 @@ export default function PublicReservation() {
     ? (form.date === todayStr ? tr.today : new Date(form.date + 'T00:00:00').toLocaleDateString(tr.dateLocale, { day: 'numeric', month: 'short' }))
     : null;
   const peopleOptions = Array.from({ length: Math.min(maxPeople, 20) }, (_, i) => i + 1);
-  const inputCls = 'w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white';
+  const inputCls = 'w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white';
   const multiShift = Object.keys(slotsByShift).length > 1;
 
   return (
@@ -481,7 +481,7 @@ export default function PublicReservation() {
                         type="checkbox"
                         checked={form.consent}
                         onChange={e => setForm(f => ({ ...f, consent: e.target.checked }))}
-                        className="mt-0.5 w-4 h-4 rounded shrink-0 accent-indigo-600"
+                        className="mt-0.5 w-4 h-4 rounded shrink-0 accent-violet-600"
                       />
                       <span className="text-sm text-gray-600 leading-snug">
                         {tr.consentPrivacyPre}{' '}
@@ -504,7 +504,7 @@ export default function PublicReservation() {
                         type="checkbox"
                         checked={form.marketing}
                         onChange={e => setForm(f => ({ ...f, marketing: e.target.checked }))}
-                        className="mt-0.5 w-4 h-4 rounded shrink-0 accent-indigo-600"
+                        className="mt-0.5 w-4 h-4 rounded shrink-0 accent-violet-600"
                       />
                       <span className="text-sm text-gray-500 leading-snug">{tr.consentMarketing}</span>
                     </label>

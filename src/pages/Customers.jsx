@@ -4,7 +4,7 @@ import CustomerForm from '../components/CustomerForm';
 import Modal from '../components/Modal';
 
 function Avatar({ name, size = 'md' }) {
-  const colors = ['bg-indigo-500','bg-violet-500','bg-rose-500','bg-amber-500','bg-emerald-500','bg-cyan-500'];
+  const colors = ['bg-violet-500','bg-violet-500','bg-rose-500','bg-amber-500','bg-emerald-500','bg-cyan-500'];
   const idx = (name?.charCodeAt(0) || 0) % colors.length;
   const sz = size === 'lg' ? 'w-11 h-11 text-base' : 'w-9 h-9 text-sm';
   return (
@@ -30,7 +30,7 @@ function CustomerCard({ c, onEdit }) {
         </div>
         <div className="mt-2 flex items-center gap-2">
           <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-            c.visits > 5 ? 'bg-indigo-100 text-indigo-700' :
+            c.visits > 5 ? 'bg-violet-100 text-violet-700' :
             c.visits > 0 ? 'bg-gray-100 text-gray-700' :
             'bg-gray-50 text-gray-400'
           }`}>
@@ -41,7 +41,7 @@ function CustomerCard({ c, onEdit }) {
       </div>
       <button
         onClick={onEdit}
-        className="shrink-0 w-9 h-9 flex items-center justify-center rounded-xl text-indigo-600 hover:bg-indigo-50 transition-colors"
+        className="shrink-0 w-9 h-9 flex items-center justify-center rounded-xl text-violet-600 hover:bg-violet-50 transition-colors"
       >
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
           <path d="M13.488 2.513a1.75 1.75 0 0 0-2.475 0L6.75 6.774a2.75 2.75 0 0 0-.596.892l-.848 2.047a.75.75 0 0 0 .98.98l2.047-.848a2.75 2.75 0 0 0 .892-.596l4.261-4.263a1.75 1.75 0 0 0 0-2.474ZM4.75 3.5c-.69 0-1.25.56-1.25 1.25v6.5c0 .69.56 1.25 1.25 1.25h6.5c.69 0 1.25-.56 1.25-1.25V9a.75.75 0 0 1 1.5 0v2.25A2.75 2.75 0 0 1 11.25 14h-6.5A2.75 2.75 0 0 1 2 11.25v-6.5A2.75 2.75 0 0 1 4.75 2H7a.75.75 0 0 1 0 1.5H4.75Z" />
@@ -56,7 +56,7 @@ function MobileCustomerRow({ c, onEdit }) {
   const hasContact = Boolean(c.phone || c.email);
   const badgeCls =
     c.visits > 5
-      ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
+      ? 'bg-violet-50 text-violet-700 border-violet-200'
       : c.visits > 0
       ? 'bg-gray-50 text-gray-700 border-gray-200'
       : 'bg-gray-50 text-gray-400 border-gray-200';
@@ -101,7 +101,7 @@ function MobileCustomerRow({ c, onEdit }) {
             {c.email && (
               <a
                 href={`mailto:${c.email}`}
-                className="flex-1 text-center text-xs font-semibold py-2 rounded-xl bg-indigo-600 text-white active:bg-indigo-700 transition-colors"
+                className="flex-1 text-center text-xs font-semibold py-2 rounded-xl bg-violet-600 text-white active:bg-violet-700 transition-colors"
               >
                 Email
               </a>
@@ -156,7 +156,7 @@ export default function Customers() {
           </div>
           <button
             onClick={() => setModal({ mode: 'create' })}
-            className="w-10 h-10 flex items-center justify-center rounded-xl bg-indigo-600 text-white active:bg-indigo-700 shrink-0 shadow-sm"
+            className="w-10 h-10 flex items-center justify-center rounded-xl bg-violet-600 text-white active:bg-violet-700 shrink-0 shadow-sm"
             aria-label="Nuevo cliente"
           >
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-5 h-5">
@@ -168,7 +168,7 @@ export default function Customers() {
         <div className="grid grid-cols-3 gap-1.5">
           <button
             onClick={() => setMobileFilter('all')}
-            className={`rounded-xl border px-2 py-2 text-xs font-semibold ${mobileFilter === 'all' ? 'bg-indigo-50 border-indigo-200 text-indigo-700' : 'bg-white border-gray-200 text-gray-600'}`}
+            className={`rounded-xl border px-2 py-2 text-xs font-semibold ${mobileFilter === 'all' ? 'bg-violet-50 border-violet-200 text-violet-700' : 'bg-white border-gray-200 text-gray-600'}`}
           >
             {mobileStats.total} total
           </button>
@@ -195,7 +195,7 @@ export default function Customers() {
         </div>
         <button
           onClick={() => setModal({ mode: 'create' })}
-          className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors shadow-sm"
+          className="flex items-center gap-2 bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors shadow-sm"
         >
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
             <path d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z" />
@@ -214,7 +214,7 @@ export default function Customers() {
           value={search}
           onChange={e => setSearch(e.target.value)}
           placeholder="Buscar por nombre, teléfono o email..."
-          className="w-full border border-gray-300 rounded-xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white"
+          className="w-full border border-gray-300 rounded-xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-white"
         />
       </div>
 
@@ -230,7 +230,7 @@ export default function Customers() {
             {search ? 'No hay resultados para tu búsqueda' : 'Sin clientes todavía'}
           </p>
           {!search && (
-            <button onClick={() => setModal({ mode: 'create' })} className="mt-4 text-sm text-indigo-600 hover:underline font-medium">
+            <button onClick={() => setModal({ mode: 'create' })} className="mt-4 text-sm text-violet-600 hover:underline font-medium">
               Registrar el primer cliente →
             </button>
           )}
@@ -288,7 +288,7 @@ export default function Customers() {
                     <td className="px-4 py-3.5">
                       <div className="flex items-center gap-1.5">
                         <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${
-                          c.visits > 5 ? 'bg-indigo-100 text-indigo-700' :
+                          c.visits > 5 ? 'bg-violet-100 text-violet-700' :
                           c.visits > 0 ? 'bg-gray-100 text-gray-700' :
                           'bg-gray-50 text-gray-400'
                         }`}>
@@ -303,7 +303,7 @@ export default function Customers() {
                     <td className="px-4 py-3.5">
                       <button
                         onClick={() => setModal({ mode: 'edit', customer: c })}
-                        className="text-xs font-medium px-2.5 py-1.5 rounded-lg text-indigo-600 hover:bg-indigo-50 transition-colors"
+                        className="text-xs font-medium px-2.5 py-1.5 rounded-lg text-violet-600 hover:bg-violet-50 transition-colors"
                       >
                         Editar
                       </button>

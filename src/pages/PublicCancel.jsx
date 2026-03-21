@@ -102,14 +102,14 @@ export default function PublicCancel() {
     body = (
       <>
         <p className="text-green-600 font-semibold mb-4">{message}</p>
-        <Link to="/" className="text-indigo-600 hover:underline">Volver al inicio</Link>
+        <Link to="/" className="text-violet-600 hover:underline">Volver al inicio</Link>
       </>
     );
   } else {
     body = (
       <>
         <p className="text-red-600 font-semibold mb-4">{message}</p>
-        <Link to="/" className="text-indigo-600 hover:underline">Volver al inicio</Link>
+        <Link to="/" className="text-violet-600 hover:underline">Volver al inicio</Link>
       </>
     );
   }

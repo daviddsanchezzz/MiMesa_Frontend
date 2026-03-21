@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80">
+  <!-- Outer circle -->
+  <circle cx="40" cy="40" r="40" fill="#7C3AED"/>
+  <!-- Center white dot -->
+  <circle cx="40" cy="40" r="12" fill="white"/>
+  <!-- Satellite dots -->
+  <circle cx="40" cy="10" r="6" fill="white"/>
+  <circle cx="70" cy="40" r="6" fill="white"/>
+  <circle cx="40" cy="70" r="6" fill="white"/>
+  <circle cx="10" cy="40" r="6" fill="white"/>
+</svg>

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import api from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 const inputCls = 'w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bg-white';
 const labelCls = 'block text-sm font-medium text-gray-700 mb-1.5';
@@ -67,6 +68,7 @@ function BellIcon() {
 }
 
 export default function ReservationForm({ reservation, onSave, onCancel, initialContext = null }) {
+  const { business } = useAuth();
   const isEdit = Boolean(reservation?._id);
   const initialDate = reservation?.date || initialContext?.date || new Date().toISOString().slice(0, 10);
   const [rooms, setRooms] = useState(initialContext?.rooms || []);
@@ -148,7 +150,7 @@ export default function ReservationForm({ reservation, onSave, onCancel, initial
     [slots]
   );
   const multiShift = Object.keys(slotsByShift).length > 1;
-  const quickPeopleMax = 20;
+  const quickPeopleMax = Math.max(1, Number(business?.maxReservationPeople) || 10);
   const peopleOptions = Array.from({ length: quickPeopleMax }, (_, i) => i + 1);
   const [customPeopleOpen, setCustomPeopleOpen] = useState(form.people > quickPeopleMax);
 
@@ -336,7 +338,7 @@ export default function ReservationForm({ reservation, onSave, onCancel, initial
                 }
                 className={inputCls}
               />
-              <p className="text-xs text-gray-400 mt-1">Sin limite maximo en este formulario.</p>
+              <p className="text-xs text-gray-400 mt-1">Usa "Otro" para valores por encima de {quickPeopleMax}.</p>
             </div>
           )}
           {rooms.length > 0 && (

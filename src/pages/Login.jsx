@@ -41,11 +41,7 @@ export default function Login() {
         <div className="absolute -top-32 -left-32 w-96 h-96 bg-violet-600/20 rounded-full blur-3xl" />
         <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-violet-500/10 rounded-full blur-3xl" />
         <div className="relative z-10 text-center">
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500 to-violet-700 flex items-center justify-center mx-auto mb-8 shadow-2xl shadow-violet-900/50">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" className="w-8 h-8">
-              <path d="M11.25 4.533A9.707 9.707 0 0 0 6 3a9.735 9.735 0 0 0-3.25.555.75.75 0 0 0-.5.707v14.25a.75.75 0 0 0 1 .707A8.237 8.237 0 0 1 6 18.75c1.995 0 3.823.707 5.25 1.886V4.533ZM12.75 20.636A8.214 8.214 0 0 1 18 18.75c.966 0 1.89.166 2.75.47a.75.75 0 0 0 1-.708V4.262a.75.75 0 0 0-.5-.707A9.735 9.735 0 0 0 18 3a9.707 9.707 0 0 0-5.25 1.533v16.103Z" />
-            </svg>
-          </div>
+          <img src="/logo.svg" alt="Tableo" className="w-16 h-16 mx-auto mb-8" />
           <h1 className="text-4xl font-bold text-white mb-3">Tableo</h1>
           <p className="text-violet-300 text-lg font-light leading-relaxed max-w-xs mx-auto">
             Gestiona tu restaurante de forma sencilla y eficiente
@@ -70,11 +66,7 @@ export default function Login() {
         <div className="w-full max-w-sm">
           {/* Mobile logo */}
           <div className="lg:hidden text-center mb-10">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-violet-500 to-violet-700 flex items-center justify-center mx-auto mb-3">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" className="w-6 h-6">
-                <path d="M3 2a1 1 0 0 0-1 1v1a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1H3ZM2 9a1 1 0 0 1 1-1h18a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V9ZM1 15a1 1 0 0 1 1-1h8a1 1 0 1 1 0 2H2a1 1 0 0 1-1-1Z" />
-              </svg>
-            </div>
+            <img src="/logo.svg" alt="Tableo" className="w-12 h-12 mx-auto mb-3" />
             <h1 className="text-2xl font-bold text-gray-900">Tableo</h1>
           </div>
 

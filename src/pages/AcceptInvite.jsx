@@ -145,11 +145,7 @@ export default function AcceptInvite() {
         <div className="text-center mb-8">
           {invite.type === 'platform' || !invite.business ? (
             <>
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-violet-500 to-violet-700 flex items-center justify-center mx-auto mb-4 text-white shadow-lg">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="white" className="w-7 h-7">
-                  <path d="M3 2a1 1 0 0 0-1 1v1a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1V3a1 1 0 0 0-1-1H3ZM2 9a1 1 0 0 1 1-1h18a1 1 0 0 1 1 1v1a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V9ZM1 15a1 1 0 0 1 1-1h8a1 1 0 1 1 0 2H2a1 1 0 0 1-1-1Z" />
-                </svg>
-              </div>
+              <img src="/logo.svg" alt="Tableo" className="w-14 h-14 mx-auto mb-4" />
               <h1 className="text-xl font-bold text-gray-900">Tableo</h1>
               <p className="text-sm text-gray-500 mt-1">Te han dado acceso a la plataforma</p>
             </>

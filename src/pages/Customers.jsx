@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import api from '../services/api';
 import CustomerForm from '../components/CustomerForm';
 import Modal from '../components/Modal';
@@ -51,24 +51,144 @@ function CustomerCard({ c, onEdit }) {
   );
 }
 
+function MobileCustomerRow({ c, onEdit }) {
+  const [open, setOpen] = useState(false);
+  const hasContact = Boolean(c.phone || c.email);
+  const badgeCls =
+    c.visits > 5
+      ? 'bg-indigo-50 text-indigo-700 border-indigo-200'
+      : c.visits > 0
+      ? 'bg-gray-50 text-gray-700 border-gray-200'
+      : 'bg-gray-50 text-gray-400 border-gray-200';
+
+  return (
+    <div className="border-b border-gray-100 last:border-0">
+      <button
+        className="w-full text-left px-4 py-3 flex items-center gap-3 active:bg-gray-50 transition-colors"
+        onClick={() => setOpen((v) => !v)}
+      >
+        <Avatar name={c.name} />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5">
+            <p className="text-sm font-semibold text-gray-900 truncate">{c.name}</p>
+            {c.visits > 5 && <span className="text-amber-400 text-sm shrink-0">★</span>}
+          </div>
+          <p className="text-xs text-gray-500 truncate mt-0.5">
+            {c.phone || c.email || 'Sin contacto'}
+          </p>
+        </div>
+        <span className={`text-[11px] border px-2 py-0.5 rounded-full font-semibold ${badgeCls}`}>
+          {c.visits}
+        </span>
+      </button>
+
+      {open && (
+        <div className="px-4 pb-3 pt-1 bg-gray-50/80 border-t border-gray-100 space-y-2">
+          {c.notes && (
+            <p className="text-xs text-gray-500 italic bg-white border border-gray-200 rounded-lg px-2.5 py-2">
+              "{c.notes}"
+            </p>
+          )}
+          <div className="flex gap-2 flex-wrap">
+            {c.phone && (
+              <a
+                href={`tel:${c.phone}`}
+                className="flex-1 text-center text-xs font-semibold py-2 rounded-xl bg-emerald-600 text-white active:bg-emerald-700 transition-colors"
+              >
+                Llamar
+              </a>
+            )}
+            {c.email && (
+              <a
+                href={`mailto:${c.email}`}
+                className="flex-1 text-center text-xs font-semibold py-2 rounded-xl bg-indigo-600 text-white active:bg-indigo-700 transition-colors"
+              >
+                Email
+              </a>
+            )}
+            <button
+              onClick={onEdit}
+              className={`${hasContact ? 'px-3' : 'flex-1'} py-2 rounded-xl text-xs font-semibold bg-gray-100 text-gray-700 active:bg-gray-200 transition-colors`}
+            >
+              Editar
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Customers() {
   const [customers, setCustomers] = useState([]);
   const [modal, setModal] = useState(null);
   const [search, setSearch] = useState('');
+  const [mobileFilter, setMobileFilter] = useState('all'); // all | frequent | contactless
 
   const load = () => api.get('/customers').then(r => setCustomers(r.data));
   useEffect(() => { load(); }, []);
 
-  const filtered = customers.filter(c =>
+  const filteredBase = customers.filter(c =>
     c.name.toLowerCase().includes(search.toLowerCase()) ||
     c.phone?.includes(search) ||
     c.email?.toLowerCase().includes(search.toLowerCase())
   );
 
+  const filtered = useMemo(() => {
+    if (mobileFilter === 'frequent') return filteredBase.filter((c) => c.visits > 5);
+    if (mobileFilter === 'contactless') return filteredBase.filter((c) => !c.phone && !c.email);
+    return filteredBase;
+  }, [filteredBase, mobileFilter]);
+
+  const mobileStats = useMemo(() => ({
+    total: customers.length,
+    frequent: customers.filter((c) => c.visits > 5).length,
+    contactless: customers.filter((c) => !c.phone && !c.email).length,
+  }), [customers]);
+
   return (
     <div className="space-y-4">
+      <div className="sm:hidden space-y-3">
+        <div className="flex items-center gap-2">
+          <div className="flex-1">
+            <h2 className="text-xl font-bold text-gray-900">Clientes</h2>
+            <p className="text-sm text-gray-400 mt-0.5">{customers.length} registrados</p>
+          </div>
+          <button
+            onClick={() => setModal({ mode: 'create' })}
+            className="w-10 h-10 flex items-center justify-center rounded-xl bg-indigo-600 text-white active:bg-indigo-700 shrink-0 shadow-sm"
+            aria-label="Nuevo cliente"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-5 h-5">
+              <path d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z" />
+            </svg>
+          </button>
+        </div>
+
+        <div className="grid grid-cols-3 gap-1.5">
+          <button
+            onClick={() => setMobileFilter('all')}
+            className={`rounded-xl border px-2 py-2 text-xs font-semibold ${mobileFilter === 'all' ? 'bg-indigo-50 border-indigo-200 text-indigo-700' : 'bg-white border-gray-200 text-gray-600'}`}
+          >
+            {mobileStats.total} total
+          </button>
+          <button
+            onClick={() => setMobileFilter('frequent')}
+            className={`rounded-xl border px-2 py-2 text-xs font-semibold ${mobileFilter === 'frequent' ? 'bg-amber-50 border-amber-200 text-amber-700' : 'bg-white border-gray-200 text-gray-600'}`}
+          >
+            {mobileStats.frequent} frecuentes
+          </button>
+          <button
+            onClick={() => setMobileFilter('contactless')}
+            className={`rounded-xl border px-2 py-2 text-xs font-semibold ${mobileFilter === 'contactless' ? 'bg-gray-100 border-gray-200 text-gray-700' : 'bg-white border-gray-200 text-gray-600'}`}
+          >
+            {mobileStats.contactless} sin contacto
+          </button>
+        </div>
+      </div>
+
       {/* Header */}
-      <div className="flex flex-wrap items-start justify-between gap-3">
+      <div className="hidden sm:flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-xl font-bold text-gray-900">Clientes</h2>
           <p className="text-sm text-gray-400 mt-0.5">{customers.length} cliente{customers.length !== 1 ? 's' : ''} registrados</p>
@@ -120,9 +240,11 @@ export default function Customers() {
       {/* Mobile cards */}
       {filtered.length > 0 && (
         <div className="space-y-3 sm:hidden">
-          {filtered.map((c) => (
-            <CustomerCard key={c._id} c={c} onEdit={() => setModal({ mode: 'edit', customer: c })} />
-          ))}
+          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden divide-y divide-gray-100">
+            {filtered.map((c) => (
+              <MobileCustomerRow key={c._id} c={c} onEdit={() => setModal({ mode: 'edit', customer: c })} />
+            ))}
+          </div>
         </div>
       )}
 

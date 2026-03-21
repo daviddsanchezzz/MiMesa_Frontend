@@ -2,20 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 
-const PLAN_META = {
-  free:  { label: 'Free',  cls: 'bg-gray-100 text-gray-600 ring-gray-200' },
-  basic: { label: 'Basic', cls: 'bg-blue-50 text-blue-700 ring-blue-200' },
-  pro:   { label: 'Pro',   cls: 'bg-violet-50 text-violet-700 ring-violet-200' },
-};
 
-function PlanBadge({ plan }) {
-  const m = PLAN_META[plan] || PLAN_META.free;
-  return (
-    <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold ring-1 ${m.cls}`}>
-      {m.label}
-    </span>
-  );
-}
 
 function StatCard({ label, value, sub }) {
   return (
@@ -27,6 +14,380 @@ function StatCard({ label, value, sub }) {
   );
 }
 
+// ── Pricing tab ─────────────────────────────────────────────────────────────
+
+function PricingTab() {
+  const [plans, setPlans]       = useState(null);
+  const [loading, setLoading]   = useState(true);
+  const [saving, setSaving]     = useState(false);
+  const [error, setError]       = useState('');
+  const [success, setSuccess]   = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const { data } = await api.get('/dev/pricing');
+      setPlans(data);
+    } catch (err) {
+      setError(err.response?.data?.message || err.message);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const save = async () => {
+    setSaving(true);
+    setError('');
+    setSuccess(false);
+    try {
+      await api.put('/dev/pricing', { plans });
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 3000);
+    } catch (err) {
+      setError(err.response?.data?.message || err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const updatePlan = (i, field, value) =>
+    setPlans(ps => ps.map((p, idx) => idx === i ? { ...p, [field]: value } : p));
+
+  const updateFeature = (pi, fi, field, value) =>
+    setPlans(ps => ps.map((p, idx) =>
+      idx === pi
+        ? { ...p, features: p.features.map((f, fIdx) => fIdx === fi ? { ...f, [field]: value } : f) }
+        : p
+    ));
+
+  const addFeature = (pi) =>
+    setPlans(ps => ps.map((p, idx) =>
+      idx === pi ? { ...p, features: [...p.features, { text: '', included: true }] } : p
+    ));
+
+  const removeFeature = (pi, fi) =>
+    setPlans(ps => ps.map((p, idx) =>
+      idx === pi ? { ...p, features: p.features.filter((_, fIdx) => fIdx !== fi) } : p
+    ));
+
+  const addPlan = () =>
+    setPlans(ps => [...ps, {
+      id: `plan_${Date.now()}`,
+      name: 'Nuevo plan',
+      price: 0,
+      period: 'mes',
+      description: '',
+      featured: false,
+      featuredLabel: '',
+      cta: 'Empezar',
+      ctaStyle: 'outline',
+      visible: true,
+      order: ps.length,
+      features: [],
+    }]);
+
+  const removePlan = (i) =>
+    setPlans(ps => ps.filter((_, idx) => idx !== i));
+
+  const movePlan = (i, dir) => {
+    const j = i + dir;
+    if (j < 0 || j >= plans.length) return;
+    setPlans(ps => {
+      const arr = [...ps];
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+      return arr;
+    });
+  };
+
+  if (loading) return <div className="py-20 text-center text-sm text-gray-400">Cargando...</div>;
+
+  return (
+    <div className="max-w-4xl">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h2 className="text-lg font-bold text-gray-900">Planes de precios</h2>
+          <p className="text-sm text-gray-500 mt-0.5">
+            Los cambios se reflejan en la landing automáticamente al guardar.
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={addPlan}
+            className="flex items-center gap-2 border border-gray-300 text-gray-700 font-medium text-sm px-3.5 py-2 rounded-xl hover:bg-gray-50 transition-colors"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+              <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z"/>
+            </svg>
+            Añadir plan
+          </button>
+          <button
+            onClick={save}
+            disabled={saving}
+            className="flex items-center gap-2 bg-amber-400 hover:bg-amber-300 disabled:opacity-60 text-slate-900 font-semibold text-sm px-4 py-2 rounded-xl transition-colors"
+          >
+            {saving ? 'Guardando...' : 'Guardar cambios'}
+          </button>
+        </div>
+      </div>
+
+      {error && (
+        <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-3 mb-4">{error}</div>
+      )}
+      {success && (
+        <div className="text-sm text-green-700 bg-green-50 border border-green-200 rounded-xl px-4 py-3 mb-4">
+          ✓ Cambios guardados. La landing los reflejará en la próxima carga.
+        </div>
+      )}
+
+      {/* Plan cards */}
+      <div className="flex flex-col gap-4">
+        {plans.map((plan, pi) => (
+          <div
+            key={pi}
+            className={`bg-white border rounded-2xl overflow-hidden ${
+              !plan.visible ? 'opacity-60 border-gray-200' : 'border-gray-200'
+            }`}
+          >
+            {/* Card header */}
+            <div className="flex items-center justify-between px-5 py-3.5 bg-gray-50 border-b border-gray-200">
+              <div className="flex items-center gap-3">
+                {/* Reorder */}
+                <div className="flex flex-col gap-0.5">
+                  <button
+                    onClick={() => movePlan(pi, -1)}
+                    disabled={pi === 0}
+                    className="text-gray-300 hover:text-gray-600 disabled:opacity-20 transition-colors"
+                    title="Subir"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
+                      <path fillRule="evenodd" d="M11.78 11.03a.75.75 0 0 1-1.06 0L8 8.31l-2.72 2.72a.75.75 0 0 1-1.06-1.06l3.25-3.25a.75.75 0 0 1 1.06 0l3.25 3.25a.75.75 0 0 1 0 1.06Z" clipRule="evenodd"/>
+                    </svg>
+                  </button>
+                  <button
+                    onClick={() => movePlan(pi, 1)}
+                    disabled={pi === plans.length - 1}
+                    className="text-gray-300 hover:text-gray-600 disabled:opacity-20 transition-colors"
+                    title="Bajar"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
+                      <path fillRule="evenodd" d="M4.22 4.97a.75.75 0 0 1 1.06 0L8 7.69l2.72-2.72a.75.75 0 1 1 1.06 1.06L8.53 9.28a.75.75 0 0 1-1.06 0L4.22 6.03a.75.75 0 0 1 0-1.06Z" clipRule="evenodd"/>
+                    </svg>
+                  </button>
+                </div>
+                <span className="font-semibold text-gray-800 text-sm">{plan.name || 'Sin nombre'}</span>
+                <span className="text-xs text-gray-400 font-mono">#{plan.id}</span>
+                {plan.featured && (
+                  <span className="text-xs bg-indigo-50 text-indigo-600 ring-1 ring-indigo-200 px-2 py-0.5 rounded-full font-semibold">
+                    Destacado
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-3">
+                {/* Visible toggle */}
+                <label className="flex items-center gap-1.5 text-xs text-gray-500 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={plan.visible}
+                    onChange={e => updatePlan(pi, 'visible', e.target.checked)}
+                    className="rounded"
+                  />
+                  Visible
+                </label>
+                {/* Delete */}
+                <button
+                  onClick={() => {
+                    if (window.confirm(`¿Eliminar el plan "${plan.name}"?`)) removePlan(pi);
+                  }}
+                  className="text-gray-300 hover:text-red-500 transition-colors"
+                  title="Eliminar plan"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                    <path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5Zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5Z" clipRule="evenodd"/>
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Card body */}
+            <div className="p-5 grid grid-cols-2 gap-4">
+              {/* Left col */}
+              <div className="flex flex-col gap-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Nombre</label>
+                    <input
+                      value={plan.name}
+                      onChange={e => updatePlan(pi, 'name', e.target.value)}
+                      className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">ID (clave interna)</label>
+                    <input
+                      value={plan.id}
+                      onChange={e => updatePlan(pi, 'id', e.target.value)}
+                      className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-amber-400"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Precio (€)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={plan.price}
+                      onChange={e => updatePlan(pi, 'price', Number(e.target.value))}
+                      className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Período</label>
+                    <input
+                      value={plan.period}
+                      onChange={e => updatePlan(pi, 'period', e.target.value)}
+                      placeholder="mes"
+                      className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 mb-1">Descripción</label>
+                  <textarea
+                    value={plan.description}
+                    onChange={e => updatePlan(pi, 'description', e.target.value)}
+                    rows={2}
+                    className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-amber-400"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Texto del botón</label>
+                    <input
+                      value={plan.cta}
+                      onChange={e => updatePlan(pi, 'cta', e.target.value)}
+                      className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Estilo botón</label>
+                    <select
+                      value={plan.ctaStyle}
+                      onChange={e => updatePlan(pi, 'ctaStyle', e.target.value)}
+                      className="w-full border border-gray-200 rounded-lg px-3 py-1.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-400"
+                    >
+                      <option value="outline">Outline</option>
+                      <option value="primary">Primary (relleno)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-4">
+                  <label className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={plan.featured}
+                      onChange={e => updatePlan(pi, 'featured', e.target.checked)}
+                      className="rounded"
+                    />
+                    Plan destacado
+                  </label>
+                  {plan.featured && (
+                    <input
+                      value={plan.featuredLabel}
+                      onChange={e => updatePlan(pi, 'featuredLabel', e.target.value)}
+                      placeholder="Etiqueta (ej: Más popular)"
+                      className="flex-1 border border-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                    />
+                  )}
+                </div>
+              </div>
+
+              {/* Right col — features */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-xs font-medium text-gray-500">Características</label>
+                  <button
+                    onClick={() => addFeature(pi)}
+                    className="text-xs text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-1"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
+                      <path d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z"/>
+                    </svg>
+                    Añadir
+                  </button>
+                </div>
+                <div className="flex flex-col gap-1.5 max-h-64 overflow-y-auto pr-1">
+                  {plan.features.length === 0 && (
+                    <p className="text-xs text-gray-400 py-2 text-center">Sin características</p>
+                  )}
+                  {plan.features.map((feat, fi) => (
+                    <div key={fi} className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        checked={feat.included}
+                        onChange={e => updateFeature(pi, fi, 'included', e.target.checked)}
+                        title={feat.included ? 'Incluido' : 'No incluido'}
+                        className="shrink-0 rounded"
+                      />
+                      <input
+                        value={feat.text}
+                        onChange={e => updateFeature(pi, fi, 'text', e.target.value)}
+                        placeholder="Descripción de la característica"
+                        className="flex-1 border border-gray-200 rounded-lg px-2.5 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-amber-400"
+                      />
+                      <button
+                        onClick={() => removeFeature(pi, fi)}
+                        className="shrink-0 text-gray-300 hover:text-red-400 transition-colors"
+                        title="Eliminar"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
+                          <path d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z"/>
+                        </svg>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-xs text-gray-400 mt-2">
+                  ✓ checkbox = incluido &nbsp;·&nbsp; ☐ checkbox = no incluido (tachado en la landing)
+                </p>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {plans.length === 0 && (
+        <div className="py-16 text-center text-sm text-gray-400 bg-white rounded-2xl border border-gray-200">
+          No hay planes. Pulsa "Añadir plan" para crear el primero.
+        </div>
+      )}
+
+      {/* Bottom save */}
+      {plans.length > 0 && (
+        <div className="mt-4 flex justify-end">
+          <button
+            onClick={save}
+            disabled={saving}
+            className="flex items-center gap-2 bg-amber-400 hover:bg-amber-300 disabled:opacity-60 text-slate-900 font-semibold text-sm px-5 py-2.5 rounded-xl transition-colors"
+          >
+            {saving ? 'Guardando...' : 'Guardar cambios'}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Main component ───────────────────────────────────────────────────────────
+
 export default function DevDashboard() {
   const { session, logout } = useAuth();
 
@@ -37,24 +398,19 @@ export default function DevDashboard() {
   const [search, setSearch]         = useState('');
   const [planFilter, setPlanFilter] = useState('all');
 
-  // New business modal
   const [showModal, setShowModal]   = useState(false);
   const [form, setForm]             = useState({ name: '', email: '', phone: '', plan: 'free' });
   const [saving, setSaving]         = useState(false);
   const [formError, setFormError]   = useState('');
 
-  // Plan change in-line
-  const [changingPlan, setChangingPlan] = useState(null); // businessId
+  const [changingPlan, setChangingPlan] = useState(null);
+  const [deleting, setDeleting]         = useState(null);
 
-  // Delete confirm
-  const [deleting, setDeleting] = useState(null); // businessId
-
-  // Invite user form
-  const [inviteForm, setInviteForm]       = useState({ name: '', email: '' });
-  const [inviting, setInviting]           = useState(false);
-  const [inviteError, setInviteError]     = useState('');
-  const [inviteResult, setInviteResult]   = useState(null); // { email, inviteLink }
-  const [copied, setCopied]               = useState(false);
+  const [inviteForm, setInviteForm]     = useState({ name: '', email: '' });
+  const [inviting, setInviting]         = useState(false);
+  const [inviteError, setInviteError]   = useState('');
+  const [inviteResult, setInviteResult] = useState(null);
+  const [copied, setCopied]             = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -75,11 +431,9 @@ export default function DevDashboard() {
     return matchQ && matchP;
   });
 
-  // Stats
   const totalReservations30d = businesses.reduce((s, b) => s + b.reservationsLast30d, 0);
   const paidCount = businesses.filter(b => b.plan !== 'free').length;
 
-  // ── Create business ────────────────────────────────────────────────────
   const handleCreate = async (e) => {
     e.preventDefault();
     setFormError('');
@@ -96,7 +450,6 @@ export default function DevDashboard() {
     }
   };
 
-  // ── Change plan ────────────────────────────────────────────────────────
   const handlePlanChange = async (id, plan) => {
     setChangingPlan(id);
     try {
@@ -107,7 +460,6 @@ export default function DevDashboard() {
     }
   };
 
-  // ── Invite user ────────────────────────────────────────────────────────
   const handleInviteUser = async (e) => {
     e.preventDefault();
     setInviteError('');
@@ -125,7 +477,6 @@ export default function DevDashboard() {
     }
   };
 
-  // ── Delete ─────────────────────────────────────────────────────────────
   const handleDelete = async (id) => {
     setDeleting(id);
     try {
@@ -139,7 +490,7 @@ export default function DevDashboard() {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
 
-      {/* ── Top bar ────────────────────────────────────────────────────── */}
+      {/* ── Top bar ──────────────────────────────────────────────────────── */}
       <header className="bg-slate-900 text-white px-6 py-3 flex items-center justify-between shrink-0 sticky top-0 z-30">
         <div className="flex items-center gap-3">
           <span className="text-xs font-mono font-bold bg-amber-400 text-slate-900 px-2 py-0.5 rounded">DEV</span>
@@ -147,10 +498,7 @@ export default function DevDashboard() {
         </div>
         <div className="flex items-center gap-5">
           <span className="text-xs text-slate-400 hidden sm:block">{session?.user?.email}</span>
-          <button
-            onClick={logout}
-            className="text-xs text-slate-400 hover:text-white transition-colors"
-          >
+          <button onClick={logout} className="text-xs text-slate-400 hover:text-white transition-colors">
             Cerrar sesión
           </button>
         </div>
@@ -162,6 +510,7 @@ export default function DevDashboard() {
           {[
             { id: 'businesses', label: 'Negocios' },
             { id: 'users',      label: 'Usuarios' },
+            { id: 'pricing',    label: 'Precios landing' },
           ].map(t => (
             <button
               key={t.id}
@@ -178,12 +527,11 @@ export default function DevDashboard() {
         </div>
       </div>
 
-      {/* ── Content ────────────────────────────────────────────────────── */}
+      {/* ── Content ──────────────────────────────────────────────────────── */}
       <main className="flex-1 px-4 sm:px-8 py-8 max-w-7xl mx-auto w-full">
 
         {tab === 'businesses' && (
           <>
-            {/* Stats */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
               <StatCard label="Negocios totales"   value={businesses.length} />
               <StatCard label="Con plan de pago"   value={paidCount} sub={`${businesses.length - paidCount} en free`} />
@@ -191,7 +539,6 @@ export default function DevDashboard() {
               <StatCard label="Total reservas"     value={businesses.reduce((s, b) => s + b.totalReservations, 0)} />
             </div>
 
-            {/* Toolbar */}
             <div className="flex flex-col sm:flex-row gap-3 mb-5">
               <input
                 value={search}
@@ -220,7 +567,6 @@ export default function DevDashboard() {
               </button>
             </div>
 
-            {/* Table */}
             <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
               {loading ? (
                 <div className="py-20 text-center text-sm text-gray-400">Cargando...</div>
@@ -243,13 +589,10 @@ export default function DevDashboard() {
                     <tbody className="divide-y divide-gray-50">
                       {filtered.map(b => (
                         <tr key={b.id} className="hover:bg-gray-50 transition-colors">
-                          {/* Name + email */}
                           <td className="px-5 py-3.5">
                             <p className="font-semibold text-gray-900 truncate max-w-[180px]">{b.name}</p>
                             <p className="text-xs text-gray-400 truncate max-w-[180px]">{b.email}</p>
                           </td>
-
-                          {/* Plan select */}
                           <td className="px-4 py-3.5">
                             <select
                               value={b.plan}
@@ -262,17 +605,12 @@ export default function DevDashboard() {
                               <option value="pro">Pro</option>
                             </select>
                           </td>
-
                           <td className="px-4 py-3.5 text-center text-gray-700">{b.memberCount}</td>
                           <td className="px-4 py-3.5 text-center text-gray-700">{b.reservationsLast30d}</td>
                           <td className="px-4 py-3.5 text-center text-gray-500">{b.totalReservations}</td>
-
-                          {/* Created */}
                           <td className="px-4 py-3.5 text-xs text-gray-400 whitespace-nowrap">
                             {new Date(b.createdAt).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
                           </td>
-
-                          {/* Delete */}
                           <td className="px-4 py-3.5 text-right">
                             {deleting === b.id ? (
                               <span className="text-xs text-gray-400">Eliminando...</span>
@@ -370,9 +708,11 @@ export default function DevDashboard() {
             </form>
           </div>
         )}
+
+        {tab === 'pricing' && <PricingTab />}
       </main>
 
-      {/* ── New business modal ──────────────────────────────────────────── */}
+      {/* ── New business modal ────────────────────────────────────────────── */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6">

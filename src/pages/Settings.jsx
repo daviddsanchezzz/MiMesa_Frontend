@@ -1597,29 +1597,52 @@ function MarketingSection() {
 }
 
 const TABS = [
-  { key: 'negocio',    label: 'Negocio' },
-  { key: 'salas',      label: 'Salas' },
-  { key: 'mesas',      label: 'Mesas' },
-  { key: 'turnos',     label: 'Turnos' },
-  { key: 'vacaciones', label: 'Vacaciones' },
-  { key: 'limites',    label: 'Límites' },
-  { key: 'publico',    label: 'Público' },
-  { key: 'promos',     label: 'Códigos' },
-  { key: 'marketing',  label: 'Marketing' },
+  { key: 'negocio',    label: 'Negocio',    desc: 'Nombre, logo y datos del establecimiento' },
+  { key: 'salas',      label: 'Salas',      desc: 'Zonas y espacios del restaurante' },
+  { key: 'mesas',      label: 'Mesas',      desc: 'Mesas, capacidades y creación rápida' },
+  { key: 'turnos',     label: 'Turnos',     desc: 'Horarios de comida y cena' },
+  { key: 'vacaciones', label: 'Vacaciones', desc: 'Días cerrados y periodos de cierre' },
+  { key: 'limites',    label: 'Límites',    desc: 'Personas máximas por reserva y franja' },
+  { key: 'publico',    label: 'Público',    desc: 'Página de reservas online para clientes' },
+  { key: 'promos',     label: 'Códigos',    desc: 'Códigos promocionales y descuentos' },
+  { key: 'marketing',  label: 'Marketing',  desc: 'Campañas de email a suscriptores' },
 ];
 
 export default function Settings() {
   const [tab, setTab] = useState('negocio');
+  const current = TABS.find(t => t.key === tab);
 
   return (
     <div className="space-y-5">
       <div>
-        <h2 className="text-xl font-bold text-gray-900">Configuracion</h2>
-        <p className="text-sm text-gray-400 mt-0.5">Administra la operativa y ajustes publicos del negocio.</p>
+        <h2 className="text-xl font-bold text-gray-900">Configuración</h2>
+        <p className="text-sm text-gray-400 mt-0.5">Administra la operativa y ajustes del negocio.</p>
       </div>
 
+      {/* ── Mobile: styled select ── */}
+      <div className="lg:hidden">
+        <div className="relative">
+          <select
+            value={tab}
+            onChange={e => setTab(e.target.value)}
+            className="w-full appearance-none bg-white border border-gray-200 rounded-2xl px-4 py-3 pr-10 text-sm font-semibold text-gray-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+          >
+            {TABS.map(t => (
+              <option key={t.key} value={t.key}>{t.label}</option>
+            ))}
+          </select>
+          <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 text-gray-400">
+              <path fillRule="evenodd" d="M4.22 6.22a.75.75 0 0 1 1.06 0L8 8.94l2.72-2.72a.75.75 0 1 1 1.06 1.06l-3.25 3.25a.75.75 0 0 1-1.06 0L4.22 7.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
+            </svg>
+          </div>
+        </div>
+        <p className="text-xs text-gray-400 mt-1.5 px-1">{current?.desc}</p>
+      </div>
+
+      {/* ── Desktop: sidebar + content ── */}
       <div className="grid grid-cols-1 lg:grid-cols-[220px_1fr] gap-4 items-start">
-        <div className="bg-white border border-gray-200 rounded-2xl p-2 lg:sticky lg:top-6">
+        <div className="hidden lg:block bg-white border border-gray-200 rounded-2xl p-2 lg:sticky lg:top-6">
           {TABS.map((t) => (
             <button
               key={t.key}
@@ -1634,15 +1657,15 @@ export default function Settings() {
         </div>
 
         <div>
-          {tab === 'negocio' && <NegocioSection />}
-          {tab === 'salas' && <SalasSection />}
-          {tab === 'mesas' && <MesasSection />}
-          {tab === 'turnos' && <TurnosSection />}
+          {tab === 'negocio'    && <NegocioSection />}
+          {tab === 'salas'      && <SalasSection />}
+          {tab === 'mesas'      && <MesasSection />}
+          {tab === 'turnos'     && <TurnosSection />}
           {tab === 'vacaciones' && <VacacionesSection />}
-          {tab === 'limites' && <LimitesSection />}
-          {tab === 'publico' && <PublicoSection />}
-          {tab === 'promos'    && <PromoSection />}
-          {tab === 'marketing' && <MarketingSection />}
+          {tab === 'limites'    && <LimitesSection />}
+          {tab === 'publico'    && <PublicoSection />}
+          {tab === 'promos'     && <PromoSection />}
+          {tab === 'marketing'  && <MarketingSection />}
         </div>
       </div>
     </div>

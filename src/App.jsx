@@ -19,6 +19,7 @@ import DevDashboard from './pages/DevDashboard';
 import Onboarding from './pages/Onboarding';
 import PublicReservation from './pages/PublicReservation';
 import PublicCancel from './pages/PublicCancel';
+import PublicUnsubscribe from './pages/PublicUnsubscribe';
 import Sidebar from './components/Sidebar';
 
 function LoadingScreen() {
@@ -147,7 +148,8 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/public/:businessId/reserve" element={<PublicReservation />} />
-          <Route path="/public/cancel" element={<PublicCancel />} />
+          <Route path="/public/cancel"       element={<PublicCancel />} />
+          <Route path="/public/unsubscribe"  element={<PublicUnsubscribe />} />
           {/* Auth — public only (redirect to / if already logged in) */}
           <Route path="/login"           element={<PublicRoute><Login /></PublicRoute>} />
           <Route path="/register"        element={<PublicRoute><Register /></PublicRoute>} />

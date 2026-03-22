@@ -165,7 +165,8 @@ export default function PublicReservation() {
       await publicApi.post('/reservations/public', {
         businessId, ...form,
         roomId: form.roomId || null,
-        marketingConsent: form.marketing,
+        marketingConsent:     form.marketing,
+        marketingConsentText: form.marketing ? tr.consentMarketing : '',
       });
       setSuccess(tr.successMsg);
     } catch (err) {

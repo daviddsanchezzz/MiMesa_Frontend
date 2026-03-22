@@ -1322,14 +1322,14 @@ function PromoSection() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-xl font-bold text-gray-900">Códigos promocionales</h2>
-          <p className="text-sm text-gray-400 mt-0.5">Los clientes pueden usar estos códigos al reservar online.</p>
+          <p className="text-sm text-gray-400 mt-0.5">Los clientes pueden usarlos al reservar online.</p>
         </div>
         <button
           onClick={() => setCreating(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-violet-600 text-white text-sm font-medium rounded-xl hover:bg-violet-700 transition-colors"
+          className="flex items-center gap-1.5 px-3 py-2 bg-violet-600 text-white text-sm font-medium rounded-xl hover:bg-violet-700 transition-colors shrink-0"
         >
           <IconPlus /> Nuevo código
         </button>
@@ -1392,34 +1392,40 @@ function PromoSection() {
           const expired = isExpired(p);
           const maxed   = isMaxed(p);
           const invalid = expired || maxed;
+          const statusLabel = !p.active ? 'Inactivo' : expired ? 'Expirado' : maxed ? 'Agotado' : 'Activo';
+          const statusCls   = !p.active || invalid ? 'bg-gray-100 text-gray-400' : 'bg-green-100 text-green-700';
           return (
-            <div key={p._id} className="flex items-start gap-3 px-4 py-3">
+            <div key={p._id} className="flex items-center gap-3 px-4 py-3">
+              {/* Info */}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-mono font-semibold text-sm text-gray-900">{p.code}</span>
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                    !p.active || invalid
-                      ? 'bg-gray-100 text-gray-400'
-                      : 'bg-green-100 text-green-700'
-                  }`}>
-                    {!p.active ? 'Inactivo' : expired ? 'Expirado' : maxed ? 'Agotado' : 'Activo'}
-                  </span>
+                  <span className="font-mono font-semibold text-sm text-gray-900 tracking-wide">{p.code}</span>
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${statusCls}`}>{statusLabel}</span>
                 </div>
-                {p.description && <p className="text-xs text-gray-500 mt-0.5">{p.description}</p>}
+                {p.description && <p className="text-xs text-gray-500 mt-0.5 truncate">{p.description}</p>}
                 <p className="text-xs text-gray-400 mt-0.5">
-                  Usos: {p.usedCount}{p.maxUses ? `/${p.maxUses}` : ''} · Expira: {fmtDate(p.expiresAt)}
+                  {p.usedCount}{p.maxUses ? `/${p.maxUses}` : ''} usos · {fmtDate(p.expiresAt)}
                 </p>
               </div>
-              <div className="flex items-center gap-2 shrink-0">
+              {/* Actions */}
+              <div className="flex items-center gap-3 shrink-0">
                 <button
+                  type="button"
                   onClick={() => handleToggle(p)}
                   title={p.active ? 'Desactivar' : 'Activar'}
-                  className={`w-9 h-5 rounded-full transition-colors relative ${p.active ? 'bg-violet-600' : 'bg-gray-200'}`}
+                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none ${
+                    p.active ? 'bg-violet-600' : 'bg-gray-200'
+                  }`}
                 >
-                  <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${p.active ? 'translate-x-4' : 'translate-x-0.5'}`} />
+                  <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${
+                    p.active ? 'translate-x-5' : 'translate-x-0'
+                  }`} />
                 </button>
-                <button onClick={() => handleDelete(p._id)}
-                  className="text-gray-300 hover:text-red-500 transition-colors p-1">
+                <button
+                  type="button"
+                  onClick={() => handleDelete(p._id)}
+                  className="text-gray-300 hover:text-red-500 transition-colors p-1 -m-1"
+                >
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
                     <path fillRule="evenodd" d="M5 3.25V4H2.75a.75.75 0 0 0 0 1.5h.3l.815 8.15A1.5 1.5 0 0 0 5.357 15h5.285a1.5 1.5 0 0 0 1.493-1.35l.815-8.15h.3a.75.75 0 0 0 0-1.5H11v-.75A2.25 2.25 0 0 0 8.75 1h-1.5A2.25 2.25 0 0 0 5 3.25Zm2.25-.75a.75.75 0 0 0-.75.75V4h3v-.75a.75.75 0 0 0-.75-.75h-1.5ZM6.05 6a.75.75 0 0 1 .787.713l.275 5.5a.75.75 0 0 1-1.498.075l-.275-5.5A.75.75 0 0 1 6.05 6Zm3.9 0a.75.75 0 0 1 .712.787l-.275 5.5a.75.75 0 0 1-1.498-.075l.275-5.5a.75.75 0 0 1 .786-.712Z" clipRule="evenodd" />
                   </svg>
@@ -1481,17 +1487,17 @@ function MarketingSection() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="space-y-3">
         <div>
           <h2 className="text-xl font-bold text-gray-900">Marketing</h2>
           <p className="text-sm text-gray-400 mt-0.5">
             {subscribers.length} suscriptor{subscribers.length !== 1 ? 'es' : ''} activo{subscribers.length !== 1 ? 's' : ''} · {remaining}/3 envíos disponibles este mes
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-2 overflow-x-auto pb-0.5">
           {['compose', 'history', 'subscribers'].map(v => (
             <button key={v} onClick={() => setView(v)}
-              className={`text-xs px-3 py-1.5 rounded-lg font-medium transition-colors ${view === v ? 'bg-violet-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+              className={`text-xs px-3 py-2 rounded-lg font-medium transition-colors whitespace-nowrap shrink-0 ${view === v ? 'bg-violet-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
               {v === 'compose' ? 'Redactar' : v === 'history' ? 'Historial' : 'Suscriptores'}
             </button>
           ))}
@@ -1533,14 +1539,14 @@ function MarketingSection() {
                   className={`${inputCls} resize-y min-h-[160px]`} />
                 <p className="text-xs text-gray-400 mt-1">El pie con «Darse de baja» se añade automáticamente en cada email.</p>
               </div>
-              <div className="flex items-center justify-between pt-1">
-                <p className="text-xs text-gray-400">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-3 pt-1">
+                <p className="text-xs text-gray-400 flex-1">
                   {remaining === 0
                     ? 'Has alcanzado el límite de 3 campañas este mes.'
                     : `Se enviará a ${subscribers.length} suscriptor${subscribers.length !== 1 ? 'es' : ''}.`}
                 </p>
                 <button onClick={handleSend} disabled={sending || remaining === 0}
-                  className="bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white px-5 py-2.5 rounded-xl text-sm font-semibold transition-colors">
+                  className="w-full sm:w-auto bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white px-5 py-3 rounded-xl text-sm font-semibold transition-colors">
                   {sending ? 'Enviando...' : 'Enviar campaña'}
                 </button>
               </div>
@@ -1550,58 +1556,40 @@ function MarketingSection() {
       )}
 
       {view === 'history' && (
-        <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
+        <div className="bg-white border border-gray-200 rounded-2xl divide-y divide-gray-100">
           {campaigns.length === 0 ? (
             <div className="text-center py-10 text-gray-400 text-sm">Sin campañas enviadas todavía.</div>
-          ) : (
-            <table className="w-full text-sm">
-              <thead><tr className="border-b border-gray-100 bg-gray-50">
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500">Asunto</th>
-                <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500">Enviados</th>
-                <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500">Fecha</th>
-              </tr></thead>
-              <tbody>
-                {campaigns.map(c => (
-                  <tr key={c._id} className="border-b border-gray-50 last:border-0">
-                    <td className="px-4 py-3 text-gray-800 truncate max-w-[260px]">{c.subject}</td>
-                    <td className="px-4 py-3 text-right text-gray-500">{c.recipientCount}</td>
-                    <td className="px-4 py-3 text-right text-gray-400 text-xs whitespace-nowrap">
-                      {new Date(c.sentAt).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+          ) : campaigns.map(c => (
+            <div key={c._id} className="px-4 py-3 flex items-start justify-between gap-3">
+              <p className="text-sm text-gray-800 font-medium leading-snug flex-1 min-w-0 truncate">{c.subject}</p>
+              <div className="text-right shrink-0">
+                <p className="text-xs text-gray-500 font-medium">{c.recipientCount} env.</p>
+                <p className="text-xs text-gray-400 whitespace-nowrap">
+                  {new Date(c.sentAt).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
+                </p>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
       {view === 'subscribers' && (
-        <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden">
+        <div className="bg-white border border-gray-200 rounded-2xl divide-y divide-gray-100">
           {subscribers.length === 0 ? (
             <div className="text-center py-10 text-gray-400 text-sm">Sin suscriptores todavía.</div>
-          ) : (
-            <table className="w-full text-sm">
-              <thead><tr className="border-b border-gray-100 bg-gray-50">
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500">Nombre</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500">Email</th>
-                <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500">Suscrito el</th>
-              </tr></thead>
-              <tbody>
-                {subscribers.map(s => (
-                  <tr key={s._id} className="border-b border-gray-50 last:border-0">
-                    <td className="px-4 py-3 text-gray-800">{s.name}</td>
-                    <td className="px-4 py-3 text-gray-500">{s.email}</td>
-                    <td className="px-4 py-3 text-right text-gray-400 text-xs whitespace-nowrap">
-                      {s.marketingSubscribedAt
-                        ? new Date(s.marketingSubscribedAt).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })
-                        : '—'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+          ) : subscribers.map(s => (
+            <div key={s._id} className="px-4 py-3 flex items-start justify-between gap-3">
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-gray-800 font-medium truncate">{s.name}</p>
+                <p className="text-xs text-gray-500 truncate">{s.email}</p>
+              </div>
+              <p className="text-xs text-gray-400 shrink-0 whitespace-nowrap pt-0.5">
+                {s.marketingSubscribedAt
+                  ? new Date(s.marketingSubscribedAt).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })
+                  : '—'}
+              </p>
+            </div>
+          ))}
         </div>
       )}
     </div>
@@ -1609,15 +1597,15 @@ function MarketingSection() {
 }
 
 const TABS = [
-  { key: 'negocio', label: 'Negocio' },
-  { key: 'salas', label: 'Salas' },
-  { key: 'mesas', label: 'Mesas' },
-  { key: 'turnos', label: 'Turnos' },
+  { key: 'negocio',    label: 'Negocio' },
+  { key: 'salas',      label: 'Salas' },
+  { key: 'mesas',      label: 'Mesas' },
+  { key: 'turnos',     label: 'Turnos' },
   { key: 'vacaciones', label: 'Vacaciones' },
-  { key: 'limites', label: 'Limites' },
-  { key: 'publico', label: 'Publico' },
-  { key: 'promos',    label: 'Códigos' },
-  { key: 'marketing', label: 'Marketing' },
+  { key: 'limites',    label: 'Límites' },
+  { key: 'publico',    label: 'Público' },
+  { key: 'promos',     label: 'Códigos' },
+  { key: 'marketing',  label: 'Marketing' },
 ];
 
 export default function Settings() {

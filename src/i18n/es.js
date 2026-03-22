@@ -56,6 +56,11 @@ const es = {
   errorNoSlots: 'No hay turnos para este día',
   errorNoTime: 'Selecciona una hora',
   errorSave: 'Error al guardar',
+  promoCode: 'Código promocional',
+  promoCodePlaceholder: 'VERANO2024',
+  promoCodeValid: (desc) => desc ? `Código válido: ${desc}` : 'Código válido',
+  promoCodeInvalid: 'Código no válido o expirado',
+  promoCodeChecking: 'Verificando...',
   dateLocale: 'es-ES',
 };
 

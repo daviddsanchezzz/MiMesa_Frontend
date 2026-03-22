@@ -56,6 +56,11 @@ const en = {
   errorNoSlots: 'No time slots for this day',
   errorNoTime: 'Please select a time',
   errorSave: 'Error saving',
+  promoCode: 'Promo code',
+  promoCodePlaceholder: 'SUMMER2024',
+  promoCodeValid: (desc) => desc ? `Valid code: ${desc}` : 'Valid code',
+  promoCodeInvalid: 'Invalid or expired code',
+  promoCodeChecking: 'Checking...',
   dateLocale: 'en-GB',
 };
 

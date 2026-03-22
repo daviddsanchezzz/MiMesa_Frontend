@@ -56,6 +56,11 @@ const ca = {
   errorNoSlots: 'No hi ha torns per a aquest dia',
   errorNoTime: 'Selecciona una hora',
   errorSave: 'Error en guardar',
+  promoCode: 'Codi promocional',
+  promoCodePlaceholder: 'ESTIU2024',
+  promoCodeValid: (desc) => desc ? `Codi vàlid: ${desc}` : 'Codi vàlid',
+  promoCodeInvalid: 'Codi no vàlid o expirat',
+  promoCodeChecking: 'Verificant...',
   dateLocale: 'ca',
 };
 

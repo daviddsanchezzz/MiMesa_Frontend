@@ -151,6 +151,9 @@ function MobileRow({ r, tables, onEdit, onCancel, onDelete, onAssign, onQuickSta
             {(r.roomId?.name || r.tableId?.roomId?.name) && (
               <span className="text-xs text-gray-400 truncate">{r.roomId?.name || r.tableId?.roomId?.name}</span>
             )}
+            {r.promoCode && (
+              <span className="text-xs text-amber-700 font-medium bg-amber-50 px-1.5 py-0.5 rounded-md">{r.promoCode}</span>
+            )}
           </div>
         </div>
 

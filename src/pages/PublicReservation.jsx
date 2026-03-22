@@ -53,12 +53,16 @@ export default function PublicReservation() {
   const [form, setForm] = useState({
     guestName: '', guestPhone: '', guestEmail: '',
     roomId: '', date: '', time: '', people: 2, notes: '', consent: false, marketing: false,
+    promoCode: '',
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [slots, setSlots] = useState(null);
   const [vacation, setVacation] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [hasActivePromo, setHasActivePromo] = useState(false);
+  const [promoStatus, setPromoStatus] = useState(null); // null | 'checking' | 'valid' | 'invalid'
+  const [promoDesc, setPromoDesc] = useState('');
 
   const todayDate = useMemo(() => { const d = new Date(); d.setHours(0,0,0,0); return d; }, []);
   const todayStr = `${todayDate.getFullYear()}-${String(todayDate.getMonth()+1).padStart(2,'0')}-${String(todayDate.getDate()).padStart(2,'0')}`;
@@ -73,12 +77,14 @@ export default function PublicReservation() {
   useEffect(() => {
     (async () => {
       try {
-        const [bizRes, roomsRes] = await Promise.all([
+        const [bizRes, roomsRes, promoRes] = await Promise.all([
           publicApi.get(`/auth/public/business/${businessId}`),
           publicApi.get(`/rooms/public/${businessId}`),
+          publicApi.get(`/promos/public/${businessId}/has-active`).catch(() => ({ data: { hasActive: false } })),
         ]);
         setBusiness(bizRes.data);
         setRooms(Array.isArray(roomsRes.data) ? roomsRes.data : roomsRes.data?.rooms || []);
+        setHasActivePromo(promoRes.data.hasActive);
       } catch {
         setError(tr.businessNotFound);
       } finally {
@@ -86,6 +92,20 @@ export default function PublicReservation() {
       }
     })();
   }, [businessId]);
+
+  const validatePromo = async (code) => {
+    const trimmed = code.trim().toUpperCase();
+    if (!trimmed) { setPromoStatus(null); setPromoDesc(''); return; }
+    setPromoStatus('checking');
+    try {
+      const res = await publicApi.post('/promos/public/validate', { businessId, code: trimmed });
+      setPromoStatus('valid');
+      setPromoDesc(res.data.description || '');
+    } catch {
+      setPromoStatus('invalid');
+      setPromoDesc('');
+    }
+  };
 
   useEffect(() => {
     if (!businessId) return;
@@ -165,6 +185,7 @@ export default function PublicReservation() {
       await publicApi.post('/reservations/public', {
         businessId, ...form,
         roomId: form.roomId || null,
+        promoCode: promoStatus === 'valid' ? form.promoCode.trim().toUpperCase() : '',
         marketingConsent:     form.marketing,
         marketingConsentText: form.marketing ? tr.consentMarketing : '',
       });
@@ -474,6 +495,38 @@ export default function PublicReservation() {
                       <textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}
                         className={inputCls} rows={3} placeholder={tr.notesPlaceholder} />
                     </div>
+                    {hasActivePromo && (
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                          {tr.promoCode} <span className="text-gray-400 font-normal text-xs">(opcional)</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={form.promoCode}
+                          onChange={e => {
+                            setForm(f => ({ ...f, promoCode: e.target.value }));
+                            setPromoStatus(null);
+                            setPromoDesc('');
+                          }}
+                          onBlur={e => validatePromo(e.target.value)}
+                          className={`${inputCls} uppercase ${
+                            promoStatus === 'valid' ? 'border-green-400 focus:ring-green-400' :
+                            promoStatus === 'invalid' ? 'border-red-400 focus:ring-red-400' : ''
+                          }`}
+                          placeholder={tr.promoCodePlaceholder}
+                          maxLength={32}
+                        />
+                        {promoStatus === 'checking' && (
+                          <p className="text-xs text-gray-400 mt-1">{tr.promoCodeChecking}</p>
+                        )}
+                        {promoStatus === 'valid' && (
+                          <p className="text-xs text-green-600 mt-1">✓ {tr.promoCodeValid(promoDesc)}</p>
+                        )}
+                        {promoStatus === 'invalid' && (
+                          <p className="text-xs text-red-500 mt-1">{tr.promoCodeInvalid}</p>
+                        )}
+                      </div>
+                    )}
                   </div>
                   <div className="space-y-3 mb-5">
                     {/* Required: privacy consent */}

@@ -720,7 +720,7 @@ export default function Reservations() {
         </div>
       )}
 
-      {pendingEnabled && canModeratePending && filterMode !== 'pending' && (
+      {pendingEnabled && canModeratePending && filterMode !== 'pending' && pendingReservations.length > 0 && (
         <div className="bg-white rounded-2xl border border-amber-200 shadow-sm overflow-hidden">
           <div className="px-4 sm:px-5 py-3 border-b border-amber-100 bg-amber-50/70 flex items-center justify-between">
             <div>
@@ -733,8 +733,6 @@ export default function Reservations() {
           </div>
           {pendingLoading ? (
             <div className="px-4 sm:px-5 py-4 text-sm text-gray-500">Cargando pendientes...</div>
-          ) : pendingReservations.length === 0 ? (
-            <div className="px-4 sm:px-5 py-4 text-sm text-gray-500">No hay pendientes ahora mismo.</div>
           ) : (
             <div className="divide-y divide-gray-100">
               {pendingReservations.slice(0, 8).map((r) => (

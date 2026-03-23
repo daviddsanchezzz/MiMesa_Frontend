@@ -238,6 +238,12 @@ function MobileRow({ r, tables, onEdit, onCancel, onDelete, onAssign, onQuickSta
                 Cancelar
               </button>
             )}
+            <button
+              onClick={onDelete}
+              className="px-3 py-2 rounded-xl text-xs font-semibold text-gray-700 bg-gray-100 active:bg-gray-200 transition-colors"
+            >
+              Eliminar
+            </button>
           </div>
         </div>
       )}

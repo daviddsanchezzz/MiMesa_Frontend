@@ -2,30 +2,6 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 
-function PlanBadge({ plan, subscriptionStatus, onClick }) {
-  const isActive = subscriptionStatus === 'active' || subscriptionStatus === 'trialing';
-  const isTrialing = subscriptionStatus === 'trialing';
-  const isPastDue = subscriptionStatus === 'past_due';
-
-  if (isActive && plan !== 'free') {
-    return (
-      <button onClick={onClick} className="flex items-center gap-1.5 w-full mt-1.5">
-        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${isTrialing ? 'bg-amber-500/20 text-amber-300' : 'bg-violet-500/20 text-violet-300'}`}>
-          {isTrialing ? `Trial · ${plan.charAt(0).toUpperCase() + plan.slice(1)}` : plan.charAt(0).toUpperCase() + plan.slice(1)}
-        </span>
-        {isPastDue && <span className="text-[10px] text-red-400 font-medium">Pago fallido</span>}
-      </button>
-    );
-  }
-
-  return (
-    <button onClick={onClick} className="flex items-center gap-1.5 w-full mt-1.5 group">
-      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-slate-700 text-slate-400">Gratis</span>
-      <span className="text-[10px] text-violet-400 group-hover:text-violet-300 transition-colors">Actualizar →</span>
-    </button>
-  );
-}
-
 const IconTeam = () => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 shrink-0">
     <path fillRule="evenodd" d="M10 1.75a.75.75 0 0 1 .33.077l6.5 3.25a.75.75 0 0 1 .42.673v4.786a8.25 8.25 0 1 1-16.5 0V5.75a.75.75 0 0 1 .42-.673l6.5-3.25A.75.75 0 0 1 10 1.75Zm3.03 6.72a.75.75 0 1 0-1.06-1.06L9.25 10.13l-1.22-1.22a.75.75 0 1 0-1.06 1.06l1.75 1.75a.75.75 0 0 0 1.06 0l3.25-3.25Z" clipRule="evenodd" />
@@ -77,7 +53,7 @@ const configLinks = [
 ];
 
 export default function Sidebar({ isOpen, onClose }) {
-  const { business, memberships, logout, hasRole, switchBusiness, session, plan, subscriptionStatus } = useAuth();
+  const { business, memberships, logout, hasRole, switchBusiness, session } = useAuth();
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const [isSmallScreen, setIsSmallScreen] = useState(false);
@@ -144,13 +120,7 @@ export default function Sidebar({ isOpen, onClose }) {
               </select>
             ) : (
               <p className="text-slate-400 text-xs truncate leading-tight mt-0.5">{business?.name}</p>
-            )}
-            <PlanBadge
-              plan={plan}
-              subscriptionStatus={subscriptionStatus}
-              onClick={() => { navigate('/configuracion?tab=suscripcion'); handleNavClick(); }}
-            />
-          </div>
+            )}          </div>
         </div>
       </div>
 
@@ -233,3 +203,4 @@ export default function Sidebar({ isOpen, onClose }) {
     </aside>
   );
 }
+

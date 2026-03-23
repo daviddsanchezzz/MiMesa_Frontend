@@ -5,9 +5,9 @@ import Modal from '../components/Modal';
 
 function StatCard({ label, value, sub }) {
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm px-4 py-3.5">
+    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm px-4 py-3">
       <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{label}</p>
-      <p className="text-3xl font-bold text-gray-900 leading-tight mt-1">{value}</p>
+      <p className="text-2xl font-bold text-gray-900 leading-tight mt-1">{value}</p>
       {sub && <p className="text-xs text-gray-500 mt-1">{sub}</p>}
     </div>
   );
@@ -196,13 +196,13 @@ export default function DevDashboard() {
   };
 
   return (
-    <div className="space-y-4 max-w-[1280px]">
+    <div className="space-y-4 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
       <div className="bg-white rounded-2xl border border-gray-200 shadow-sm px-4 py-3.5 sm:px-5 sm:py-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <div className="inline-flex items-center gap-2 mb-1">
               <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-700 border border-amber-200">DEV</span>
-              <h2 className="text-xl font-bold text-gray-900">Panel de desarrollo</h2>
+              <h2 className="text-lg sm:text-xl font-bold text-gray-900">Panel de desarrollo</h2>
             </div>
             <p className="text-sm text-gray-500">Administración interna de negocios y usuarios.</p>
           </div>

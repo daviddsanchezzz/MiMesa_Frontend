@@ -893,13 +893,13 @@ export default function Reservations() {
         const thead = (
           <>
             <colgroup>
-              <col style={{ width: '28%' }} />
-              <col style={{ width: '9%' }} />
+              <col style={{ width: '27%' }} />
+              <col style={{ width: '8%' }} />
               <col style={{ width: '8%' }} />
               <col style={{ width: '10%' }} />
-              <col style={{ width: '12%' }} />
-              <col style={{ width: '15%' }} />
-              <col style={{ width: '18%' }} />
+              <col style={{ width: '11%' }} />
+              <col style={{ width: '14%' }} />
+              <col style={{ width: '22%' }} />
             </colgroup>
             <thead>
               <tr className="border-b border-gray-100">
@@ -960,76 +960,52 @@ export default function Reservations() {
                 </span>
               </td>
               <td className="px-4 py-3.5">
-                <div className="flex items-center justify-end gap-1.5">
+                <div className="flex items-center justify-end gap-1.5 gap-y-2 flex-wrap max-w-[260px] ml-auto">
                   {r.status === 'pending' && (
                     <button
                       onClick={() => quickStatus(r._id, 'confirmed')}
-                      className="p-1.5 rounded-lg text-violet-600 hover:bg-violet-50 transition-colors"
-                      title="Confirmar"
-                      aria-label="Confirmar"
+                      className="text-[11px] font-semibold px-2.5 py-1.5 rounded-lg bg-violet-50 text-violet-700 hover:bg-violet-100 transition-colors"
                     >
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
-                        <path fillRule="evenodd" d="M12.416 3.376a.75.75 0 0 1 .208 1.04l-5 7.5a.75.75 0 0 1-1.154.114l-3-3a.75.75 0 0 1 1.06-1.06l2.353 2.353 4.493-6.74a.75.75 0 0 1 1.04-.207Z" clipRule="evenodd" />
-                      </svg>
+                      Confirmar
                     </button>
                   )}
                   {r.status === 'confirmed' && (
                     <button
                       onClick={() => quickStatus(r._id, 'seated')}
-                      className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50 transition-colors"
-                      title="Pasar a sentada"
-                      aria-label="Pasar a sentada"
+                      className="text-[11px] font-semibold px-2.5 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors"
                     >
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
-                        <path fillRule="evenodd" d="M12.416 3.376a.75.75 0 0 1 .208 1.04l-5 7.5a.75.75 0 0 1-1.154.114l-3-3a.75.75 0 0 1 1.06-1.06l2.353 2.353 4.493-6.74a.75.75 0 0 1 1.04-.207Z" clipRule="evenodd" />
-                      </svg>
+                      Sentar
                     </button>
                   )}
                   {canModeratePending && (r.status === 'confirmed' || r.status === 'seated') && (
                     <button
                       onClick={() => handleNoShow(r._id)}
-                      className="p-1.5 rounded-lg text-amber-600 hover:bg-amber-50 transition-colors"
-                      title="Marcar no-show"
-                      aria-label="Marcar no-show"
+                      className="text-[11px] font-semibold px-2.5 py-1.5 rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors"
                     >
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
-                        <path d="M8 1.75a6.25 6.25 0 1 0 0 12.5 6.25 6.25 0 0 0 0-12.5Zm0 1.5a4.75 4.75 0 0 1 3.312 8.16L4.59 4.688A4.731 4.731 0 0 1 8 3.25Zm-3.312 1.34 6.723 6.723A4.75 4.75 0 0 1 4.688 4.59Z" />
-                      </svg>
+                      No-show
                     </button>
                   )}
                   {r.status !== 'cancelled' && r.status !== 'no_show' && (
                     <button
                       onClick={() => handleCancel(r._id)}
-                      className="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50 transition-colors"
-                      title="Cancelar"
-                      aria-label="Cancelar"
+                      className="text-[11px] font-semibold px-2.5 py-1.5 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 transition-colors"
                     >
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
-                        <path fillRule="evenodd" d="M3.22 3.22a.75.75 0 0 1 1.06 0L8 6.94l3.72-3.72a.75.75 0 0 1 1.06 1.06L9.06 8l3.72 3.72a.75.75 0 1 1-1.06 1.06L8 9.06l-3.72 3.72a.75.75 0 1 1-1.06-1.06L6.94 8 3.22 4.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
-                      </svg>
+                      Cancelar
                     </button>
                   )}
 
                   <button
                     onClick={() => setModal({ mode: 'edit', reservation: r })}
-                    className="p-1.5 rounded-lg text-violet-600 hover:bg-violet-50 transition-colors"
-                    title="Editar"
-                    aria-label="Editar"
+                    className="text-[11px] font-semibold px-2.5 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors"
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
-                      <path d="M11.013 1.427a1.75 1.75 0 0 1 2.474 2.475l-7.75 7.75a1.75 1.75 0 0 1-.777.445l-2.19.627a.75.75 0 0 1-.927-.927l.626-2.19a1.75 1.75 0 0 1 .446-.777l7.75-7.75Zm1.414 1.06a.25.25 0 0 0-.354 0L11.03 3.53l1.44 1.44 1.043-1.043a.25.25 0 0 0 0-.354l-1.086-1.086ZM11.41 6.03 9.97 4.59 3.975 10.586a.25.25 0 0 0-.064.11l-.33 1.152 1.151-.33a.25.25 0 0 0 .111-.064L11.41 6.03Z" />
-                    </svg>
+                    Editar
                   </button>
 
                   <button
                     onClick={() => handleDelete(r._id)}
-                    className="p-1.5 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
-                    title="Eliminar"
-                    aria-label="Eliminar"
+                    className="text-[11px] font-semibold px-2.5 py-1.5 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
-                      <path fillRule="evenodd" d="M5 3.25V4H2.75a.75.75 0 0 0 0 1.5h.3l.815 8.15A1.5 1.5 0 0 0 5.357 15h5.285a1.5 1.5 0 0 0 1.493-1.35l.815-8.15h.3a.75.75 0 0 0 0-1.5H11v-.75A2.25 2.25 0 0 0 8.75 1h-1.5A2.25 2.25 0 0 0 5 3.25Zm2.25-.75a.75.75 0 0 0-.75.75V4h3v-.75a.75.75 0 0 0-.75-.75h-1.5ZM6.05 6a.75.75 0 0 1 .787.713l.275 5.5a.75.75 0 0 1-1.498.075l-.275-5.5A.75.75 0 0 1 6.05 6Zm3.9 0a.75.75 0 0 1 .712.787l-.275 5.5a.75.75 0 0 1-1.498-.075l.275-5.5a.75.75 0 0 1 .786-.711Z" clipRule="evenodd" />
-                    </svg>
+                    Eliminar
                   </button>
                 </div>
               </td>

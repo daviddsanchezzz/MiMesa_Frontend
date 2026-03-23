@@ -259,6 +259,7 @@ export default function Reservations() {
   const [filterMode,   setFilterMode]   = useState('today'); // today | week | upcoming | day | pending
   const [dateFilter,   setDateFilter]   = useState(new Date().toISOString().slice(0, 10));
   const [modal,        setModal]        = useState(null);
+  const [expandedDesktopId, setExpandedDesktopId] = useState(null);
   const [toasts,       setToasts]       = useState([]);
   const [confirmDialog, setConfirmDialog] = useState(null);
   const [confirmLoading, setConfirmLoading] = useState(false);
@@ -917,9 +918,11 @@ export default function Reservations() {
 
         const renderDesktopRow = (r, i, arr) => {
           const s = statusConfig[r.status];
+          const isExpanded = expandedDesktopId === r._id;
           return (
-            <tr key={r._id}
-              className={`hover:bg-gray-50/60 transition-colors ${i < arr.length - 1 ? 'border-b border-gray-50' : ''}`}
+            <>
+            <tr key={`${r._id}-main`}
+              className={`hover:bg-gray-50/60 transition-colors ${i < arr.length - 1 && !isExpanded ? 'border-b border-gray-50' : ''}`}
             >
               <td className="px-5 py-3.5">
                 <div className="flex items-center gap-3">
@@ -960,56 +963,72 @@ export default function Reservations() {
                 </span>
               </td>
               <td className="px-4 py-3.5">
-                <div className="flex items-center justify-end gap-1.5 gap-y-2 flex-wrap max-w-[260px] ml-auto">
-                  {r.status === 'pending' && (
-                    <button
-                      onClick={() => quickStatus(r._id, 'confirmed')}
-                      className="text-[11px] font-semibold px-2.5 py-1.5 rounded-lg bg-violet-50 text-violet-700 hover:bg-violet-100 transition-colors"
-                    >
-                      Confirmar
-                    </button>
-                  )}
-                  {r.status === 'confirmed' && (
-                    <button
-                      onClick={() => quickStatus(r._id, 'seated')}
-                      className="text-[11px] font-semibold px-2.5 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors"
-                    >
-                      Sentar
-                    </button>
-                  )}
-                  {canModeratePending && (r.status === 'confirmed' || r.status === 'seated') && (
-                    <button
-                      onClick={() => handleNoShow(r._id)}
-                      className="text-[11px] font-semibold px-2.5 py-1.5 rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors"
-                    >
-                      No-show
-                    </button>
-                  )}
-                  {r.status !== 'cancelled' && r.status !== 'no_show' && (
-                    <button
-                      onClick={() => handleCancel(r._id)}
-                      className="text-[11px] font-semibold px-2.5 py-1.5 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 transition-colors"
-                    >
-                      Cancelar
-                    </button>
-                  )}
-
+                <div className="flex justify-end">
                   <button
-                    onClick={() => setModal({ mode: 'edit', reservation: r })}
-                    className="text-[11px] font-semibold px-2.5 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors"
+                    onClick={() => setExpandedDesktopId(isExpanded ? null : r._id)}
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors"
                   >
-                    Editar
-                  </button>
-
-                  <button
-                    onClick={() => handleDelete(r._id)}
-                    className="text-[11px] font-semibold px-2.5 py-1.5 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
-                  >
-                    Eliminar
+                    {isExpanded ? 'Ocultar' : 'Acciones'}
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className={`w-3.5 h-3.5 transition-transform ${isExpanded ? 'rotate-180' : ''}`}>
+                      <path fillRule="evenodd" d="M3.22 5.22a.75.75 0 0 1 1.06 0L8 8.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L3.22 6.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
+                    </svg>
                   </button>
                 </div>
               </td>
             </tr>
+            {isExpanded && (
+              <tr key={`${r._id}-actions`} className={`${i < arr.length - 1 ? 'border-b border-gray-50' : ''}`}>
+                <td colSpan={7} className="px-5 py-3 bg-gray-50/80">
+                  <div className="flex items-center justify-end gap-2 flex-wrap">
+                    {r.status === 'pending' && (
+                      <button
+                        onClick={() => quickStatus(r._id, 'confirmed')}
+                        className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-violet-50 text-violet-700 hover:bg-violet-100 transition-colors"
+                      >
+                        Confirmar
+                      </button>
+                    )}
+                    {r.status === 'confirmed' && (
+                      <button
+                        onClick={() => quickStatus(r._id, 'seated')}
+                        className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 transition-colors"
+                      >
+                        Pasar a sentada
+                      </button>
+                    )}
+                    {canModeratePending && (r.status === 'confirmed' || r.status === 'seated') && (
+                      <button
+                        onClick={() => handleNoShow(r._id)}
+                        className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors"
+                      >
+                        Marcar no-show
+                      </button>
+                    )}
+                    {r.status !== 'cancelled' && r.status !== 'no_show' && (
+                      <button
+                        onClick={() => handleCancel(r._id)}
+                        className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 transition-colors"
+                      >
+                        Cancelar
+                      </button>
+                    )}
+                    <button
+                      onClick={() => setModal({ mode: 'edit', reservation: r })}
+                      className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors"
+                    >
+                      Editar
+                    </button>
+                    <button
+                      onClick={() => handleDelete(r._id)}
+                      className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
+                    >
+                      Eliminar
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            )}
+            </>
           );
         };
 

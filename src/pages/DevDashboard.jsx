@@ -93,6 +93,12 @@ function MobileBusinessCard({ b, changingPlan, deleting, onPlanChange, onDelete 
   );
 }
 
+function rolePillClass(role) {
+  if (role === 'owner') return 'bg-amber-50 text-amber-700 border-amber-200';
+  if (role === 'manager') return 'bg-blue-50 text-blue-700 border-blue-200';
+  return 'bg-gray-50 text-gray-600 border-gray-200';
+}
+
 export default function DevDashboard() {
   const { session, logout } = useAuth();
 
@@ -116,6 +122,9 @@ export default function DevDashboard() {
   const [inviteError, setInviteError] = useState('');
   const [inviteResult, setInviteResult] = useState(null);
   const [copied, setCopied] = useState(false);
+  const [users, setUsers] = useState([]);
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [userSearch, setUserSearch] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -131,6 +140,21 @@ export default function DevDashboard() {
     load();
   }, [load]);
 
+  const loadUsers = useCallback(async () => {
+    setUsersLoading(true);
+    try {
+      const { data } = await api.get('/dev/users');
+      setUsers(data || []);
+    } finally {
+      setUsersLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (tab !== 'users') return;
+    loadUsers();
+  }, [tab, loadUsers]);
+
   const filtered = businesses.filter((b) => {
     const q = search.toLowerCase();
     const matchQ = !q || b.name.toLowerCase().includes(q) || b.email.toLowerCase().includes(q);
@@ -140,6 +164,11 @@ export default function DevDashboard() {
 
   const totalReservations30d = businesses.reduce((s, b) => s + b.reservationsLast30d, 0);
   const paidCount = businesses.filter((b) => b.plan !== 'free').length;
+  const filteredUsers = users.filter((u) => {
+    const q = userSearch.trim().toLowerCase();
+    if (!q) return true;
+    return (u.name || '').toLowerCase().includes(q) || (u.email || '').toLowerCase().includes(q);
+  });
 
   const handleCreate = async (e) => {
     e.preventDefault();
@@ -182,6 +211,7 @@ export default function DevDashboard() {
     } finally {
       setInviting(false);
     }
+    await loadUsers();
   };
 
   const handleDelete = async (id, name) => {
@@ -349,74 +379,179 @@ export default function DevDashboard() {
       )}
 
       {tab === 'users' && (
-        <div className="max-w-xl">
-          <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-6 space-y-4">
-            <div>
-              <h3 className="text-base font-semibold text-gray-900">Invitar usuario</h3>
-              <p className="text-sm text-gray-500 mt-0.5">Se envia un email con enlace de activacion.</p>
+        <div className="space-y-3">
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-3">
+            <div className="xl:col-span-1">
+              <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-6 space-y-4 h-full">
+                <div>
+                  <h3 className="text-base font-semibold text-gray-900">Invitar usuario</h3>
+                  <p className="text-sm text-gray-500 mt-0.5">Se envia un email con enlace de activacion.</p>
+                </div>
+
+                {inviteError && (
+                  <div className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-4 py-3">
+                    {inviteError}
+                  </div>
+                )}
+
+                {inviteResult && (
+                  <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-4">
+                    <p className="text-sm font-semibold text-emerald-800 mb-2">Invitacion creada para {inviteResult.email}</p>
+                    <p className="text-xs text-emerald-700 mb-2">Copia el enlace para compartirlo:</p>
+                    <div className="flex items-center gap-2">
+                      <input
+                        readOnly
+                        value={inviteResult.inviteLink}
+                        className="flex-1 text-xs bg-white border border-emerald-300 rounded-lg px-3 py-2 text-gray-700 focus:outline-none truncate"
+                        onClick={(e) => e.target.select()}
+                      />
+                      <button
+                        onClick={() => {
+                          navigator.clipboard.writeText(inviteResult.inviteLink);
+                          setCopied(true);
+                          setTimeout(() => setCopied(false), 1800);
+                        }}
+                        className="shrink-0 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors"
+                      >
+                        {copied ? 'Copiado' : 'Copiar'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                <form onSubmit={handleInviteUser} className="space-y-4">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Nombre *</label>
+                    <input
+                      required
+                      value={inviteForm.name}
+                      onChange={(e) => setInviteForm((f) => ({ ...f, name: e.target.value }))}
+                      placeholder="Juan Garcia"
+                      className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 mb-1">Email *</label>
+                    <input
+                      required
+                      type="email"
+                      value={inviteForm.email}
+                      onChange={(e) => setInviteForm((f) => ({ ...f, email: e.target.value }))}
+                      placeholder="juan@restaurante.com"
+                      className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    disabled={inviting}
+                    className="w-full bg-violet-600 hover:bg-violet-700 disabled:opacity-60 text-white py-2.5 rounded-xl text-sm font-semibold transition-colors"
+                  >
+                    {inviting ? 'Enviando invitacion...' : 'Enviar invitacion'}
+                  </button>
+                </form>
+              </div>
             </div>
 
-            {inviteError && (
-              <div className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-4 py-3">
-                {inviteError}
-              </div>
-            )}
-
-            {inviteResult && (
-              <div className="bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-4">
-                <p className="text-sm font-semibold text-emerald-800 mb-2">Invitacion creada para {inviteResult.email}</p>
-                <p className="text-xs text-emerald-700 mb-2">Copia el enlace para compartirlo:</p>
-                <div className="flex items-center gap-2">
+            <div className="xl:col-span-2 space-y-3">
+              <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-4">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                  <div>
+                    <h3 className="text-base font-semibold text-gray-900">Usuarios</h3>
+                    <p className="text-xs text-gray-500 mt-0.5">{filteredUsers.length} de {users.length}</p>
+                  </div>
                   <input
-                    readOnly
-                    value={inviteResult.inviteLink}
-                    className="flex-1 text-xs bg-white border border-emerald-300 rounded-lg px-3 py-2 text-gray-700 focus:outline-none truncate"
-                    onClick={(e) => e.target.select()}
+                    value={userSearch}
+                    onChange={(e) => setUserSearch(e.target.value)}
+                    placeholder="Buscar por nombre o email..."
+                    className="w-full sm:w-72 border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
                   />
-                  <button
-                    onClick={() => {
-                      navigator.clipboard.writeText(inviteResult.inviteLink);
-                      setCopied(true);
-                      setTimeout(() => setCopied(false), 1800);
-                    }}
-                    className="shrink-0 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors"
-                  >
-                    {copied ? 'Copiado' : 'Copiar'}
-                  </button>
                 </div>
               </div>
-            )}
 
-            <form onSubmit={handleInviteUser} className="space-y-4">
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Nombre *</label>
-                <input
-                  required
-                  value={inviteForm.name}
-                  onChange={(e) => setInviteForm((f) => ({ ...f, name: e.target.value }))}
-                  placeholder="Juan Garcia"
-                  className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
-                />
+              <div className="sm:hidden space-y-2">
+                {usersLoading ? (
+                  <div className="bg-white rounded-2xl border border-gray-200 shadow-sm py-12 text-center text-sm text-gray-400">Cargando usuarios...</div>
+                ) : filteredUsers.length === 0 ? (
+                  <div className="bg-white rounded-2xl border border-gray-200 shadow-sm py-12 text-center text-sm text-gray-400">Sin usuarios</div>
+                ) : (
+                  filteredUsers.map((u) => (
+                    <div key={u.id} className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 space-y-3">
+                      <div>
+                        <p className="font-semibold text-gray-900">{u.name || 'Sin nombre'}</p>
+                        <p className="text-xs text-gray-400">{u.email}</p>
+                      </div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${rolePillClass(u.role)}`}>
+                          {u.role}
+                        </span>
+                        <span className="text-[11px] text-gray-500">
+                          {u.businessCount} negocio{u.businessCount === 1 ? '' : 's'}
+                        </span>
+                      </div>
+                      <div className="text-xs text-gray-500 space-y-1">
+                        {u.businesses.slice(0, 3).map((biz) => (
+                          <p key={`${u.id}-${biz.businessId}`}>{biz.businessName} · {biz.role}</p>
+                        ))}
+                        {u.businesses.length > 3 && <p>+{u.businesses.length - 3} mas</p>}
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
-              <div>
-                <label className="block text-xs font-medium text-gray-500 mb-1">Email *</label>
-                <input
-                  required
-                  type="email"
-                  value={inviteForm.email}
-                  onChange={(e) => setInviteForm((f) => ({ ...f, email: e.target.value }))}
-                  placeholder="juan@restaurante.com"
-                  className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
-                />
+
+              <div className="hidden sm:block bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+                {usersLoading ? (
+                  <div className="py-14 text-center text-sm text-gray-400">Cargando usuarios...</div>
+                ) : filteredUsers.length === 0 ? (
+                  <div className="py-14 text-center text-sm text-gray-400">Sin usuarios</div>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-gray-100 bg-gray-50">
+                          <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Usuario</th>
+                          <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Rol</th>
+                          <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Negocios</th>
+                          <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Alta</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-50">
+                        {filteredUsers.map((u) => (
+                          <tr key={u.id} className="hover:bg-gray-50/70 transition-colors">
+                            <td className="px-5 py-3.5">
+                              <p className="font-semibold text-gray-900">{u.name || 'Sin nombre'}</p>
+                              <p className="text-xs text-gray-400">{u.email}</p>
+                            </td>
+                            <td className="px-4 py-3.5">
+                              <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${rolePillClass(u.role)}`}>
+                                {u.role}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3.5 text-xs text-gray-600">
+                              {u.businessCount === 0 ? (
+                                <span className="text-gray-400">Sin membership</span>
+                              ) : (
+                                <div className="space-y-0.5">
+                                  {u.businesses.slice(0, 2).map((biz) => (
+                                    <p key={`${u.id}-${biz.businessId}`}>{biz.businessName} · {biz.role}</p>
+                                  ))}
+                                  {u.businesses.length > 2 && <p className="text-gray-400">+{u.businesses.length - 2} mas</p>}
+                                </div>
+                              )}
+                            </td>
+                            <td className="px-4 py-3.5 text-xs text-gray-400 whitespace-nowrap">
+                              {u.createdAt
+                                ? new Date(u.createdAt).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })
+                                : '-'}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
-              <button
-                type="submit"
-                disabled={inviting}
-                className="w-full bg-violet-600 hover:bg-violet-700 disabled:opacity-60 text-white py-2.5 rounded-xl text-sm font-semibold transition-colors"
-              >
-                {inviting ? 'Enviando invitacion...' : 'Enviar invitacion'}
-              </button>
-            </form>
+            </div>
           </div>
         </div>
       )}

@@ -17,7 +17,7 @@ export default function Register() {
     setLoading(true);
     try {
       await register(form.name, form.email, form.password, form.phone);
-      navigate('/');
+      navigate('/onboarding');
     } catch (err) {
       setError(err.message || 'Error al crear la cuenta');
     } finally {
@@ -90,9 +90,9 @@ export default function Register() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Nombre del restaurante *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Tu nombre *</label>
               <input required value={form.name} onChange={field('name')}
-                placeholder="Restaurante El Patio"
+                placeholder="Marc Soler"
                 className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-white" />
             </div>
             <div>

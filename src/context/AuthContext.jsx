@@ -59,6 +59,7 @@ export function AuthProvider({ children }) {
     const { data, error } = await authClient.signUp.email({ name, email, password, phone });
     if (error) throw new Error(error.message || 'Error al crear la cuenta');
     if (data?.token) setStoredToken(data.token);
+    await refreshBusiness();
   };
 
   // ── Logout ─────────────────────────────────────────────────────────────────

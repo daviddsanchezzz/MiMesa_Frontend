@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+﻿import { useState, useEffect, useRef } from 'react';
 import api from '../services/api';
 import ReservationForm from '../components/ReservationForm';
 import Modal from '../components/Modal';
@@ -108,7 +108,7 @@ function TableCell({ reservation, tables, onAssign }) {
   );
 }
 
-// ── Mobile row: ultra-compact, max density ──────────────────────────────────
+// â”€â”€ Mobile row: ultra-compact, max density â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function MobileRow({ r, tables, onEdit, onCancel, onDelete, onAssign, onQuickStatus, onNoShow, canMarkNoShow, canModeratePending }) {
   const [expanded, setExpanded] = useState(false);
   const s = statusConfig[r.status];
@@ -116,7 +116,7 @@ function MobileRow({ r, tables, onEdit, onCancel, onDelete, onAssign, onQuickSta
 
   return (
     <div className={`border-b border-gray-100 last:border-0 ${isCancelled ? 'opacity-60' : ''}`}>
-      {/* Main row — tap to expand */}
+      {/* Main row â€” tap to expand */}
       <button
         className="w-full text-left px-4 py-3 flex items-center gap-3 active:bg-gray-50 transition-colors"
         onClick={() => setExpanded(x => !x)}
@@ -124,7 +124,7 @@ function MobileRow({ r, tables, onEdit, onCancel, onDelete, onAssign, onQuickSta
         {/* Status bar left edge */}
         <div className={`w-1 self-stretch rounded-full shrink-0 ${s.bar}`} />
 
-        {/* Time — BIG */}
+        {/* Time â€” BIG */}
         <div className="shrink-0 w-14 text-center">
           <p className="text-lg font-bold text-gray-900 leading-none">{r.time}</p>
           <p className={`text-[10px] font-semibold mt-1 ${
@@ -256,14 +256,42 @@ export default function Reservations() {
   const [pendingLoading, setPendingLoading] = useState(false);
   const [pendingProposal, setPendingProposal] = useState(null);
   const [pendingProposalSaving, setPendingProposalSaving] = useState(false);
-  const [filterMode,   setFilterMode]   = useState('today'); // today | week | upcoming | day
+  const [filterMode,   setFilterMode]   = useState('today'); // today | week | upcoming | day | pending
   const [dateFilter,   setDateFilter]   = useState(new Date().toISOString().slice(0, 10));
   const [modal,        setModal]        = useState(null);
+  const [toasts,       setToasts]       = useState([]);
+  const [confirmDialog, setConfirmDialog] = useState(null);
+  const [confirmLoading, setConfirmLoading] = useState(false);
   const [openingCreateModal, setOpeningCreateModal] = useState(false);
   const [createModalError, setCreateModalError] = useState('');
   const todayStr = new Date().toISOString().slice(0, 10);
 
   const resolveCreateDate = () => (filterMode === 'day' ? dateFilter : todayStr);
+
+  const pushToast = (message, type = 'success') => {
+    const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    setToasts((prev) => [...prev, { id, message, type }]);
+    window.setTimeout(() => {
+      setToasts((prev) => prev.filter((t) => t.id !== id));
+    }, 3200);
+  };
+
+  const requestConfirm = ({ title, message, confirmLabel = 'Confirmar', intent = 'danger', onConfirm }) => {
+    setConfirmDialog({ title, message, confirmLabel, intent, onConfirm });
+  };
+
+  const executeConfirm = async () => {
+    if (!confirmDialog?.onConfirm) return;
+    setConfirmLoading(true);
+    try {
+      await confirmDialog.onConfirm();
+      setConfirmDialog(null);
+    } catch (err) {
+      pushToast(err?.response?.data?.message || 'No se pudo completar la acción', 'error');
+    } finally {
+      setConfirmLoading(false);
+    }
+  };
 
   const openCreateModal = async () => {
     const targetDate = resolveCreateDate();
@@ -295,6 +323,28 @@ export default function Reservations() {
   };
 
   const load = () => {
+    if (filterMode === 'pending') {
+      if (!canModeratePending) {
+        setReservations([]);
+        return Promise.resolve();
+      }
+      return api.get('/reservations/pending')
+        .then((r) => {
+          const list = Array.isArray(r.data) ? r.data : [];
+          setPendingEnabled(true);
+          setPendingReservations(list);
+          setReservations(list);
+        })
+        .catch((err) => {
+          if (err?.response?.status === 403) {
+            setPendingEnabled(false);
+            setPendingReservations([]);
+            setReservations([]);
+            return;
+          }
+          throw err;
+        });
+    }
     if (filterMode === 'today') {
       return api.get(`/reservations?date=${todayStr}`).then(r => setReservations(r.data));
     }
@@ -348,7 +398,9 @@ export default function Reservations() {
   };
 
   useEffect(() => {
-    load();
+    load().catch((err) => {
+      pushToast(err?.response?.data?.message || 'No se pudieron cargar las reservas', 'error');
+    });
   }, [filterMode, dateFilter]);
 
   useEffect(() => {
@@ -367,7 +419,7 @@ export default function Reservations() {
   }, [filterMode, dateFilter, todayStr]);
   useEffect(() => { api.get('/tables').then(r => setTables(r.data)); }, []);
 
-  // Build time→shiftName map and ordered shift list from slots
+  // Build timeâ†’shiftName map and ordered shift list from slots
   const isSingleDayFilter = filterMode === 'today' || filterMode === 'day';
   const sortByTime = (a, b) => (a.time || '').localeCompare(b.time || '');
   const sortByDateTime = (a, b) => `${a.date} ${a.time || ''}`.localeCompare(`${b.date} ${b.time || ''}`);
@@ -408,19 +460,39 @@ export default function Reservations() {
   };
 
   const quickStatus = async (id, status) => {
-    await api.put(`/reservations/${id}`, { status });
-    await Promise.all([load(), loadPendingReservations()]);
+    try {
+      await api.put(`/reservations/${id}`, { status });
+      await Promise.all([load(), loadPendingReservations()]);
+      if (status === 'confirmed') pushToast('Reserva confirmada');
+      if (status === 'seated') pushToast('Reserva pasada a sentada');
+      if (status === 'cancelled') pushToast('Reserva cancelada');
+    } catch (err) {
+      pushToast(err?.response?.data?.message || 'No se pudo actualizar la reserva', 'error');
+    }
   };
 
   const handlePendingAccept = async (id) => {
-    await api.put(`/reservations/${id}/accept`);
-    await Promise.all([load(), loadPendingReservations()]);
+    try {
+      await api.put(`/reservations/${id}/accept`);
+      await Promise.all([load(), loadPendingReservations()]);
+      pushToast('Reserva pendiente aceptada');
+    } catch (err) {
+      pushToast(err?.response?.data?.message || 'No se pudo aceptar la reserva', 'error');
+    }
   };
 
   const handlePendingReject = async (id) => {
-    if (!confirm('¿Seguro que quieres rechazar esta reserva pendiente?')) return;
-    await api.put(`/reservations/${id}/reject`);
-    await Promise.all([load(), loadPendingReservations()]);
+    requestConfirm({
+      title: 'Rechazar reserva pendiente',
+      message: 'Esta reserva pasará a cancelada.',
+      confirmLabel: 'Rechazar',
+      intent: 'danger',
+      onConfirm: async () => {
+        await api.put(`/reservations/${id}/reject`);
+        await Promise.all([load(), loadPendingReservations()]);
+        pushToast('Reserva pendiente rechazada');
+      },
+    });
   };
 
   const openPendingProposalModal = (reservation) => {
@@ -449,31 +521,61 @@ export default function Reservations() {
       await api.put(`/reservations/${pendingProposal.reservationId}/propose-alternative`, payload);
       await loadPendingReservations();
       setPendingProposal(null);
+      pushToast('Propuesta enviada al cliente');
+    } catch (err) {
+      pushToast(err?.response?.data?.message || 'No se pudo enviar la propuesta', 'error');
     } finally {
       setPendingProposalSaving(false);
     }
   };
 
   const handleNoShow = async (id) => {
-    if (!confirm('¿Marcar esta reserva como no-show?')) return;
-    await api.put(`/reservations/${id}/no-show`);
-    await Promise.all([load(), loadPendingReservations()]);
+    requestConfirm({
+      title: 'Marcar como no-show',
+      message: 'Se marcará que el cliente no asistió.',
+      confirmLabel: 'Marcar no-show',
+      intent: 'warning',
+      onConfirm: async () => {
+        await api.put(`/reservations/${id}/no-show`);
+        await Promise.all([load(), loadPendingReservations()]);
+        pushToast('Reserva marcada como no-show');
+      },
+    });
   };
 
   const handleCancel = async (id) => {
-    if (!confirm('¿Seguro que quieres cancelar esta reserva?')) return;
-    await quickStatus(id, 'cancelled');
+    requestConfirm({
+      title: 'Cancelar reserva',
+      message: 'El cliente recibirá la notificación de cancelación si aplica.',
+      confirmLabel: 'Cancelar reserva',
+      intent: 'danger',
+      onConfirm: async () => {
+        await quickStatus(id, 'cancelled');
+      },
+    });
   };
 
   const assignTable = async (id, tableId) => {
-    await api.put(`/reservations/${id}`, { tableId });
-    await Promise.all([load(), loadPendingReservations()]);
+    try {
+      await api.put(`/reservations/${id}`, { tableId });
+      await Promise.all([load(), loadPendingReservations()]);
+    } catch (err) {
+      pushToast(err?.response?.data?.message || 'No se pudo asignar la mesa', 'error');
+    }
   };
 
   const handleDelete = async (id) => {
-    if (!confirm('¿Seguro que quieres eliminar esta reserva?')) return;
-    await api.delete(`/reservations/${id}`);
-    await Promise.all([load(), loadPendingReservations()]);
+    requestConfirm({
+      title: 'Eliminar reserva',
+      message: 'Esta acción no se puede deshacer.',
+      confirmLabel: 'Eliminar',
+      intent: 'danger',
+      onConfirm: async () => {
+        await api.delete(`/reservations/${id}`);
+        await Promise.all([load(), loadPendingReservations()]);
+        pushToast('Reserva eliminada');
+      },
+    });
   };
 
   const counts = {
@@ -491,7 +593,7 @@ export default function Reservations() {
 
   return (
     <div className="space-y-4">
-      {/* ── MOBILE HEADER ──────────────────────────────────────────────── */}      <div className="sm:hidden">
+      {/* â”€â”€ MOBILE HEADER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}      <div className="sm:hidden">
         <div className="flex items-center gap-2 flex-wrap justify-end max-w-full">
           <select
             value={filterMode}
@@ -500,7 +602,8 @@ export default function Reservations() {
           >
             <option value="today">Hoy</option>
             <option value="week">Esta semana</option>
-          <option value="upcoming">Todas (proximas 20)</option>
+            <option value="upcoming">Todas (proximas 20)</option>
+            {canModeratePending && <option value="pending">Pendientes</option>}
             <option value="day">Dia concreto</option>
           </select>
           <button
@@ -555,7 +658,7 @@ export default function Reservations() {
         )}
       </div>
 
-      {/* ── DESKTOP HEADER ─────────────────────────────────────────────── */}      <div className="hidden sm:flex flex-wrap items-start justify-between gap-3">
+      {/* â”€â”€ DESKTOP HEADER â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}      <div className="hidden sm:flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-xl font-bold text-gray-900">Reservas</h2>
           <p className="text-sm text-gray-400 mt-0.5">
@@ -572,6 +675,7 @@ export default function Reservations() {
             <option value="today">Hoy</option>
             <option value="week">Esta semana</option>
             <option value="upcoming">Todas (proximas 20)</option>
+            {canModeratePending && <option value="pending">Pendientes</option>}
             <option value="day">Dia concreto</option>
           </select>
           {filterMode === 'day' && (
@@ -609,7 +713,7 @@ export default function Reservations() {
         </div>
       )}
 
-      {pendingEnabled && canModeratePending && (
+      {pendingEnabled && canModeratePending && filterMode !== 'pending' && (
         <div className="bg-white rounded-2xl border border-amber-200 shadow-sm overflow-hidden">
           <div className="px-4 sm:px-5 py-3 border-b border-amber-100 bg-amber-50/70 flex items-center justify-between">
             <div>
@@ -631,13 +735,13 @@ export default function Reservations() {
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold text-gray-900 truncate">{r.guestName}</p>
                     <p className="text-xs text-gray-500 mt-0.5">
-                      {r.date} · {r.time} · {r.people} pax
-                      {r.pendingReason === 'large_group' ? ' · Grupo grande' : ''}
-                      {r.pendingReason === 'slot_capacity' ? ' · Capacidad del slot' : ''}
+                      {r.date} Â· {r.time} Â· {r.people} pax
+                      {r.pendingReason === 'large_group' ? ' Â· Grupo grande' : ''}
+                      {r.pendingReason === 'slot_capacity' ? ' Â· Capacidad del slot' : ''}
                     </p>
                     {r.proposedAlternative?.date && r.proposedAlternative?.time && (
                       <p className="text-xs text-violet-600 mt-0.5">
-                        Propuesta: {r.proposedAlternative.date} · {r.proposedAlternative.time}
+                        Propuesta: {r.proposedAlternative.date} Â· {r.proposedAlternative.time}
                       </p>
                     )}
                   </div>
@@ -684,7 +788,7 @@ export default function Reservations() {
         </div>
       )}
 
-      {/* ── EMPTY STATE ────────────────────────────────────────────────── */}
+      {/* â”€â”€ EMPTY STATE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {reservations.length === 0 && (
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm py-16 text-center">
           <div className="w-12 h-12 rounded-xl bg-gray-50 flex items-center justify-center mx-auto mb-4">
@@ -692,14 +796,16 @@ export default function Reservations() {
               <path fillRule="evenodd" d="M4 1.75a.75.75 0 0 1 1.5 0V3h5V1.75a.75.75 0 0 1 1.5 0V3h.25A2.75 2.75 0 0 1 15 5.75v7.5A2.75 2.75 0 0 1 12.25 16H3.75A2.75 2.75 0 0 1 1 13.25v-7.5A2.75 2.75 0 0 1 3.75 3H4V1.75ZM3.75 4.5c-.69 0-1.25.56-1.25 1.25V6h11v-.25c0-.69-.56-1.25-1.25-1.25H3.75ZM2.5 7.5v5.75c0 .69.56 1.25 1.25 1.25h8.5c.69 0 1.25-.56 1.25-1.25V7.5h-11Z" clipRule="evenodd" />
             </svg>
           </div>
-          <p className="text-gray-500 font-medium">Sin reservas para este día</p>
+          <p className="text-gray-500 font-medium">
+            {filterMode === 'pending' ? 'Sin reservas pendientes' : 'Sin reservas para este día'}
+          </p>
           <button onClick={openCreateModal} className="mt-4 text-sm text-violet-600 hover:underline font-medium">
-            Crear la primera reserva →
+            Crear la primera reserva â†’
           </button>
         </div>
       )}
 
-      {/* ── MOBILE LIST ────────────────────────────────────────────────── */}
+      {/* â”€â”€ MOBILE LIST â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {reservations.length > 0 && (() => {
         const groups = groupedByShift();
         const dateGroups = groupedByDate();
@@ -720,7 +826,7 @@ export default function Reservations() {
           />
         );
 
-        // No shifts or single shift → flat list
+        // No shifts or single shift â†’ flat list
         if (shouldGroupByDay) {
           return (
             <div className="sm:hidden space-y-3">
@@ -749,7 +855,7 @@ export default function Reservations() {
           );
         }
 
-        // Multiple shifts → grouped sections
+        // Multiple shifts â†’ grouped sections
         return (
           <div className="sm:hidden space-y-3">
             {Object.entries(groups).map(([shiftName, rows]) => {
@@ -780,7 +886,7 @@ export default function Reservations() {
         );
       })()}
 
-      {/* ── DESKTOP TABLE ──────────────────────────────────────────────── */}
+      {/* â”€â”€ DESKTOP TABLE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       {reservations.length > 0 && (() => {
         const groups  = groupedByShift();
         const dateGroups = groupedByDate();
@@ -823,7 +929,7 @@ export default function Reservations() {
                       <p className="font-semibold text-gray-900 leading-tight">{r.guestName}</p>
                       {r.customerId && <span title="Cliente registrado" className="w-1.5 h-1.5 rounded-full bg-violet-400 shrink-0" />}
                     </div>
-                    <p className="text-xs text-gray-400 mt-0.5">{r.guestPhone || r.guestEmail || '—'}</p>
+                    <p className="text-xs text-gray-400 mt-0.5">{r.guestPhone || r.guestEmail || 'â€”'}</p>
                   </div>
                 </div>
               </td>
@@ -842,7 +948,7 @@ export default function Reservations() {
                 ) : r.tableId?.roomId ? (
                   <span className="text-xs text-gray-400">{r.tableId.roomId.name}</span>
                 ) : (
-                  <span className="text-gray-300 text-xs">—</span>
+                  <span className="text-gray-300 text-xs">â€”</span>
                 )}
               </td>
               <td className="px-4 py-3.5">
@@ -893,7 +999,7 @@ export default function Reservations() {
           );
         };
 
-        // Single / no shift → one table
+        // Single / no shift â†’ one table
         if (shouldGroupByDay) {
           return (
             <div className="hidden sm:block space-y-4">
@@ -933,7 +1039,7 @@ export default function Reservations() {
           );
         }
 
-        // Multiple shifts → one table per shift with a header row
+        // Multiple shifts â†’ one table per shift with a header row
         return (
           <div className="hidden sm:block space-y-4">
             {Object.entries(groups).map(([shiftName, rows]) => {
@@ -982,7 +1088,7 @@ export default function Reservations() {
         >
           <form onSubmit={submitPendingProposal} className="space-y-4">
             <p className="text-xs text-gray-500">
-              Si dejas fecha y hora vacías, Tableo buscará una alternativa automática.
+              Si dejas fecha y hora vacÃ­as, Tableo buscarÃ¡ una alternativa automÃ¡tica.
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
@@ -1049,9 +1155,60 @@ export default function Reservations() {
           />
         </Modal>
       )}
+
+      {confirmDialog && (
+        <Modal
+          title={confirmDialog.title}
+          subtitle={confirmDialog.message}
+          onClose={() => !confirmLoading && setConfirmDialog(null)}
+          size="sm"
+        >
+          <div className="flex items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setConfirmDialog(null)}
+              disabled={confirmLoading}
+              className="px-3 py-2 text-xs font-semibold rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors disabled:opacity-60"
+            >
+              Volver
+            </button>
+            <button
+              type="button"
+              onClick={executeConfirm}
+              disabled={confirmLoading}
+              className={`px-3 py-2 text-xs font-semibold rounded-lg text-white transition-colors disabled:opacity-60 ${
+                confirmDialog.intent === 'warning'
+                  ? 'bg-amber-600 hover:bg-amber-700'
+                  : 'bg-rose-600 hover:bg-rose-700'
+              }`}
+            >
+              {confirmLoading ? 'Procesando...' : confirmDialog.confirmLabel}
+            </button>
+          </div>
+        </Modal>
+      )}
+
+      {toasts.length > 0 && (
+        <div className="fixed z-[70] right-3 left-3 sm:left-auto sm:right-5 bottom-4 sm:bottom-5 flex flex-col gap-2 pointer-events-none">
+          {toasts.map((toast) => (
+            <div
+              key={toast.id}
+              className={`pointer-events-auto rounded-xl px-3 py-2 text-xs font-medium shadow-lg border ${
+                toast.type === 'error'
+                  ? 'bg-rose-50 text-rose-700 border-rose-200'
+                  : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+              }`}
+            >
+              {toast.message}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
+
+
 
 
 

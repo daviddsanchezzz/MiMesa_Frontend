@@ -6,8 +6,8 @@ import Modal from '../components/Modal';
 function StatCard({ label, value, sub }) {
   return (
     <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4">
-      <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">{label}</p>
-      <p className="text-2xl font-bold text-gray-900 mt-1">{value}</p>
+      <p className="text-xs font-medium text-gray-500">{label}</p>
+      <p className="text-2xl font-bold text-gray-900 mt-0.5">{value}</p>
       {sub && <p className="text-xs text-gray-500 mt-1">{sub}</p>}
     </div>
   );
@@ -33,6 +33,64 @@ function planPillClass(plan) {
   if (plan === 'pro') return 'bg-emerald-50 text-emerald-700 border-emerald-200';
   if (plan === 'basic') return 'bg-violet-50 text-violet-700 border-violet-200';
   return 'bg-gray-50 text-gray-600 border-gray-200';
+}
+
+function MobileBusinessCard({ b, changingPlan, deleting, onPlanChange, onDelete }) {
+  return (
+    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 space-y-3">
+      <div>
+        <p className="font-semibold text-gray-900">{b.name}</p>
+        <p className="text-xs text-gray-400 mt-0.5 truncate">{b.email}</p>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${planPillClass(b.plan)}`}>
+          {b.plan}
+        </span>
+        <select
+          value={b.plan}
+          disabled={changingPlan === b.id}
+          onChange={(e) => onPlanChange(b.id, e.target.value)}
+          className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-violet-500 disabled:opacity-50"
+        >
+          <option value="free">Free</option>
+          <option value="basic">Basic</option>
+          <option value="pro">Pro</option>
+        </select>
+      </div>
+
+      <div className="grid grid-cols-3 gap-2 text-center">
+        <div className="rounded-xl bg-gray-50 border border-gray-100 py-2">
+          <p className="text-[11px] text-gray-500">Miembros</p>
+          <p className="text-sm font-semibold text-gray-900">{b.memberCount}</p>
+        </div>
+        <div className="rounded-xl bg-gray-50 border border-gray-100 py-2">
+          <p className="text-[11px] text-gray-500">30d</p>
+          <p className="text-sm font-semibold text-gray-900">{b.reservationsLast30d}</p>
+        </div>
+        <div className="rounded-xl bg-gray-50 border border-gray-100 py-2">
+          <p className="text-[11px] text-gray-500">Total</p>
+          <p className="text-sm font-semibold text-gray-900">{b.totalReservations}</p>
+        </div>
+      </div>
+
+      <div className="flex items-center justify-between">
+        <p className="text-xs text-gray-400">
+          Alta: {new Date(b.createdAt).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
+        </p>
+        {deleting === b.id ? (
+          <span className="text-xs text-gray-400">Eliminando...</span>
+        ) : (
+          <button
+            onClick={() => onDelete(b.id, b.name)}
+            className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 transition-colors"
+          >
+            Eliminar
+          </button>
+        )}
+      </div>
+    </div>
+  );
 }
 
 export default function DevDashboard() {
@@ -138,11 +196,14 @@ export default function DevDashboard() {
   };
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-xl font-bold text-gray-900">Panel DEV</h2>
-          <p className="text-sm text-gray-500 mt-0.5">Administracion interna de negocios y usuarios.</p>
+          <div className="inline-flex items-center gap-2 mb-1">
+            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-700 border border-amber-200">DEV</span>
+            <h2 className="text-xl font-bold text-gray-900">Panel de desarrollo</h2>
+          </div>
+          <p className="text-sm text-gray-500">Administración interna de negocios y usuarios.</p>
         </div>
         <div className="flex items-center gap-2">
           <span className="hidden sm:inline text-xs text-gray-500">{session?.user?.email}</span>
@@ -194,7 +255,26 @@ export default function DevDashboard() {
             </button>
           </div>
 
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+          <div className="sm:hidden space-y-3">
+            {loading ? (
+              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm py-12 text-center text-sm text-gray-400">Cargando...</div>
+            ) : filtered.length === 0 ? (
+              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm py-12 text-center text-sm text-gray-400">Sin resultados</div>
+            ) : (
+              filtered.map((b) => (
+                <MobileBusinessCard
+                  key={b.id}
+                  b={b}
+                  changingPlan={changingPlan}
+                  deleting={deleting}
+                  onPlanChange={handlePlanChange}
+                  onDelete={handleDelete}
+                />
+              ))
+            )}
+          </div>
+
+          <div className="hidden sm:block bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
             {loading ? (
               <div className="py-16 text-center text-sm text-gray-400">Cargando...</div>
             ) : filtered.length === 0 ? (

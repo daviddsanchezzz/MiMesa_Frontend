@@ -36,6 +36,11 @@ function CustomerCard({ c, onEdit }) {
           }`}>
             {c.visits} {c.visits === 1 ? 'visita' : 'visitas'}
           </span>
+          {c.noShowCount > 0 && (
+            <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-rose-100 text-rose-700">
+              {c.noShowCount} no-show
+            </span>
+          )}
           {c.notes && <p className="text-xs text-gray-400 truncate flex-1">{c.notes}</p>}
         </div>
       </div>

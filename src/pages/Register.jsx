@@ -7,7 +7,7 @@ import PasswordInput from '../components/PasswordInput';
 export default function Register() {
   const { register } = useAuth();
   const navigate     = useNavigate();
-  const [form, setForm]     = useState({ name: '', email: '', password: '', phone: '' });
+  const [form, setForm]     = useState({ name: '', email: '', password: '' });
   const [error, setError]   = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -16,7 +16,7 @@ export default function Register() {
     setError('');
     setLoading(true);
     try {
-      await register(form.name, form.email, form.password, form.phone);
+      await register(form.name, form.email, form.password);
       navigate('/onboarding');
     } catch (err) {
       setError(err.message || 'Error al crear la cuenta');
@@ -106,13 +106,7 @@ export default function Register() {
               <PasswordInput required minLength={8} value={form.password} onChange={field('password')}
                 placeholder="Mínimo 8 caracteres" />
             </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Teléfono <span className="text-gray-400 font-normal">(opcional)</span></label>
-              <input value={form.phone} onChange={field('phone')}
-                placeholder="+34 600 000 000"
-                className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-white" />
-            </div>
-            <button type="submit" disabled={loading}
+<button type="submit" disabled={loading}
               className="w-full bg-violet-600 hover:bg-violet-700 active:bg-violet-800 disabled:opacity-60 text-white py-2.5 rounded-xl text-sm font-semibold transition-colors shadow-sm shadow-violet-200 mt-2">
               {loading ? 'Creando cuenta...' : 'Crear cuenta'}
             </button>

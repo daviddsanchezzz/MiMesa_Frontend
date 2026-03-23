@@ -5,9 +5,9 @@ import Modal from '../components/Modal';
 
 function StatCard({ label, value, sub }) {
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4">
-      <p className="text-xs font-medium text-gray-500">{label}</p>
-      <p className="text-2xl font-bold text-gray-900 mt-0.5">{value}</p>
+    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm px-4 py-3.5">
+      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{label}</p>
+      <p className="text-3xl font-bold text-gray-900 leading-tight mt-1">{value}</p>
       {sub && <p className="text-xs text-gray-500 mt-1">{sub}</p>}
     </div>
   );
@@ -196,34 +196,36 @@ export default function DevDashboard() {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <div className="inline-flex items-center gap-2 mb-1">
-            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-700 border border-amber-200">DEV</span>
-            <h2 className="text-xl font-bold text-gray-900">Panel de desarrollo</h2>
+    <div className="space-y-4 max-w-[1280px]">
+      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm px-4 py-3.5 sm:px-5 sm:py-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <div className="inline-flex items-center gap-2 mb-1">
+              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-700 border border-amber-200">DEV</span>
+              <h2 className="text-xl font-bold text-gray-900">Panel de desarrollo</h2>
+            </div>
+            <p className="text-sm text-gray-500">Administración interna de negocios y usuarios.</p>
           </div>
-          <p className="text-sm text-gray-500">Administración interna de negocios y usuarios.</p>
+          <div className="flex items-center gap-2">
+            <span className="hidden md:inline text-xs text-gray-500">{session?.user?.email}</span>
+            <button
+              onClick={logout}
+              className="text-xs font-semibold px-3 py-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50"
+            >
+              Cerrar sesion
+            </button>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <span className="hidden sm:inline text-xs text-gray-500">{session?.user?.email}</span>
-          <button
-            onClick={logout}
-            className="text-xs font-semibold px-3 py-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50"
-          >
-            Cerrar sesion
-          </button>
-        </div>
-      </div>
 
-      <div className="flex items-center gap-2">
-        <TabButton active={tab === 'businesses'} onClick={() => setTab('businesses')}>Negocios</TabButton>
-        <TabButton active={tab === 'users'} onClick={() => setTab('users')}>Usuarios</TabButton>
+        <div className="mt-3 flex items-center gap-2">
+          <TabButton active={tab === 'businesses'} onClick={() => setTab('businesses')}>Negocios</TabButton>
+          <TabButton active={tab === 'users'} onClick={() => setTab('users')}>Usuarios</TabButton>
+        </div>
       </div>
 
       {tab === 'businesses' && (
         <>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
             <StatCard label="Negocios" value={businesses.length} />
             <StatCard label="De pago" value={paidCount} sub={`${businesses.length - paidCount} en free`} />
             <StatCard label="Reservas 30d" value={totalReservations30d} />
@@ -276,9 +278,9 @@ export default function DevDashboard() {
 
           <div className="hidden sm:block bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
             {loading ? (
-              <div className="py-16 text-center text-sm text-gray-400">Cargando...</div>
+              <div className="py-14 text-center text-sm text-gray-400">Cargando...</div>
             ) : filtered.length === 0 ? (
-              <div className="py-16 text-center text-sm text-gray-400">Sin resultados</div>
+              <div className="py-14 text-center text-sm text-gray-400">Sin resultados</div>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">

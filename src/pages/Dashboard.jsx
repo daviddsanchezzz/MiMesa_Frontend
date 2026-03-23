@@ -66,6 +66,9 @@ export default function Dashboard() {
   const [reservations, setReservations] = useState([]);
   const [tables, setTables] = useState([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [analytics, setAnalytics] = useState(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(false);
+  const [analyticsEnabled, setAnalyticsEnabled] = useState(true);
 
   const today = new Date().toISOString().slice(0, 10);
   const dateLabel = new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
@@ -73,6 +76,20 @@ export default function Dashboard() {
   const loadData = () => {
     api.get(`/reservations?date=${today}`).then(r => setReservations(r.data));
     api.get('/tables').then(r => setTables(r.data));
+    setAnalyticsLoading(true);
+    api.get('/analytics/overview')
+      .then((r) => {
+        setAnalytics(r.data);
+        setAnalyticsEnabled(true);
+      })
+      .catch((err) => {
+        if (err?.response?.status === 403) {
+          setAnalyticsEnabled(false);
+          return;
+        }
+        console.error('Error loading analytics:', err);
+      })
+      .finally(() => setAnalyticsLoading(false));
   };
 
   useEffect(() => {
@@ -97,6 +114,7 @@ export default function Dashboard() {
   const pctFree     = Math.round((free / total) * 100);
   const pctReserved = Math.round((reserved / total) * 100);
   const pctOccupied = Math.round((occupied / total) * 100);
+  const topPeakHours = analytics?.peakHours?.slice(0, 3) || [];
 
   return (
     <div className="space-y-5">
@@ -153,6 +171,47 @@ export default function Dashboard() {
               </div>
             ))}
           </div>
+        </div>
+      )}
+
+      {analyticsEnabled && (
+        <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-gray-700">Analytics (30 días)</h3>
+            {analyticsLoading && <span className="text-xs text-gray-400">Cargando...</span>}
+          </div>
+          {!analyticsLoading && analytics && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-2">
+                <div className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2">
+                  <p className="text-[11px] text-gray-500">Reservas</p>
+                  <p className="text-lg font-bold text-gray-900">{analytics.summary?.totalReservations ?? 0}</p>
+                </div>
+                <div className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2">
+                  <p className="text-[11px] text-gray-500">Cancelaciones</p>
+                  <p className="text-lg font-bold text-gray-900">{analytics.summary?.cancellations ?? 0}</p>
+                </div>
+                <div className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2">
+                  <p className="text-[11px] text-gray-500">No-show</p>
+                  <p className="text-lg font-bold text-gray-900">{analytics.summary?.noShows ?? 0}</p>
+                </div>
+                <div className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2">
+                  <p className="text-[11px] text-gray-500">Cancel ratio</p>
+                  <p className="text-lg font-bold text-gray-900">{analytics.summary?.cancelRatePct ?? 0}%</p>
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs font-semibold text-gray-500">Horas pico:</span>
+                {topPeakHours.length === 0 ? (
+                  <span className="text-xs text-gray-400">Sin datos</span>
+                ) : topPeakHours.map((h) => (
+                  <span key={h.time} className="text-xs px-2 py-1 rounded-full bg-violet-50 text-violet-700 border border-violet-200">
+                    {h.time} · {h.reservations}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 

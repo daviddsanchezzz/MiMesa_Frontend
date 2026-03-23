@@ -2,11 +2,13 @@ import { useState, useEffect, useRef } from 'react';
 import api from '../services/api';
 import ReservationForm from '../components/ReservationForm';
 import Modal from '../components/Modal';
+import { useAuth } from '../context/AuthContext';
 
 const statusConfig = {
   pending:   { label: 'Pendiente',  cls: 'bg-amber-50 text-amber-700 ring-1 ring-amber-200',   dot: 'bg-amber-400',   bar: 'bg-amber-400' },
   confirmed: { label: 'Confirmada', cls: 'bg-violet-50 text-violet-700 ring-1 ring-violet-200', dot: 'bg-violet-500',  bar: 'bg-violet-500' },
   seated:    { label: 'Sentada',    cls: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200', dot: 'bg-emerald-500', bar: 'bg-emerald-500' },
+  no_show:   { label: 'No show',    cls: 'bg-rose-50 text-rose-700 ring-1 ring-rose-200', dot: 'bg-rose-400', bar: 'bg-rose-400' },
   cancelled: { label: 'Cancelada',  cls: 'bg-gray-100 text-gray-400 ring-1 ring-gray-200',      dot: 'bg-gray-300',    bar: 'bg-gray-300' },
 };
 
@@ -107,7 +109,7 @@ function TableCell({ reservation, tables, onAssign }) {
 }
 
 // ── Mobile row: ultra-compact, max density ──────────────────────────────────
-function MobileRow({ r, tables, onEdit, onCancel, onDelete, onAssign, onQuickStatus }) {
+function MobileRow({ r, tables, onEdit, onCancel, onDelete, onAssign, onQuickStatus, onNoShow, canMarkNoShow }) {
   const [expanded, setExpanded] = useState(false);
   const s = statusConfig[r.status];
   const isCancelled = r.status === 'cancelled';
@@ -220,6 +222,12 @@ function MobileRow({ r, tables, onEdit, onCancel, onDelete, onAssign, onQuickSta
                 Pasar a sentada
               </button>
             )}
+            {canMarkNoShow && (r.status === 'confirmed' || r.status === 'seated') && (
+              <button onClick={() => onNoShow(r._id)}
+                className="px-3 py-2 rounded-xl text-xs font-semibold text-amber-700 bg-amber-50 active:bg-amber-100 transition-colors">
+                No show
+              </button>
+            )}
             <button onClick={onEdit}
               className="flex-1 text-xs font-semibold py-2 rounded-xl bg-gray-100 text-gray-700 active:bg-gray-200 transition-colors">
               Editar
@@ -238,9 +246,14 @@ function MobileRow({ r, tables, onEdit, onCancel, onDelete, onAssign, onQuickSta
 }
 
 export default function Reservations() {
+  const { hasRole } = useAuth();
+  const canModeratePending = hasRole('manager');
   const [reservations, setReservations] = useState([]);
   const [tables,       setTables]       = useState([]);
   const [slots,        setSlots]        = useState([]);   // [{time, shiftName}]
+  const [pendingReservations, setPendingReservations] = useState([]);
+  const [pendingEnabled, setPendingEnabled] = useState(canModeratePending);
+  const [pendingLoading, setPendingLoading] = useState(false);
   const [filterMode,   setFilterMode]   = useState('today'); // today | week | upcoming | day
   const [dateFilter,   setDateFilter]   = useState(new Date().toISOString().slice(0, 10));
   const [modal,        setModal]        = useState(null);
@@ -309,9 +322,36 @@ export default function Reservations() {
     });
   };
 
+  const loadPendingReservations = () => {
+    if (!canModeratePending) {
+      setPendingEnabled(false);
+      setPendingReservations([]);
+      return Promise.resolve();
+    }
+    setPendingLoading(true);
+    return api.get('/reservations/pending')
+      .then((r) => {
+        setPendingEnabled(true);
+        setPendingReservations(Array.isArray(r.data) ? r.data : []);
+      })
+      .catch((err) => {
+        if (err?.response?.status === 403) {
+          setPendingEnabled(false);
+          setPendingReservations([]);
+          return;
+        }
+        console.error('Error loading pending reservations:', err);
+      })
+      .finally(() => setPendingLoading(false));
+  };
+
   useEffect(() => {
     load();
   }, [filterMode, dateFilter]);
+
+  useEffect(() => {
+    loadPendingReservations();
+  }, [canModeratePending]);
 
   useEffect(() => {
     if (filterMode !== 'today' && filterMode !== 'day') {
@@ -366,7 +406,32 @@ export default function Reservations() {
   };
 
   const quickStatus = async (id, status) => {
-    await api.put(`/reservations/${id}`, { status }); load();
+    await api.put(`/reservations/${id}`, { status });
+    await Promise.all([load(), loadPendingReservations()]);
+  };
+
+  const handlePendingAccept = async (id) => {
+    await api.put(`/reservations/${id}/accept`);
+    await Promise.all([load(), loadPendingReservations()]);
+  };
+
+  const handlePendingReject = async (id) => {
+    if (!confirm('¿Seguro que quieres rechazar esta reserva pendiente?')) return;
+    await api.put(`/reservations/${id}/reject`);
+    await Promise.all([load(), loadPendingReservations()]);
+  };
+
+  const handlePendingPropose = async (id) => {
+    const message = prompt('Mensaje opcional para el cliente (puedes dejarlo vacío):') ?? '';
+    await api.put(`/reservations/${id}/propose-alternative`, { message });
+    await loadPendingReservations();
+    alert('Alternativa enviada al cliente por email.');
+  };
+
+  const handleNoShow = async (id) => {
+    if (!confirm('¿Marcar esta reserva como no-show?')) return;
+    await api.put(`/reservations/${id}/no-show`);
+    await Promise.all([load(), loadPendingReservations()]);
   };
 
   const handleCancel = async (id) => {
@@ -387,6 +452,7 @@ export default function Reservations() {
     confirmed: displayReservations.filter(r => r.status === 'confirmed').length,
     seated:    displayReservations.filter(r => r.status === 'seated').length,
     pending:   displayReservations.filter(r => r.status === 'pending').length,
+    noShow:    displayReservations.filter(r => r.status === 'no_show').length,
     cancelled: displayReservations.filter(r => r.status === 'cancelled').length,
   };
 
@@ -444,12 +510,13 @@ export default function Reservations() {
 
         {/* Stats strip */}
         {reservations.length > 0 && (
-          <div className="mt-3 grid grid-cols-4 gap-1.5">
+          <div className="mt-3 grid grid-cols-5 gap-1.5">
             {[
               { label: 'Total',    count: reservations.length,  cls: 'bg-gray-50 text-gray-700 border-gray-200' },
               { label: 'Pend.',    count: counts.pending,       cls: 'bg-amber-50 text-amber-700 border-amber-200' },
               { label: 'Conf.',    count: counts.confirmed,     cls: 'bg-violet-50 text-violet-700 border-violet-200' },
               { label: 'Sentadas', count: counts.seated,        cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+              { label: 'No show',  count: counts.noShow,        cls: 'bg-rose-50 text-rose-700 border-rose-200' },
             ].map(s => (
               <div key={s.label} className={`flex flex-col items-center py-2 rounded-xl border text-xs font-medium ${s.cls}`}>
                 <span className="font-bold text-lg leading-none">{s.count}</span>
@@ -514,11 +581,71 @@ export default function Reservations() {
         </div>
       )}
 
+      {pendingEnabled && canModeratePending && (
+        <div className="bg-white rounded-2xl border border-amber-200 shadow-sm overflow-hidden">
+          <div className="px-4 sm:px-5 py-3 border-b border-amber-100 bg-amber-50/70 flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-semibold text-amber-900">Reservas pendientes</h3>
+              <p className="text-xs text-amber-700 mt-0.5">Acepta, rechaza o propone otro horario</p>
+            </div>
+            <span className="text-xs font-semibold bg-white border border-amber-200 text-amber-700 px-2 py-0.5 rounded-full">
+              {pendingReservations.length}
+            </span>
+          </div>
+          {pendingLoading ? (
+            <div className="px-4 sm:px-5 py-4 text-sm text-gray-500">Cargando pendientes...</div>
+          ) : pendingReservations.length === 0 ? (
+            <div className="px-4 sm:px-5 py-4 text-sm text-gray-500">No hay pendientes ahora mismo.</div>
+          ) : (
+            <div className="divide-y divide-gray-100">
+              {pendingReservations.slice(0, 8).map((r) => (
+                <div key={r._id} className="px-4 sm:px-5 py-3 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-gray-900 truncate">{r.guestName}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      {r.date} · {r.time} · {r.people} pax
+                      {r.pendingReason === 'large_group' ? ' · Grupo grande' : ''}
+                      {r.pendingReason === 'slot_capacity' ? ' · Capacidad del slot' : ''}
+                    </p>
+                    {r.proposedAlternative?.date && r.proposedAlternative?.time && (
+                      <p className="text-xs text-violet-600 mt-0.5">
+                        Propuesta: {r.proposedAlternative.date} · {r.proposedAlternative.time}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <button
+                      onClick={() => handlePendingAccept(r._id)}
+                      className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
+                    >
+                      Aceptar
+                    </button>
+                    <button
+                      onClick={() => handlePendingPropose(r._id)}
+                      className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-violet-100 text-violet-700 hover:bg-violet-200 transition-colors"
+                    >
+                      Proponer hora
+                    </button>
+                    <button
+                      onClick={() => handlePendingReject(r._id)}
+                      className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-rose-100 text-rose-700 hover:bg-rose-200 transition-colors"
+                    >
+                      Rechazar
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {reservations.length > 0 && (
         <div className="hidden sm:flex gap-2 flex-wrap">
           {[
             { label: 'Confirmadas', count: counts.confirmed, cls: 'bg-violet-50 text-violet-700 border-violet-200' },
             { label: 'Sentadas',    count: counts.seated,    cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+            { label: 'No show',     count: counts.noShow,    cls: 'bg-rose-50 text-rose-700 border-rose-200' },
             { label: 'Canceladas',  count: counts.cancelled, cls: 'bg-gray-50 text-gray-700 border-gray-200' },
           ].map(s => (
             <div key={s.label} className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border text-xs font-medium ${s.cls}`}>
@@ -559,6 +686,8 @@ export default function Reservations() {
             onDelete={() => handleDelete(r._id)}
             onAssign={assignTable}
             onQuickStatus={quickStatus}
+            onNoShow={handleNoShow}
+            canMarkNoShow={canModeratePending}
           />
         );
 
@@ -700,6 +829,9 @@ export default function Reservations() {
                   )}
                   {r.status === 'confirmed' && (
                     <ActionBtn onClick={() => quickStatus(r._id, 'seated')} color="green">Sentar</ActionBtn>
+                  )}
+                  {canModeratePending && (r.status === 'confirmed' || r.status === 'seated') && (
+                    <ActionBtn onClick={() => handleNoShow(r._id)} color="red">No show</ActionBtn>
                   )}
                   {r.status !== 'cancelled' && (
                     <ActionBtn onClick={() => handleCancel(r._id)} color="red">Cancelar</ActionBtn>

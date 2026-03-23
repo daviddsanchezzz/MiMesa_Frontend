@@ -1596,20 +1596,302 @@ function MarketingSection() {
   );
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// BILLING / SUBSCRIPTION SECTION
+// ═══════════════════════════════════════════════════════════════════════════
+function BillingSection() {
+  const { plan, subscriptionStatus, trialEndsAt, currentPeriodEnd, cancelAtPeriodEnd, hasRole, refreshBusiness } = useAuth();
+  const [status, setStatus]   = useState(null);   // billing status from API
+  const [loading, setLoading] = useState(true);
+  const [working, setWorking] = useState(false);
+  const [msg, setMsg]         = useState('');
+  const [err, setErr]         = useState('');
+
+  const isOwner    = hasRole('owner');
+  const isActive   = subscriptionStatus === 'active' || subscriptionStatus === 'trialing';
+  const isTrialing = subscriptionStatus === 'trialing';
+  const isPastDue  = subscriptionStatus === 'past_due';
+  const isFree     = !isActive || plan === 'free';
+
+  const load = async () => {
+    try {
+      setLoading(true);
+      const { data } = await api.get('/stripe/status');
+      setStatus(data);
+    } catch { /* silently ignore */ }
+    finally { setLoading(false); }
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const fmt = (dateStr) => {
+    if (!dateStr) return '—';
+    return new Date(dateStr).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
+  };
+
+  const handleUpgrade = async () => {
+    if (!isOwner) return;
+    setWorking(true); setErr('');
+    try {
+      const { data } = await api.post('/stripe/checkout', { priceId: import.meta.env.VITE_STRIPE_PRICE_BASIC });
+      window.location.href = data.url;
+    } catch (e) {
+      setErr(e.response?.data?.message || 'Error al iniciar el pago');
+      setWorking(false);
+    }
+  };
+
+  const handlePortal = async () => {
+    setWorking(true); setErr('');
+    try {
+      const { data } = await api.post('/stripe/portal');
+      window.location.href = data.url;
+    } catch (e) {
+      setErr(e.response?.data?.message || 'Error al abrir el portal');
+      setWorking(false);
+    }
+  };
+
+  const handleCancel = async () => {
+    if (!confirm('¿Confirmas que quieres cancelar? Seguirás teniendo acceso hasta el final del período.')) return;
+    setWorking(true); setErr('');
+    try {
+      await api.post('/stripe/cancel');
+      setMsg('Suscripción programada para cancelar al final del período.');
+      await refreshBusiness();
+      await load();
+    } catch (e) {
+      setErr(e.response?.data?.message || 'Error al cancelar');
+    } finally { setWorking(false); }
+  };
+
+  const handleReactivate = async () => {
+    setWorking(true); setErr('');
+    try {
+      await api.post('/stripe/reactivate');
+      setMsg('¡Suscripción reactivada!');
+      await refreshBusiness();
+      await load();
+    } catch (e) {
+      setErr(e.response?.data?.message || 'Error al reactivar');
+    } finally { setWorking(false); }
+  };
+
+  const used  = status?.usage?.reservations?.used  ?? 0;
+  const limit = status?.usage?.reservations?.limit ?? 30;
+  const pct   = isFree ? Math.min(100, Math.round((used / limit) * 100)) : 0;
+  const nearLimit = isFree && used >= limit * 0.8;
+
+  // Check for subscription=success in URL after Stripe redirect
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('subscription') === 'success') {
+      setMsg('¡Listo! Activando tu suscripción Basic…');
+      window.history.replaceState({}, '', window.location.pathname + '?tab=suscripcion');
+      // Poll until plan updates (webhook may take a moment)
+      let attempts = 0;
+      const poll = setInterval(async () => {
+        await refreshBusiness();
+        attempts++;
+        if (attempts >= 10) clearInterval(poll);
+      }, 2000);
+      return () => clearInterval(poll);
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return (
+    <div className="space-y-4">
+      {msg && (
+        <div className="bg-green-50 border border-green-200 text-green-700 text-sm rounded-xl px-4 py-3">
+          {msg}
+        </div>
+      )}
+      {err && (
+        <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3">
+          {err}
+        </div>
+      )}
+
+      {/* Plan status card */}
+      <div className="bg-white rounded-2xl p-6 border border-gray-200">
+        <div className="flex items-start justify-between gap-4 flex-wrap">
+          <div>
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Plan actual</p>
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <span className={`text-xl font-bold ${isFree ? 'text-gray-700' : 'text-violet-700'}`}>
+                {isFree ? 'Free' : `Basic`}
+              </span>
+              {isTrialing && (
+                <span className="text-xs font-semibold bg-amber-100 text-amber-700 px-2.5 py-1 rounded-full">
+                  Trial activo
+                </span>
+              )}
+              {isPastDue && (
+                <span className="text-xs font-semibold bg-red-100 text-red-600 px-2.5 py-1 rounded-full">
+                  Pago fallido
+                </span>
+              )}
+              {cancelAtPeriodEnd && (
+                <span className="text-xs font-semibold bg-orange-100 text-orange-700 px-2.5 py-1 rounded-full">
+                  Cancela el {fmt(currentPeriodEnd)}
+                </span>
+              )}
+            </div>
+            {isTrialing && trialEndsAt && (
+              <p className="text-sm text-gray-500 mt-1">
+                Tu prueba gratuita termina el <strong>{fmt(trialEndsAt)}</strong>
+              </p>
+            )}
+            {!isFree && !isTrialing && currentPeriodEnd && !cancelAtPeriodEnd && (
+              <p className="text-sm text-gray-500 mt-1">
+                Próxima factura el <strong>{fmt(currentPeriodEnd)}</strong>
+              </p>
+            )}
+            {isPastDue && (
+              <p className="text-sm text-red-600 mt-1">
+                El último pago ha fallado. Actualiza tu método de pago para no perder el acceso.
+              </p>
+            )}
+          </div>
+
+          {isOwner && (
+            <div className="flex gap-2 flex-wrap">
+              {isFree && (
+                <button
+                  onClick={handleUpgrade}
+                  disabled={working}
+                  className="px-4 py-2 bg-violet-600 text-white text-sm font-semibold rounded-xl hover:bg-violet-700 disabled:opacity-50 transition-colors"
+                >
+                  {working ? 'Redirigiendo…' : 'Activar Basic · 14 días gratis'}
+                </button>
+              )}
+              {!isFree && (isPastDue || cancelAtPeriodEnd) && (
+                <button
+                  onClick={handlePortal}
+                  disabled={working}
+                  className="px-4 py-2 bg-violet-600 text-white text-sm font-semibold rounded-xl hover:bg-violet-700 disabled:opacity-50"
+                >
+                  Gestionar suscripción
+                </button>
+              )}
+              {!isFree && !cancelAtPeriodEnd && !isPastDue && (
+                <button
+                  onClick={handlePortal}
+                  disabled={working}
+                  className="px-4 py-2 bg-white text-gray-700 text-sm font-medium rounded-xl border border-gray-200 hover:bg-gray-50 disabled:opacity-50"
+                >
+                  Gestionar facturación
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Monthly usage (free plan) */}
+      {isFree && (
+        <div className={`bg-white rounded-2xl p-6 border ${nearLimit ? 'border-amber-200' : 'border-gray-200'}`}>
+          <div className="flex items-center justify-between mb-3">
+            <div>
+              <p className="text-sm font-semibold text-gray-900">Reservas este mes</p>
+              <p className="text-xs text-gray-400 mt-0.5">Se reinicia el 1 de cada mes</p>
+            </div>
+            <span className={`text-sm font-bold ${nearLimit ? 'text-amber-600' : 'text-gray-700'}`}>
+              {loading ? '…' : `${used} / ${limit}`}
+            </span>
+          </div>
+          <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all ${pct >= 100 ? 'bg-red-500' : nearLimit ? 'bg-amber-400' : 'bg-violet-500'}`}
+              style={{ width: `${pct}%` }}
+            />
+          </div>
+          {nearLimit && (
+            <p className="text-xs text-amber-700 mt-2">
+              {pct >= 100
+                ? 'Límite alcanzado. Las nuevas reservas están bloqueadas.'
+                : `Casi en el límite. Te quedan ${limit - used} reservas este mes.`}
+              {isOwner && (
+                <button onClick={handleUpgrade} disabled={working} className="ml-1.5 font-semibold underline hover:no-underline">
+                  Actualizar a Basic
+                </button>
+              )}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* What's included */}
+      <div className="bg-white rounded-2xl p-6 border border-gray-200">
+        <p className="text-sm font-semibold text-gray-900 mb-4">Qué incluye cada plan</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-1.5 text-sm">
+          {[
+            { label: 'Reservas ilimitadas',             free: false },
+            { label: 'Página pública de reservas',      free: true  },
+            { label: 'Mesas, salas y turnos',           free: true  },
+            { label: 'Cierres y vacaciones',            free: true  },
+            { label: 'Emails automáticos (confirmación, cancelación)', free: false },
+            { label: 'Equipo y roles',                  free: false },
+            { label: 'Marketing por email',             free: false },
+            { label: 'Códigos promocionales',           free: false },
+            { label: 'Hasta 30 reservas/mes',           free: true, basicLabel: 'Ilimitadas' },
+          ].map((f) => {
+            const hasFree  = f.free;
+            const hasBasic = true;
+            return (
+              <div key={f.label} className="flex items-center gap-2 py-1">
+                <div className="flex gap-3 shrink-0">
+                  <span className={`text-xs font-mono w-4 text-center ${hasFree ? 'text-green-500' : 'text-gray-200'}`}>✓</span>
+                  <span className={`text-xs font-mono w-4 text-center ${hasBasic ? 'text-violet-500' : 'text-gray-200'}`}>✓</span>
+                </div>
+                <span className="text-gray-600 text-xs">{f.basicLabel && !hasFree ? f.basicLabel : f.label}</span>
+              </div>
+            );
+          })}
+        </div>
+        <div className="flex gap-3 mt-3 text-xs text-gray-400">
+          <span className="flex items-center gap-1"><span className="text-green-500 font-mono">✓</span> Free</span>
+          <span className="flex items-center gap-1"><span className="text-violet-500 font-mono">✓</span> Basic</span>
+        </div>
+      </div>
+
+      {/* Cancel option */}
+      {isOwner && !isFree && !cancelAtPeriodEnd && (
+        <div className="bg-white rounded-2xl p-5 border border-gray-200">
+          <p className="text-sm font-semibold text-gray-900 mb-1">Cancelar suscripción</p>
+          <p className="text-xs text-gray-500 mb-3">
+            Seguirás teniendo acceso hasta el {fmt(currentPeriodEnd)}. Después se degradará automáticamente al plan Free.
+          </p>
+          <button
+            onClick={handleCancel}
+            disabled={working}
+            className="text-sm text-red-500 hover:text-red-600 font-medium disabled:opacity-50 underline hover:no-underline"
+          >
+            Cancelar suscripción
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 const TABS = [
-  { key: 'negocio',    label: 'Negocio',    desc: 'Nombre, logo y datos del establecimiento' },
-  { key: 'salas',      label: 'Salas',      desc: 'Zonas y espacios del restaurante' },
-  { key: 'mesas',      label: 'Mesas',      desc: 'Mesas, capacidades y creación rápida' },
-  { key: 'turnos',     label: 'Turnos',     desc: 'Horarios de comida y cena' },
-  { key: 'vacaciones', label: 'Vacaciones', desc: 'Días cerrados y periodos de cierre' },
-  { key: 'limites',    label: 'Límites',    desc: 'Personas máximas por reserva y franja' },
-  { key: 'publico',    label: 'Público',    desc: 'Página de reservas online para clientes' },
-  { key: 'promos',     label: 'Códigos',    desc: 'Códigos promocionales y descuentos' },
-  { key: 'marketing',  label: 'Marketing',  desc: 'Campañas de email a suscriptores' },
+  { key: 'negocio',      label: 'Negocio',       desc: 'Nombre, logo y datos del establecimiento' },
+  { key: 'salas',        label: 'Salas',          desc: 'Zonas y espacios del restaurante' },
+  { key: 'mesas',        label: 'Mesas',          desc: 'Mesas, capacidades y creación rápida' },
+  { key: 'turnos',       label: 'Turnos',         desc: 'Horarios de comida y cena' },
+  { key: 'vacaciones',   label: 'Vacaciones',     desc: 'Días cerrados y periodos de cierre' },
+  { key: 'limites',      label: 'Límites',        desc: 'Personas máximas por reserva y franja' },
+  { key: 'publico',      label: 'Público',        desc: 'Página de reservas online para clientes' },
+  { key: 'promos',       label: 'Códigos',        desc: 'Códigos promocionales y descuentos' },
+  { key: 'marketing',    label: 'Marketing',      desc: 'Campañas de email a suscriptores' },
+  { key: 'suscripcion',  label: 'Suscripción',    desc: 'Plan, uso mensual y facturación' },
 ];
 
 export default function Settings() {
-  const [tab, setTab] = useState('negocio');
+  const searchParams = new URLSearchParams(window.location.search);
+  const initialTab   = TABS.find(t => t.key === searchParams.get('tab'))?.key ?? 'negocio';
+  const [tab, setTab] = useState(initialTab);
   const current = TABS.find(t => t.key === tab);
 
   return (
@@ -1657,15 +1939,16 @@ export default function Settings() {
         </div>
 
         <div>
-          {tab === 'negocio'    && <NegocioSection />}
-          {tab === 'salas'      && <SalasSection />}
-          {tab === 'mesas'      && <MesasSection />}
-          {tab === 'turnos'     && <TurnosSection />}
-          {tab === 'vacaciones' && <VacacionesSection />}
-          {tab === 'limites'    && <LimitesSection />}
-          {tab === 'publico'    && <PublicoSection />}
-          {tab === 'promos'     && <PromoSection />}
-          {tab === 'marketing'  && <MarketingSection />}
+          {tab === 'negocio'     && <NegocioSection />}
+          {tab === 'salas'       && <SalasSection />}
+          {tab === 'mesas'       && <MesasSection />}
+          {tab === 'turnos'      && <TurnosSection />}
+          {tab === 'vacaciones'  && <VacacionesSection />}
+          {tab === 'limites'     && <LimitesSection />}
+          {tab === 'publico'     && <PublicoSection />}
+          {tab === 'promos'      && <PromoSection />}
+          {tab === 'marketing'   && <MarketingSection />}
+          {tab === 'suscripcion' && <BillingSection />}
         </div>
       </div>
     </div>

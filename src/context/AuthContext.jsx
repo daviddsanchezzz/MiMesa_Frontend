@@ -92,10 +92,23 @@ export function AuthProvider({ children }) {
   const role               = business?.role ?? null;
   const plan               = business?.plan ?? 'free';
   const subscriptionStatus = business?.subscriptionStatus ?? null;
+  const trialEndsAt        = business?.trialEndsAt  ?? null;
+  const currentPeriodEnd   = business?.currentPeriodEnd ?? null;
+  const cancelAtPeriodEnd  = business?.cancelAtPeriodEnd ?? false;
 
   const HIERARCHY = { owner: 3, manager: 2, staff: 1 };
   const hasRole   = (minRole) => (HIERARCHY[role] ?? 0) >= (HIERARCHY[minRole] ?? 0);
   const isSubscribed = subscriptionStatus === 'active' || subscriptionStatus === 'trialing';
+
+  /**
+   * Returns true if the business currently has access to a feature.
+   * Mirrors the backend planCapabilities logic so the UI can gate without
+   * an extra API call on every render.
+   */
+  const FREE_CAPS = { autoEmails: false, staffNotifications: false, marketing: false, promoCodes: false };
+  const BASIC_CAPS = { autoEmails: true, staffNotifications: true, marketing: true, promoCodes: true };
+  const planCaps = isSubscribed ? BASIC_CAPS : FREE_CAPS;
+  const canUse = (feature) => !!planCaps[feature];
 
   // Minimal session object for pages that need the logged-in user's identity
   const session = business
@@ -113,7 +126,8 @@ export function AuthProvider({ children }) {
       business, loading, memberships,
       login, register, logout, refreshBusiness, switchBusiness,
       isDev, role, plan, subscriptionStatus,
-      hasRole, isSubscribed,
+      trialEndsAt, currentPeriodEnd, cancelAtPeriodEnd,
+      hasRole, isSubscribed, canUse,
       session,
     }}>
       {children}

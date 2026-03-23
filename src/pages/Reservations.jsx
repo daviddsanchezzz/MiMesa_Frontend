@@ -109,7 +109,7 @@ function TableCell({ reservation, tables, onAssign }) {
 }
 
 // ── Mobile row: ultra-compact, max density ──────────────────────────────────
-function MobileRow({ r, tables, onEdit, onCancel, onDelete, onAssign, onQuickStatus, onNoShow, canMarkNoShow }) {
+function MobileRow({ r, tables, onEdit, onCancel, onDelete, onAssign, onQuickStatus, onNoShow, canMarkNoShow, canModeratePending }) {
   const [expanded, setExpanded] = useState(false);
   const s = statusConfig[r.status];
   const isCancelled = r.status === 'cancelled';
@@ -204,13 +204,13 @@ function MobileRow({ r, tables, onEdit, onCancel, onDelete, onAssign, onQuickSta
 
           {/* Quick status buttons */}
           <div className="flex gap-2 flex-wrap">
-            {r.status === 'pending' && (
+            {canModeratePending && r.status === 'pending' && (
               <button onClick={() => onQuickStatus(r._id, 'confirmed')}
                 className="flex-1 text-xs font-semibold py-2 rounded-xl bg-violet-600 text-white active:bg-violet-700 transition-colors">
                 Confirmar
               </button>
             )}
-            {r.status === 'pending' && (
+            {canModeratePending && r.status === 'pending' && (
               <button onClick={() => onQuickStatus(r._id, 'seated')}
                 className="flex-1 text-xs font-semibold py-2 rounded-xl bg-emerald-600 text-white active:bg-emerald-700 transition-colors">
                 Sentar directo
@@ -254,6 +254,8 @@ export default function Reservations() {
   const [pendingReservations, setPendingReservations] = useState([]);
   const [pendingEnabled, setPendingEnabled] = useState(canModeratePending);
   const [pendingLoading, setPendingLoading] = useState(false);
+  const [pendingProposal, setPendingProposal] = useState(null);
+  const [pendingProposalSaving, setPendingProposalSaving] = useState(false);
   const [filterMode,   setFilterMode]   = useState('today'); // today | week | upcoming | day
   const [dateFilter,   setDateFilter]   = useState(new Date().toISOString().slice(0, 10));
   const [modal,        setModal]        = useState(null);
@@ -421,11 +423,35 @@ export default function Reservations() {
     await Promise.all([load(), loadPendingReservations()]);
   };
 
-  const handlePendingPropose = async (id) => {
-    const message = prompt('Mensaje opcional para el cliente (puedes dejarlo vacío):') ?? '';
-    await api.put(`/reservations/${id}/propose-alternative`, { message });
-    await loadPendingReservations();
-    alert('Alternativa enviada al cliente por email.');
+  const openPendingProposalModal = (reservation) => {
+    setPendingProposal({
+      reservationId: reservation._id,
+      guestName: reservation.guestName,
+      date: reservation.proposedAlternative?.date || '',
+      time: reservation.proposedAlternative?.time || '',
+      message: reservation.proposedAlternative?.message || '',
+    });
+  };
+
+  const submitPendingProposal = async (e) => {
+    e.preventDefault();
+    if (!pendingProposal?.reservationId) return;
+
+    const payload = {};
+    if (pendingProposal.message?.trim()) payload.message = pendingProposal.message.trim();
+    if (pendingProposal.date && pendingProposal.time) {
+      payload.date = pendingProposal.date;
+      payload.time = pendingProposal.time;
+    }
+
+    setPendingProposalSaving(true);
+    try {
+      await api.put(`/reservations/${pendingProposal.reservationId}/propose-alternative`, payload);
+      await loadPendingReservations();
+      setPendingProposal(null);
+    } finally {
+      setPendingProposalSaving(false);
+    }
   };
 
   const handleNoShow = async (id) => {
@@ -623,7 +649,7 @@ export default function Reservations() {
                       Aceptar
                     </button>
                     <button
-                      onClick={() => handlePendingPropose(r._id)}
+                      onClick={() => openPendingProposalModal(r)}
                       className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-violet-100 text-violet-700 hover:bg-violet-200 transition-colors"
                     >
                       Proponer hora
@@ -690,6 +716,7 @@ export default function Reservations() {
             onQuickStatus={quickStatus}
             onNoShow={handleNoShow}
             canMarkNoShow={canModeratePending}
+            canModeratePending={canModeratePending}
           />
         );
 
@@ -945,6 +972,68 @@ export default function Reservations() {
           </div>
         );
       })()}
+
+      {pendingProposal && (
+        <Modal
+          title="Proponer horario"
+          subtitle={`Reserva de ${pendingProposal.guestName}`}
+          onClose={() => !pendingProposalSaving && setPendingProposal(null)}
+          size="md"
+        >
+          <form onSubmit={submitPendingProposal} className="space-y-4">
+            <p className="text-xs text-gray-500">
+              Si dejas fecha y hora vacías, Tableo buscará una alternativa automática.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Fecha propuesta</label>
+                <input
+                  type="date"
+                  value={pendingProposal.date}
+                  onChange={(e) => setPendingProposal((p) => ({ ...p, date: e.target.value }))}
+                  className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Hora propuesta</label>
+                <input
+                  type="time"
+                  value={pendingProposal.time}
+                  onChange={(e) => setPendingProposal((p) => ({ ...p, time: e.target.value }))}
+                  className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">Mensaje para el cliente (opcional)</label>
+              <textarea
+                rows={3}
+                value={pendingProposal.message}
+                onChange={(e) => setPendingProposal((p) => ({ ...p, message: e.target.value }))}
+                className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white resize-none"
+                placeholder="Ej: Estamos completos a esa hora, te ofrecemos esta alternativa."
+              />
+            </div>
+            <div className="flex items-center justify-end gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => setPendingProposal(null)}
+                disabled={pendingProposalSaving}
+                className="px-3 py-2 text-xs font-semibold rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors disabled:opacity-60"
+              >
+                Cerrar
+              </button>
+              <button
+                type="submit"
+                disabled={pendingProposalSaving}
+                className="px-3 py-2 text-xs font-semibold rounded-lg bg-violet-600 text-white hover:bg-violet-700 transition-colors disabled:opacity-60"
+              >
+                {pendingProposalSaving ? 'Enviando...' : 'Enviar propuesta'}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
 
       {modal && (
         <Modal

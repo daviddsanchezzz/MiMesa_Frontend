@@ -232,7 +232,7 @@ function MobileRow({ r, tables, onEdit, onCancel, onDelete, onAssign, onQuickSta
               className="flex-1 text-xs font-semibold py-2 rounded-xl bg-gray-100 text-gray-700 active:bg-gray-200 transition-colors">
               Editar
             </button>
-            {r.status !== 'cancelled' && (
+            {r.status !== 'cancelled' && r.status !== 'no_show' && (
               <button onClick={onCancel}
                 className="px-3 py-2 rounded-xl text-xs font-semibold text-rose-600 bg-rose-50 active:bg-rose-100 transition-colors">
                 Cancelar
@@ -440,12 +440,14 @@ export default function Reservations() {
   };
 
   const assignTable = async (id, tableId) => {
-    await api.put(`/reservations/${id}`, { tableId }); load();
+    await api.put(`/reservations/${id}`, { tableId });
+    await Promise.all([load(), loadPendingReservations()]);
   };
 
   const handleDelete = async (id) => {
     if (!confirm('¿Seguro que quieres eliminar esta reserva?')) return;
-    await api.delete(`/reservations/${id}`); load();
+    await api.delete(`/reservations/${id}`);
+    await Promise.all([load(), loadPendingReservations()]);
   };
 
   const counts = {
@@ -725,7 +727,7 @@ export default function Reservations() {
           <div className="sm:hidden space-y-3">
             {Object.entries(groups).map(([shiftName, rows]) => {
               if (rows.length === 0) return null;
-              const active  = rows.filter(r => r.status !== 'cancelled').length;
+              const active  = rows.filter(r => r.status !== 'cancelled' && r.status !== 'no_show').length;
               const label   = shiftName === '__otros__' ? 'Sin turno' : shiftName;
               return (
                 <div key={shiftName}>
@@ -833,7 +835,7 @@ export default function Reservations() {
                   {canModeratePending && (r.status === 'confirmed' || r.status === 'seated') && (
                     <ActionBtn onClick={() => handleNoShow(r._id)} color="red">No show</ActionBtn>
                   )}
-                  {r.status !== 'cancelled' && (
+                  {r.status !== 'cancelled' && r.status !== 'no_show' && (
                     <ActionBtn onClick={() => handleCancel(r._id)} color="red">Cancelar</ActionBtn>
                   )}
 
@@ -869,7 +871,7 @@ export default function Reservations() {
           return (
             <div className="hidden sm:block space-y-4">
               {Object.entries(dateGroups).map(([date, rows]) => {
-                const active = rows.filter(r => r.status !== 'cancelled').length;
+                const active = rows.filter(r => r.status !== 'cancelled' && r.status !== 'no_show').length;
                 return (
                   <div key={date} className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
                     <div className="flex items-center justify-between px-5 py-3 bg-gray-50 border-b border-gray-100">
@@ -909,9 +911,9 @@ export default function Reservations() {
           <div className="hidden sm:block space-y-4">
             {Object.entries(groups).map(([shiftName, rows]) => {
               if (rows.length === 0) return null;
-              const active = rows.filter(r => r.status !== 'cancelled').length;
+              const active = rows.filter(r => r.status !== 'cancelled' && r.status !== 'no_show').length;
               const label  = shiftName === '__otros__' ? 'Sin turno' : shiftName;
-              const totalPax = rows.filter(r => r.status !== 'cancelled').reduce((s, r) => s + (r.people || 0), 0);
+              const totalPax = rows.filter(r => r.status !== 'cancelled' && r.status !== 'no_show').reduce((s, r) => s + (r.people || 0), 0);
               return (
                 <div key={shiftName} className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
                   {/* Shift header bar */}
@@ -953,7 +955,7 @@ export default function Reservations() {
           <ReservationForm
             reservation={modal.reservation}
             initialContext={modal.preloaded || null}
-            onSave={() => { setModal(null); load(); }}
+            onSave={() => { setModal(null); Promise.all([load(), loadPendingReservations()]); }}
             onCancel={() => setModal(null)}
           />
         </Modal>
@@ -961,3 +963,7 @@ export default function Reservations() {
     </div>
   );
 }
+
+
+
+

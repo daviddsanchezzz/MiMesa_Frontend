@@ -82,6 +82,12 @@ function MobileCustomerRow({ c, onEdit }) {
             {c.phone || c.email || 'Sin contacto'}
           </p>
         </div>
+        
+        {c.noShowCount > 0 && (
+          <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold bg-rose-100 text-rose-700">
+            {c.noShowCount} no-show
+          </span>
+        )}
         <span className={`text-[11px] border px-2 py-0.5 rounded-full font-semibold ${badgeCls}`}>
           {c.visits}
         </span>
@@ -148,6 +154,7 @@ export default function Customers() {
   const mobileStats = useMemo(() => ({
     total: customers.length,
     frequent: customers.filter((c) => c.visits > 5).length,
+    risky: customers.filter((c) => (c.noShowCount || 0) > 0).length,
     contactless: customers.filter((c) => !c.phone && !c.email).length,
   }), [customers]);
 
@@ -170,7 +177,7 @@ export default function Customers() {
           </button>
         </div>
 
-        <div className="grid grid-cols-3 gap-1.5">
+        <div className="grid grid-cols-4 gap-1.5">
           <button
             onClick={() => setMobileFilter('all')}
             className={`rounded-xl border px-2 py-2 text-xs font-semibold ${mobileFilter === 'all' ? 'bg-violet-50 border-violet-200 text-violet-700' : 'bg-white border-gray-200 text-gray-600'}`}
@@ -183,6 +190,9 @@ export default function Customers() {
           >
             {mobileStats.frequent} frecuentes
           </button>
+          <div className="rounded-xl border px-2 py-2 text-xs font-semibold bg-rose-50 border-rose-200 text-rose-700 text-center">
+            {mobileStats.risky} no-show
+          </div>
           <button
             onClick={() => setMobileFilter('contactless')}
             className={`rounded-xl border px-2 py-2 text-xs font-semibold ${mobileFilter === 'contactless' ? 'bg-gray-100 border-gray-200 text-gray-700' : 'bg-white border-gray-200 text-gray-600'}`}
@@ -337,3 +347,4 @@ export default function Customers() {
     </div>
   );
 }
+

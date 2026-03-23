@@ -893,12 +893,12 @@ export default function Reservations() {
         const thead = (
           <>
             <colgroup>
-              <col style={{ width: '30%' }} />
+              <col style={{ width: '28%' }} />
               <col style={{ width: '9%' }} />
               <col style={{ width: '8%' }} />
               <col style={{ width: '10%' }} />
               <col style={{ width: '12%' }} />
-              <col style={{ width: '13%' }} />
+              <col style={{ width: '15%' }} />
               <col style={{ width: '18%' }} />
             </colgroup>
             <thead>
@@ -955,21 +955,59 @@ export default function Reservations() {
                 <TableCell reservation={r} tables={tables} onAssign={assignTable} />
               </td>
               <td className="px-4 py-3.5">
-                <span className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${s.cls}`}>{s.label}</span>
+                <span className={`inline-flex items-center justify-center min-w-[96px] px-2.5 py-1 rounded-full text-xs font-semibold ${s.cls}`}>
+                  {s.label}
+                </span>
               </td>
-              <td className="px-4 py-3.5 whitespace-nowrap">
-                <div className="flex items-center justify-end gap-1">
+              <td className="px-4 py-3.5">
+                <div className="flex items-center justify-end gap-1.5">
                   {r.status === 'pending' && (
-                    <ActionBtn onClick={() => quickStatus(r._id, 'confirmed')} color="blue">Confirmar</ActionBtn>
+                    <button
+                      onClick={() => quickStatus(r._id, 'confirmed')}
+                      className="p-1.5 rounded-lg text-violet-600 hover:bg-violet-50 transition-colors"
+                      title="Confirmar"
+                      aria-label="Confirmar"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
+                        <path fillRule="evenodd" d="M12.416 3.376a.75.75 0 0 1 .208 1.04l-5 7.5a.75.75 0 0 1-1.154.114l-3-3a.75.75 0 0 1 1.06-1.06l2.353 2.353 4.493-6.74a.75.75 0 0 1 1.04-.207Z" clipRule="evenodd" />
+                      </svg>
+                    </button>
                   )}
                   {r.status === 'confirmed' && (
-                    <ActionBtn onClick={() => quickStatus(r._id, 'seated')} color="green">Sentar</ActionBtn>
+                    <button
+                      onClick={() => quickStatus(r._id, 'seated')}
+                      className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50 transition-colors"
+                      title="Pasar a sentada"
+                      aria-label="Pasar a sentada"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
+                        <path fillRule="evenodd" d="M12.416 3.376a.75.75 0 0 1 .208 1.04l-5 7.5a.75.75 0 0 1-1.154.114l-3-3a.75.75 0 0 1 1.06-1.06l2.353 2.353 4.493-6.74a.75.75 0 0 1 1.04-.207Z" clipRule="evenodd" />
+                      </svg>
+                    </button>
                   )}
                   {canModeratePending && (r.status === 'confirmed' || r.status === 'seated') && (
-                    <ActionBtn onClick={() => handleNoShow(r._id)} color="red">No show</ActionBtn>
+                    <button
+                      onClick={() => handleNoShow(r._id)}
+                      className="p-1.5 rounded-lg text-amber-600 hover:bg-amber-50 transition-colors"
+                      title="Marcar no-show"
+                      aria-label="Marcar no-show"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
+                        <path d="M8 1.75a6.25 6.25 0 1 0 0 12.5 6.25 6.25 0 0 0 0-12.5Zm0 1.5a4.75 4.75 0 0 1 3.312 8.16L4.59 4.688A4.731 4.731 0 0 1 8 3.25Zm-3.312 1.34 6.723 6.723A4.75 4.75 0 0 1 4.688 4.59Z" />
+                      </svg>
+                    </button>
                   )}
                   {r.status !== 'cancelled' && r.status !== 'no_show' && (
-                    <ActionBtn onClick={() => handleCancel(r._id)} color="red">Cancelar</ActionBtn>
+                    <button
+                      onClick={() => handleCancel(r._id)}
+                      className="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50 transition-colors"
+                      title="Cancelar"
+                      aria-label="Cancelar"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
+                        <path fillRule="evenodd" d="M3.22 3.22a.75.75 0 0 1 1.06 0L8 6.94l3.72-3.72a.75.75 0 0 1 1.06 1.06L9.06 8l3.72 3.72a.75.75 0 1 1-1.06 1.06L8 9.06l-3.72 3.72a.75.75 0 1 1-1.06-1.06L6.94 8 3.22 4.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
+                      </svg>
+                    </button>
                   )}
 
                   <button

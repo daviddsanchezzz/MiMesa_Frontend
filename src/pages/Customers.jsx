@@ -309,6 +309,11 @@ export default function Customers() {
                         }`}>
                           {c.visits} {c.visits === 1 ? 'visita' : 'visitas'}
                         </span>
+                        {c.noShowCount > 0 && (
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-100 text-rose-700">
+                            {c.noShowCount} no-show
+                          </span>
+                        )}
                         {c.visits > 5 && <span title="Cliente frecuente" className="text-amber-400 text-sm">★</span>}
                       </div>
                     </td>
@@ -347,4 +352,6 @@ export default function Customers() {
     </div>
   );
 }
+
+
 

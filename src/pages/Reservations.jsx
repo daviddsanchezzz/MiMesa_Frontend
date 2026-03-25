@@ -955,7 +955,7 @@ export default function Reservations() {
                 ) : r.tableId?.roomId ? (
                   <span className="text-xs text-gray-400">{r.tableId.roomId.name}</span>
                 ) : (
-                  <span className="text-gray-300 text-xs">â€”</span>
+                  <span className="text-gray-300 text-xs">-</span>
                 )}
               </td>
               <td className="px-4 py-3.5">

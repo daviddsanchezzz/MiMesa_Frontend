@@ -805,7 +805,7 @@ export default function Reservations() {
             {filterMode === 'pending' ? 'Sin reservas pendientes' : 'Sin reservas para este día'}
           </p>
           <button onClick={openCreateModal} className="mt-4 text-sm text-violet-600 hover:underline font-medium">
-            Crear la primera reserva â†’
+            Crear la primera reserva →
           </button>
         </div>
       )}
@@ -936,7 +936,7 @@ export default function Reservations() {
                       <p className="font-semibold text-gray-900 leading-tight">{r.guestName}</p>
                       {r.customerId && <span title="Cliente registrado" className="w-1.5 h-1.5 rounded-full bg-violet-400 shrink-0" />}
                     </div>
-                    <p className="text-xs text-gray-400 mt-0.5">{r.guestPhone || r.guestEmail || 'â€”'}</p>
+                    <p className=”text-xs text-gray-400 mt-0.5”>{r.guestPhone || r.guestEmail || '\u2014'}</p>
                   </div>
                 </div>
               </td>

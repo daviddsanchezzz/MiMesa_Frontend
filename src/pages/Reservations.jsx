@@ -805,7 +805,7 @@ export default function Reservations() {
             {filterMode === 'pending' ? 'Sin reservas pendientes' : 'Sin reservas para este día'}
           </p>
           <button onClick={openCreateModal} className="mt-4 text-sm text-violet-600 hover:underline font-medium">
-            Crear la primera reserva →
+            Crear la primera reserva ->
           </button>
         </div>
       )}

@@ -38,6 +38,12 @@ const IconSettings = () => (
   </svg>
 );
 
+const IconChartBar = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 shrink-0">
+    <path d="M15.5 2A1.5 1.5 0 0 0 14 3.5v13a1.5 1.5 0 0 0 3 0v-13A1.5 1.5 0 0 0 15.5 2ZM9.5 6A1.5 1.5 0 0 0 8 7.5v9a1.5 1.5 0 0 0 3 0v-9A1.5 1.5 0 0 0 9.5 6ZM3.5 10A1.5 1.5 0 0 0 2 11.5v5a1.5 1.5 0 0 0 3 0v-5A1.5 1.5 0 0 0 3.5 10Z" />
+  </svg>
+);
+
 const IconMegaphone = () => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 shrink-0">
     <path d="M13.92 3.845a19.361 19.361 0 0 1-6.3 1.98C6.765 5.942 5.89 6 5 6a4 4 0 0 0 0 8c.184 0 .368-.006.55-.016A19.065 19.065 0 0 1 13.92 16.155 1 1 0 0 0 15 15.27V4.73a1 1 0 0 0-1.08-.885ZM16 9.5a.75.75 0 0 1 .75-.75h1.5a.75.75 0 0 1 0 1.5h-1.5A.75.75 0 0 1 16 9.5ZM7 14.803V17a1 1 0 0 0 1 1h.5a1 1 0 0 0 .979-.8l.34-1.7A19.52 19.52 0 0 1 7 14.803Z" />
@@ -149,6 +155,21 @@ const [isSmallScreen, setIsSmallScreen] = useState(false);
               {link.label}
             </NavLink>
           ))}
+
+          {!isStaff && hasRole('manager') && (
+            <NavLink
+              to="/analytics"
+              onClick={handleNavClick}
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-3 py-3 lg:py-2 rounded-lg text-sm font-medium transition-all duration-100 ${
+                  isActive ? 'bg-violet-600 text-white shadow-sm' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100'
+                }`
+              }
+            >
+              <IconChartBar />
+              Analytics
+            </NavLink>
+          )}
 
           {!isStaff && hasRole('manager') && (
             <NavLink

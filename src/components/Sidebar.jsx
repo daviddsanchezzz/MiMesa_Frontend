@@ -1,4 +1,4 @@
-import { NavLink, useNavigate, useLocation } from 'react-router-dom';
+import { NavLink, useNavigate } from 'react-router-dom';
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 
@@ -61,12 +61,8 @@ const configLinks = [
 export default function Sidebar({ isOpen, onClose }) {
   const { business, memberships, logout, hasRole, switchBusiness, session } = useAuth();
   const navigate = useNavigate();
-  const location = useLocation();
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [pubOpen, setPubOpen] = useState(() =>
-    ['/marketing', '/promos'].includes(location.pathname)
-  );
-  const [isSmallScreen, setIsSmallScreen] = useState(false);
+const [menuOpen, setMenuOpen] = useState(false);
+const [isSmallScreen, setIsSmallScreen] = useState(false);
   const menuRef = useRef(null);
   const isStaff = business?.role === 'staff';
 
@@ -155,49 +151,18 @@ export default function Sidebar({ isOpen, onClose }) {
           ))}
 
           {!isStaff && hasRole('manager') && (
-            <div>
-              <button
-                onClick={() => setPubOpen(v => !v)}
-                className={`w-full flex items-center gap-3 px-3 py-3 lg:py-2 rounded-lg text-sm font-medium transition-all duration-100 ${
-                  ['/marketing', '/promos'].includes(location.pathname)
-                    ? 'text-white'
-                    : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100'
-                }`}
-              >
-                <IconMegaphone />
-                <span className="flex-1 text-left">Publicidad</span>
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor"
-                  className={`w-3.5 h-3.5 shrink-0 transition-transform duration-150 ${pubOpen ? 'rotate-180' : ''}`}>
-                  <path fillRule="evenodd" d="M4.22 6.22a.75.75 0 0 1 1.06 0L8 8.94l2.72-2.72a.75.75 0 1 1 1.06 1.06l-3.25 3.25a.75.75 0 0 1-1.06 0L4.22 7.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
-                </svg>
-              </button>
-              {pubOpen && (
-                <div className="mt-0.5 ml-4 pl-3 border-l border-slate-700 space-y-0.5">
-                  <NavLink
-                    to="/marketing"
-                    onClick={handleNavClick}
-                    className={({ isActive }) =>
-                      `flex items-center gap-2 px-2 py-2 lg:py-1.5 rounded-lg text-sm font-medium transition-all duration-100 ${
-                        isActive ? 'text-violet-400' : 'text-slate-400 hover:text-slate-100'
-                      }`
-                    }
-                  >
-                    Email marketing
-                  </NavLink>
-                  <NavLink
-                    to="/promos"
-                    onClick={handleNavClick}
-                    className={({ isActive }) =>
-                      `flex items-center gap-2 px-2 py-2 lg:py-1.5 rounded-lg text-sm font-medium transition-all duration-100 ${
-                        isActive ? 'text-violet-400' : 'text-slate-400 hover:text-slate-100'
-                      }`
-                    }
-                  >
-                    Códigos promo
-                  </NavLink>
-                </div>
-              )}
-            </div>
+            <NavLink
+              to="/publicidad"
+              onClick={handleNavClick}
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-3 py-3 lg:py-2 rounded-lg text-sm font-medium transition-all duration-100 ${
+                  isActive ? 'bg-violet-600 text-white shadow-sm' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100'
+                }`
+              }
+            >
+              <IconMegaphone />
+              Publicidad
+            </NavLink>
           )}
         </div>
       </nav>

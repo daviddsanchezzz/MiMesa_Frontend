@@ -17,6 +17,8 @@ import Profile from './pages/Profile';
 import AcceptInvite from './pages/AcceptInvite';
 import DevDashboard from './pages/DevDashboard';
 import Onboarding from './pages/Onboarding';
+import Marketing from './pages/Marketing';
+import PromoCodes from './pages/PromoCodes';
 import PublicReservation from './pages/PublicReservation';
 import PublicCancel from './pages/PublicCancel';
 import PublicUnsubscribe from './pages/PublicUnsubscribe';
@@ -169,6 +171,8 @@ export default function App() {
           <Route path="/settings"      element={<Navigate to="/configuracion" replace />} />
           <Route path="/profile"       element={<PrivateLayout><Profile /></PrivateLayout>} />
           <Route path="/team"         element={<RoleRoute minRole="manager"><PrivateLayout><Team /></PrivateLayout></RoleRoute>} />
+          <Route path="/marketing"    element={<RoleRoute minRole="manager"><PrivateLayout><Marketing /></PrivateLayout></RoleRoute>} />
+          <Route path="/promos"       element={<RoleRoute minRole="manager"><PrivateLayout><PromoCodes /></PrivateLayout></RoleRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>

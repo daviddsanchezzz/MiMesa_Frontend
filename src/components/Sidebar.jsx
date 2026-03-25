@@ -1,4 +1,4 @@
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 
@@ -38,6 +38,12 @@ const IconSettings = () => (
   </svg>
 );
 
+const IconMegaphone = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 shrink-0">
+    <path d="M13.92 3.845a19.361 19.361 0 0 1-6.3 1.98C6.765 5.942 5.89 6 5 6a4 4 0 0 0 0 8c.184 0 .368-.006.55-.016A19.065 19.065 0 0 1 13.92 16.155 1 1 0 0 0 15 15.27V4.73a1 1 0 0 0-1.08-.885ZM16 9.5a.75.75 0 0 1 .75-.75h1.5a.75.75 0 0 1 0 1.5h-1.5A.75.75 0 0 1 16 9.5ZM7 14.803V17a1 1 0 0 0 1 1h.5a1 1 0 0 0 .979-.8l.34-1.7A19.52 19.52 0 0 1 7 14.803Z" />
+  </svg>
+);
+
 const links = [
   { to: '/', label: 'Dashboard', icon: <IconHome /> },
   { to: '/reservations', label: 'Reservas', icon: <IconCalendar /> },
@@ -55,7 +61,11 @@ const configLinks = [
 export default function Sidebar({ isOpen, onClose }) {
   const { business, memberships, logout, hasRole, switchBusiness, session } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [pubOpen, setPubOpen] = useState(() =>
+    ['/marketing', '/promos'].includes(location.pathname)
+  );
   const [isSmallScreen, setIsSmallScreen] = useState(false);
   const menuRef = useRef(null);
   const isStaff = business?.role === 'staff';
@@ -143,6 +153,52 @@ export default function Sidebar({ isOpen, onClose }) {
               {link.label}
             </NavLink>
           ))}
+
+          {!isStaff && hasRole('manager') && (
+            <div>
+              <button
+                onClick={() => setPubOpen(v => !v)}
+                className={`w-full flex items-center gap-3 px-3 py-3 lg:py-2 rounded-lg text-sm font-medium transition-all duration-100 ${
+                  ['/marketing', '/promos'].includes(location.pathname)
+                    ? 'text-white'
+                    : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100'
+                }`}
+              >
+                <IconMegaphone />
+                <span className="flex-1 text-left">Publicidad</span>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor"
+                  className={`w-3.5 h-3.5 shrink-0 transition-transform duration-150 ${pubOpen ? 'rotate-180' : ''}`}>
+                  <path fillRule="evenodd" d="M4.22 6.22a.75.75 0 0 1 1.06 0L8 8.94l2.72-2.72a.75.75 0 1 1 1.06 1.06l-3.25 3.25a.75.75 0 0 1-1.06 0L4.22 7.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
+                </svg>
+              </button>
+              {pubOpen && (
+                <div className="mt-0.5 ml-4 pl-3 border-l border-slate-700 space-y-0.5">
+                  <NavLink
+                    to="/marketing"
+                    onClick={handleNavClick}
+                    className={({ isActive }) =>
+                      `flex items-center gap-2 px-2 py-2 lg:py-1.5 rounded-lg text-sm font-medium transition-all duration-100 ${
+                        isActive ? 'text-violet-400' : 'text-slate-400 hover:text-slate-100'
+                      }`
+                    }
+                  >
+                    Email marketing
+                  </NavLink>
+                  <NavLink
+                    to="/promos"
+                    onClick={handleNavClick}
+                    className={({ isActive }) =>
+                      `flex items-center gap-2 px-2 py-2 lg:py-1.5 rounded-lg text-sm font-medium transition-all duration-100 ${
+                        isActive ? 'text-violet-400' : 'text-slate-400 hover:text-slate-100'
+                      }`
+                    }
+                  >
+                    Códigos promo
+                  </NavLink>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </nav>
 

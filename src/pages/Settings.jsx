@@ -1883,8 +1883,6 @@ const TABS = [
   { key: 'vacaciones',   label: 'Vacaciones',     desc: 'Días cerrados y periodos de cierre' },
   { key: 'limites',      label: 'Límites',        desc: 'Personas máximas por reserva y franja' },
   { key: 'publico',      label: 'Público',        desc: 'Página de reservas online para clientes' },
-  { key: 'promos',       label: 'Códigos',        desc: 'Códigos promocionales y descuentos' },
-  { key: 'marketing',    label: 'Marketing',      desc: 'Campañas de email a suscriptores' },
   { key: 'suscripcion',  label: 'Suscripción',    desc: 'Plan, uso mensual y facturación' },
 ];
 
@@ -1946,8 +1944,6 @@ export default function Settings() {
           {tab === 'vacaciones'  && <VacacionesSection />}
           {tab === 'limites'     && <LimitesSection />}
           {tab === 'publico'     && <PublicoSection />}
-          {tab === 'promos'      && <PromoSection />}
-          {tab === 'marketing'   && <MarketingSection />}
           {tab === 'suscripcion' && <BillingSection />}
         </div>
       </div>

@@ -167,7 +167,7 @@ const [isSmallScreen, setIsSmallScreen] = useState(false);
               }
             >
               <IconChartBar />
-              Analytics
+              Estadísticas
             </NavLink>
           )}
 

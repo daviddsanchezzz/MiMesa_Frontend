@@ -50,42 +50,43 @@ function KpiCard({ label, value, sub, trend, trendLabel, color = 'violet', icon 
   );
 }
 
-// ─── Bar Chart (SVG) ─────────────────────────────────────────────────────────
-function BarChart({ data, height = 140 }) {
+// ─── Bar Chart (CSS) ─────────────────────────────────────────────────────────
+function BarChart({ data, chartHeight = 120 }) {
   if (!data || data.length === 0) return <p className="text-xs text-gray-400 py-8 text-center">Sin datos</p>;
 
   const max = Math.max(...data.map(d => d.total), 1);
-  const W = 100 / data.length; // % width per bar
-
-  // Label every N bars so they don't overlap
-  const step = data.length <= 14 ? 1 : data.length <= 31 ? 3 : 7;
+  // Show label every N bars to avoid overlap
+  const step = data.length <= 10 ? 1 : data.length <= 20 ? 2 : data.length <= 45 ? 5 : 10;
 
   return (
-    <div style={{ height }}>
-      <svg viewBox={`0 0 ${data.length * 12} ${height}`} className="w-full h-full" preserveAspectRatio="none">
+    <div>
+      <div className="flex items-end gap-px w-full" style={{ height: chartHeight }}>
         {data.map((d, i) => {
-          const barH = Math.max(2, (d.total / max) * (height - 24));
-          const x = i * 12 + 1;
-          const y = height - 20 - barH;
-          const isHighlighted = d.total === max;
+          const pct = Math.max(4, Math.round((d.total / max) * 100));
+          const isPeak = d.total === max;
           return (
-            <g key={d.date}>
-              <rect
-                x={x} y={y}
-                width={10} height={barH}
-                rx={2}
-                fill={isHighlighted ? '#7c3aed' : '#ddd6fe'}
-                className="transition-all"
-              />
-              {i % step === 0 && (
-                <text x={x + 5} y={height - 4} textAnchor="middle" fontSize="7" fill="#9ca3af">
-                  {d.date.slice(5)}
-                </text>
-              )}
-            </g>
+            <div
+              key={d.date}
+              title={`${d.date}: ${d.total} reservas`}
+              className="flex-1 rounded-t-sm transition-all cursor-default"
+              style={{
+                height: `${pct}%`,
+                backgroundColor: isPeak ? '#7c3aed' : '#ddd6fe',
+              }}
+            />
           );
         })}
-      </svg>
+      </div>
+      {/* X-axis labels */}
+      <div className="flex w-full mt-1.5">
+        {data.map((d, i) => (
+          <div key={d.date} className="flex-1 text-center" style={{ minWidth: 0 }}>
+            {i % step === 0 && (
+              <span className="text-[9px] text-gray-400 leading-none">{d.date.slice(5)}</span>
+            )}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
@@ -276,7 +277,7 @@ export default function Estadisticas() {
               <Section title={`Reservas por día (${period}d)`}>
                 {daily.length > 0 ? (
                   <>
-                    <BarChart data={daily} height={130} />
+                    <BarChart data={daily} chartHeight={120} />
                     <div className="flex items-center gap-4 mt-3 pt-3 border-t border-gray-50">
                       <div className="flex items-center gap-1.5">
                         <span className="w-2.5 h-2.5 rounded-sm bg-violet-500 shrink-0" />

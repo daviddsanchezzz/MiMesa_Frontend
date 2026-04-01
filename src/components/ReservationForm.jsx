@@ -191,13 +191,17 @@ export default function ReservationForm({ reservation, onSave, onCancel, initial
     if (isEdit || target < step) setStep(target);
   };
 
+  const [saving, setSaving] = useState(false);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (saving) return;
     setError('');
     if (!form.guestName.trim()) {
       setError('El nombre es obligatorio');
       return;
     }
+    setSaving(true);
     try {
       const payload = { ...form, roomId: form.roomId || null };
       if (isEdit) await api.put(`/reservations/${reservation._id}`, payload);
@@ -205,6 +209,7 @@ export default function ReservationForm({ reservation, onSave, onCancel, initial
       onSave();
     } catch (err) {
       setError(err.response?.data?.message || 'Error al guardar');
+      setSaving(false);
     }
   };
 
@@ -420,7 +425,8 @@ export default function ReservationForm({ reservation, onSave, onCancel, initial
             <button type="button" onClick={() => setStep(3)} className="px-4 py-2.5 rounded-xl text-sm font-medium text-gray-500 hover:bg-gray-100 transition-colors">
               Atras
             </button>
-            <button type="submit" className="flex-1 bg-violet-600 hover:bg-violet-700 text-white py-2.5 rounded-xl text-sm font-semibold transition-colors">
+            <button type="submit" disabled={saving} className="flex-1 bg-violet-600 hover:bg-violet-700 disabled:opacity-60 disabled:cursor-not-allowed text-white py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-2">
+              {saving && <span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin shrink-0" />}
               {isEdit ? 'Guardar cambios' : 'Crear reserva'}
             </button>
             <button type="button" onClick={onCancel} className="px-4 py-2.5 rounded-xl text-sm font-medium text-gray-500 hover:bg-gray-100 transition-colors">

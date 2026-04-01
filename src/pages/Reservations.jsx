@@ -1,26 +1,9 @@
-﻿import { useState, useEffect, useRef } from 'react';
+﻿import { useState, useEffect } from 'react';
 import api from '../services/api';
 import ReservationForm from '../components/ReservationForm';
 import Modal from '../components/Modal';
 import { useAuth } from '../context/AuthContext';
-
-const statusConfig = {
-  pending:   { label: 'Pendiente',  cls: 'bg-amber-50 text-amber-700 ring-1 ring-amber-200',   dot: 'bg-amber-400',   bar: 'bg-amber-400' },
-  confirmed: { label: 'Confirmada', cls: 'bg-violet-50 text-violet-700 ring-1 ring-violet-200', dot: 'bg-violet-500',  bar: 'bg-violet-500' },
-  seated:    { label: 'Sentada',    cls: 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200', dot: 'bg-emerald-500', bar: 'bg-emerald-500' },
-  no_show:   { label: 'No show',    cls: 'bg-rose-50 text-rose-700 ring-1 ring-rose-200', dot: 'bg-rose-400', bar: 'bg-rose-400' },
-  cancelled: { label: 'Cancelada',  cls: 'bg-gray-100 text-gray-400 ring-1 ring-gray-200',      dot: 'bg-gray-300',    bar: 'bg-gray-300' },
-};
-
-function Avatar({ name }) {
-  const colors = ['bg-violet-500','bg-violet-500','bg-rose-500','bg-amber-500','bg-emerald-500','bg-cyan-500'];
-  const idx = (name?.charCodeAt(0) || 0) % colors.length;
-  return (
-    <div className={`w-9 h-9 rounded-full ${colors[idx]} flex items-center justify-center text-white text-sm font-semibold shrink-0`}>
-      {name?.[0]?.toUpperCase() || '?'}
-    </div>
-  );
-}
+import { statusConfig, Avatar, TableCell } from '../components/ReservationCard';
 
 function ActionBtn({ onClick, children, color = 'gray' }) {
   const cls = {
@@ -34,77 +17,6 @@ function ActionBtn({ onClick, children, color = 'gray' }) {
     <button onClick={onClick} className={`text-xs font-medium px-2 py-1 rounded-lg transition-colors ${cls}`}>
       {children}
     </button>
-  );
-}
-
-// Inline table picker cell
-function TableCell({ reservation, tables, onAssign }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [open]);
-
-  const roomId    = reservation.roomId?._id || reservation.roomId;
-  const available = tables
-    .filter(t => !roomId || t.roomId?._id === roomId || t.roomId === roomId)
-    .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
-  const assigned  = reservation.tableId;
-
-  // Group by room for optgroup display
-  const grouped = available.reduce((acc, t) => {
-    const key = t.roomId?.name || 'Sin sala';
-    if (!acc[key]) acc[key] = [];
-    acc[key].push(t);
-    return acc;
-  }, {});
-  const hasGroups = Object.keys(grouped).length > 1 || !Object.keys(grouped)[0]?.match(/^Sin sala$/);
-
-  if (!open) {
-    return (
-      <button
-        onClick={() => setOpen(true)}
-        className={`flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg border transition-colors ${
-          assigned
-            ? 'bg-slate-50 border-slate-200 text-slate-700 hover:border-violet-300 hover:bg-violet-50 hover:text-violet-600 font-medium'
-            : 'border-dashed border-gray-300 text-gray-400 hover:border-violet-300 hover:text-violet-500 hover:bg-violet-50'
-        }`}
-      >
-        {assigned ? (
-          <><span className="w-1.5 h-1.5 rounded-full bg-violet-400 shrink-0" />{assigned.name}</>
-        ) : (
-          <><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3 h-3">
-            <path d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z" />
-          </svg>Asignar</>
-        )}
-      </button>
-    );
-  }
-
-  return (
-    <div ref={ref} className="relative">
-      <select
-        autoFocus
-        defaultValue={assigned?._id || ''}
-        onChange={e => { onAssign(reservation._id, e.target.value || null); setOpen(false); }}
-        onBlur={() => setOpen(false)}
-        className="text-xs border border-violet-300 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-violet-400 bg-white shadow-md min-w-[140px]"
-      >
-        <option value="">Sin mesa</option>
-        {hasGroups
-          ? Object.entries(grouped).map(([roomName, roomTables]) => (
-              <optgroup key={roomName} label={roomName}>
-                {roomTables.map(t => <option key={t._id} value={t._id}>{t.name}</option>)}
-              </optgroup>
-            ))
-          : available.map(t => <option key={t._id} value={t._id}>{t.name}</option>)
-        }
-      </select>
-    </div>
   );
 }
 

@@ -123,18 +123,6 @@ function MobileRow({ r, tables, onEdit, onCancel, onDelete, onAssign, onQuickSta
                 Confirmar
               </button>
             )}
-            {canModeratePending && r.status === 'pending' && (
-              <button onClick={() => onQuickStatus(r._id, 'seated')}
-                className="flex-1 text-xs font-semibold py-2 rounded-xl bg-emerald-600 text-white active:bg-emerald-700 transition-colors">
-                Sentar directo
-              </button>
-            )}
-            {r.status === 'confirmed' && (
-              <button onClick={() => onQuickStatus(r._id, 'seated')}
-                className="flex-1 text-xs font-semibold py-2 rounded-xl bg-emerald-600 text-white active:bg-emerald-700 transition-colors">
-                Pasar a sentada
-              </button>
-            )}
             {canMarkNoShow && (r.status === 'confirmed' || r.status === 'seated') && (
               <button onClick={() => onNoShow(r._id)}
                 className="px-3 py-2 rounded-xl text-xs font-semibold text-amber-700 bg-amber-50 active:bg-amber-100 transition-colors">

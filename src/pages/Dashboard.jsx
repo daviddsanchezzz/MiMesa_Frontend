@@ -116,8 +116,8 @@ export default function Dashboard() {
     await api.delete(`/reservations/${id}`);
     loadReservations();
   };
-  const handleAssign = async (id, tableId) => {
-    await api.put(`/reservations/${id}`, { tableId: tableId || null });
+  const handleAssign = async (id, tableIds) => {
+    await api.put(`/reservations/${id}`, { tableIds: tableIds || [] });
     loadReservations();
   };
 

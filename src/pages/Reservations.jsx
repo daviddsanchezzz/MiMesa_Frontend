@@ -56,10 +56,11 @@ function MobileRow({ r, tables, onEdit, onCancel, onDelete, onAssign, onQuickSta
               </svg>
               {r.people} pax
             </span>
-            {r.tableId && (
-              <span className="text-xs text-violet-600 font-medium bg-violet-50 px-1.5 py-0.5 rounded-md">{r.tableId.name}</span>
-            )}
-            {!r.tableId && (
+            {(r.tableIds?.length > 0 || r.tableId) ? (
+              (r.tableIds?.length > 0 ? r.tableIds : [r.tableId]).map(t => (
+                <span key={t._id || t} className="text-xs text-violet-600 font-medium bg-violet-50 px-1.5 py-0.5 rounded-md">{t.name}</span>
+              ))
+            ) : (
               <span className="text-xs text-gray-300">sin mesa</span>
             )}
             {(r.roomId?.name || r.tableId?.roomId?.name) && (
@@ -174,8 +175,10 @@ export default function Reservations() {
   const [pendingLoading, setPendingLoading] = useState(false);
   const [pendingProposal, setPendingProposal] = useState(null);
   const [pendingProposalSaving, setPendingProposalSaving] = useState(false);
-  const [filterMode,   setFilterMode]   = useState('today'); // today | week | upcoming | day | pending
+  const [filterMode,   setFilterMode]   = useState('today'); // today | week | upcoming | day | range | pending
   const [dateFilter,   setDateFilter]   = useState(new Date().toISOString().slice(0, 10));
+  const [dateFrom,     setDateFrom]     = useState(new Date().toISOString().slice(0, 10));
+  const [dateTo,       setDateTo]       = useState(new Date().toISOString().slice(0, 10));
   const [modal,        setModal]        = useState(null);
   const [expandedDesktopId, setExpandedDesktopId] = useState(null);
   const [toasts,       setToasts]       = useState([]);
@@ -270,6 +273,10 @@ export default function Reservations() {
     if (filterMode === 'day') {
       return api.get(`/reservations?date=${dateFilter}`).then(r => setReservations(r.data));
     }
+    if (filterMode === 'range') {
+      if (!dateFrom || !dateTo) return Promise.resolve();
+      return api.get(`/reservations?from=${dateFrom}&to=${dateTo}`).then(r => setReservations(r.data));
+    }
 
     return api.get('/reservations').then(r => {
       const now = new Date();
@@ -320,7 +327,7 @@ export default function Reservations() {
     load().catch((err) => {
       pushToast(err?.response?.data?.message || 'No se pudieron cargar las reservas', 'error');
     });
-  }, [filterMode, dateFilter]);
+  }, [filterMode, dateFilter, dateFrom, dateTo]);
 
   useEffect(() => {
     loadPendingReservations();
@@ -474,9 +481,9 @@ export default function Reservations() {
     });
   };
 
-  const assignTable = async (id, tableId) => {
+  const assignTable = async (id, tableIds) => {
     try {
-      await api.put(`/reservations/${id}`, { tableId });
+      await api.put(`/reservations/${id}`, { tableIds: tableIds || [] });
       await Promise.all([load(), loadPendingReservations()]);
     } catch (err) {
       pushToast(err?.response?.data?.message || 'No se pudo asignar la mesa', 'error');
@@ -521,9 +528,10 @@ export default function Reservations() {
           >
             <option value="today">Hoy</option>
             <option value="week">Esta semana</option>
-            <option value="upcoming">Todas (proximas 20)</option>
+            <option value="upcoming">Próximas 20</option>
             {canModeratePending && <option value="pending">Pendientes</option>}
-            <option value="day">Dia concreto</option>
+            <option value="day">Día concreto</option>
+            <option value="range">Rango de días</option>
           </select>
           <button
             onClick={openCreateModal}
@@ -547,6 +555,21 @@ export default function Reservations() {
               value={dateFilter}
               onChange={e => setDateFilter(e.target.value)}
               className="block w-full max-w-full min-w-0 box-border border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white"
+            />
+          </div>
+        )}
+        {filterMode === 'range' && (
+          <div className="mt-2 flex items-center gap-2">
+            <input
+              type="date" value={dateFrom}
+              onChange={e => setDateFrom(e.target.value)}
+              className="flex-1 min-w-0 border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white"
+            />
+            <span className="text-xs text-gray-400 shrink-0">—</span>
+            <input
+              type="date" value={dateTo}
+              onChange={e => setDateTo(e.target.value)}
+              className="flex-1 min-w-0 border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white"
             />
           </div>
         )}
@@ -593,15 +616,29 @@ export default function Reservations() {
           >
             <option value="today">Hoy</option>
             <option value="week">Esta semana</option>
-            <option value="upcoming">Todas (proximas 20)</option>
+            <option value="upcoming">Próximas 20</option>
             {canModeratePending && <option value="pending">Pendientes</option>}
-            <option value="day">Dia concreto</option>
+            <option value="day">Día concreto</option>
+            <option value="range">Rango de días</option>
           </select>
           {filterMode === 'day' && (
             <input type="date" value={dateFilter}
               onChange={e => setDateFilter(e.target.value)}
               className="block w-44 max-w-full min-w-0 box-border border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white"
             />
+          )}
+          {filterMode === 'range' && (
+            <>
+              <input type="date" value={dateFrom}
+                onChange={e => setDateFrom(e.target.value)}
+                className="w-36 border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white"
+              />
+              <span className="text-xs text-gray-400">—</span>
+              <input type="date" value={dateTo}
+                onChange={e => setDateTo(e.target.value)}
+                className="w-36 border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white"
+              />
+            </>
           )}
           <button
             onClick={openCreateModal}

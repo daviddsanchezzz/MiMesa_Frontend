@@ -22,6 +22,20 @@ export function TableCell({ reservation, tables, onAssign }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
 
+  // Resolve currently assigned IDs — prefer tableIds array, fallback to tableId
+  const assignedIds = (() => {
+    if (Array.isArray(reservation.tableIds) && reservation.tableIds.length > 0)
+      return reservation.tableIds.map(t => t?._id?.toString() || t?.toString()).filter(Boolean);
+    if (reservation.tableId)
+      return [reservation.tableId._id?.toString() || reservation.tableId.toString()];
+    return [];
+  })();
+
+  const [selected, setSelected] = useState(assignedIds);
+
+  // Reset selection when reservation changes
+  useEffect(() => { setSelected(assignedIds); }, [reservation._id]);
+
   useEffect(() => {
     if (!open) return;
     const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
@@ -33,7 +47,6 @@ export function TableCell({ reservation, tables, onAssign }) {
   const available = tables
     .filter(t => !roomId || t.roomId?._id === roomId || t.roomId === roomId)
     .sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
-  const assigned = reservation.tableId;
 
   const grouped = available.reduce((acc, t) => {
     const key = t.roomId?.name || 'Sin sala';
@@ -41,48 +54,103 @@ export function TableCell({ reservation, tables, onAssign }) {
     acc[key].push(t);
     return acc;
   }, {});
-  const hasGroups = Object.keys(grouped).length > 1 || !Object.keys(grouped)[0]?.match(/^Sin sala$/);
+
+  // Assigned table objects for display
+  const assignedTables = assignedIds
+    .map(id => tables.find(t => (t._id?.toString() || t.toString()) === id))
+    .filter(Boolean);
+
+  const toggle = (id) => setSelected(prev =>
+    prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+  );
+
+  const save = () => {
+    onAssign(reservation._id, selected);
+    setOpen(false);
+  };
 
   if (!open) {
     return (
       <button
-        onClick={() => setOpen(true)}
+        onClick={() => { setSelected(assignedIds); setOpen(true); }}
         className={`flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg border transition-colors ${
-          assigned
+          assignedTables.length > 0
             ? 'bg-slate-50 border-slate-200 text-slate-700 hover:border-violet-300 hover:bg-violet-50 hover:text-violet-600 font-medium'
             : 'border-dashed border-gray-300 text-gray-400 hover:border-violet-300 hover:text-violet-500 hover:bg-violet-50'
         }`}
       >
-        {assigned ? (
-          <><span className="w-1.5 h-1.5 rounded-full bg-violet-400 shrink-0" />{assigned.name}</>
+        {assignedTables.length > 0 ? (
+          <>
+            <span className="w-1.5 h-1.5 rounded-full bg-violet-400 shrink-0" />
+            {assignedTables.map(t => t.name).join(', ')}
+          </>
         ) : (
-          <><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3 h-3">
-            <path d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z" />
-          </svg>Asignar</>
+          <>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3 h-3">
+              <path d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z" />
+            </svg>
+            Asignar
+          </>
         )}
       </button>
     );
   }
 
   return (
-    <div ref={ref} className="relative">
-      <select
-        autoFocus
-        defaultValue={assigned?._id || ''}
-        onChange={e => { onAssign(reservation._id, e.target.value || null); setOpen(false); }}
-        onBlur={() => setOpen(false)}
-        className="text-xs border border-violet-300 rounded-lg px-2 py-1.5 focus:outline-none focus:ring-2 focus:ring-violet-400 bg-white shadow-md min-w-[140px]"
-      >
-        <option value="">Sin mesa</option>
-        {hasGroups
-          ? Object.entries(grouped).map(([roomName, roomTables]) => (
-              <optgroup key={roomName} label={roomName}>
-                {roomTables.map(t => <option key={t._id} value={t._id}>{t.name}</option>)}
-              </optgroup>
-            ))
-          : available.map(t => <option key={t._id} value={t._id}>{t.name}</option>)
-        }
-      </select>
+    <div ref={ref} className="relative z-10">
+      <div className="absolute left-0 top-0 bg-white border border-violet-200 rounded-xl shadow-lg p-3 min-w-[200px] max-w-[280px]">
+        <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-2">Seleccionar mesas</p>
+
+        {/* None option */}
+        <label className="flex items-center gap-2 py-1 px-1 rounded-lg hover:bg-gray-50 cursor-pointer">
+          <input
+            type="checkbox"
+            className="accent-violet-600 w-3.5 h-3.5"
+            checked={selected.length === 0}
+            onChange={() => setSelected([])}
+          />
+          <span className="text-xs text-gray-500">Sin mesa</span>
+        </label>
+
+        {/* Tables grouped by room */}
+        {Object.entries(grouped).map(([roomName, roomTables]) => (
+          <div key={roomName}>
+            {Object.keys(grouped).length > 1 && (
+              <p className="text-[10px] text-gray-400 font-medium mt-2 mb-1 px-1">{roomName}</p>
+            )}
+            {roomTables.map(t => {
+              const id = t._id?.toString();
+              return (
+                <label key={id} className="flex items-center gap-2 py-1 px-1 rounded-lg hover:bg-gray-50 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="accent-violet-600 w-3.5 h-3.5"
+                    checked={selected.includes(id)}
+                    onChange={() => toggle(id)}
+                  />
+                  <span className="text-xs text-gray-700 font-medium">{t.name}</span>
+                  {t.capacity && <span className="text-[10px] text-gray-400 ml-auto">{t.capacity} pax</span>}
+                </label>
+              );
+            })}
+          </div>
+        ))}
+
+        <div className="flex gap-2 mt-3 pt-2 border-t border-gray-100">
+          <button
+            onClick={save}
+            className="flex-1 text-xs font-semibold py-1.5 rounded-lg bg-violet-600 text-white hover:bg-violet-700 transition-colors"
+          >
+            Guardar
+          </button>
+          <button
+            onClick={() => setOpen(false)}
+            className="text-xs font-medium px-3 py-1.5 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors"
+          >
+            Cancelar
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
@@ -131,8 +199,10 @@ export function ReservationCard({
               </svg>
               {r.people} pax
             </span>
-            {r.tableId ? (
-              <span className="text-xs text-violet-600 font-medium bg-violet-50 px-1.5 py-0.5 rounded-md">{r.tableId.name}</span>
+            {(r.tableIds?.length > 0 || r.tableId) ? (
+              (r.tableIds?.length > 0 ? r.tableIds : [r.tableId]).map(t => (
+                <span key={t._id || t} className="text-xs text-violet-600 font-medium bg-violet-50 px-1.5 py-0.5 rounded-md">{t.name}</span>
+              ))
             ) : (
               <span className="text-xs text-gray-300">sin mesa</span>
             )}

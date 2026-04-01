@@ -1,117 +1,254 @@
-import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState, useEffect, useCallback } from 'react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import Modal from '../components/Modal';
 import ReservationForm from '../components/ReservationForm';
 
-// ─── Status Badges ──────────────────────────────────────────────────────────
-const statusBadge = {
-  pending:   { label: 'Pendiente',  cls: 'bg-gradient-to-r from-amber-400 to-amber-500 text-white shadow-sm' },
-  confirmed: { label: 'Confirmada', cls: 'bg-gradient-to-r from-violet-400 to-violet-500 text-white shadow-sm' },
-  seated:    { label: 'Sentada',    cls: 'bg-gradient-to-r from-emerald-400 to-emerald-500 text-white shadow-sm' },
-  cancelled: { label: 'Cancelada',  cls: 'bg-gradient-to-r from-gray-400 to-gray-500 text-white shadow-sm' },
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+function getToday() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function getWeekRange() {
+  const now = new Date();
+  const day = now.getDay(); // 0=Sun
+  const mon = new Date(now);
+  mon.setDate(now.getDate() - ((day + 6) % 7));
+  const sun = new Date(mon);
+  sun.setDate(mon.getDate() + 6);
+  return {
+    from: mon.toISOString().slice(0, 10),
+    to:   sun.toISOString().slice(0, 10),
+  };
+}
+
+function formatDayHeader(dateStr, today) {
+  const d = new Date(dateStr + 'T12:00:00');
+  const isToday = dateStr === today;
+  const isTomorrow = dateStr === (() => { const t = new Date(); t.setDate(t.getDate() + 1); return t.toISOString().slice(0, 10); })();
+  const weekday = d.toLocaleDateString('es-ES', { weekday: 'long' });
+  const dayMonth = d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
+  const prefix = isToday ? 'Hoy' : isTomorrow ? 'Mañana' : weekday.charAt(0).toUpperCase() + weekday.slice(1);
+  return { prefix, dayMonth, isToday };
+}
+
+// ─── Status config ────────────────────────────────────────────────────────────
+const STATUS = {
+  pending:   { label: 'Pendiente',  badge: 'bg-amber-50 text-amber-700 ring-1 ring-inset ring-amber-200',   dot: 'bg-amber-400' },
+  confirmed: { label: 'Confirmada', badge: 'bg-violet-50 text-violet-700 ring-1 ring-inset ring-violet-200', dot: 'bg-violet-500' },
+  seated:    { label: 'Sentada',    badge: 'bg-emerald-50 text-emerald-700 ring-1 ring-inset ring-emerald-200', dot: 'bg-emerald-500' },
+  no_show:   { label: 'No show',    badge: 'bg-rose-50 text-rose-600 ring-1 ring-inset ring-rose-200',      dot: 'bg-rose-400' },
+  cancelled: { label: 'Cancelada',  badge: 'bg-gray-100 text-gray-400 ring-1 ring-inset ring-gray-200',     dot: 'bg-gray-300' },
 };
 
-const IcoCalendar = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-5 h-5">
-    <path d="M5.75 7.5a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5ZM5 10.25a.75.75 0 1 1 1.5 0 .75.75 0 0 1-1.5 0ZM10.25 7.5a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5ZM9.5 10.25a.75.75 0 1 1 1.5 0 .75.75 0 0 1-1.5 0ZM7.25 7.5a.75.75 0 1 0 0 1.5.75.75 0 0 0 0-1.5ZM6.5 10.25a.75.75 0 1 1 1.5 0 .75.75 0 0 1-1.5 0Z" />
-    <path fillRule="evenodd" d="M4.75 1a.75.75 0 0 1 .75.75V3h5V1.75a.75.75 0 0 1 1.5 0V3h.25A2.75 2.75 0 0 1 15 5.75v7.5A2.75 2.75 0 0 1 12.25 16H3.75A2.75 2.75 0 0 1 1 13.25v-7.5A2.75 2.75 0 0 1 3.75 3H4V1.75A.75.75 0 0 1 4.75 1ZM3.75 4.5c-.69 0-1.25.56-1.25 1.25V6h11v-.25c0-.69-.56-1.25-1.25-1.25H3.75ZM2.5 7.5v5.75c0 .69.56 1.25 1.25 1.25h8.5c.69 0 1.25-.56 1.25-1.25V7.5h-11Z" clipRule="evenodd" />
-  </svg>
-);
-const IcoCheck = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-5 h-5">
-    <path fillRule="evenodd" d="M12.416 3.376a.75.75 0 0 1 .208 1.04l-5 7.5a.75.75 0 0 1-1.154.114l-3-3a.75.75 0 0 1 1.06-1.06l2.353 2.353 4.493-6.74a.75.75 0 0 1 1.04-.207Z" clipRule="evenodd" />
-  </svg>
-);
-const IcoTable = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-5 h-5">
-    <path fillRule="evenodd" d="M1 2.75A.75.75 0 0 1 1.75 2h10.5a.75.75 0 0 1 0 1.5H12v5.75A2.75 2.75 0 0 1 9.25 12H4.75A2.75 2.75 0 0 1 2 9.25V3.5h-.25A.75.75 0 0 1 1 2.75ZM3.5 3.5v5.75c0 .69.56 1.25 1.25 1.25h4.5c.69 0 1.25-.56 1.25-1.25V3.5h-7ZM6.25 13a.75.75 0 0 0-1.5 0v.25h-.5a.75.75 0 0 0 0 1.5h7.5a.75.75 0 0 0 0-1.5h-.5V13a.75.75 0 0 0-1.5 0v.25h-3.5V13Z" clipRule="evenodd" />
-  </svg>
-);
-const IcoLock = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-5 h-5">
-    <path fillRule="evenodd" d="M8 1a3.5 3.5 0 0 0-3.5 3.5V7A1.5 1.5 0 0 0 3 8.5v5A1.5 1.5 0 0 0 4.5 15h7a1.5 1.5 0 0 0 1.5-1.5v-5A1.5 1.5 0 0 0 11.5 7V4.5A3.5 3.5 0 0 0 8 1Zm2 6V4.5a2 2 0 1 0-4 0V7h4Z" clipRule="evenodd" />
-  </svg>
-);
-
-function StatCard({ label, value, icon, color, bg, to }) {
-  const inner = (
-    <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm hover:shadow-md transition-shadow duration-200 flex items-center gap-4">
-      <div className={`w-12 h-12 rounded-xl ${bg} ${color} flex items-center justify-center shrink-0`}>
-        {icon}
-      </div>
-      <div>
-        <p className="text-xs font-medium text-gray-400 uppercase tracking-wide">{label}</p>
-        <p className={`text-3xl font-bold mt-0.5 ${color}`}>{value}</p>
-      </div>
-    </div>
-  );
-  return to ? <Link to={to}>{inner}</Link> : inner;
-}
-
+// ─── Avatar ───────────────────────────────────────────────────────────────────
 function Avatar({ name }) {
-  const colors = ['bg-violet-500','bg-violet-500','bg-rose-500','bg-amber-500','bg-emerald-500','bg-cyan-500'];
-  const idx = (name?.charCodeAt(0) || 0) % colors.length;
+  const COLORS = ['bg-violet-500', 'bg-rose-500', 'bg-amber-500', 'bg-emerald-500', 'bg-cyan-500', 'bg-sky-500'];
+  const idx = (name?.charCodeAt(0) || 0) % COLORS.length;
   return (
-    <div className={`w-8 h-8 rounded-full ${colors[idx]} flex items-center justify-center text-white text-xs font-semibold shrink-0`}>
-      {name?.[0]?.toUpperCase()}
+    <div className={`w-9 h-9 rounded-full ${COLORS[idx]} flex items-center justify-center text-white text-sm font-semibold shrink-0`}>
+      {name?.[0]?.toUpperCase() || '?'}
     </div>
   );
 }
 
-export default function Dashboard() {
-  const navigate = useNavigate();
-  const { business } = useAuth();
-  const [reservations, setReservations] = useState([]);
-  const [tables, setTables] = useState([]);
-  const [showCreateModal, setShowCreateModal] = useState(false);
+// ─── Quick action button ──────────────────────────────────────────────────────
+function QBtn({ onClick, children, variant = 'gray', loading }) {
+  const cls = {
+    gray:    'text-gray-500 hover:text-gray-700 hover:bg-gray-100 border-gray-200',
+    green:   'text-emerald-700 hover:bg-emerald-50 border-emerald-200 bg-emerald-50/50',
+    red:     'text-rose-600 hover:bg-rose-50 border-rose-200',
+    violet:  'text-violet-700 hover:bg-violet-50 border-violet-200 bg-violet-50/50',
+  }[variant];
+  return (
+    <button
+      onClick={onClick}
+      disabled={loading}
+      className={`text-xs font-semibold px-2.5 py-1 rounded-lg border transition-colors disabled:opacity-50 ${cls}`}
+    >
+      {children}
+    </button>
+  );
+}
 
-  const today = new Date().toISOString().slice(0, 10);
-  const dateLabel = new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+// ─── Reservation Card ─────────────────────────────────────────────────────────
+function ReservationCard({ r, onStatusChange, onEdit }) {
+  const [busy, setBusy] = useState(false);
+  const st = STATUS[r.status] || STATUS.pending;
 
-  const loadData = () => {
-    api.get(`/reservations?date=${today}`).then(r => setReservations(r.data));
-    api.get('/tables').then(r => setTables(r.data));
-  };
-
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const handleNewReservationClick = () => {
-    const isSmallScreen = typeof window !== 'undefined' && window.matchMedia('(max-width: 639px)').matches;
-    if (isSmallScreen) {
-      setShowCreateModal(true);
-      return;
+  const changeStatus = async (status) => {
+    setBusy(true);
+    try {
+      await api.put(`/reservations/${r._id}`, { status });
+      onStatusChange();
+    } finally {
+      setBusy(false);
     }
-    navigate('/reservations');
   };
 
-  const free     = tables.filter(t => t.status === 'free').length;
-  const occupied = tables.filter(t => t.status === 'occupied').length;
-  const reserved = tables.filter(t => t.status === 'reserved').length;
-  const upcoming = reservations.filter(r => r.status === 'confirmed');
-
-  const total = tables.length || 1;
-  const pctFree     = Math.round((free / total) * 100);
-  const pctReserved = Math.round((reserved / total) * 100);
-  const pctOccupied = Math.round((occupied / total) * 100);
+  const room = r.roomId?.name || r.tableId?.roomId?.name;
 
   return (
-    <div className="space-y-5">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-3">
+    <div className="flex items-start gap-3 px-4 py-3.5 hover:bg-gray-50/60 transition-colors group">
+      <Avatar name={r.guestName} />
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2 flex-wrap">
+          <p className="text-sm font-semibold text-gray-900 truncate">{r.guestName}</p>
+          <span className={`shrink-0 inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full ${st.badge}`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${st.dot} shrink-0`} />
+            {st.label}
+          </span>
+        </div>
+        <div className="flex items-center gap-2 mt-0.5 flex-wrap">
+          <span className="text-xs text-gray-500 font-medium tabular-nums">{r.time}</span>
+          <span className="text-gray-200 text-xs">·</span>
+          <span className="text-xs text-gray-500">{r.people} {r.people === 1 ? 'persona' : 'personas'}</span>
+          {r.tableId && (
+            <>
+              <span className="text-gray-200 text-xs">·</span>
+              <span className="text-xs text-violet-600 font-medium">{r.tableId.name}</span>
+            </>
+          )}
+          {room && !r.tableId && (
+            <>
+              <span className="text-gray-200 text-xs">·</span>
+              <span className="text-xs text-gray-400">{room}</span>
+            </>
+          )}
+          {r.notes && (
+            <>
+              <span className="text-gray-200 text-xs">·</span>
+              <span className="text-xs text-gray-400 italic truncate max-w-[120px]">{r.notes}</span>
+            </>
+          )}
+        </div>
+
+        {/* Quick actions */}
+        <div className="flex items-center gap-1.5 mt-2 flex-wrap">
+          {r.status === 'pending' && (
+            <>
+              <QBtn variant="green" onClick={() => changeStatus('confirmed')} loading={busy}>Confirmar</QBtn>
+              <QBtn variant="red"   onClick={() => changeStatus('cancelled')} loading={busy}>Cancelar</QBtn>
+            </>
+          )}
+          {r.status === 'confirmed' && (
+            <>
+              <QBtn variant="violet" onClick={() => changeStatus('seated')} loading={busy}>Sentar</QBtn>
+              <QBtn variant="red"    onClick={() => changeStatus('cancelled')} loading={busy}>Cancelar</QBtn>
+            </>
+          )}
+          {r.status === 'seated' && (
+            <QBtn variant="gray" onClick={() => changeStatus('cancelled')} loading={busy}>Cancelar</QBtn>
+          )}
+          <QBtn variant="gray" onClick={() => onEdit(r)}>Editar</QBtn>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── Mini stat pill ────────────────────────────────────────────────────────────
+function Pill({ label, value, color = 'gray' }) {
+  const cls = {
+    gray:   'bg-gray-100 text-gray-600',
+    violet: 'bg-violet-50 text-violet-700',
+    amber:  'bg-amber-50 text-amber-700',
+    emerald:'bg-emerald-50 text-emerald-700',
+  }[color];
+  return (
+    <span className={`inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full ${cls}`}>
+      <span className="text-sm font-bold tabular-nums">{value}</span>
+      {label}
+    </span>
+  );
+}
+
+// ─── Empty state ──────────────────────────────────────────────────────────────
+function EmptyDay({ onNew }) {
+  return (
+    <div className="py-10 flex flex-col items-center gap-3">
+      <div className="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-6 h-6 text-gray-300">
+          <path fillRule="evenodd" d="M5.75 2a.75.75 0 0 1 .75.75V4h7V2.75a.75.75 0 0 1 1.5 0V4h.25A2.75 2.75 0 0 1 18 6.75v8.5A2.75 2.75 0 0 1 15.25 18H4.75A2.75 2.75 0 0 1 2 15.25v-8.5A2.75 2.75 0 0 1 4.75 4H5V2.75A.75.75 0 0 1 5.75 2Zm-1 5.5c-.69 0-1.25.56-1.25 1.25v6.5c0 .69.56 1.25 1.25 1.25h10.5c.69 0 1.25-.56 1.25-1.25v-6.5c0-.69-.56-1.25-1.25-1.25H4.75Z" clipRule="evenodd" />
+        </svg>
+      </div>
+      <p className="text-sm text-gray-400">Sin reservas para este período</p>
+      <button
+        onClick={onNew}
+        className="text-sm font-semibold text-violet-600 hover:text-violet-700 transition-colors"
+      >
+        + Crear la primera
+      </button>
+    </div>
+  );
+}
+
+// ─── Main ─────────────────────────────────────────────────────────────────────
+export default function Dashboard() {
+  const { business } = useAuth();
+  const [view, setView] = useState('today'); // 'today' | 'week'
+  const [reservations, setReservations] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [showCreate, setShowCreate] = useState(false);
+  const [editReservation, setEditReservation] = useState(null);
+
+  const today = getToday();
+  const todayLabel = new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      if (view === 'today') {
+        const r = await api.get(`/reservations?date=${today}`);
+        setReservations(r.data);
+      } else {
+        const { from, to } = getWeekRange();
+        const r = await api.get(`/reservations?from=${from}&to=${to}`);
+        setReservations(r.data);
+      }
+    } finally {
+      setLoading(false);
+    }
+  }, [view, today]);
+
+  useEffect(() => { load(); }, [load]);
+
+  // Stats
+  const total     = reservations.length;
+  const pending   = reservations.filter(r => r.status === 'pending').length;
+  const confirmed = reservations.filter(r => r.status === 'confirmed').length;
+  const seated    = reservations.filter(r => r.status === 'seated').length;
+  const cancelled = reservations.filter(r => r.status === 'cancelled').length;
+
+  // Week: group by date
+  const byDate = reservations.reduce((acc, r) => {
+    if (!acc[r.date]) acc[r.date] = [];
+    acc[r.date].push(r);
+    return acc;
+  }, {});
+  const sortedDates = Object.keys(byDate).sort();
+
+  // Week stats
+  const todayCount    = reservations.filter(r => r.date === today).length;
+  const tomorrow      = (() => { const d = new Date(); d.setDate(d.getDate() + 1); return d.toISOString().slice(0, 10); })();
+  const tomorrowCount = reservations.filter(r => r.date === tomorrow).length;
+
+  const handleEdit = (r) => setEditReservation(r);
+  const handleSaved = () => { setShowCreate(false); setEditReservation(null); load(); };
+
+  return (
+    <div className="space-y-4 max-w-2xl mx-auto">
+      {/* ── Header ── */}
+      <div className="flex items-center justify-between gap-3">
         <div>
           <h2 className="text-xl font-bold text-gray-900">
-            Hola, <span className="text-violet-600">{business?.name}</span>
+            {business?.name}
           </h2>
-          <p className="text-sm text-gray-400 mt-0.5 capitalize">{dateLabel}</p>
+          <p className="text-sm text-gray-400 capitalize">{todayLabel}</p>
         </div>
         <button
-          type="button"
-          onClick={handleNewReservationClick}
-          className="shrink-0 flex items-center gap-2 bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors shadow-sm"
+          onClick={() => setShowCreate(true)}
+          className="flex items-center gap-2 bg-violet-600 hover:bg-violet-700 active:bg-violet-800 text-white px-4 py-2.5 rounded-2xl text-sm font-semibold transition-colors shadow-sm shrink-0"
         >
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
             <path d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z" />
@@ -121,94 +258,140 @@ export default function Dashboard() {
         </button>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <StatCard label="Reservas hoy"     value={reservations.length} icon={<IcoCalendar />} color="text-violet-600"  bg="bg-violet-50"  to="/reservations" />
-        <StatCard label="Mesas libres"     value={free}                icon={<IcoCheck />}    color="text-emerald-600" bg="bg-emerald-50" to="/tables" />
-        <StatCard label="Mesas ocupadas"   value={occupied}            icon={<IcoTable />}    color="text-rose-600"    bg="bg-rose-50"    to="/tables" />
-        <StatCard label="Mesas reservadas" value={reserved}            icon={<IcoLock />}     color="text-amber-600"   bg="bg-amber-50"   to="/tables" />
+      {/* ── Period selector ── */}
+      <div className="flex items-center gap-1 bg-gray-100 rounded-2xl p-1 w-fit">
+        {[
+          { key: 'today', label: 'Hoy' },
+          { key: 'week',  label: 'Esta semana' },
+        ].map(v => (
+          <button
+            key={v.key}
+            onClick={() => setView(v.key)}
+            className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${
+              view === v.key
+                ? 'bg-white text-gray-900 shadow-sm'
+                : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            {v.label}
+          </button>
+        ))}
       </div>
 
-      {/* Occupancy bar */}
-      {tables.length > 0 && (
-        <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-sm">
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-semibold text-gray-700">Ocupación de mesas</h3>
-            <span className="text-xs text-gray-400">{tables.length} mesas en total</span>
-          </div>
-          <div className="flex rounded-full overflow-hidden h-3 gap-0.5 bg-gray-100">
-            {pctOccupied > 0 && <div className="bg-rose-400 transition-all" style={{ width: `${pctOccupied}%` }} />}
-            {pctReserved > 0 && <div className="bg-amber-400 transition-all" style={{ width: `${pctReserved}%` }} />}
-            {pctFree > 0     && <div className="bg-emerald-400 transition-all" style={{ width: `${pctFree}%` }} />}
-          </div>
-          <div className="flex items-center gap-5 mt-3">
-            {[
-              { label: 'Ocupadas',   pct: pctOccupied, dot: 'bg-rose-400' },
-              { label: 'Reservadas', pct: pctReserved, dot: 'bg-amber-400' },
-              { label: 'Libres',     pct: pctFree,     dot: 'bg-emerald-400' },
-            ].map(l => (
-              <div key={l.label} className="flex items-center gap-1.5">
-                <span className={`w-2 h-2 rounded-full ${l.dot}`} />
-                <span className="text-xs text-gray-500">{l.label} {l.pct}%</span>
-              </div>
-            ))}
-          </div>
+      {/* ── Stats pills ── */}
+      {!loading && total > 0 && (
+        <div className="flex items-center gap-2 flex-wrap">
+          {view === 'today' ? (
+            <>
+              <Pill value={total}     label="reservas"   color="gray" />
+              {pending   > 0 && <Pill value={pending}   label="pendientes" color="amber" />}
+              {confirmed > 0 && <Pill value={confirmed} label="confirmadas" color="violet" />}
+              {seated    > 0 && <Pill value={seated}    label="sentadas"    color="emerald" />}
+              {cancelled > 0 && <Pill value={cancelled} label="canceladas"  color="gray" />}
+            </>
+          ) : (
+            <>
+              <Pill value={total}         label="esta semana" color="gray" />
+              {todayCount    > 0 && <Pill value={todayCount}    label="hoy"      color="violet" />}
+              {tomorrowCount > 0 && <Pill value={tomorrowCount} label="mañana"   color="amber" />}
+            </>
+          )}
         </div>
       )}
 
-
-      {/* Upcoming reservations */}
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-gray-900">Próximas reservas de hoy</h3>
-          <Link to="/reservations" className="text-xs text-violet-600 hover:text-violet-700 font-medium">Ver todas →</Link>
-        </div>
-
-        {upcoming.length === 0 ? (
-          <div className="py-14 text-center">
-            <div className="w-12 h-12 rounded-xl bg-gray-50 flex items-center justify-center mx-auto mb-3">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-6 h-6 text-gray-300">
-                <path d="M2.5 3A1.5 1.5 0 0 0 1 4.5v.793c.026.009.051.02.076.032L7.674 8.51c.206.1.446.1.652 0l6.598-3.185A.755.755 0 0 1 15 5.293V4.5A1.5 1.5 0 0 0 13.5 3h-11Z" />
-                <path d="M15 6.954 8.978 9.86a2.25 2.25 0 0 1-1.956 0L1 6.954V11.5A1.5 1.5 0 0 0 2.5 13h11a1.5 1.5 0 0 0 1.5-1.5V6.954Z" />
-              </svg>
+      {/* ── Content ── */}
+      {loading ? (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm divide-y divide-gray-50">
+          {[...Array(4)].map((_, i) => (
+            <div key={i} className="px-4 py-4 flex items-center gap-3 animate-pulse">
+              <div className="w-9 h-9 rounded-full bg-gray-100 shrink-0" />
+              <div className="flex-1 space-y-2">
+                <div className="h-3 bg-gray-100 rounded w-1/3" />
+                <div className="h-2 bg-gray-100 rounded w-1/2" />
+              </div>
             </div>
-            <p className="text-sm text-gray-400">Sin reservas pendientes para hoy</p>
-          </div>
-        ) : (
-          <div className="divide-y divide-gray-50">
-            {upcoming.map((r) => {
-              const s = statusBadge[r.status];
+          ))}
+        </div>
+      ) : view === 'today' ? (
+        /* ── TODAY: flat list ordered by time ── */
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          {reservations.length === 0 ? (
+            <EmptyDay onNew={() => setShowCreate(true)} />
+          ) : (
+            <div className="divide-y divide-gray-50">
+              {reservations
+                .slice()
+                .sort((a, b) => a.time.localeCompare(b.time))
+                .map(r => (
+                  <ReservationCard
+                    key={r._id}
+                    r={r}
+                    onStatusChange={load}
+                    onEdit={handleEdit}
+                  />
+                ))}
+            </div>
+          )}
+        </div>
+      ) : (
+        /* ── WEEK: grouped by day ── */
+        <div className="space-y-3">
+          {sortedDates.length === 0 ? (
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+              <EmptyDay onNew={() => setShowCreate(true)} />
+            </div>
+          ) : (
+            sortedDates.map(date => {
+              const { prefix, dayMonth, isToday } = formatDayHeader(date, today);
+              const rsvs = byDate[date] || [];
               return (
-                <div key={r._id} className="px-5 py-3.5 flex items-center gap-3 hover:bg-gray-50/50 transition-colors">
-                  <Avatar name={r.guestName} />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium text-gray-900 truncate">{r.guestName}</p>
-                    <p className="text-xs text-gray-400 mt-0.5">
-                      {r.time} · {r.people} {r.people === 1 ? 'persona' : 'personas'}
-                      {r.tableId && <span className="text-gray-300"> · </span>}
-                      {r.tableId && <span className="text-violet-500">{r.tableId.name}</span>}
-                    </p>
+                <div key={date} className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                  {/* Day header */}
+                  <div className={`flex items-center justify-between px-4 py-3 border-b border-gray-50 ${isToday ? 'bg-violet-50/60' : ''}`}>
+                    <div className="flex items-center gap-2">
+                      {isToday && <span className="w-2 h-2 rounded-full bg-violet-500 shrink-0" />}
+                      <span className={`text-sm font-bold ${isToday ? 'text-violet-700' : 'text-gray-800'}`}>
+                        {prefix}
+                      </span>
+                      <span className="text-sm text-gray-400">{dayMonth}</span>
+                    </div>
+                    <span className="text-xs font-semibold text-gray-400 tabular-nums">
+                      {rsvs.length} {rsvs.length === 1 ? 'reserva' : 'reservas'}
+                    </span>
                   </div>
-                  <span className={`shrink-0 text-xs px-2.5 py-1 rounded-full font-medium ${s.cls}`}>{s.label}</span>
+                  {/* Reservations */}
+                  <div className="divide-y divide-gray-50">
+                    {rsvs
+                      .slice()
+                      .sort((a, b) => a.time.localeCompare(b.time))
+                      .map(r => (
+                        <ReservationCard
+                          key={r._id}
+                          r={r}
+                          onStatusChange={load}
+                          onEdit={handleEdit}
+                        />
+                      ))}
+                  </div>
                 </div>
               );
-            })}
-          </div>
-        )}
-      </div>
+            })
+          )}
+        </div>
+      )}
 
-      {showCreateModal && (
-        <Modal
-          title="Nueva reserva"
-          subtitle="Crea una nueva reserva"
-          onClose={() => setShowCreateModal(false)}
-        >
+      {/* ── Modals ── */}
+      {showCreate && (
+        <Modal title="Nueva reserva" onClose={() => setShowCreate(false)}>
+          <ReservationForm onSave={handleSaved} onCancel={() => setShowCreate(false)} />
+        </Modal>
+      )}
+      {editReservation && (
+        <Modal title="Editar reserva" onClose={() => setEditReservation(null)}>
           <ReservationForm
-            onSave={() => {
-              setShowCreateModal(false);
-              loadData();
-            }}
-            onCancel={() => setShowCreateModal(false)}
+            reservation={editReservation}
+            onSave={handleSaved}
+            onCancel={() => setEditReservation(null)}
           />
         </Modal>
       )}

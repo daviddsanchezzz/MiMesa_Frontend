@@ -1,7 +1,9 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import publicApi from '../services/publicApi';
 import TRANSLATIONS from '../i18n';
+import { loadStripe } from '@stripe/stripe-js';
+import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 
 
 
@@ -41,6 +43,148 @@ function ChevronRight() {
   );
 }
 
+// ── Componente de pago (necesita estar dentro de <Elements>) ─────────────────
+function PaymentStep({ paymentConfig, form, brandColor, onBack, onPaid, error, setError, publicApi, businessId }) {
+  const stripe   = useStripe();
+  const elements = useElements();
+  const [paying, setPaying] = useState(false);
+
+  const bs = { backgroundColor: brandColor };
+  const mode = paymentConfig?.mode;
+
+  const depositLabel = () => {
+    const cents = paymentConfig?.depositPerPerson
+      ? (paymentConfig.depositAmount ?? 0) * form.people
+      : (paymentConfig.depositAmount ?? 0);
+    return `${(cents / 100).toFixed(2)} ${(paymentConfig?.currency ?? 'eur').toUpperCase()}`;
+  };
+
+  const noShowLabel = () => {
+    const cents = paymentConfig?.noShowFeeAmount ?? 0;
+    return `${(cents / 100).toFixed(2)} ${(paymentConfig?.currency ?? 'eur').toUpperCase()}`;
+  };
+
+  const handlePay = async (e) => {
+    e.preventDefault();
+    if (!stripe || !elements) return;
+    setPaying(true);
+    setError('');
+
+    try {
+      if (mode === 'deposit') {
+        // 1. Crear PaymentIntent en el backend
+        const piRes = await publicApi.post('/reservations/public/payment-intent', {
+          businessId,
+          people: form.people,
+        });
+        const { clientSecret } = piRes.data;
+
+        // 2. Confirmar el pago con la tarjeta del huésped
+        const { error: stripeErr, paymentIntent } = await stripe.confirmCardPayment(clientSecret, {
+          payment_method: { card: elements.getElement(CardElement) },
+        });
+        if (stripeErr) { setError(stripeErr.message); setPaying(false); return; }
+
+        // 3. Crear la reserva pasando el paymentIntentId
+        await onPaid({ paymentIntentId: paymentIntent.id });
+
+      } else if (mode === 'card_guarantee') {
+        // 1. Crear SetupIntent en el backend
+        const siRes = await publicApi.post('/reservations/public/setup-intent', { businessId });
+        const { clientSecret } = siRes.data;
+
+        // 2. Confirmar el SetupIntent (guarda la tarjeta sin cobrar)
+        const { error: stripeErr, setupIntent } = await stripe.confirmCardSetup(clientSecret, {
+          payment_method: { card: elements.getElement(CardElement) },
+        });
+        if (stripeErr) { setError(stripeErr.message); setPaying(false); return; }
+
+        // 3. Crear la reserva pasando setupIntentId + paymentMethodId
+        await onPaid({
+          setupIntentId:   setupIntent.id,
+          paymentMethodId: setupIntent.payment_method,
+        });
+      }
+    } catch (err) {
+      setError(err?.response?.data?.message || 'Error al procesar el pago');
+      setPaying(false);
+    }
+  };
+
+  return (
+    <form onSubmit={handlePay} className="space-y-5">
+      <div>
+        <h2 className="text-xl font-bold text-gray-900 mb-1">
+          {mode === 'deposit' ? 'Pago del depósito' : 'Garantía con tarjeta'}
+        </h2>
+        <p className="text-sm text-gray-500">
+          {mode === 'deposit'
+            ? `Se cargará un depósito de ${depositLabel()} para confirmar tu reserva.`
+            : `Tu tarjeta no se cobrará ahora. Se guardará como garantía (${noShowLabel()} si no asistes).`
+          }
+        </p>
+      </div>
+
+      {/* Política de cancelación */}
+      <div className="flex items-start gap-2.5 px-3.5 py-3 bg-blue-50 border border-blue-100 rounded-xl">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 text-blue-400 mt-0.5 shrink-0">
+          <path fillRule="evenodd" d="M15 8A7 7 0 1 1 1 8a7 7 0 0 1 14 0Zm-6 3.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0ZM7.293 5.293a1 1 0 1 1 1.414 1.414L8 7.414V9.5a.5.5 0 0 1-1 0V7.414L6.293 6.707a.999.999 0 0 1 0-1.414Z" clipRule="evenodd" />
+        </svg>
+        <p className="text-xs text-blue-700">
+          {mode === 'deposit'
+            ? `Cancelación gratuita hasta ${paymentConfig?.freeCancellationHours ?? 24}h antes de la reserva. Fuera de ese plazo el depósito no se reembolsa.`
+            : `Sin cargo si cancelas con más de ${paymentConfig?.freeCancellationHours ?? 24}h de antelación.`
+          }
+        </p>
+      </div>
+
+      {/* Resumen reserva */}
+      <div className="px-3.5 py-3 bg-gray-50 rounded-xl border border-gray-200 text-sm text-gray-700">
+        <span className="font-semibold">{form.date}</span> · {form.time} · {form.people} {form.people === 1 ? 'persona' : 'personas'}
+      </div>
+
+      {/* Stripe Card Element */}
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-1.5">
+          {mode === 'deposit' ? 'Datos de pago' : 'Datos de tarjeta'}
+        </label>
+        <div className="border border-gray-300 rounded-xl px-3.5 py-3 bg-white focus-within:ring-2 focus-within:ring-violet-500 focus-within:border-transparent transition-shadow">
+          <CardElement options={{
+            style: {
+              base: {
+                fontSize: '14px',
+                color: '#111827',
+                '::placeholder': { color: '#9CA3AF' },
+              },
+            },
+            hidePostalCode: true,
+          }} />
+        </div>
+      </div>
+
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-3 py-2">{error}</div>
+      )}
+
+      <div className="flex gap-3">
+        <button type="button" onClick={onBack}
+          className="flex-1 bg-gray-100 text-gray-700 py-3 rounded-xl font-medium hover:bg-gray-200 transition-colors">
+          Atrás
+        </button>
+        <button type="submit" disabled={!stripe || paying}
+          className="flex-1 text-white py-3 rounded-xl font-semibold transition-colors disabled:opacity-60 flex items-center justify-center gap-2"
+          style={bs}>
+          {paying && <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />}
+          {mode === 'deposit'
+            ? (paying ? 'Procesando...' : `Pagar ${depositLabel()}`)
+            : (paying ? 'Guardando...'  : 'Guardar tarjeta y confirmar')
+          }
+        </button>
+      </div>
+    </form>
+  );
+}
+
 export default function PublicReservation() {
   const { businessId } = useParams();
   const navigate = useNavigate();
@@ -63,6 +207,10 @@ export default function PublicReservation() {
   const [hasActivePromo, setHasActivePromo] = useState(false);
   const [promoStatus, setPromoStatus] = useState(null); // null | 'checking' | 'valid' | 'invalid'
   const [promoDesc, setPromoDesc] = useState('');
+  // Pago
+  const [paymentConfig, setPaymentConfig] = useState(null); // null = cargando, { mode, ... } cuando listo
+  const [stripePromise, setStripePromise]  = useState(null);
+  const stripeLoadedRef = useRef(false);
 
   const todayDate = useMemo(() => { const d = new Date(); d.setHours(0,0,0,0); return d; }, []);
   const todayStr = `${todayDate.getFullYear()}-${String(todayDate.getMonth()+1).padStart(2,'0')}-${String(todayDate.getDate()).padStart(2,'0')}`;
@@ -77,12 +225,24 @@ export default function PublicReservation() {
   useEffect(() => {
     (async () => {
       try {
-        const [bizRes, roomsRes, promoRes] = await Promise.all([
+        const [bizRes, roomsRes, promoRes, paymentRes] = await Promise.all([
           publicApi.get(`/auth/public/business/${businessId}`),
           publicApi.get(`/rooms/public/${businessId}`),
           publicApi.get(`/promos/public/${businessId}/has-active`).catch(() => ({ data: { hasActive: false } })),
+          publicApi.get(`/reservations/public/payment-config?businessId=${businessId}`).catch(() => ({ data: { mode: 'none' } })),
         ]);
         setBusiness(bizRes.data);
+
+        // Cargar Stripe solo si el negocio tiene pagos activos
+        const pc = paymentRes.data;
+        setPaymentConfig(pc);
+        if (pc.mode !== 'none' && pc.stripeConnectId && !stripeLoadedRef.current) {
+          stripeLoadedRef.current = true;
+          const pubKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
+          if (pubKey) {
+            setStripePromise(loadStripe(pubKey, { stripeAccount: pc.stripeConnectId }));
+          }
+        }
         setRooms(Array.isArray(roomsRes.data) ? roomsRes.data : roomsRes.data?.rooms || []);
         setHasActivePromo(promoRes.data.hasActive);
       } catch {
@@ -174,6 +334,8 @@ export default function PublicReservation() {
   };
   const selectPeople = (n) => { setForm(f => ({ ...f, people: n })); };
 
+  const needsPayment = paymentConfig && paymentConfig.mode !== 'none' && stripePromise;
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
@@ -181,6 +343,17 @@ export default function PublicReservation() {
     if (!form.guestPhone.trim()) { setError(tr.errorPhone); return; }
     if (!form.guestEmail.trim()) { setError(tr.errorEmail); return; }
     if (!form.consent) { setError(tr.errorConsent); return; }
+
+    // Si hay pago activo, ir al paso 5 en lugar de enviar directamente
+    if (needsPayment) {
+      setStep(5);
+      return;
+    }
+
+    await submitReservation({});
+  };
+
+  const submitReservation = async ({ paymentIntentId, setupIntentId, paymentMethodId } = {}) => {
     try {
       await publicApi.post('/reservations/public', {
         businessId, ...form,
@@ -188,6 +361,9 @@ export default function PublicReservation() {
         promoCode: promoStatus === 'valid' ? form.promoCode.trim().toUpperCase() : '',
         marketingConsent:     form.marketing,
         marketingConsentText: form.marketing ? tr.consentMarketing : '',
+        paymentIntentId,
+        setupIntentId,
+        paymentMethodId,
       });
       setSuccess(tr.successMsg);
     } catch (err) {
@@ -572,10 +748,27 @@ export default function PublicReservation() {
                       {tr.back}
                     </button>
                     <button type="submit" className="flex-1 text-white py-3 rounded-xl font-medium transition-colors" style={bs}>
-                      {tr.book}
+                      {needsPayment ? 'Siguiente →' : tr.book}
                     </button>
                   </div>
                 </form>
+              )}
+
+              {/* STEP 5: Payment */}
+              {step === 5 && stripePromise && (
+                <Elements stripe={stripePromise}>
+                  <PaymentStep
+                    paymentConfig={paymentConfig}
+                    form={form}
+                    brandColor={brandColor}
+                    onBack={() => setStep(4)}
+                    onPaid={submitReservation}
+                    error={error}
+                    setError={setError}
+                    publicApi={publicApi}
+                    businessId={businessId}
+                  />
+                </Elements>
               )}
             </div>
           )}

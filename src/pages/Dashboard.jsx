@@ -118,6 +118,16 @@ export default function Dashboard() {
     await api.put(`/reservations/${id}`, { tableIds: tableIds || [] });
     loadReservations();
   };
+  const handleChargeNoShow = async (id) => {
+    if (!window.confirm('¿Cobrar el no-show a la tarjeta guardada?')) return;
+    await api.post(`/reservations/${id}/charge-noshow`);
+    loadReservations();
+  };
+  const handleRefundDeposit = async (id) => {
+    if (!window.confirm('¿Reembolsar el depósito al cliente?')) return;
+    await api.post(`/reservations/${id}/refund`);
+    loadReservations();
+  };
 
   // ── Stats ──
   const total     = reservations.length;
@@ -147,6 +157,8 @@ export default function Dashboard() {
     onDelete: () => handleDelete(r._id),
     onAssign: handleAssign,
     onEdit: () => setModal({ mode: 'edit', reservation: r }),
+    onChargeNoShow: handleChargeNoShow,
+    onRefundDeposit: handleRefundDeposit,
     canModeratePending,
     canMarkNoShow,
   });
@@ -193,6 +205,18 @@ export default function Dashboard() {
                   {r.customerId && <span title="Cliente registrado" className="w-1.5 h-1.5 rounded-full bg-violet-400 shrink-0" />}
                 </div>
                 <p className="text-xs text-gray-400 mt-0.5">{r.guestPhone || r.guestEmail || '—'}</p>
+                {r.payment?.mode === 'deposit' && r.payment?.status === 'captured' && (
+                  <span className="text-[10px] font-medium text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-md mt-0.5 inline-block">Dep. {Math.round(r.payment.amount / 100)}€</span>
+                )}
+                {r.payment?.mode === 'deposit' && r.payment?.status === 'refunded' && (
+                  <span className="text-[10px] font-medium text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded-md mt-0.5 inline-block">Dep. reembolsado</span>
+                )}
+                {r.payment?.mode === 'card_guarantee' && r.payment?.stripePaymentMethodId && r.payment?.status !== 'captured' && (
+                  <span className="text-[10px] font-medium text-violet-700 bg-violet-50 px-1.5 py-0.5 rounded-md mt-0.5 inline-block">Tarjeta guardada</span>
+                )}
+                {r.payment?.mode === 'card_guarantee' && r.payment?.status === 'captured' && (
+                  <span className="text-[10px] font-medium text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded-md mt-0.5 inline-block">No-show cobrado</span>
+                )}
               </div>
             </div>
           </td>
@@ -256,6 +280,18 @@ export default function Dashboard() {
                   <button onClick={() => handleNoShow(r._id)}
                     className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors">
                     Marcar no-show
+                  </button>
+                )}
+                {canMarkNoShow && r.payment?.mode === 'card_guarantee' && r.payment?.stripePaymentMethodId && r.payment?.status !== 'captured' && (
+                  <button onClick={() => handleChargeNoShow(r._id)}
+                    className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 transition-colors">
+                    Cobrar no-show
+                  </button>
+                )}
+                {canMarkNoShow && r.payment?.mode === 'deposit' && r.payment?.status === 'captured' && (
+                  <button onClick={() => handleRefundDeposit(r._id)}
+                    className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-sky-50 text-sky-700 hover:bg-sky-100 transition-colors">
+                    Reembolsar depósito
                   </button>
                 )}
                 {r.status !== 'cancelled' && r.status !== 'no_show' && (

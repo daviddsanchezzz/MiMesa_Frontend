@@ -21,7 +21,21 @@ function ActionBtn({ onClick, children, color = 'gray' }) {
 }
 
 // â"€â"€ Mobile row: ultra-compact, max density â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
-function MobileRow({ r, tables, onEdit, onCancel, onDelete, onAssign, onQuickStatus, onNoShow, canMarkNoShow, canModeratePending }) {
+function PaymentBadge({ payment }) {
+  if (!payment || payment.mode === 'none') return null;
+  if (payment.mode === 'deposit') {
+    const amt = payment.amount ? `${Math.round(payment.amount / 100)}€` : '';
+    if (payment.status === 'refunded') return <span className="text-[10px] font-medium text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded-md">Dep. reembolsado</span>;
+    if (payment.status === 'captured') return <span className="text-[10px] font-medium text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-md">Dep. {amt}</span>;
+  }
+  if (payment.mode === 'card_guarantee') {
+    if (payment.status === 'captured') return <span className="text-[10px] font-medium text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded-md">No-show cobrado</span>;
+    if (payment.stripePaymentMethodId) return <span className="text-[10px] font-medium text-violet-700 bg-violet-50 px-1.5 py-0.5 rounded-md">Tarjeta guardada</span>;
+  }
+  return null;
+}
+
+function MobileRow({ r, tables, onEdit, onCancel, onDelete, onAssign, onQuickStatus, onNoShow, onChargeNoShow, onRefundDeposit, canMarkNoShow, canModeratePending }) {
   const [expanded, setExpanded] = useState(false);
   const s = statusConfig[r.status];
   const isCancelled = r.status === 'cancelled';
@@ -69,6 +83,7 @@ function MobileRow({ r, tables, onEdit, onCancel, onDelete, onAssign, onQuickSta
             {r.promoCode && (
               <span className="text-xs text-amber-700 font-medium bg-amber-50 px-1.5 py-0.5 rounded-md">{r.promoCode}</span>
             )}
+            <PaymentBadge payment={r.payment} />
           </div>
         </div>
 
@@ -127,6 +142,18 @@ function MobileRow({ r, tables, onEdit, onCancel, onDelete, onAssign, onQuickSta
               <button onClick={() => onNoShow(r._id)}
                 className="px-3 py-2 rounded-xl text-xs font-semibold text-amber-700 bg-amber-50 active:bg-amber-100 transition-colors">
                 No show
+              </button>
+            )}
+            {canMarkNoShow && r.payment?.mode === 'card_guarantee' && r.payment?.stripePaymentMethodId && r.payment?.status !== 'captured' && (
+              <button onClick={() => onChargeNoShow(r._id)}
+                className="px-3 py-2 rounded-xl text-xs font-semibold text-rose-700 bg-rose-50 active:bg-rose-100 transition-colors">
+                Cobrar no-show
+              </button>
+            )}
+            {canMarkNoShow && r.payment?.mode === 'deposit' && r.payment?.status === 'captured' && (
+              <button onClick={() => onRefundDeposit(r._id)}
+                className="px-3 py-2 rounded-xl text-xs font-semibold text-sky-700 bg-sky-50 active:bg-sky-100 transition-colors">
+                Reembolsar
               </button>
             )}
             <button onClick={onEdit}
@@ -459,6 +486,34 @@ export default function Reservations() {
     });
   };
 
+  const handleChargeNoShow = async (id) => {
+    requestConfirm({
+      title: 'Cobrar no-show',
+      message: 'Se cargará el importe de no-show a la tarjeta guardada del cliente.',
+      confirmLabel: 'Cobrar',
+      intent: 'danger',
+      onConfirm: async () => {
+        await api.post(`/reservations/${id}/charge-noshow`);
+        await Promise.all([load(), loadPendingReservations()]);
+        pushToast('No-show cobrado correctamente');
+      },
+    });
+  };
+
+  const handleRefundDeposit = async (id) => {
+    requestConfirm({
+      title: 'Reembolsar depósito',
+      message: 'Se devolverá el depósito al cliente.',
+      confirmLabel: 'Reembolsar',
+      intent: 'warning',
+      onConfirm: async () => {
+        await api.post(`/reservations/${id}/refund`);
+        await Promise.all([load(), loadPendingReservations()]);
+        pushToast('Depósito reembolsado');
+      },
+    });
+  };
+
   const counts = {
     confirmed: displayReservations.filter(r => r.status === 'confirmed').length,
     seated:    displayReservations.filter(r => r.status === 'seated').length,
@@ -688,6 +743,8 @@ export default function Reservations() {
             onAssign={assignTable}
             onQuickStatus={quickStatus}
             onNoShow={handleNoShow}
+            onChargeNoShow={handleChargeNoShow}
+            onRefundDeposit={handleRefundDeposit}
             canMarkNoShow={canModeratePending}
             canModeratePending={canModeratePending}
           />
@@ -800,6 +857,7 @@ export default function Reservations() {
                       {r.customerId && <span title="Cliente registrado" className="w-1.5 h-1.5 rounded-full bg-violet-400 shrink-0" />}
                     </div>
                     <p className="text-xs text-gray-400 mt-0.5">{r.guestPhone || r.guestEmail || '\u2014'}</p>
+                    <PaymentBadge payment={r.payment} />
                   </div>
                 </div>
               </td>
@@ -869,6 +927,22 @@ export default function Reservations() {
                         className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 transition-colors"
                       >
                         Marcar no-show
+                      </button>
+                    )}
+                    {canModeratePending && r.payment?.mode === 'card_guarantee' && r.payment?.stripePaymentMethodId && r.payment?.status !== 'captured' && (
+                      <button
+                        onClick={() => handleChargeNoShow(r._id)}
+                        className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 transition-colors"
+                      >
+                        Cobrar no-show
+                      </button>
+                    )}
+                    {canModeratePending && r.payment?.mode === 'deposit' && r.payment?.status === 'captured' && (
+                      <button
+                        onClick={() => handleRefundDeposit(r._id)}
+                        className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-sky-50 text-sky-700 hover:bg-sky-100 transition-colors"
+                      >
+                        Reembolsar depósito
                       </button>
                     )}
                     {r.status !== 'cancelled' && r.status !== 'no_show' && (

@@ -176,6 +176,20 @@ export function TableCell({ reservation, tables, onAssign }) {
 }
 
 // Main expandable card — same as MobileRow in Reservations
+function PaymentBadge({ payment }) {
+  if (!payment || payment.mode === 'none') return null;
+  if (payment.mode === 'deposit') {
+    const amt = payment.amount ? `${Math.round(payment.amount / 100)}€` : '';
+    if (payment.status === 'refunded') return <span className="text-[10px] font-medium text-gray-500 bg-gray-100 px-1.5 py-0.5 rounded-md">Dep. reembolsado</span>;
+    if (payment.status === 'captured') return <span className="text-[10px] font-medium text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-md">Dep. {amt}</span>;
+  }
+  if (payment.mode === 'card_guarantee') {
+    if (payment.status === 'captured') return <span className="text-[10px] font-medium text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded-md">No-show cobrado</span>;
+    if (payment.stripePaymentMethodId) return <span className="text-[10px] font-medium text-violet-700 bg-violet-50 px-1.5 py-0.5 rounded-md">Tarjeta guardada</span>;
+  }
+  return null;
+}
+
 export function ReservationCard({
   r,
   tables = [],
@@ -185,6 +199,8 @@ export function ReservationCard({
   onAssign,
   onQuickStatus,
   onNoShow,
+  onChargeNoShow,
+  onRefundDeposit,
   canMarkNoShow = false,
   canModeratePending = false,
 }) {
@@ -232,6 +248,7 @@ export function ReservationCard({
             {r.promoCode && (
               <span className="text-xs text-amber-700 font-medium bg-amber-50 px-1.5 py-0.5 rounded-md">{r.promoCode}</span>
             )}
+            <PaymentBadge payment={r.payment} />
           </div>
         </div>
 
@@ -286,6 +303,18 @@ export function ReservationCard({
               <button onClick={() => onNoShow(r._id)}
                 className="px-3 py-2 rounded-xl text-xs font-semibold text-amber-700 bg-amber-50 active:bg-amber-100 transition-colors">
                 No show
+              </button>
+            )}
+            {canMarkNoShow && r.payment?.mode === 'card_guarantee' && r.payment?.stripePaymentMethodId && r.payment?.status !== 'captured' && (
+              <button onClick={() => onChargeNoShow?.(r._id)}
+                className="px-3 py-2 rounded-xl text-xs font-semibold text-rose-700 bg-rose-50 active:bg-rose-100 transition-colors">
+                Cobrar no-show
+              </button>
+            )}
+            {canMarkNoShow && r.payment?.mode === 'deposit' && r.payment?.status === 'captured' && (
+              <button onClick={() => onRefundDeposit?.(r._id)}
+                className="px-3 py-2 rounded-xl text-xs font-semibold text-sky-700 bg-sky-50 active:bg-sky-100 transition-colors">
+                Reembolsar
               </button>
             )}
             <button onClick={onEdit}

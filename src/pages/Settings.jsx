@@ -1897,6 +1897,292 @@ function BillingSection() {
   );
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// PAGOS SECTION
+// ═══════════════════════════════════════════════════════════════════════════
+function PagosSection() {
+  const [status, setStatus]   = useState(null);   // { connected, reservationPayment }
+  const [loading, setLoading] = useState(true);
+  const [saving,  setSaving]  = useState(false);
+  const [connecting, setConnecting] = useState(false);
+  const [disconnecting, setDisconnecting] = useState(false);
+  const [error,   setError]   = useState('');
+  const [success, setSuccess] = useState('');
+
+  const [mode, setMode]                         = useState('none');
+  const [depositAmount, setDepositAmount]       = useState('');
+  const [depositPerPerson, setDepositPerPerson] = useState(false);
+  const [noShowFeeAmount, setNoShowFeeAmount]   = useState('');
+  const [freeCancelHours, setFreeCancelHours]   = useState(24);
+
+  const load = async () => {
+    setLoading(true);
+    try {
+      const r = await api.get('/stripe/connect/status');
+      const rp = r.data.reservationPayment || {};
+      setStatus(r.data);
+      setMode(rp.mode || 'none');
+      setDepositAmount(rp.depositAmount   ? (rp.depositAmount   / 100).toFixed(2) : '');
+      setDepositPerPerson(rp.depositPerPerson ?? false);
+      setNoShowFeeAmount(rp.noShowFeeAmount  ? (rp.noShowFeeAmount  / 100).toFixed(2) : '');
+      setFreeCancelHours(rp.freeCancellationHours ?? 24);
+    } catch {
+      setError('No se pudo cargar la configuración de pagos');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    load();
+    // Leer resultado del OAuth de Stripe de la URL
+    const params = new URLSearchParams(window.location.search);
+    const connect = params.get('connect');
+    if (connect === 'success') setSuccess('¡Cuenta Stripe conectada correctamente!');
+    if (connect === 'error')   setError('No se pudo conectar la cuenta Stripe. Inténtalo de nuevo.');
+    // Limpiar param de URL sin recargar
+    if (connect) window.history.replaceState({}, '', window.location.pathname + '?tab=pagos');
+  }, []);
+
+  const handleConnect = async () => {
+    setConnecting(true);
+    setError('');
+    try {
+      const r = await api.get('/stripe/connect/oauth-url');
+      window.location.href = r.data.url;
+    } catch (err) {
+      setError(err?.response?.data?.message || 'No se pudo iniciar la conexión con Stripe');
+      setConnecting(false);
+    }
+  };
+
+  const handleDisconnect = async () => {
+    if (!window.confirm('¿Seguro que quieres desconectar tu cuenta Stripe? Se desactivarán los pagos en reservas.')) return;
+    setDisconnecting(true);
+    setError('');
+    try {
+      await api.delete('/stripe/connect');
+      setSuccess('Cuenta Stripe desconectada');
+      await load();
+    } catch (err) {
+      setError(err?.response?.data?.message || 'No se pudo desconectar');
+    } finally {
+      setDisconnecting(false);
+    }
+  };
+
+  const handleSave = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    setError('');
+    setSuccess('');
+    try {
+      await api.put('/stripe/connect/payment-settings', {
+        mode,
+        depositAmount:        mode === 'deposit'        ? parseFloat(depositAmount)  || 0 : undefined,
+        depositPerPerson:     mode === 'deposit'        ? depositPerPerson            : undefined,
+        noShowFeeAmount:      mode === 'card_guarantee' ? parseFloat(noShowFeeAmount) || 0 : undefined,
+        freeCancellationHours: parseFloat(freeCancelHours) || 24,
+      });
+      setSuccess('Configuración guardada');
+    } catch (err) {
+      setError(err?.response?.data?.message || 'No se pudo guardar');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) return <div className="animate-pulse h-64 bg-gray-50 rounded-2xl" />;
+
+  const connected = status?.connected;
+
+  return (
+    <div className="space-y-5">
+
+      {/* ── Estado de conexión Stripe ── */}
+      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 space-y-4">
+        <div>
+          <h3 className="text-sm font-semibold text-gray-900">Cuenta Stripe</h3>
+          <p className="text-xs text-gray-500 mt-0.5">
+            Conecta tu cuenta Stripe para recibir depósitos y garantías directamente en tu banco.
+          </p>
+        </div>
+
+        {error   && <div className="bg-rose-50 border border-rose-200 text-rose-700 text-sm rounded-xl px-3 py-2">{error}</div>}
+        {success && <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm rounded-xl px-3 py-2">{success}</div>}
+
+        {connected ? (
+          <div className="flex items-center justify-between p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl">
+            <div className="flex items-center gap-2.5">
+              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+              <div>
+                <p className="text-sm font-semibold text-emerald-900">Cuenta conectada</p>
+                <p className="text-xs text-emerald-700 font-mono">{status.stripeConnectId}</p>
+              </div>
+            </div>
+            <button
+              onClick={handleDisconnect}
+              disabled={disconnecting}
+              className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-white border border-rose-200 text-rose-600 hover:bg-rose-50 transition-colors disabled:opacity-60"
+            >
+              {disconnecting ? 'Desconectando...' : 'Desconectar'}
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center justify-between p-3.5 bg-gray-50 border border-gray-200 rounded-xl">
+            <div>
+              <p className="text-sm font-semibold text-gray-700">Sin cuenta Stripe</p>
+              <p className="text-xs text-gray-500">Necesitas conectar tu cuenta para activar pagos</p>
+            </div>
+            <button
+              onClick={handleConnect}
+              disabled={connecting}
+              className="flex items-center gap-2 text-sm font-semibold px-4 py-2 rounded-xl bg-violet-600 text-white hover:bg-violet-700 transition-colors disabled:opacity-60"
+            >
+              {connecting ? 'Redirigiendo...' : (
+                <>
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                    <path d="M3.105 2.288a.75.75 0 0 0-.826.95l1.414 4.926A1.5 1.5 0 0 0 5.135 9.25h6.115a.75.75 0 0 1 0 1.5H5.135a1.5 1.5 0 0 0-1.442 1.086l-1.414 4.926a.75.75 0 0 0 .826.95 28.897 28.897 0 0 0 15.799-8.684.75.75 0 0 0 0-1.052A28.897 28.897 0 0 0 3.105 2.288Z" />
+                  </svg>
+                  Conectar con Stripe
+                </>
+              )}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* ── Configuración de pagos ── */}
+      <form onSubmit={handleSave} className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 space-y-5">
+        <div>
+          <h3 className="text-sm font-semibold text-gray-900">Pagos en reservas</h3>
+          <p className="text-xs text-gray-500 mt-0.5">
+            Elige si tus clientes deben pagar al reservar o dejar su tarjeta como garantía.
+          </p>
+        </div>
+
+        {/* Modo */}
+        <div className="space-y-2">
+          {[
+            { value: 'none',           label: 'Sin pago',             desc: 'Los clientes reservan sin pagar nada.' },
+            { value: 'deposit',        label: 'Depósito al reservar', desc: 'El cliente paga un importe al hacer la reserva. Se reembolsa si cancela a tiempo.' },
+            { value: 'card_guarantee', label: 'Tarjeta como garantía',desc: 'El cliente guarda su tarjeta. Solo se cobra si no viene o cancela fuera de plazo.' },
+          ].map(opt => (
+            <label key={opt.value} className={`flex items-start gap-3 p-3.5 rounded-xl border cursor-pointer transition-colors ${mode === opt.value ? 'border-violet-400 bg-violet-50' : 'border-gray-200 hover:border-gray-300'}`}>
+              <input
+                type="radio"
+                name="paymentMode"
+                value={opt.value}
+                checked={mode === opt.value}
+                onChange={() => setMode(opt.value)}
+                disabled={!connected && opt.value !== 'none'}
+                className="mt-0.5 accent-violet-600"
+              />
+              <div>
+                <p className={`text-sm font-semibold ${!connected && opt.value !== 'none' ? 'text-gray-400' : 'text-gray-900'}`}>{opt.label}</p>
+                <p className="text-xs text-gray-500 mt-0.5">{opt.desc}</p>
+                {!connected && opt.value !== 'none' && (
+                  <p className="text-xs text-amber-600 mt-0.5 font-medium">Requiere cuenta Stripe conectada</p>
+                )}
+              </div>
+            </label>
+          ))}
+        </div>
+
+        {/* Importe depósito */}
+        {mode === 'deposit' && (
+          <div className="space-y-3 p-4 bg-gray-50 rounded-xl border border-gray-200">
+            <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Configuración del depósito</h4>
+            <div>
+              <label className={labelCls}>Importe del depósito (€)</label>
+              <input
+                type="number"
+                min="0.50"
+                step="0.50"
+                value={depositAmount}
+                onChange={e => setDepositAmount(e.target.value)}
+                placeholder="5.00"
+                className={inputCls}
+                required
+              />
+            </div>
+            <label className="flex items-center gap-2.5 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={depositPerPerson}
+                onChange={e => setDepositPerPerson(e.target.checked)}
+                className="w-4 h-4 accent-violet-600"
+              />
+              <span className="text-sm text-gray-700">Importe <strong>por persona</strong> (ej: 5€/pax → 4 pax = 20€)</span>
+            </label>
+            {depositPerPerson && depositAmount && (
+              <p className="text-xs text-violet-600 bg-violet-50 px-3 py-2 rounded-lg">
+                Ejemplo: reserva para 4 personas → depósito de <strong>{(parseFloat(depositAmount) * 4).toFixed(2)}€</strong>
+              </p>
+            )}
+          </div>
+        )}
+
+        {/* Importe no-show */}
+        {mode === 'card_guarantee' && (
+          <div className="p-4 bg-gray-50 rounded-xl border border-gray-200">
+            <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-3">Cargo por no presentarse</h4>
+            <label className={labelCls}>Importe a cobrar si no-show (€)</label>
+            <input
+              type="number"
+              min="0.50"
+              step="0.50"
+              value={noShowFeeAmount}
+              onChange={e => setNoShowFeeAmount(e.target.value)}
+              placeholder="15.00"
+              className={inputCls}
+              required
+            />
+            <p className="text-xs text-gray-500 mt-2">
+              Se cobrará este importe fijo si marcas la reserva como no-show desde el panel.
+            </p>
+          </div>
+        )}
+
+        {/* Ventana de cancelación gratuita */}
+        {mode !== 'none' && (
+          <div className="p-4 bg-gray-50 rounded-xl border border-gray-200">
+            <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-3">Política de cancelación</h4>
+            <label className={labelCls}>Cancelación gratuita hasta (horas antes)</label>
+            <div className="flex items-center gap-3">
+              <input
+                type="number"
+                min="1"
+                max="168"
+                value={freeCancelHours}
+                onChange={e => setFreeCancelHours(e.target.value)}
+                className={`${inputCls} w-32`}
+              />
+              <span className="text-sm text-gray-500">horas antes de la reserva</span>
+            </div>
+            <p className="text-xs text-gray-500 mt-2">
+              {mode === 'deposit'
+                ? 'Si el cliente cancela con más de esta antelación, el depósito se reembolsa automáticamente.'
+                : 'Si el cliente cancela con más de esta antelación, la tarjeta se libera sin cargo.'
+              }
+            </p>
+          </div>
+        )}
+
+        <div className="flex justify-end">
+          <button
+            type="submit"
+            disabled={saving}
+            className="px-5 py-2.5 bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold rounded-xl transition-colors disabled:opacity-60"
+          >
+            {saving ? 'Guardando...' : 'Guardar configuración'}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
 const TABS = [
   { key: 'negocio',     label: 'Negocio',      desc: 'Nombre y datos del establecimiento',   icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 shrink-0"><path fillRule="evenodd" d="M4.5 1A2.5 2.5 0 0 0 2 3.5V5c0 .174.018.344.052.508A2 2 0 0 0 2 7v1a2 2 0 0 0 .052 1.492A2 2 0 0 0 2 11v1.5A2.5 2.5 0 0 0 4.5 15h7a2.5 2.5 0 0 0 2.5-2.5V11a2 2 0 0 0-.052-1.508A2 2 0 0 0 14 8V7a2 2 0 0 0-.052-1.492A2 2 0 0 0 14 4V3.5A2.5 2.5 0 0 0 11.5 1h-7Zm5 9.5H6.5a.5.5 0 0 0 0 1h3a.5.5 0 0 0 0-1Zm0-3H6.5a.5.5 0 0 0 0 1h3a.5.5 0 0 0 0-1Zm0-3H6.5a.5.5 0 0 0 0 1h3a.5.5 0 0 0 0-1Z" clipRule="evenodd"/></svg> },
   { key: 'salas',       label: 'Salas',        desc: 'Zonas y espacios del restaurante',      icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 shrink-0"><path d="M1 3.5A1.5 1.5 0 0 1 2.5 2h3A1.5 1.5 0 0 1 7 3.5v3A1.5 1.5 0 0 1 5.5 8h-3A1.5 1.5 0 0 1 1 6.5v-3ZM9 3.5A1.5 1.5 0 0 1 10.5 2h3A1.5 1.5 0 0 1 15 3.5v3A1.5 1.5 0 0 1 13.5 8h-3A1.5 1.5 0 0 1 9 6.5v-3ZM1 10.5A1.5 1.5 0 0 1 2.5 9h3A1.5 1.5 0 0 1 7 10.5v3A1.5 1.5 0 0 1 5.5 15h-3A1.5 1.5 0 0 1 1 13.5v-3ZM9 10.5A1.5 1.5 0 0 1 10.5 9h3a1.5 1.5 0 0 1 1.5 1.5v3a1.5 1.5 0 0 1-1.5 1.5h-3A1.5 1.5 0 0 1 9 13.5v-3Z"/></svg> },
@@ -1906,6 +2192,7 @@ const TABS = [
   { key: 'limites',     label: 'Límites',      desc: 'Personas máximas por reserva',          icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 shrink-0"><path d="M2 5.25a.75.75 0 0 0 0 1.5h12a.75.75 0 0 0 0-1.5H2ZM2 9.25a.75.75 0 0 0 0 1.5h12a.75.75 0 0 0 0-1.5H2Z"/><path d="M4.5 3.5a1 1 0 1 0 0 3 1 1 0 0 0 0-3ZM4.5 9.5a1 1 0 1 0 0 3 1 1 0 0 0 0-3ZM10.5 9.5a1 1 0 1 0 0 3 1 1 0 0 0 0-3ZM10.5 3.5a1 1 0 1 0 0 3 1 1 0 0 0 0-3Z" style={{fill:'none',stroke:'currentColor',strokeWidth:0}}/><path fillRule="evenodd" d="M3.5 6a1 1 0 1 0 2 0 1 1 0 0 0-2 0Zm6 0a1 1 0 1 0 2 0 1 1 0 0 0-2 0Zm-6 4.5a1 1 0 1 0 2 0 1 1 0 0 0-2 0Zm6 0a1 1 0 1 0 2 0 1 1 0 0 0-2 0Z" clipRule="evenodd"/></svg> },
   { key: 'publico',     label: 'Página pública', desc: 'Reservas online para clientes',       icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 shrink-0"><path d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1ZM3.661 4.098A5.476 5.476 0 0 1 6.79 2.86c-.344.984-.543 2.086-.575 3.14H3.188a5.507 5.507 0 0 1 .473-1.902ZM3.188 7.5h3.027c.032 1.054.231 2.156.575 3.14a5.476 5.476 0 0 1-3.129-1.238A5.507 5.507 0 0 1 3.188 7.5ZM7.715 7.5h.57c-.026.96-.19 1.906-.471 2.798-.283-.892-.447-1.838-.473-2.798h.374ZM7.715 6h.374c.026-.96.19-1.906.473-2.798.281.892.445 1.838.47 2.798h-.317Zm2.312 5.14c.344-.984.543-2.086.575-3.14h3.027a5.507 5.507 0 0 1-.473 1.902 5.476 5.476 0 0 1-3.129 1.238ZM12.812 6h-3.027a9.54 9.54 0 0 0-.575-3.14 5.476 5.476 0 0 1 3.129 1.238A5.507 5.507 0 0 1 12.812 6Z"/></svg> },
   { key: 'suscripcion', label: 'Suscripción',   desc: 'Plan, uso mensual y facturación',      icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 shrink-0"><path d="M2.5 3A1.5 1.5 0 0 0 1 4.5v1A1.5 1.5 0 0 0 2.5 7h11A1.5 1.5 0 0 0 15 5.5v-1A1.5 1.5 0 0 0 13.5 3h-11ZM1 9.5A1.5 1.5 0 0 1 2.5 8h11A1.5 1.5 0 0 1 15 9.5v1a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 1 10.5v-1ZM4.5 10a.5.5 0 0 0 0 1h1a.5.5 0 0 0 0-1h-1ZM3 10.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5Z"/></svg> },
+  { key: 'pagos',       label: 'Pagos',        desc: 'Depósitos y garantías en reservas',     icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 shrink-0"><path d="M2.5 3A1.5 1.5 0 0 0 1 4.5v1A1.5 1.5 0 0 0 2.5 7h11A1.5 1.5 0 0 0 15 5.5v-1A1.5 1.5 0 0 0 13.5 3h-11ZM1 9.5A1.5 1.5 0 0 1 2.5 8h11A1.5 1.5 0 0 1 15 9.5v1a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 1 10.5v-1ZM4.5 10a.5.5 0 0 0 0 1h1a.5.5 0 0 0 0-1h-1ZM3 10.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5Z"/></svg> },
 ];
 
 export default function Settings() {
@@ -1972,6 +2259,7 @@ export default function Settings() {
           {tab === 'limites'     && <LimitesSection />}
           {tab === 'publico'     && <PublicoSection />}
           {tab === 'suscripcion' && <BillingSection />}
+          {tab === 'pagos'       && <PagosSection />}
         </div>
       </div>
     </div>

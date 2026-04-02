@@ -97,7 +97,7 @@ function ReservationDrawer({ reservation, onClose, onAction, onEdit }) {
       {/* Panel — bottom sheet on mobile, side panel on desktop */}
       <div className="fixed z-50 bg-white shadow-2xl flex flex-col
         bottom-0 left-0 right-0 rounded-t-2xl max-h-[88vh]
-        sm:bottom-auto sm:top-0 sm:right-0 sm:left-auto sm:h-full sm:w-96 sm:rounded-none sm:rounded-l-2xl">
+        sm:bottom-auto sm:top-1/2 sm:left-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:w-96 sm:max-h-[90vh] sm:rounded-2xl sm:overflow-y-auto">
 
         {/* Handle (mobile only) */}
         <div className="sm:hidden flex justify-center pt-3 pb-1 shrink-0">

@@ -172,11 +172,7 @@ export default function Reservations() {
   const [toasts,       setToasts]       = useState([]);
   const [confirmDialog, setConfirmDialog] = useState(null);
   const [confirmLoading, setConfirmLoading] = useState(false);
-  const [openingCreateModal, setOpeningCreateModal] = useState(false);
-  const [createModalError, setCreateModalError] = useState('');
   const todayStr = new Date().toISOString().slice(0, 10);
-
-  const resolveCreateDate = () => (filterMode === 'day' ? dateFilter : todayStr);
 
   const pushToast = (message, type = 'success') => {
     const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -200,35 +196,6 @@ export default function Reservations() {
       pushToast(err?.response?.data?.message || 'No se pudo completar la acción', 'error');
     } finally {
       setConfirmLoading(false);
-    }
-  };
-
-  const openCreateModal = async () => {
-    const targetDate = resolveCreateDate();
-    setCreateModalError('');
-    setOpeningCreateModal(true);
-    try {
-      const [roomsRes, slotsRes, vacRes] = await Promise.all([
-        api.get('/rooms'),
-        api.get(`/shifts/slots?date=${targetDate}`),
-        api.get(`/vacations/check?date=${targetDate}`),
-      ]);
-      const vacation = vacRes.data.closed ? vacRes.data : false;
-      const availableSlots = vacation ? [] : slotsRes.data;
-
-      setModal({
-        mode: 'create',
-        preloaded: {
-          date: targetDate,
-          rooms: roomsRes.data,
-          slots: availableSlots,
-          vacation,
-        },
-      });
-    } catch {
-      setCreateModalError('No se pudo preparar el formulario. Reintenta.');
-    } finally {
-      setOpeningCreateModal(false);
     }
   };
 
@@ -521,19 +488,6 @@ export default function Reservations() {
             <option value="day">Día concreto</option>
             <option value="range">Rango de días</option>
           </select>
-          <button
-            onClick={openCreateModal}
-            disabled={openingCreateModal}
-            className="w-10 h-10 flex items-center justify-center rounded-xl bg-violet-600 text-white active:bg-violet-700 shrink-0 shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            {openingCreateModal ? (
-              <span className="w-4 h-4 border-2 border-white/50 border-t-white rounded-full animate-spin" />
-            ) : (
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-5 h-5">
-                <path d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z" />
-              </svg>
-            )}
-          </button>
         </div>
 
         {filterMode === 'day' && (
@@ -628,34 +582,8 @@ export default function Reservations() {
               />
             </>
           )}
-          <button
-            onClick={openCreateModal}
-            disabled={openingCreateModal}
-            className="flex items-center gap-1.5 bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors shadow-sm disabled:opacity-60 disabled:cursor-not-allowed"
-          >
-            {openingCreateModal ? (
-              <>
-                <span className="w-4 h-4 border-2 border-white/50 border-t-white rounded-full animate-spin" />
-                Cargando...
-              </>
-            ) : (
-              <>
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
-                  <path d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z" />
-                </svg>
-                Nueva reserva
-              </>
-            )}
-          </button>
         </div>
       </div>
-
-      {/* Desktop mini stats */}
-      {createModalError && (
-        <div className="bg-rose-50 border border-rose-200 text-rose-700 text-sm rounded-xl px-4 py-2.5">
-          {createModalError}
-        </div>
-      )}
 
       {pendingEnabled && canModeratePending && filterMode !== 'pending' && pendingReservations.length > 0 && (
         <div className="bg-white rounded-2xl border border-amber-200 shadow-sm overflow-hidden">
@@ -741,9 +669,6 @@ export default function Reservations() {
           <p className="text-gray-500 font-medium">
             {filterMode === 'pending' ? 'Sin reservas pendientes' : 'Sin reservas para este día'}
           </p>
-          <button onClick={openCreateModal} className="mt-4 text-sm text-violet-600 hover:underline font-medium">
-            Crear la primera reserva ->
-          </button>
         </div>
       )}
 
@@ -1118,13 +1043,12 @@ export default function Reservations() {
 
       {modal && (
         <Modal
-          title={modal.mode === 'create' ? 'Nueva reserva' : 'Editar reserva'}
-          subtitle={modal.mode === 'create' ? 'Crea una nueva reserva' : 'Modifica los datos de la reserva'}
+          title="Editar reserva"
+          subtitle="Modifica los datos de la reserva"
           onClose={() => setModal(null)}
         >
           <ReservationForm
             reservation={modal.reservation}
-            initialContext={modal.preloaded || null}
             onSave={() => { setModal(null); Promise.all([load(), loadPendingReservations()]); }}
             onCancel={() => setModal(null)}
           />

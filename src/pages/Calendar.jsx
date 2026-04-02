@@ -238,7 +238,6 @@ export default function Calendar() {
   const [shifts, setShifts]             = useState([]);
   const [loading, setLoading]           = useState(true);
   const [selectedRsv, setSelectedRsv]   = useState(null);  // drawer
-  const [createModal, setCreateModal]   = useState(false);  // new reservation
   const [editRsv, setEditRsv]           = useState(null);   // edit modal
   const [dragState, setDragState]       = useState(null);   // { rsvId, targetTableId }
   const [dragError, setDragError]       = useState(null);   // conflict message
@@ -275,7 +274,6 @@ export default function Calendar() {
   };
 
   const afterSave = () => {
-    setCreateModal(false);
     setEditRsv(null);
     loadReservations();
   };
@@ -501,15 +499,6 @@ export default function Calendar() {
               onChange={e => e.target.value && setDate(e.target.value)}
               className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 text-gray-600 focus:outline-none focus:ring-2 focus:ring-violet-500"
             />
-            <button
-              onClick={() => setCreateModal(true)}
-              className="flex items-center gap-1.5 bg-violet-600 hover:bg-violet-700 text-white px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors shadow-sm shrink-0"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
-                <path d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z" />
-              </svg>
-              <span className="hidden sm:inline">Nueva</span>
-            </button>
           </div>
         </div>
 
@@ -647,17 +636,6 @@ export default function Calendar() {
             onAction={(action) => handleAction(selectedRsv, action)}
             onEdit={() => handleEdit(selectedRsv)}
           />
-        )}
-
-        {/* ── Create modal ── */}
-        {createModal && (
-          <Modal title="Nueva reserva" onClose={() => setCreateModal(false)}>
-            <ReservationForm
-              initialContext={{ date }}
-              onSave={afterSave}
-              onCancel={() => setCreateModal(false)}
-            />
-          </Modal>
         )}
 
         {/* ── Edit modal ── */}

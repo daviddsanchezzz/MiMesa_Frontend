@@ -48,7 +48,7 @@ function Pill({ label, value, color = 'gray' }) {
 }
 
 // ─── Empty state ──────────────────────────────────────────────────────────────
-function EmptyDay({ onNew }) {
+function EmptyDay() {
   return (
     <div className="py-12 flex flex-col items-center gap-3">
       <div className="w-12 h-12 rounded-2xl bg-gray-50 flex items-center justify-center">
@@ -57,9 +57,6 @@ function EmptyDay({ onNew }) {
         </svg>
       </div>
       <p className="text-sm text-gray-400">Sin reservas para este período</p>
-      <button onClick={onNew} className="text-sm font-semibold text-violet-600 hover:text-violet-700 transition-colors">
-        + Crear la primera
-      </button>
     </div>
   );
 }
@@ -74,7 +71,7 @@ export default function Dashboard() {
   const [reservations, setReservations] = useState([]);
   const [tables, setTables]           = useState([]);
   const [loading, setLoading]         = useState(true);
-  const [modal, setModal]             = useState(null); // null | { mode: 'create' | 'edit', reservation? }
+  const [modal, setModal]             = useState(null); // null | { reservation }
   const [expandedDesktopId, setExpandedDesktopId] = useState(null);
 
   const today      = getToday();
@@ -291,16 +288,6 @@ export default function Dashboard() {
           <h2 className="text-xl font-bold text-gray-900">{business?.name}</h2>
           <p className="text-sm text-gray-400 capitalize">{todayLabel}</p>
         </div>
-        <button
-          onClick={() => setModal({ mode: 'create' })}
-          className="flex items-center gap-2 bg-violet-600 hover:bg-violet-700 active:bg-violet-800 text-white px-4 py-2.5 rounded-2xl text-sm font-semibold transition-colors shadow-sm shrink-0"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
-            <path d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z" />
-          </svg>
-          <span className="hidden sm:inline">Nueva reserva</span>
-          <span className="sm:hidden">Nueva</span>
-        </button>
       </div>
 
       {/* Period selector */}
@@ -361,14 +348,14 @@ export default function Dashboard() {
           {/* Mobile */}
           <div className="sm:hidden bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
             {reservations.length === 0
-              ? <EmptyDay onNew={() => setModal({ mode: 'create' })} />
+              ? <EmptyDay />
               : sorted(reservations).map(r => <ReservationCard key={r._id} {...cardProps(r)} />)
             }
           </div>
           {/* Desktop */}
           <div className="hidden sm:block bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
             {reservations.length === 0
-              ? <EmptyDay onNew={() => setModal({ mode: 'create' })} />
+              ? <EmptyDay />
               : <div className="overflow-x-auto">
                   <table className="w-full table-fixed text-sm">
                     {thead}
@@ -385,7 +372,7 @@ export default function Dashboard() {
             {sortedDates.length === 0
               ? (
                 <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                  <EmptyDay onNew={() => setModal({ mode: 'create' })} />
+                  <EmptyDay />
                 </div>
               )
               : sortedDates.map(date => {
@@ -414,7 +401,7 @@ export default function Dashboard() {
             {sortedDates.length === 0
               ? (
                 <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-                  <EmptyDay onNew={() => setModal({ mode: 'create' })} />
+                  <EmptyDay />
                 </div>
               )
               : sortedDates.map(date => {
@@ -447,15 +434,7 @@ export default function Dashboard() {
       )}
 
       {/* Modals */}
-      {modal?.mode === 'create' && (
-        <Modal title="Nueva reserva" onClose={() => setModal(null)}>
-          <ReservationForm
-            onSave={() => { setModal(null); loadReservations(); }}
-            onCancel={() => setModal(null)}
-          />
-        </Modal>
-      )}
-      {modal?.mode === 'edit' && (
+      {modal && (
         <Modal title="Editar reserva" onClose={() => setModal(null)}>
           <ReservationForm
             reservation={modal.reservation}

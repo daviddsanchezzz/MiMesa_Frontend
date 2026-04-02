@@ -21,6 +21,13 @@ export function Avatar({ name }) {
 export function TableCell({ reservation, tables, onAssign }) {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);
+  const panelRef = useRef(null);
+
+  useEffect(() => {
+    if (open && panelRef.current) {
+      panelRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+  }, [open]);
 
   // Resolve currently assigned IDs — prefer tableIds array, fallback to tableId
   const assignedIds = (() => {
@@ -72,7 +79,7 @@ export function TableCell({ reservation, tables, onAssign }) {
   if (!open) {
     return (
       <button
-        onClick={() => { setSelected(assignedIds); setOpen(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+        onClick={() => { setSelected(assignedIds); setOpen(true); }}
         className={`flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg border transition-colors ${
           assignedTables.length > 0
             ? 'bg-slate-50 border-slate-200 text-slate-700 hover:border-violet-300 hover:bg-violet-50 hover:text-violet-600 font-medium'
@@ -98,7 +105,7 @@ export function TableCell({ reservation, tables, onAssign }) {
 
   return (
     <div ref={ref} className="relative z-10">
-      <div className="absolute left-0 top-0 bg-white border border-violet-200 rounded-xl shadow-lg p-3 min-w-[200px] max-w-[280px]">
+      <div ref={panelRef} className="absolute left-0 top-0 bg-white border border-violet-200 rounded-xl shadow-lg p-3 min-w-[200px] max-w-[280px]">
         <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-2">Seleccionar mesas</p>
 
         {/* None option */}

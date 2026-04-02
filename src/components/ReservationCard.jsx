@@ -23,11 +23,6 @@ export function TableCell({ reservation, tables, onAssign }) {
   const ref = useRef(null);
   const panelRef = useRef(null);
 
-  useEffect(() => {
-    if (open && panelRef.current) {
-      panelRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }
-  }, [open]);
 
   // Resolve currently assigned IDs — prefer tableIds array, fallback to tableId
   const assignedIds = (() => {
@@ -104,8 +99,8 @@ export function TableCell({ reservation, tables, onAssign }) {
   }
 
   return (
-    <div ref={ref} className="relative z-10">
-      <div ref={panelRef} className="absolute left-0 top-0 bg-white border border-violet-200 rounded-xl shadow-lg p-3 min-w-[200px] max-w-[280px]">
+    <div ref={ref}>
+      <div ref={panelRef} className="fixed top-4 left-4 right-4 z-50 bg-white border border-violet-200 rounded-xl shadow-xl p-3 max-h-[80vh] overflow-y-auto">
         <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-2">Seleccionar mesas</p>
 
         {/* None option */}

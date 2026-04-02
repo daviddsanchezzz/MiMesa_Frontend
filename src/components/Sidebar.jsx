@@ -1,6 +1,8 @@
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
+import Modal from './Modal';
+import ReservationForm from './ReservationForm';
 
 const IconTeam = () => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 shrink-0">
@@ -74,8 +76,9 @@ const configLinks = [
 export default function Sidebar({ isOpen, onClose }) {
   const { business, memberships, logout, hasRole, switchBusiness, session, isSubscribed } = useAuth();
   const navigate = useNavigate();
-const [menuOpen, setMenuOpen] = useState(false);
-const [isSmallScreen, setIsSmallScreen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [isSmallScreen, setIsSmallScreen] = useState(false);
+  const [newRsvModal, setNewRsvModal] = useState(false);
   const menuRef = useRef(null);
   const isStaff = business?.role === 'staff';
   const isFree = !isSubscribed;
@@ -126,6 +129,7 @@ const [isSmallScreen, setIsSmallScreen] = useState(false);
   }, []);
 
   return (
+    <>
     <aside
       className={`
         fixed lg:relative inset-y-0 left-0 z-50 lg:z-auto
@@ -153,8 +157,21 @@ const [isSmallScreen, setIsSmallScreen] = useState(false);
               </select>
             ) : (
               <p className="text-slate-400 text-xs truncate leading-tight mt-0.5">{business?.name}</p>
-            )}          </div>
+            )}
+          </div>
         </div>
+      </div>
+
+      <div className="px-3 pt-3 pb-1">
+        <button
+          onClick={() => setNewRsvModal(true)}
+          className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold transition-colors"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 shrink-0">
+            <path d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z" />
+          </svg>
+          Nueva reserva
+        </button>
       </div>
 
       <nav className="flex-1 px-3 py-4 overflow-y-auto">
@@ -264,6 +281,16 @@ const [isSmallScreen, setIsSmallScreen] = useState(false);
         </div>
       </div>
     </aside>
+
+    {newRsvModal && (
+      <Modal title="Nueva reserva" onClose={() => setNewRsvModal(false)}>
+        <ReservationForm
+          onSave={() => { setNewRsvModal(false); handleNavClick(); }}
+          onCancel={() => setNewRsvModal(false)}
+        />
+      </Modal>
+    )}
+    </>
   );
 }
 

@@ -19,6 +19,7 @@ import DevDashboard from './pages/DevDashboard';
 import Onboarding from './pages/Onboarding';
 import Publicidad from './pages/Publicidad';
 import Analytics from './pages/Analytics';
+import Calendar from './pages/Calendar';
 import PublicReservation from './pages/PublicReservation';
 import PublicCancel from './pages/PublicCancel';
 import PublicUnsubscribe from './pages/PublicUnsubscribe';
@@ -172,6 +173,7 @@ export default function App() {
           <Route path="/profile"       element={<PrivateLayout><Profile /></PrivateLayout>} />
           <Route path="/team"         element={<RoleRoute minRole="manager"><PrivateLayout><Team /></PrivateLayout></RoleRoute>} />
           <Route path="/analytics"    element={<RoleRoute minRole="manager"><PrivateLayout><Analytics /></PrivateLayout></RoleRoute>} />
+          <Route path="/calendario"   element={<RoleRoute minRole="manager"><FullBleedLayout><Calendar /></FullBleedLayout></RoleRoute>} />
           <Route path="/publicidad"   element={<RoleRoute minRole="manager"><PrivateLayout><Publicidad /></PrivateLayout></RoleRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

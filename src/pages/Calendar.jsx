@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import PlanGate from '../components/PlanGate';
@@ -240,6 +240,8 @@ export default function Calendar() {
   const [selectedRsv, setSelectedRsv]   = useState(null);  // drawer
   const [createModal, setCreateModal]   = useState(false);  // new reservation
   const [editRsv, setEditRsv]           = useState(null);   // edit modal
+  const [dragState, setDragState]       = useState(null);   // { rsvId, targetTableId }
+  const dragRef                         = useRef(null);
 
   useEffect(() => {
     Promise.all([api.get('/tables'), api.get('/rooms'), api.get('/shifts')])
@@ -275,6 +277,69 @@ export default function Calendar() {
     setCreateModal(false);
     setEditRsv(null);
     loadReservations();
+  };
+
+  // ── Drag to reassign table ──
+  const startDrag = (e, r, fromTableId) => {
+    const isTouch = e.type === 'touchstart';
+    const clientX = isTouch ? e.touches[0].clientX : e.clientX;
+    const clientY = isTouch ? e.touches[0].clientY : e.clientY;
+
+    dragRef.current = {
+      rsv: r, fromTableId,
+      startX: clientX, startY: clientY,
+      moved: false,
+      targetTableId: null,
+    };
+
+    const onMove = (ev) => {
+      const cx = ev.touches ? ev.touches[0].clientX : ev.clientX;
+      const cy = ev.touches ? ev.touches[0].clientY : ev.clientY;
+      const dy = Math.abs(cy - dragRef.current.startY);
+      const dx = Math.abs(cx - dragRef.current.startX);
+
+      if (!dragRef.current.moved) {
+        if (dy < 8) return;
+        if (dx > dy) { endDrag(false); return; } // mostly horizontal → cancel
+        dragRef.current.moved = true;
+        setDragState({ rsvId: r._id, targetTableId: fromTableId });
+      }
+      if (ev.cancelable) ev.preventDefault();
+
+      const els = document.elementsFromPoint(cx, cy);
+      const rowEl = els.find(el => el.dataset.tableId);
+      if (rowEl) {
+        dragRef.current.targetTableId = rowEl.dataset.tableId;
+        setDragState({ rsvId: r._id, targetTableId: rowEl.dataset.tableId });
+      }
+    };
+
+    const endDrag = async (commit = true) => {
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', endDragHandler);
+      document.removeEventListener('touchmove', onMove);
+      document.removeEventListener('touchend', endDragHandler);
+
+      const { moved, targetTableId, rsv } = dragRef.current || {};
+      dragRef.current = null;
+      setDragState(null);
+
+      if (!moved || !commit) {
+        setSelectedRsv(rsv);
+        return;
+      }
+      if (!targetTableId || targetTableId === fromTableId) return;
+
+      await api.put(`/reservations/${rsv._id}`, { tableIds: [targetTableId] });
+      loadReservations();
+    };
+
+    const endDragHandler = () => endDrag(true);
+
+    document.addEventListener('mousemove', onMove);
+    document.addEventListener('mouseup', endDragHandler);
+    document.addEventListener('touchmove', onMove, { passive: false });
+    document.addEventListener('touchend', endDragHandler);
   };
 
   // ── Time range ──
@@ -438,10 +503,17 @@ export default function Calendar() {
                     </div>
 
                     {roomTables.map((table) => {
-                      const tableId   = table._id?.toString();
-                      const tableRsvs = rsvsByTable[tableId] || [];
+                      const tableId    = table._id?.toString();
+                      const tableRsvs  = rsvsByTable[tableId] || [];
+                      const isDragTarget = dragState?.targetTableId === tableId && dragRef.current?.fromTableId !== tableId;
                       return (
-                        <div key={table._id} className="flex border-b border-gray-100 hover:bg-gray-50/40 transition-colors" style={{ height: ROW_H }}>
+                        <div
+                          key={table._id}
+                          data-table-id={tableId}
+                          data-table-name={table.name}
+                          className={`flex border-b border-gray-100 transition-colors ${isDragTarget ? 'bg-violet-50' : 'hover:bg-gray-50/40'}`}
+                          style={{ height: ROW_H }}
+                        >
                           <div className="sticky left-0 z-10 flex items-center px-3 bg-white border-r border-gray-100 shrink-0" style={{ width: TABLE_COL_W }}>
                             <div className="min-w-0">
                               <p className="text-xs font-semibold text-gray-700 truncate">{table.name}</p>
@@ -458,16 +530,18 @@ export default function Calendar() {
                             ))}
 
                             {tableRsvs.map(r => {
-                              const rMin   = timeToMinutes(r.time);
-                              const left   = (rMin - effectiveStart) * PX_PER_MIN;
-                              const width  = Math.max(reservationDuration * PX_PER_MIN - 3, 20);
-                              const colors = BLOCK[r.status] || BLOCK.confirmed;
+                              const rMin    = timeToMinutes(r.time);
+                              const left    = (rMin - effectiveStart) * PX_PER_MIN;
+                              const width   = Math.max(reservationDuration * PX_PER_MIN - 3, 20);
+                              const colors  = BLOCK[r.status] || BLOCK.confirmed;
+                              const isDragging = dragState?.rsvId === r._id;
                               return (
                                 <div key={r._id}
-                                  onClick={() => setSelectedRsv(r)}
                                   title={`${r.guestName} · ${r.people} pax · ${r.time}`}
-                                  className="absolute top-1.5 bottom-1.5 rounded-lg px-2 flex flex-col justify-center overflow-hidden cursor-pointer select-none hover:brightness-95 transition-all"
-                                  style={{ left, width, backgroundColor: colors.bg, borderLeft: `3px solid ${colors.border}`, color: colors.text }}
+                                  onMouseDown={(e) => { e.preventDefault(); startDrag(e, r, tableId); }}
+                                  onTouchStart={(e) => startDrag(e, r, tableId)}
+                                  className="absolute top-1.5 bottom-1.5 rounded-lg px-2 flex flex-col justify-center overflow-hidden cursor-grab active:cursor-grabbing select-none transition-all"
+                                  style={{ left, width, backgroundColor: colors.bg, borderLeft: `3px solid ${colors.border}`, color: colors.text, opacity: isDragging ? 0.45 : 1 }}
                                 >
                                   <p className="text-[11px] font-semibold leading-tight truncate">{r.guestName}</p>
                                   <p className="text-[10px] leading-tight opacity-70">{r.time} · {r.people} pax</p>

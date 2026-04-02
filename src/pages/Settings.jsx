@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import Modal from '../components/Modal';
+import PlanGate from '../components/PlanGate';
 
 const inputCls = 'w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent';
 const labelCls = 'block text-xs font-medium text-gray-600 mb-1.5';
@@ -211,6 +212,7 @@ function SalasSection() {
 // MESAS SECTION
 // ═══════════════════════════════════════════════════════════════════════════
 function MesasSection() {
+  const { planLimit } = useAuth();
   const [tables, setTables] = useState([]);
   const [rooms,  setRooms]  = useState([]);
   const [modal,  setModal]  = useState(null);
@@ -317,9 +319,13 @@ function MesasSection() {
           />
         </div>
         <div className="flex items-center gap-2 shrink-0">
+          {planLimit('maxTables') !== Infinity && (
+            <span className="text-xs text-gray-400">{tables.length}/{planLimit('maxTables')}</span>
+          )}
           <button
             onClick={() => { setRanges([{ prefix: 'Mesa ', from: 1, to: 10, capacity: 2, roomId: '' }]); setQuickError(''); setQuickOpen(true); }}
-            className="flex items-center gap-1.5 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-3.5 py-2 rounded-xl text-sm font-semibold transition-colors"
+            disabled={tables.length >= planLimit('maxTables')}
+            className="flex items-center gap-1.5 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-3.5 py-2 rounded-xl text-sm font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 text-violet-500">
               <path d="M2 2.75A.75.75 0 0 1 2.75 2h10.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 2.75ZM2 8a.75.75 0 0 1 .75-.75h10.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 8Zm0 5.25a.75.75 0 0 1 .75-.75h4.5a.75.75 0 0 1 0 1.5h-4.5a.75.75 0 0 1-.75-.75Z" />
@@ -328,7 +334,8 @@ function MesasSection() {
           </button>
           <button
             onClick={openCreate}
-            className="flex items-center gap-1.5 bg-violet-600 hover:bg-violet-700 text-white px-3.5 py-2 rounded-xl text-sm font-semibold transition-colors shadow-sm"
+            disabled={tables.length >= planLimit('maxTables')}
+            className="flex items-center gap-1.5 bg-violet-600 hover:bg-violet-700 text-white px-3.5 py-2 rounded-xl text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <IconPlus /> Nueva mesa
           </button>
@@ -556,6 +563,7 @@ function fmtDate(d) {
 }
 
 function TurnosSection() {
+  const { planLimit } = useAuth();
   const [shifts, setShifts] = useState([]);
   const [modal,  setModal]  = useState(null);
   const [form,   setForm]   = useState(emptyShiftForm());
@@ -609,9 +617,12 @@ function TurnosSection() {
       <div className="flex items-center justify-between">
         <p className="text-sm text-gray-500">
           {shifts.length} turno{shifts.length !== 1 ? 's' : ''} configurado{shifts.length !== 1 ? 's' : ''}
+          {planLimit('maxShifts') !== Infinity && (
+            <span className="ml-1 text-gray-400">/ {planLimit('maxShifts')} en Free</span>
+          )}
         </p>
-        <button onClick={openCreate}
-          className="flex items-center gap-1.5 bg-violet-600 hover:bg-violet-700 text-white px-3.5 py-2 rounded-xl text-sm font-semibold transition-colors shadow-sm">
+        <button onClick={openCreate} disabled={shifts.length >= planLimit('maxShifts')}
+          className="flex items-center gap-1.5 bg-violet-600 hover:bg-violet-700 text-white px-3.5 py-2 rounded-xl text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
           <IconPlus /> Nuevo turno
         </button>
       </div>
@@ -819,6 +830,7 @@ function TurnosSection() {
 // VACACIONES SECTION
 // ═══════════════════════════════════════════════════════════════════════════
 function VacacionesSection() {
+  const { planLimit } = useAuth();
   const [vacations, setVacations] = useState([]);
   const [form, setForm] = useState({ startDate: '', endDate: '', reason: '' });
   const [error, setError] = useState('');
@@ -855,37 +867,43 @@ function VacacionesSection() {
   return (
     <div className="space-y-6">
       {/* Add form */}
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
-        <h3 className="text-sm font-semibold text-gray-900 mb-4">Añadir período de cierre</h3>
-        <ErrorBanner msg={error} />
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className={labelCls}>Fecha inicio *</label>
-              <input type="date" required value={form.startDate}
-                onChange={e => setForm(f => ({ ...f, startDate: e.target.value }))}
-                className={inputCls} />
+      {upcoming.length >= planLimit('maxVacations') ? (
+        <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 text-sm text-amber-700">
+          Has alcanzado el límite de {planLimit('maxVacations')} período{planLimit('maxVacations') !== 1 ? 's' : ''} de cierre del plan Free. Elimina uno existente para añadir otro.
+        </div>
+      ) : (
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
+          <h3 className="text-sm font-semibold text-gray-900 mb-4">Añadir período de cierre</h3>
+          <ErrorBanner msg={error} />
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className={labelCls}>Fecha inicio *</label>
+                <input type="date" required value={form.startDate}
+                  onChange={e => setForm(f => ({ ...f, startDate: e.target.value }))}
+                  className={inputCls} />
+              </div>
+              <div>
+                <label className={labelCls}>Fecha fin *</label>
+                <input type="date" required value={form.endDate}
+                  onChange={e => setForm(f => ({ ...f, endDate: e.target.value }))}
+                  className={inputCls} />
+              </div>
             </div>
             <div>
-              <label className={labelCls}>Fecha fin *</label>
-              <input type="date" required value={form.endDate}
-                onChange={e => setForm(f => ({ ...f, endDate: e.target.value }))}
+              <label className={labelCls}>Motivo <span className="text-gray-400 font-normal">(opcional)</span></label>
+              <input value={form.reason}
+                onChange={e => setForm(f => ({ ...f, reason: e.target.value }))}
+                placeholder="Vacaciones de verano, obras, festivo..."
                 className={inputCls} />
             </div>
-          </div>
-          <div>
-            <label className={labelCls}>Motivo <span className="text-gray-400 font-normal">(opcional)</span></label>
-            <input value={form.reason}
-              onChange={e => setForm(f => ({ ...f, reason: e.target.value }))}
-              placeholder="Vacaciones de verano, obras, festivo..."
-              className={inputCls} />
-          </div>
-          <button type="submit" disabled={saving}
-            className="flex items-center gap-1.5 bg-violet-600 hover:bg-violet-700 text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors disabled:opacity-50">
-            <IconPlus /> Añadir cierre
-          </button>
-        </form>
-      </div>
+            <button type="submit" disabled={saving}
+              className="flex items-center gap-1.5 bg-violet-600 hover:bg-violet-700 text-white px-4 py-2.5 rounded-xl text-sm font-semibold transition-colors disabled:opacity-50">
+              <IconPlus /> Añadir cierre
+            </button>
+          </form>
+        </div>
+      )}
 
       {/* Upcoming closures */}
       {upcoming.length > 0 && (
@@ -1044,21 +1062,23 @@ function PublicoSection() {
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl p-6 border border-gray-200">
-        <h3 className="text-sm font-semibold text-gray-900 mb-2">Integrar en tu web (iframe)</h3>
-        <p className="text-sm text-gray-600 mb-4">
-          Copia este codigo y pegalo en la web de tu restaurante para que los clientes puedan reservar sin salir de tu pagina.
-        </p>
-        <pre className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-xs text-gray-700 font-mono overflow-x-auto whitespace-pre-wrap break-all leading-relaxed mb-3">
+      <PlanGate paid>
+        <div className="bg-white rounded-2xl p-6 border border-gray-200">
+          <h3 className="text-sm font-semibold text-gray-900 mb-2">Integrar en tu web (iframe)</h3>
+          <p className="text-sm text-gray-600 mb-4">
+            Copia este codigo y pegalo en la web de tu restaurante para que los clientes puedan reservar sin salir de tu pagina.
+          </p>
+          <pre className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-xs text-gray-700 font-mono overflow-x-auto whitespace-pre-wrap break-all leading-relaxed mb-3">
 {embedCode}
-        </pre>
-        <button
-          onClick={() => copyToClipboard(embedCode, 'embed')}
-          className="px-4 py-2.5 bg-violet-600 text-white text-sm font-medium rounded-xl hover:bg-violet-700 transition-colors"
-        >
-          {copied === 'embed' ? 'Copiado' : 'Copiar codigo'}
-        </button>
-      </div>
+          </pre>
+          <button
+            onClick={() => copyToClipboard(embedCode, 'embed')}
+            className="px-4 py-2.5 bg-violet-600 text-white text-sm font-medium rounded-xl hover:bg-violet-700 transition-colors"
+          >
+            {copied === 'embed' ? 'Copiado' : 'Copiar codigo'}
+          </button>
+        </div>
+      </PlanGate>
     </div>
   );
 }
@@ -1118,53 +1138,55 @@ function LimitesSection() {
         </div>
       </div>
 
-      <div className="bg-white rounded-2xl p-6 border border-gray-200">
-        <div className="flex items-center gap-2 mb-2">
-          <h3 className="text-sm font-semibold text-gray-900">Maximo de Personas por Turno</h3>
-        </div>
-        <p className="text-sm text-gray-600 mb-4">
-          Deja vacio para no establecer limite por turno.
-        </p>
-        <div className="flex items-center gap-3">
-          <input
-            type="number"
-            min="1"
-            placeholder="Sin limite"
-            value={maxPeoplePerSlot}
-            onChange={(e) => setMaxPeoplePerSlot(e.target.value)}
-            className="w-24 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
-            disabled={saving}
-          />
-          <div>
-            <p className="text-sm font-medium text-gray-900">personas maximo</p>
-            <p className="text-xs text-gray-500">Por franja horaria simultanea</p>
+      <PlanGate paid>
+        <div className="bg-white rounded-2xl p-6 border border-gray-200">
+          <div className="flex items-center gap-2 mb-2">
+            <h3 className="text-sm font-semibold text-gray-900">Maximo de Personas por Turno</h3>
+          </div>
+          <p className="text-sm text-gray-600 mb-4">
+            Deja vacio para no establecer limite por turno.
+          </p>
+          <div className="flex items-center gap-3">
+            <input
+              type="number"
+              min="1"
+              placeholder="Sin limite"
+              value={maxPeoplePerSlot}
+              onChange={(e) => setMaxPeoplePerSlot(e.target.value)}
+              className="w-24 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+              disabled={saving}
+            />
+            <div>
+              <p className="text-sm font-medium text-gray-900">personas maximo</p>
+              <p className="text-xs text-gray-500">Por franja horaria simultanea</p>
+            </div>
           </div>
         </div>
-      </div>
 
-      <div className="bg-white rounded-2xl p-6 border border-gray-200">
-        <div className="flex items-center gap-2 mb-2">
-          <h3 className="text-sm font-semibold text-gray-900">Duracion por Mesa</h3>
-        </div>
-        <p className="text-sm text-gray-600 mb-4">
-          Deja vacio para no bloquear franjas posteriores.
-        </p>
-        <div className="flex items-center gap-3">
-          <input
-            type="number"
-            min="1"
-            placeholder="Sin bloqueo"
-            value={reservationDuration}
-            onChange={(e) => setReservationDuration(e.target.value)}
-            className="w-24 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
-            disabled={saving}
-          />
-          <div>
-            <p className="text-sm font-medium text-gray-900">minutos</p>
-            <p className="text-xs text-gray-500">Tiempo bloqueado por reserva</p>
+        <div className="bg-white rounded-2xl p-6 border border-gray-200">
+          <div className="flex items-center gap-2 mb-2">
+            <h3 className="text-sm font-semibold text-gray-900">Duracion por Mesa</h3>
+          </div>
+          <p className="text-sm text-gray-600 mb-4">
+            Deja vacio para no bloquear franjas posteriores.
+          </p>
+          <div className="flex items-center gap-3">
+            <input
+              type="number"
+              min="1"
+              placeholder="Sin bloqueo"
+              value={reservationDuration}
+              onChange={(e) => setReservationDuration(e.target.value)}
+              className="w-24 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+              disabled={saving}
+            />
+            <div>
+              <p className="text-sm font-medium text-gray-900">minutos</p>
+              <p className="text-xs text-gray-500">Tiempo bloqueado por reserva</p>
+            </div>
           </div>
         </div>
-      </div>
+      </PlanGate>
 
       <div className="flex items-center gap-3">
         <button

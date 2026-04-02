@@ -106,10 +106,47 @@ export function AuthProvider({ children }) {
    * Mirrors the backend planCapabilities logic so the UI can gate without
    * an extra API call on every render.
    */
-  const FREE_CAPS = { autoEmails: false, staffNotifications: false, marketing: false, promoCodes: false };
-  const BASIC_CAPS = { autoEmails: true, staffNotifications: true, marketing: true, promoCodes: true };
+  const FREE_CAPS  = {
+    maxReservationsPerMonth: 30,
+    maxMembers:              1,
+    maxTables:               15,
+    maxShifts:               2,
+    maxVacations:            1,
+    autoEmails:              false,
+    staffNotifications:      false,
+    marketing:               false,
+    promoCodes:              false,
+    iframeEmbed:             true,
+    removeTableoBranding:    false,
+    pendingApprovalControl:  false,
+    advancedAnalytics:       false,
+    autoReminders:           false,
+    advancedReminders:       false,
+    noShowTracking:          false,
+    dataExport:              false,
+  };
+  const BASIC_CAPS = {
+    maxReservationsPerMonth: Infinity,
+    maxMembers:              Infinity,
+    maxTables:               Infinity,
+    maxShifts:               Infinity,
+    maxVacations:            Infinity,
+    autoEmails:              true,
+    staffNotifications:      true,
+    marketing:               true,
+    promoCodes:              true,
+    iframeEmbed:             true,
+    removeTableoBranding:    true,
+    pendingApprovalControl:  true,
+    advancedAnalytics:       true,
+    autoReminders:           true,
+    advancedReminders:       true,
+    noShowTracking:          true,
+    dataExport:              true,
+  };
   const planCaps = isSubscribed ? BASIC_CAPS : FREE_CAPS;
-  const canUse = (feature) => !!planCaps[feature];
+  const canUse    = (feature) => !!planCaps[feature];
+  const planLimit = (key) => planCaps[key] ?? Infinity;
 
   // Minimal session object for pages that need the logged-in user's identity
   const session = business
@@ -128,7 +165,7 @@ export function AuthProvider({ children }) {
       login, register, logout, refreshBusiness, switchBusiness,
       isDev, role, plan, subscriptionStatus,
       trialEndsAt, currentPeriodEnd, cancelAtPeriodEnd,
-      hasRole, isSubscribed, canUse,
+      hasRole, isSubscribed, canUse, planLimit,
       session,
     }}>
       {children}

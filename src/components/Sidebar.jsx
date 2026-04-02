@@ -89,7 +89,16 @@ const [isSmallScreen, setIsSmallScreen] = useState(false);
     ? []
     : [...secondaryLinks, ...(hasRole('manager') ? [{ to: '/team', label: 'Equipo', icon: <IconTeam /> }] : [])];
   const visibleConfigLinks = isStaff ? [] : configLinks;
-  const navLinks = [...mainLinks, ...lowerLinks].filter((link) => !(isSmallScreen && link.to === '/tables'));
+  const calendarLink = (!isStaff && !isFree && hasRole('manager'))
+    ? [{ to: '/calendario', label: 'Calendario', icon: <IconCalendarGrid /> }]
+    : [];
+  const navLinks = [
+    mainLinks[0],                // Dashboard
+    mainLinks[1],                // Reservas
+    ...calendarLink,             // Calendario (Basic+manager, justo después de Reservas)
+    ...mainLinks.slice(2),       // Clientes (si visible)
+    ...lowerLinks,               // Mesas, Equipo
+  ].filter(Boolean).filter((link) => !(isSmallScreen && link.to === '/tables'));
 
   const userName = session?.user?.name || business?.userName || business?.name || 'Usuario';
   const userEmail = session?.user?.email || business?.userEmail || business?.email || '';
@@ -167,21 +176,6 @@ const [isSmallScreen, setIsSmallScreen] = useState(false);
               {link.label}
             </NavLink>
           ))}
-
-          {!isStaff && !isFree && hasRole('manager') && (
-            <NavLink
-              to="/calendario"
-              onClick={handleNavClick}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-3 lg:py-2 rounded-lg text-sm font-medium transition-all duration-100 ${
-                  isActive ? 'bg-violet-600 text-white shadow-sm' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100'
-                }`
-              }
-            >
-              <IconCalendarGrid />
-              Calendario
-            </NavLink>
-          )}
 
           {!isStaff && !isFree && hasRole('manager') && (
             <NavLink

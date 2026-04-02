@@ -20,9 +20,7 @@ export function Avatar({ name }) {
 
 export function TableCell({ reservation, tables, onAssign }) {
   const [open, setOpen] = useState(false);
-  const ref = useRef(null);
   const panelRef = useRef(null);
-
 
   // Resolve currently assigned IDs — prefer tableIds array, fallback to tableId
   const assignedIds = (() => {
@@ -37,13 +35,6 @@ export function TableCell({ reservation, tables, onAssign }) {
 
   // Reset selection when reservation changes
   useEffect(() => { setSelected(assignedIds); }, [reservation._id]);
-
-  useEffect(() => {
-    if (!open) return;
-    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [open]);
 
   const roomId = reservation.roomId?._id || reservation.roomId;
   const available = tables
@@ -99,61 +90,88 @@ export function TableCell({ reservation, tables, onAssign }) {
   }
 
   return (
-    <div ref={ref}>
-      <div ref={panelRef} className="fixed top-4 left-4 right-4 z-50 bg-white border border-violet-200 rounded-xl shadow-xl p-3 max-h-[80vh] overflow-y-auto">
-        <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-wide mb-2">Seleccionar mesas</p>
+    <>
+      {/* Backdrop */}
+      <div className="fixed inset-0 z-40 bg-black/20" onClick={() => setOpen(false)} />
 
-        {/* None option */}
-        <label className="flex items-center gap-2 py-1 px-1 rounded-lg hover:bg-gray-50 cursor-pointer">
-          <input
-            type="checkbox"
-            className="accent-violet-600 w-3.5 h-3.5"
-            checked={selected.length === 0}
-            onChange={() => setSelected([])}
-          />
-          <span className="text-xs text-gray-500">Sin mesa</span>
-        </label>
+      {/* Panel */}
+      <div ref={panelRef} className="fixed top-4 left-4 right-4 sm:left-auto sm:right-auto sm:w-72 z-50 bg-white rounded-2xl shadow-xl overflow-hidden"
+        style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }}
+      >
+        {/* Header */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+          <p className="text-sm font-semibold text-gray-800">Asignar mesa</p>
+          <button onClick={() => setOpen(false)} className="text-gray-400 hover:text-gray-600 transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
+              <path d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z" />
+            </svg>
+          </button>
+        </div>
 
-        {/* Tables grouped by room */}
-        {Object.entries(grouped).map(([roomName, roomTables]) => (
-          <div key={roomName}>
-            {Object.keys(grouped).length > 1 && (
-              <p className="text-[10px] text-gray-400 font-medium mt-2 mb-1 px-1">{roomName}</p>
-            )}
-            {roomTables.map(t => {
-              const id = t._id?.toString();
-              return (
-                <label key={id} className="flex items-center gap-2 py-1 px-1 rounded-lg hover:bg-gray-50 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    className="accent-violet-600 w-3.5 h-3.5"
-                    checked={selected.includes(id)}
-                    onChange={() => toggle(id)}
-                  />
-                  <span className="text-xs text-gray-700 font-medium">{t.name}</span>
-                  {t.capacity && <span className="text-[10px] text-gray-400 ml-auto">{t.capacity} pax</span>}
-                </label>
-              );
-            })}
-          </div>
-        ))}
+        <div className="p-4 max-h-[60vh] overflow-y-auto space-y-4">
+          {/* Sin mesa chip */}
+          <button
+            onClick={() => setSelected([])}
+            className={`w-full text-xs font-medium px-3 py-2 rounded-xl border transition-colors ${
+              selected.length === 0
+                ? 'bg-gray-900 text-white border-gray-900'
+                : 'bg-gray-50 text-gray-500 border-gray-200 hover:bg-gray-100'
+            }`}
+          >
+            Sin mesa
+          </button>
 
-        <div className="flex gap-2 mt-3 pt-2 border-t border-gray-100">
+          {/* Tables grouped by room */}
+          {Object.entries(grouped).map(([roomName, roomTables]) => (
+            <div key={roomName}>
+              {Object.keys(grouped).length > 1 && (
+                <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest mb-2">{roomName}</p>
+              )}
+              <div className="grid grid-cols-3 gap-2">
+                {roomTables.map(t => {
+                  const id = t._id?.toString();
+                  const isSelected = selected.includes(id);
+                  return (
+                    <button
+                      key={id}
+                      onClick={() => toggle(id)}
+                      className={`flex flex-col items-center justify-center px-2 py-2.5 rounded-xl border text-xs font-semibold transition-all ${
+                        isSelected
+                          ? 'bg-violet-600 text-white border-violet-600 shadow-sm scale-[1.03]'
+                          : 'bg-white text-gray-700 border-gray-200 hover:border-violet-300 hover:bg-violet-50'
+                      }`}
+                    >
+                      <span className="truncate w-full text-center">{t.name}</span>
+                      {t.capacity && (
+                        <span className={`text-[10px] mt-0.5 ${isSelected ? 'text-violet-200' : 'text-gray-400'}`}>
+                          {t.capacity} pax
+                        </span>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Footer */}
+        <div className="flex gap-2 px-4 py-3 border-t border-gray-100 bg-gray-50/60">
           <button
             onClick={save}
-            className="flex-1 text-xs font-semibold py-1.5 rounded-lg bg-violet-600 text-white hover:bg-violet-700 transition-colors"
+            className="flex-1 text-sm font-semibold py-2 rounded-xl bg-violet-600 text-white hover:bg-violet-700 transition-colors"
           >
             Guardar
           </button>
           <button
             onClick={() => setOpen(false)}
-            className="text-xs font-medium px-3 py-1.5 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors"
+            className="px-4 text-sm font-medium py-2 rounded-xl text-gray-500 hover:bg-gray-100 transition-colors"
           >
             Cancelar
           </button>
         </div>
       </div>
-    </div>
+    </>
   );
 }
 

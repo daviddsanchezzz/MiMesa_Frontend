@@ -290,7 +290,17 @@ export default function Calendar() {
       rsv: r, fromTableId,
       startX: clientX, startY: clientY,
       moved: false,
+      activated: !isTouch, // mouse → active immediately; touch → needs long press
       targetTableId: null,
+      longPressTimer: null,
+    };
+
+    const cleanup = () => {
+      clearTimeout(dragRef.current?.longPressTimer);
+      document.removeEventListener('mousemove', onMove);
+      document.removeEventListener('mouseup', endDragHandler);
+      document.removeEventListener('touchmove', onMove);
+      document.removeEventListener('touchend', endDragHandler);
     };
 
     const onMove = (ev) => {
@@ -299,12 +309,30 @@ export default function Calendar() {
       const dy = Math.abs(cy - dragRef.current.startY);
       const dx = Math.abs(cx - dragRef.current.startX);
 
-      if (!dragRef.current.moved) {
-        if (dy < 8) return;
-        if (dx > dy) { endDrag(false); return; } // mostly horizontal → cancel
-        dragRef.current.moved = true;
-        setDragState({ rsvId: r._id, targetTableId: fromTableId });
+      // Touch: if finger moves before long-press fires → it's a scroll, cancel
+      if (!dragRef.current.activated) {
+        if (dx > 8 || dy > 8) {
+          cleanup();
+          dragRef.current = null;
+          setDragState(null);
+        }
+        return;
       }
+
+      // Activated — first real movement initialises drag
+      if (!dragRef.current.moved) {
+        if (isTouch) {
+          // Long press already confirmed, any movement starts dragging
+          dragRef.current.moved = true;
+        } else {
+          // Mouse: require intentional vertical movement
+          if (dy < 8) return;
+          if (dx > dy) { endDrag(false); return; }
+          dragRef.current.moved = true;
+          setDragState({ rsvId: r._id, targetTableId: fromTableId });
+        }
+      }
+
       if (ev.cancelable) ev.preventDefault();
 
       const els = document.elementsFromPoint(cx, cy);
@@ -316,22 +344,20 @@ export default function Calendar() {
     };
 
     const endDrag = async (commit = true) => {
-      document.removeEventListener('mousemove', onMove);
-      document.removeEventListener('mouseup', endDragHandler);
-      document.removeEventListener('touchmove', onMove);
-      document.removeEventListener('touchend', endDragHandler);
+      cleanup();
 
-      const { moved, targetTableId, rsv } = dragRef.current || {};
+      const { moved, activated, targetTableId, rsv } = dragRef.current || {};
       dragRef.current = null;
       setDragState(null);
 
-      if (!moved || !commit) {
-        setSelectedRsv(rsv);
+      // Not activated (long press never fired) or no movement → treat as tap/click
+      if (!activated || !moved || !commit) {
+        if (!moved) setSelectedRsv(rsv);
         return;
       }
       if (!targetTableId || targetTableId === fromTableId) return;
 
-      // Conflict check — does target table have an overlapping reservation?
+      // Conflict check
       const draggedStart = timeToMinutes(rsv.time);
       const draggedEnd   = draggedStart + (reservationDuration || 90);
       const conflict = (rsvsByTable[targetTableId] || []).some(existing => {
@@ -359,6 +385,17 @@ export default function Calendar() {
     };
 
     const endDragHandler = () => endDrag(true);
+
+    // Touch: activate drag only after long press (450ms)
+    if (isTouch) {
+      dragRef.current.longPressTimer = setTimeout(() => {
+        if (!dragRef.current) return;
+        dragRef.current.activated = true;
+        dragRef.current.moved = true; // consider it "dragging" from now
+        setDragState({ rsvId: r._id, targetTableId: fromTableId });
+        if (navigator.vibrate) navigator.vibrate(40); // haptic feedback
+      }, 450);
+    }
 
     document.addEventListener('mousemove', onMove);
     document.addEventListener('mouseup', endDragHandler);

@@ -89,7 +89,7 @@ const [isSmallScreen, setIsSmallScreen] = useState(false);
     ? []
     : [...secondaryLinks, ...(hasRole('manager') ? [{ to: '/team', label: 'Equipo', icon: <IconTeam /> }] : [])];
   const visibleConfigLinks = isStaff ? [] : configLinks;
-  const calendarLink = (!isStaff && !isFree && hasRole('manager'))
+  const calendarLink = (!isFree && hasRole('staff'))
     ? [{ to: '/calendario', label: 'Calendario', icon: <IconCalendarGrid /> }]
     : [];
   const navLinks = [

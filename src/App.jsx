@@ -173,7 +173,7 @@ export default function App() {
           <Route path="/profile"       element={<PrivateLayout><Profile /></PrivateLayout>} />
           <Route path="/team"         element={<RoleRoute minRole="manager"><PrivateLayout><Team /></PrivateLayout></RoleRoute>} />
           <Route path="/analytics"    element={<RoleRoute minRole="manager"><PrivateLayout><Analytics /></PrivateLayout></RoleRoute>} />
-          <Route path="/calendario"   element={<RoleRoute minRole="manager"><FullBleedLayout><Calendar /></FullBleedLayout></RoleRoute>} />
+          <Route path="/calendario"   element={<RoleRoute minRole="staff"><FullBleedLayout><Calendar /></FullBleedLayout></RoleRoute>} />
           <Route path="/publicidad"   element={<RoleRoute minRole="manager"><PrivateLayout><Publicidad /></PrivateLayout></RoleRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

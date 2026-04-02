@@ -373,13 +373,18 @@ export default function Calendar() {
         return;
       }
 
-      // Optimistic update — move instantly, sync in background
+      // Optimistic update — swap only fromTableId → targetTableId, keep the rest
       const targetTable = tables.find(t => t._id?.toString() === targetTableId);
       setReservations(prev => prev.map(r => {
         if (r._id !== rsv._id) return r;
-        return { ...r, tableIds: targetTable ? [targetTable] : r.tableIds, tableId: null };
+        const kept = (r.tableIds || []).filter(t => (t._id?.toString() || t.toString()) !== fromTableId);
+        return { ...r, tableIds: [...kept, targetTable].filter(Boolean), tableId: null };
       }));
-      api.put(`/reservations/${rsv._id}`, { tableIds: [targetTableId] }).catch(() => {
+
+      const newIds = getTableIds(rsv)
+        .filter(id => id !== fromTableId)
+        .concat(targetTableId);
+      api.put(`/reservations/${rsv._id}`, { tableIds: newIds }).catch(() => {
         loadReservations(); // revert on error
       });
     };

@@ -768,6 +768,7 @@ export default function Reservations() {
           />
         );
 
+        
         // No shifts or single shift â†' flat list
         if (shouldGroupByDay) {
           return (

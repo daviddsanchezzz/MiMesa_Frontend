@@ -24,6 +24,8 @@ import PublicReservation from './pages/PublicReservation';
 import PublicCancel from './pages/PublicCancel';
 import PublicUnsubscribe from './pages/PublicUnsubscribe';
 import Sidebar from './components/Sidebar';
+import Modal from './components/Modal';
+import ReservationForm from './components/ReservationForm';
 
 function LoadingScreen() {
   return (
@@ -36,7 +38,7 @@ function LoadingScreen() {
   );
 }
 
-function MobileHeader({ onMenuOpen }) {
+function MobileHeader({ onMenuOpen, onNewReservation }) {
   return (
     <div className="lg:hidden flex items-center gap-3 px-4 py-3 bg-white border-b border-gray-200 shrink-0 z-30">
       <button
@@ -48,65 +50,64 @@ function MobileHeader({ onMenuOpen }) {
           <path fillRule="evenodd" d="M2 4.75A.75.75 0 0 1 2.75 4h14.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 4.75ZM2 10a.75.75 0 0 1 .75-.75h14.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 10Zm0 5.25a.75.75 0 0 1 .75-.75h14.5a.75.75 0 0 1 0 1.5H2.75a.75.75 0 0 1-.75-.75Z" clipRule="evenodd" />
         </svg>
       </button>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-1 min-w-0">
         <img src="/logo.svg" alt="Tableo" className="w-6 h-6 shrink-0" />
         <p className="text-sm font-semibold text-gray-900">Tableo</p>
       </div>
+      <button
+        onClick={onNewReservation}
+        className="flex items-center gap-1.5 bg-violet-600 hover:bg-violet-700 text-white px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors"
+        aria-label="Nueva reserva"
+      >
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
+          <path d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z" />
+        </svg>
+        Reserva
+      </button>
+    </div>
+  );
+}
+
+function LayoutShell({ children, fullBleed = false }) {
+  const { business, loading } = useAuth();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [newRsvModal, setNewRsvModal] = useState(false);
+
+  if (loading) return <LoadingScreen />;
+  if (!business) return <Navigate to="/login" replace />;
+  if (!business.id && !business.isDev) return <Navigate to="/onboarding" replace />;
+
+  return (
+    <div className="flex h-screen bg-gray-50 overflow-hidden">
+      {sidebarOpen && (
+        <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={() => setSidebarOpen(false)} />
+      )}
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+        <MobileHeader
+          onMenuOpen={() => setSidebarOpen(true)}
+          onNewReservation={() => setNewRsvModal(true)}
+        />
+        <main className={fullBleed ? 'flex-1 overflow-hidden flex flex-col' : 'flex-1 overflow-auto p-4 lg:p-8'}>
+          {children}
+        </main>
+      </div>
+      {newRsvModal && (
+        <Modal title="Nueva reserva" onClose={() => setNewRsvModal(false)}>
+          <ReservationForm onSave={() => setNewRsvModal(false)} onCancel={() => setNewRsvModal(false)} />
+        </Modal>
+      )}
     </div>
   );
 }
 
 function PrivateLayout({ children }) {
-  const { business, loading } = useAuth();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-
-  if (loading) return <LoadingScreen />;
-  if (!business) return <Navigate to="/login" replace />;
-  if (!business.id && !business.isDev) return <Navigate to="/onboarding" replace />;
-
-  return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden">
-      {/* Mobile backdrop */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-        <MobileHeader onMenuOpen={() => setSidebarOpen(true)} />
-        <main className="flex-1 overflow-auto p-4 lg:p-8">{children}</main>
-      </div>
-    </div>
-  );
+  return <LayoutShell>{children}</LayoutShell>;
 }
 
 // Full-bleed layout: no padding, for map/canvas views
 function FullBleedLayout({ children }) {
-  const { business, loading } = useAuth();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-
-  if (loading) return <LoadingScreen />;
-  if (!business) return <Navigate to="/login" replace />;
-  if (!business.id && !business.isDev) return <Navigate to="/onboarding" replace />;
-
-  return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden">
-      {/* Mobile backdrop */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-        <MobileHeader onMenuOpen={() => setSidebarOpen(true)} />
-        <main className="flex-1 overflow-hidden flex flex-col">{children}</main>
-      </div>
-    </div>
-  );
+  return <LayoutShell fullBleed>{children}</LayoutShell>;
 }
 
 function PublicRoute({ children }) {

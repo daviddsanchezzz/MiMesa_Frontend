@@ -72,7 +72,7 @@ export function TableCell({ reservation, tables, onAssign }) {
   if (!open) {
     return (
       <button
-        onClick={() => { setSelected(assignedIds); setOpen(true); }}
+        onClick={() => { setSelected(assignedIds); setOpen(true); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
         className={`flex items-center gap-1.5 text-xs px-2.5 py-1.5 rounded-lg border transition-colors ${
           assignedTables.length > 0
             ? 'bg-slate-50 border-slate-200 text-slate-700 hover:border-violet-300 hover:bg-violet-50 hover:text-violet-600 font-medium'

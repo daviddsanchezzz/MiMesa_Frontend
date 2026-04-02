@@ -330,8 +330,15 @@ export default function Calendar() {
       }
       if (!targetTableId || targetTableId === fromTableId) return;
 
-      await api.put(`/reservations/${rsv._id}`, { tableIds: [targetTableId] });
-      loadReservations();
+      // Optimistic update — move instantly, sync in background
+      const targetTable = tables.find(t => t._id?.toString() === targetTableId);
+      setReservations(prev => prev.map(r => {
+        if (r._id !== rsv._id) return r;
+        return { ...r, tableIds: targetTable ? [targetTable] : r.tableIds, tableId: null };
+      }));
+      api.put(`/reservations/${rsv._id}`, { tableIds: [targetTableId] }).catch(() => {
+        loadReservations(); // revert on error
+      });
     };
 
     const endDragHandler = () => endDrag(true);

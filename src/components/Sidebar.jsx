@@ -65,15 +65,20 @@ const configLinks = [
 ];
 
 export default function Sidebar({ isOpen, onClose }) {
-  const { business, memberships, logout, hasRole, switchBusiness, session } = useAuth();
+  const { business, memberships, logout, hasRole, switchBusiness, session, isSubscribed } = useAuth();
   const navigate = useNavigate();
 const [menuOpen, setMenuOpen] = useState(false);
 const [isSmallScreen, setIsSmallScreen] = useState(false);
   const menuRef = useRef(null);
   const isStaff = business?.role === 'staff';
+  const isFree = !isSubscribed;
 
-  const mainLinks = isStaff ? links.filter((link) => link.to !== '/customers') : links;
-  const lowerLinks = isStaff
+  const mainLinks = isStaff
+    ? links.filter((link) => link.to !== '/customers')
+    : isFree
+      ? links.filter((link) => link.to !== '/customers')
+      : links;
+  const lowerLinks = isStaff || isFree
     ? []
     : [...secondaryLinks, ...(hasRole('manager') ? [{ to: '/team', label: 'Equipo', icon: <IconTeam /> }] : [])];
   const visibleConfigLinks = isStaff ? [] : configLinks;
@@ -156,7 +161,7 @@ const [isSmallScreen, setIsSmallScreen] = useState(false);
             </NavLink>
           ))}
 
-          {!isStaff && hasRole('manager') && (
+          {!isStaff && !isFree && hasRole('manager') && (
             <NavLink
               to="/analytics"
               onClick={handleNavClick}
@@ -171,7 +176,7 @@ const [isSmallScreen, setIsSmallScreen] = useState(false);
             </NavLink>
           )}
 
-          {!isStaff && hasRole('manager') && (
+          {!isStaff && !isFree && hasRole('manager') && (
             <NavLink
               to="/publicidad"
               onClick={handleNavClick}

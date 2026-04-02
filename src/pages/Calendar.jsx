@@ -241,6 +241,7 @@ export default function Calendar() {
   const [createModal, setCreateModal]   = useState(false);  // new reservation
   const [editRsv, setEditRsv]           = useState(null);   // edit modal
   const [dragState, setDragState]       = useState(null);   // { rsvId, targetTableId }
+  const [dragError, setDragError]       = useState(null);   // conflict message
   const dragRef                         = useRef(null);
 
   useEffect(() => {
@@ -329,6 +330,22 @@ export default function Calendar() {
         return;
       }
       if (!targetTableId || targetTableId === fromTableId) return;
+
+      // Conflict check — does target table have an overlapping reservation?
+      const draggedStart = timeToMinutes(rsv.time);
+      const draggedEnd   = draggedStart + (reservationDuration || 90);
+      const conflict = (rsvsByTable[targetTableId] || []).some(existing => {
+        if (existing._id === rsv._id) return false;
+        const s = timeToMinutes(existing.time);
+        const e = s + (reservationDuration || 90);
+        return draggedStart < e && s < draggedEnd;
+      });
+
+      if (conflict) {
+        setDragError('Mesa ocupada en ese horario');
+        setTimeout(() => setDragError(null), 3000);
+        return;
+      }
 
       // Optimistic update — move instantly, sync in background
       const targetTable = tables.find(t => t._id?.toString() === targetTableId);
@@ -567,6 +584,16 @@ export default function Calendar() {
                 )}
               </div>
             )}
+          </div>
+        )}
+
+        {/* ── Drag conflict toast ── */}
+        {dragError && (
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-4 py-2.5 bg-rose-600 text-white text-sm font-semibold rounded-xl shadow-lg pointer-events-none">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 shrink-0">
+              <path fillRule="evenodd" d="M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14Zm0-4a.75.75 0 0 1-.75-.75v-3.5a.75.75 0 0 1 1.5 0v3.5A.75.75 0 0 1 8 11Zm0 2.25a.75.75 0 1 1 0-1.5.75.75 0 0 1 0 1.5Z" clipRule="evenodd" />
+            </svg>
+            {dragError}
           </div>
         )}
 

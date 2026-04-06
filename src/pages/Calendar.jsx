@@ -242,6 +242,7 @@ export default function Calendar() {
   const [dragState, setDragState]       = useState(null);   // { rsvId, targetTableId }
   const [dragError, setDragError]       = useState(null);   // conflict message
   const dragRef                         = useRef(null);
+  const [nowMinutes, setNowMinutes]     = useState(() => { const n = new Date(); return n.getHours() * 60 + n.getMinutes(); });
 
   useEffect(() => {
     Promise.all([api.get('/tables'), api.get('/rooms'), api.get('/shifts')])
@@ -261,6 +262,13 @@ export default function Calendar() {
     window.addEventListener('reservation:created', handler);
     return () => window.removeEventListener('reservation:created', handler);
   }, [date]);
+
+  useEffect(() => {
+    if (date !== today) return;
+    const tick = () => { const n = new Date(); setNowMinutes(n.getHours() * 60 + n.getMinutes()); };
+    const id = setInterval(tick, 30_000);
+    return () => clearInterval(id);
+  }, [date, today]);
 
   // ── Handlers ──
   const handleAction = async (rsv, action) => {
@@ -529,7 +537,7 @@ export default function Calendar() {
             )}
 
             {!loading && (
-              <div style={{ minWidth: TABLE_COL_W + timelineWidth + 32 }}>
+              <div style={{ minWidth: TABLE_COL_W + timelineWidth + 32, position: 'relative' }}>
 
                 {/* Time header */}
                 <div className="sticky top-0 z-20 flex bg-white border-b border-gray-200" style={{ height: HEADER_H }}>
@@ -617,6 +625,22 @@ export default function Calendar() {
 
                 {tablesByRoom.length === 0 && (
                   <div className="flex items-center justify-center py-16 text-sm text-gray-400">Sin mesas configuradas</div>
+                )}
+
+                {/* Current time indicator */}
+                {date === today && nowMinutes >= effectiveStart && nowMinutes <= effectiveEnd && (
+                  <div style={{
+                    position: 'absolute',
+                    left: TABLE_COL_W + (nowMinutes - effectiveStart) * PX_PER_MIN,
+                    top: HEADER_H,
+                    bottom: 0,
+                    width: 2,
+                    backgroundColor: '#ef4444',
+                    zIndex: 15,
+                    pointerEvents: 'none',
+                  }}>
+                    <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#ef4444', marginLeft: -3, marginTop: -4 }} />
+                  </div>
                 )}
               </div>
             )}

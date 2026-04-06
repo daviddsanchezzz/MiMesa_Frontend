@@ -41,6 +41,11 @@ function CustomerCard({ c, onEdit }) {
               {c.noShowCount} no-show
             </span>
           )}
+          {c.cancellationCount > 0 && (
+            <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-amber-100 text-amber-700">
+              {c.cancellationCount} cancelac.
+            </span>
+          )}
           {c.notes && <p className="text-xs text-gray-400 truncate flex-1">{c.notes}</p>}
         </div>
       </div>
@@ -86,6 +91,11 @@ function MobileCustomerRow({ c, onEdit }) {
         {c.noShowCount > 0 && (
           <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold bg-rose-100 text-rose-700">
             {c.noShowCount} no-show
+          </span>
+        )}
+        {c.cancellationCount > 0 && (
+          <span className="text-[10px] px-1.5 py-0.5 rounded-full font-semibold bg-amber-100 text-amber-700">
+            {c.cancellationCount} cancel.
           </span>
         )}
         <span className={`text-[11px] border px-2 py-0.5 rounded-full font-semibold ${badgeCls}`}>
@@ -312,6 +322,11 @@ export default function Customers() {
                         {c.noShowCount > 0 && (
                           <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-rose-100 text-rose-700">
                             {c.noShowCount} no-show
+                          </span>
+                        )}
+                        {c.cancellationCount > 0 && (
+                          <span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">
+                            {c.cancellationCount} cancelac.
                           </span>
                         )}
                         {c.visits > 5 && <span title="Cliente frecuente" className="text-amber-400 text-sm">★</span>}

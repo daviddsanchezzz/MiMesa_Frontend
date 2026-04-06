@@ -285,7 +285,11 @@ export default function Sidebar({ isOpen, onClose }) {
     {newRsvModal && (
       <Modal title="Nueva reserva" onClose={() => setNewRsvModal(false)}>
         <ReservationForm
-          onSave={() => { setNewRsvModal(false); handleNavClick(); }}
+          onSave={() => {
+            setNewRsvModal(false);
+            handleNavClick();
+            window.dispatchEvent(new CustomEvent('reservation:created'));
+          }}
           onCancel={() => setNewRsvModal(false)}
         />
       </Modal>

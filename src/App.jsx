@@ -94,7 +94,13 @@ function LayoutShell({ children, fullBleed = false }) {
       </div>
       {newRsvModal && (
         <Modal title="Nueva reserva" onClose={() => setNewRsvModal(false)}>
-          <ReservationForm onSave={() => setNewRsvModal(false)} onCancel={() => setNewRsvModal(false)} />
+          <ReservationForm
+            onSave={() => {
+              setNewRsvModal(false);
+              window.dispatchEvent(new CustomEvent('reservation:created'));
+            }}
+            onCancel={() => setNewRsvModal(false)}
+          />
         </Modal>
       )}
     </div>

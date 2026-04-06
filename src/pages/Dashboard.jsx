@@ -96,6 +96,11 @@ export default function Dashboard() {
 
   useEffect(() => { loadReservations(); }, [loadReservations]);
   useEffect(() => { api.get('/tables').then(r => setTables(r.data)); }, []);
+  useEffect(() => {
+    const handler = () => loadReservations();
+    window.addEventListener('reservation:created', handler);
+    return () => window.removeEventListener('reservation:created', handler);
+  }, [loadReservations]);
 
   // ── Callbacks ──
   const handleQuickStatus = async (id, status) => {

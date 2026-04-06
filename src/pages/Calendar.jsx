@@ -256,6 +256,11 @@ export default function Calendar() {
   };
 
   useEffect(() => { loadReservations(); }, [date]);
+  useEffect(() => {
+    const handler = () => loadReservations();
+    window.addEventListener('reservation:created', handler);
+    return () => window.removeEventListener('reservation:created', handler);
+  }, [date]);
 
   // ── Handlers ──
   const handleAction = async (rsv, action) => {

@@ -316,6 +316,12 @@ export default function Reservations() {
   }, [canModeratePending]);
 
   useEffect(() => {
+    const handler = () => { load(); loadPendingReservations(); };
+    window.addEventListener('reservation:created', handler);
+    return () => window.removeEventListener('reservation:created', handler);
+  }, [filterMode, dateFilter, dateFrom, dateTo]);
+
+  useEffect(() => {
     if (filterMode !== 'today' && filterMode !== 'day') {
       setSlots([]);
       return;

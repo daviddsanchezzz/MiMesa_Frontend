@@ -124,6 +124,7 @@ export function AuthProvider({ children }) {
     advancedReminders:       false,
     noShowTracking:          false,
     dataExport:              false,
+    reservationPayments:     false,
   };
   const BASIC_CAPS = {
     maxReservationsPerMonth: Infinity,
@@ -143,6 +144,7 @@ export function AuthProvider({ children }) {
     advancedReminders:       true,
     noShowTracking:          true,
     dataExport:              true,
+    reservationPayments:     true,
   };
   const planCaps = isSubscribed ? BASIC_CAPS : FREE_CAPS;
   const canUse    = (feature) => !!planCaps[feature];

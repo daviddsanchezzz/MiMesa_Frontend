@@ -636,7 +636,8 @@ export default function Calendar() {
                     bottom: 0,
                     width: 2,
                     backgroundColor: '#ef4444',
-                    zIndex: 15,
+                    opacity: 0.35,
+                    zIndex: 1,
                     pointerEvents: 'none',
                   }}>
                     <div style={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#ef4444', marginLeft: -3, marginTop: -4 }} />

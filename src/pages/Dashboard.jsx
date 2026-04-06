@@ -148,8 +148,8 @@ export default function Dashboard() {
   const todayCount    = reservations.filter(r => r.date === today).length;
   const tomorrowCount = reservations.filter(r => r.date === tomorrow).length;
 
-  // ── Week grouping ──
-  const byDate = reservations.reduce((acc, r) => {
+  // ── Week grouping (también excluye canceladas) ──
+  const byDate = reservations.filter(r => r.status !== 'cancelled').reduce((acc, r) => {
     if (!acc[r.date]) acc[r.date] = [];
     acc[r.date].push(r);
     return acc;
@@ -157,6 +157,9 @@ export default function Dashboard() {
   const sortedDates = Object.keys(byDate).sort();
 
   const sorted = (list) => [...list].sort((a, b) => a.time.localeCompare(b.time));
+
+  // Dashboard no muestra canceladas
+  const visibleReservations = reservations.filter(r => r.status !== 'cancelled');
 
   // ── Shift grouping (for "today" view) ──
   const timeToShift = {};
@@ -170,7 +173,7 @@ export default function Dashboard() {
     const groups = {};
     shiftOrder.forEach(n => { groups[n] = []; });
     groups['__otros__'] = [];
-    sorted(reservations).forEach(r => {
+    sorted(visibleReservations).forEach(r => {
       const name = timeToShift[r.time];
       if (name) groups[name].push(r);
       else      groups['__otros__'].push(r);
@@ -413,13 +416,13 @@ export default function Dashboard() {
       ) : view === 'today' ? (
         <>
           {/* Mobile */}
-          {reservations.length === 0 ? (
+          {visibleReservations.length === 0 ? (
             <div className="sm:hidden bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden"><EmptyDay /></div>
           ) : (() => {
             const groups = groupedByShift();
             if (!groups) return (
               <div className="sm:hidden bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                {sorted(reservations).map(r => <ReservationCard key={r._id} {...cardProps(r)} />)}
+                {sorted(visibleReservations).map(r => <ReservationCard key={r._id} {...cardProps(r)} />)}
               </div>
             );
             return (
@@ -451,7 +454,7 @@ export default function Dashboard() {
           })()}
 
           {/* Desktop */}
-          {reservations.length === 0 ? (
+          {visibleReservations.length === 0 ? (
             <div className="hidden sm:block bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden"><EmptyDay /></div>
           ) : (() => {
             const groups = groupedByShift();
@@ -460,7 +463,7 @@ export default function Dashboard() {
                 <div className="overflow-x-auto">
                   <table className="w-full table-fixed text-sm">
                     {thead}
-                    <tbody>{sorted(reservations).map((r, i, a) => renderDesktopRow(r, i, a))}</tbody>
+                    <tbody>{sorted(visibleReservations).map((r, i, a) => renderDesktopRow(r, i, a))}</tbody>
                   </table>
                 </div>
               </div>

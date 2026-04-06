@@ -70,6 +70,7 @@ export default function Dashboard() {
   const [view, setView]               = useState('today');
   const [reservations, setReservations] = useState([]);
   const [tables, setTables]           = useState([]);
+  const [slots, setSlots]             = useState([]);
   const [loading, setLoading]         = useState(true);
   const [modal, setModal]             = useState(null); // null | { reservation }
   const [expandedDesktopId, setExpandedDesktopId] = useState(null);
@@ -96,6 +97,10 @@ export default function Dashboard() {
 
   useEffect(() => { loadReservations(); }, [loadReservations]);
   useEffect(() => { api.get('/tables').then(r => setTables(r.data)); }, []);
+  useEffect(() => {
+    if (view !== 'today') { setSlots([]); return; }
+    api.get(`/shifts/slots?date=${today}`).then(r => setSlots(r.data)).catch(() => setSlots([]));
+  }, [view, today]);
   useEffect(() => {
     const handler = () => loadReservations();
     window.addEventListener('reservation:created', handler);
@@ -152,6 +157,27 @@ export default function Dashboard() {
   const sortedDates = Object.keys(byDate).sort();
 
   const sorted = (list) => [...list].sort((a, b) => a.time.localeCompare(b.time));
+
+  // ── Shift grouping (for "today" view) ──
+  const timeToShift = {};
+  const shiftOrder  = [];
+  slots.forEach(s => {
+    timeToShift[s.time] = s.shiftName;
+    if (!shiftOrder.includes(s.shiftName)) shiftOrder.push(s.shiftName);
+  });
+  const groupedByShift = () => {
+    if (shiftOrder.length <= 1) return null;
+    const groups = {};
+    shiftOrder.forEach(n => { groups[n] = []; });
+    groups['__otros__'] = [];
+    sorted(reservations).forEach(r => {
+      const name = timeToShift[r.time];
+      if (name) groups[name].push(r);
+      else      groups['__otros__'].push(r);
+    });
+    if (groups['__otros__'].length === 0) delete groups['__otros__'];
+    return groups;
+  };
 
   const cardProps = (r) => ({
     r,
@@ -387,24 +413,84 @@ export default function Dashboard() {
       ) : view === 'today' ? (
         <>
           {/* Mobile */}
-          <div className="sm:hidden bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-            {reservations.length === 0
-              ? <EmptyDay />
-              : sorted(reservations).map(r => <ReservationCard key={r._id} {...cardProps(r)} />)
-            }
-          </div>
+          {reservations.length === 0 ? (
+            <div className="sm:hidden bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden"><EmptyDay /></div>
+          ) : (() => {
+            const groups = groupedByShift();
+            if (!groups) return (
+              <div className="sm:hidden bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                {sorted(reservations).map(r => <ReservationCard key={r._id} {...cardProps(r)} />)}
+              </div>
+            );
+            return (
+              <div className="sm:hidden space-y-3">
+                {Object.entries(groups).map(([shiftName, rows]) => {
+                  if (rows.length === 0) return null;
+                  const label = shiftName === '__otros__' ? 'Sin turno' : shiftName;
+                  const active = rows.filter(r => r.status !== 'cancelled' && r.status !== 'no_show').length;
+                  return (
+                    <div key={shiftName}>
+                      <div className="flex items-center gap-2 px-1 mb-1.5">
+                        <div className="h-px flex-1 bg-gray-200" />
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <span className="text-xs font-bold text-gray-500 uppercase tracking-wide">{label}</span>
+                          <span className="text-[10px] font-semibold bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full">
+                            {active} activa{active !== 1 ? 's' : ''}
+                          </span>
+                        </div>
+                        <div className="h-px flex-1 bg-gray-200" />
+                      </div>
+                      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+                        {rows.map(r => <ReservationCard key={r._id} {...cardProps(r)} />)}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
+
           {/* Desktop */}
-          <div className="hidden sm:block bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-            {reservations.length === 0
-              ? <EmptyDay />
-              : <div className="overflow-x-auto">
+          {reservations.length === 0 ? (
+            <div className="hidden sm:block bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden"><EmptyDay /></div>
+          ) : (() => {
+            const groups = groupedByShift();
+            if (!groups) return (
+              <div className="hidden sm:block bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+                <div className="overflow-x-auto">
                   <table className="w-full table-fixed text-sm">
                     {thead}
                     <tbody>{sorted(reservations).map((r, i, a) => renderDesktopRow(r, i, a))}</tbody>
                   </table>
                 </div>
-            }
-          </div>
+              </div>
+            );
+            return (
+              <div className="hidden sm:block space-y-4">
+                {Object.entries(groups).map(([shiftName, rows]) => {
+                  if (rows.length === 0) return null;
+                  const label = shiftName === '__otros__' ? 'Sin turno' : shiftName;
+                  const active = rows.filter(r => r.status !== 'cancelled' && r.status !== 'no_show').length;
+                  return (
+                    <div key={shiftName} className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+                      <div className="flex items-center justify-between px-5 py-3 bg-gray-50 border-b border-gray-100">
+                        <h3 className="text-sm font-bold text-gray-700">{label}</h3>
+                        <span className="text-xs font-semibold bg-white border border-gray-200 text-gray-500 px-2 py-0.5 rounded-full">
+                          {active} reserva{active !== 1 ? 's' : ''} activa{active !== 1 ? 's' : ''}
+                        </span>
+                      </div>
+                      <div className="overflow-x-auto">
+                        <table className="w-full table-fixed text-sm">
+                          {thead}
+                          <tbody>{rows.map((r, i, a) => renderDesktopRow(r, i, a))}</tbody>
+                        </table>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
         </>
       ) : (
         <>

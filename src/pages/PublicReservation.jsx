@@ -705,6 +705,16 @@ export default function PublicReservation() {
                     )}
                   </div>
                   <div className="space-y-3 mb-5">
+                    {/* Optional: marketing */}
+                    <label className="flex items-start gap-2.5 cursor-pointer group">
+                      <input
+                        type="checkbox"
+                        checked={form.marketing}
+                        onChange={e => setForm(f => ({ ...f, marketing: e.target.checked }))}
+                        className="mt-0.5 w-4 h-4 rounded shrink-0 accent-violet-600"
+                      />
+                      <span className="text-sm text-gray-500 leading-snug">{tr.consentMarketing}</span>
+                    </label>
                     {/* Required: privacy consent */}
                     <label className="flex items-start gap-2.5 cursor-pointer group">
                       <input
@@ -727,16 +737,6 @@ export default function PublicReservation() {
                         {tr.consentPrivacyPost}
                         {' '}<span className="text-gray-400">*</span>
                       </span>
-                    </label>
-                    {/* Optional: marketing */}
-                    <label className="flex items-start gap-2.5 cursor-pointer group">
-                      <input
-                        type="checkbox"
-                        checked={form.marketing}
-                        onChange={e => setForm(f => ({ ...f, marketing: e.target.checked }))}
-                        className="mt-0.5 w-4 h-4 rounded shrink-0 accent-violet-600"
-                      />
-                      <span className="text-sm text-gray-500 leading-snug">{tr.consentMarketing}</span>
                     </label>
                   </div>
                   {error && (

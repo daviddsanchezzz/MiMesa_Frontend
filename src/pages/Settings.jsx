@@ -550,9 +550,18 @@ const SHIFT_COLORS = [
 
 const colorOf = (index) => SHIFT_COLORS[index % SHIFT_COLORS.length];
 
+const INTERVAL_OPTIONS = [
+  { value: 15, label: '15 min' },
+  { value: 20, label: '20 min' },
+  { value: 30, label: '30 min' },
+  { value: 60, label: '1 hora' },
+];
+
 const emptyShiftForm = () => ({
-  name: '', startTime: '12:00', endTime: '16:00',
-  days: [1,2,3,4,5,6,0], subShifts: [],
+  name: '', slotMode: 'auto',
+  startTime: '12:00', endTime: '16:00', interval: 30,
+  manualSlots: [],
+  days: [1,2,3,4,5,6,0],
   startDate: '', endDate: '',
 });
 
@@ -575,8 +584,12 @@ function TurnosSection() {
   const openCreate = () => { setForm(emptyShiftForm()); setError(''); setModal('create'); };
   const openEdit   = (s)  => {
     setForm({
-      name: s.name, startTime: s.startTime || '12:00', endTime: s.endTime || '16:00',
-      days: s.days || [0,1,2,3,4,5,6], subShifts: s.subShifts.map(ss => ({ ...ss })),
+      name: s.name,
+      slotMode: s.subShifts.length > 0 ? 'manual' : 'auto',
+      startTime: s.startTime || '12:00', endTime: s.endTime || '16:00',
+      interval: s.interval || 30,
+      manualSlots: s.subShifts.length > 0 ? s.subShifts.map(ss => ss.time) : [],
+      days: s.days || [0,1,2,3,4,5,6],
       startDate: s.startDate || '', endDate: s.endDate || '',
     });
     setError(''); setModal(s);
@@ -589,10 +602,27 @@ function TurnosSection() {
       setError('Si indicas rango de fechas, debes rellenar tanto inicio como fin'); return;
     }
     try {
+      const validSlots = form.manualSlots.map(t => t.trim()).filter(Boolean);
+      const subShifts  = form.slotMode === 'manual'
+        ? validSlots.map(t => ({ time: t, label: '' }))
+        : [];
+      // For manual mode derive startTime/endTime from first/last slot for display
+      const startTime = form.slotMode === 'manual' && validSlots.length
+        ? validSlots[0]
+        : form.startTime;
+      const endTime = form.slotMode === 'manual' && validSlots.length
+        ? validSlots[validSlots.length - 1]
+        : form.endTime;
+
+      if (form.slotMode === 'manual' && validSlots.length === 0) {
+        setError('Añade al menos una hora en modo manual'); return;
+      }
+
       const payload = {
-        name: form.name, startTime: form.startTime, endTime: form.endTime,
-        days: form.days, subShifts: form.subShifts.filter(ss => ss.time),
+        name: form.name, startTime, endTime,
+        days: form.days, subShifts,
         startDate: form.startDate || null, endDate: form.endDate || null,
+        interval: form.slotMode === 'auto' ? form.interval : 30,
       };
       if (modal === 'create') await api.post('/shifts', payload);
       else                    await api.put(`/shifts/${modal._id}`, payload);
@@ -605,12 +635,10 @@ function TurnosSection() {
     await api.delete(`/shifts/${id}`); load();
   };
 
-  const toggleDay    = (v) => setForm(f => ({ ...f, days: f.days.includes(v) ? f.days.filter(d => d !== v) : [...f.days, v] }));
-  const addSubShift  = ()  => setForm(f => ({ ...f, subShifts: [...f.subShifts, { time: '', label: '' }] }));
-  const rmSubShift   = (i) => setForm(f => ({ ...f, subShifts: f.subShifts.filter((_, idx) => idx !== i) }));
-  const updSubShift  = (i, key, val) => setForm(f => ({
-    ...f, subShifts: f.subShifts.map((ss, idx) => idx === i ? { ...ss, [key]: val } : ss),
-  }));
+  const toggleDay       = (v)    => setForm(f => ({ ...f, days: f.days.includes(v) ? f.days.filter(d => d !== v) : [...f.days, v] }));
+  const addManualSlot   = ()     => setForm(f => ({ ...f, manualSlots: [...f.manualSlots, ''] }));
+  const rmManualSlot    = (i)    => setForm(f => ({ ...f, manualSlots: f.manualSlots.filter((_, idx) => idx !== i) }));
+  const updManualSlot   = (i, v) => setForm(f => ({ ...f, manualSlots: f.manualSlots.map((s, idx) => idx === i ? v : s) }));
 
   return (
     <div className="space-y-4">
@@ -685,7 +713,7 @@ function TurnosSection() {
                     ))}
                   </div>
                 ) : (
-                  <p className="text-xs text-gray-400">Franjas de 30 min automáticas</p>
+                  <p className="text-xs text-gray-400">Franjas cada {shift.interval || 30} min automáticas</p>
                 )}
 
                 <div className="flex gap-2 pt-1 border-t border-gray-100">
@@ -721,18 +749,65 @@ function TurnosSection() {
                 className={inputCls} />
             </div>
 
-            {/* Time range */}
+            {/* Slot mode toggle */}
             <div>
-              <label className={labelCls}>Horario *</label>
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                <input type="time" required value={form.startTime}
-                  onChange={e => setForm(f => ({ ...f, startTime: e.target.value }))}
-                  className={`${inputCls} flex-1 min-w-0`} />
-                <span className="text-gray-400 text-sm font-medium text-center shrink-0">hasta</span>
-                <input type="time" required value={form.endTime}
-                  onChange={e => setForm(f => ({ ...f, endTime: e.target.value }))}
-                  className={`${inputCls} flex-1 min-w-0`} />
+              <label className={labelCls}>Franjas horarias *</label>
+              <div className="flex items-center gap-1 bg-gray-100 rounded-2xl p-1 mb-4">
+                {[{ key: 'auto', label: 'Rango automático' }, { key: 'manual', label: 'Horas manuales' }].map(m => (
+                  <button key={m.key} type="button"
+                    onClick={() => setForm(f => ({ ...f, slotMode: m.key }))}
+                    className={`flex-1 py-2 rounded-xl text-sm font-semibold transition-all ${
+                      form.slotMode === m.key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                    }`}>
+                    {m.label}
+                  </button>
+                ))}
               </div>
+
+              {form.slotMode === 'auto' ? (
+                <div className="space-y-3">
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                    <input type="time" required value={form.startTime}
+                      onChange={e => setForm(f => ({ ...f, startTime: e.target.value }))}
+                      className={`${inputCls} flex-1 min-w-0`} />
+                    <span className="text-gray-400 text-sm font-medium text-center shrink-0">hasta</span>
+                    <input type="time" required value={form.endTime}
+                      onChange={e => setForm(f => ({ ...f, endTime: e.target.value }))}
+                      className={`${inputCls} flex-1 min-w-0`} />
+                  </div>
+                  <div className="flex gap-2">
+                    {INTERVAL_OPTIONS.map(opt => (
+                      <button key={opt.value} type="button"
+                        onClick={() => setForm(f => ({ ...f, interval: opt.value }))}
+                        className={`flex-1 py-2 rounded-xl text-sm font-semibold border transition-all ${
+                          form.interval === opt.value
+                            ? 'bg-violet-600 text-white border-violet-600 shadow-sm'
+                            : 'bg-gray-50 text-gray-500 border-gray-200 hover:border-violet-300 hover:bg-violet-50 hover:text-violet-600'
+                        }`}>
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {form.manualSlots.map((slot, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <input type="time" value={slot} required
+                        onChange={e => updManualSlot(i, e.target.value)}
+                        className={`${inputCls} flex-1`} />
+                      <button type="button" onClick={() => rmManualSlot(i)}
+                        className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-rose-50 hover:text-rose-500 text-gray-400 transition-colors shrink-0">
+                        <IconX />
+                      </button>
+                    </div>
+                  ))}
+                  <button type="button" onClick={addManualSlot}
+                    className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl border border-dashed border-gray-300 text-sm text-gray-400 hover:border-violet-400 hover:text-violet-600 transition-colors">
+                    <IconPlus /> Añadir hora
+                  </button>
+                </div>
+              )}
             </div>
 
             {/* Days */}
@@ -770,45 +845,6 @@ function TurnosSection() {
               <p className="text-xs text-gray-400 mt-1.5">
                 Un turno específico tiene prioridad sobre el turno general con el mismo nombre en ese período.
               </p>
-            </div>
-
-            {/* Optional specific slots */}
-            <div>
-              <div className="flex items-start justify-between mb-2">
-                <div>
-                  <label className={`${labelCls} mb-0`}>Horarios específicos</label>
-                  <p className="text-xs text-gray-400 mt-0.5">
-                    Opcional — sin horarios se generan franjas de 30 min dentro del rango
-                  </p>
-                </div>
-                <button type="button" onClick={addSubShift}
-                  className="flex items-center gap-1 text-xs text-violet-600 hover:text-violet-700 font-semibold shrink-0 ml-2 mt-0.5">
-                  <IconPlus /> Añadir
-                </button>
-              </div>
-              {form.subShifts.length > 0 && (
-                <div className="space-y-2">
-                  {form.subShifts.map((ss, i) => (
-                    <div key={i} className="flex items-center gap-2">
-                      <div className="flex items-center gap-2 flex-1 border border-gray-200 rounded-xl px-3 py-2 bg-gray-50">
-                        <IconClock />
-                        <input type="time" required value={ss.time}
-                          onChange={e => updSubShift(i, 'time', e.target.value)}
-                          className="text-sm font-semibold text-gray-900 bg-transparent focus:outline-none w-24" />
-                        <span className="text-gray-300 shrink-0">·</span>
-                        <input type="text" value={ss.label}
-                          onChange={e => updSubShift(i, 'label', e.target.value)}
-                          placeholder="Etiqueta (ej: Primera noche)"
-                          className="text-sm text-gray-500 bg-transparent focus:outline-none flex-1 min-w-0" />
-                      </div>
-                      <button type="button" onClick={() => rmSubShift(i)}
-                        className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-rose-50 hover:text-rose-500 text-gray-400 transition-colors shrink-0">
-                        <IconX />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
 
             <div className="flex gap-3 pt-1">

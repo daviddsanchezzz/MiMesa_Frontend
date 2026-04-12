@@ -61,6 +61,51 @@ function EmptyDay() {
   );
 }
 
+// ─── Active shift detection ───────────────────────────────────────────────────
+// Returns { name, isCurrent } for the current shift, or the next upcoming one.
+// Returns null if no shifts are configured or all shifts have already ended.
+function getActiveShiftInfo(slots, shiftOrder) {
+  if (!shiftOrder.length) return null;
+
+  const now = new Date();
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+
+  const shiftRanges = {};
+  slots.forEach(s => {
+    const [h, m] = s.time.split(':').map(Number);
+    const minutes = h * 60 + m;
+    if (!shiftRanges[s.shiftName]) {
+      shiftRanges[s.shiftName] = { min: minutes, max: minutes };
+    } else {
+      shiftRanges[s.shiftName].min = Math.min(shiftRanges[s.shiftName].min, minutes);
+      shiftRanges[s.shiftName].max = Math.max(shiftRanges[s.shiftName].max, minutes);
+    }
+  });
+
+  // Current shift: now is within its slot range (with 30-min buffer after last slot)
+  for (const name of shiftOrder) {
+    const range = shiftRanges[name];
+    if (!range) continue;
+    if (nowMinutes >= range.min && nowMinutes <= range.max + 30) {
+      return { name, isCurrent: true };
+    }
+  }
+
+  // Next upcoming shift
+  let nextShift = null;
+  let nextStart = Infinity;
+  for (const name of shiftOrder) {
+    const range = shiftRanges[name];
+    if (!range) continue;
+    if (range.min > nowMinutes && range.min < nextStart) {
+      nextStart = range.min;
+      nextShift = name;
+    }
+  }
+
+  return nextShift ? { name: nextShift, isCurrent: false } : null;
+}
+
 // ─── Main ─────────────────────────────────────────────────────────────────────
 export default function Dashboard() {
   const { business, hasRole } = useAuth();
@@ -181,6 +226,15 @@ export default function Dashboard() {
     if (groups['__otros__'].length === 0) delete groups['__otros__'];
     return groups;
   };
+
+  // ── Active-shift filter (today view only) ──
+  const activeShiftInfo = view === 'today' && slots.length > 0
+    ? getActiveShiftInfo(slots, shiftOrder)
+    : null;
+
+  const filteredReservations = activeShiftInfo
+    ? visibleReservations.filter(r => timeToShift[r.time] === activeShiftInfo.name)
+    : visibleReservations;
 
   const cardProps = (r) => ({
     r,
@@ -396,6 +450,20 @@ export default function Dashboard() {
         </div>
       )}
 
+      {/* Active shift indicator */}
+      {view === 'today' && !loading && activeShiftInfo && (
+        <div className="flex items-center gap-2">
+          <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full ${
+            activeShiftInfo.isCurrent
+              ? 'bg-emerald-50 text-emerald-700'
+              : 'bg-amber-50 text-amber-700'
+          }`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${activeShiftInfo.isCurrent ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+            {activeShiftInfo.isCurrent ? 'Turno actual' : 'Próximo turno'}: {activeShiftInfo.name}
+          </span>
+        </div>
+      )}
+
       {/* Content */}
       {loading ? (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm divide-y divide-gray-50">
@@ -416,21 +484,22 @@ export default function Dashboard() {
       ) : view === 'today' ? (
         <>
           {/* Mobile */}
-          {visibleReservations.length === 0 ? (
+          {filteredReservations.length === 0 ? (
             <div className="sm:hidden bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden"><EmptyDay /></div>
           ) : (() => {
             const groups = groupedByShift();
             if (!groups) return (
               <div className="sm:hidden bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                {sorted(visibleReservations).map(r => <ReservationCard key={r._id} {...cardProps(r)} />)}
+                {sorted(filteredReservations).map(r => <ReservationCard key={r._id} {...cardProps(r)} />)}
               </div>
             );
             return (
               <div className="sm:hidden space-y-3">
                 {Object.entries(groups).map(([shiftName, rows]) => {
-                  if (rows.length === 0) return null;
+                  const visibleRows = activeShiftInfo ? rows.filter(r => timeToShift[r.time] === activeShiftInfo.name) : rows;
+                  if (visibleRows.length === 0) return null;
                   const label = shiftName === '__otros__' ? 'Sin turno' : shiftName;
-                  const active = rows.filter(r => r.status !== 'cancelled' && r.status !== 'no_show').length;
+                  const active = visibleRows.filter(r => r.status !== 'cancelled' && r.status !== 'no_show').length;
                   return (
                     <div key={shiftName}>
                       <div className="flex items-center gap-2 px-1 mb-1.5">
@@ -444,7 +513,7 @@ export default function Dashboard() {
                         <div className="h-px flex-1 bg-gray-200" />
                       </div>
                       <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-                        {rows.map(r => <ReservationCard key={r._id} {...cardProps(r)} />)}
+                        {visibleRows.map(r => <ReservationCard key={r._id} {...cardProps(r)} />)}
                       </div>
                     </div>
                   );
@@ -454,7 +523,7 @@ export default function Dashboard() {
           })()}
 
           {/* Desktop */}
-          {visibleReservations.length === 0 ? (
+          {filteredReservations.length === 0 ? (
             <div className="hidden sm:block bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden"><EmptyDay /></div>
           ) : (() => {
             const groups = groupedByShift();
@@ -463,7 +532,7 @@ export default function Dashboard() {
                 <div className="overflow-x-auto">
                   <table className="w-full table-fixed text-sm">
                     {thead}
-                    <tbody>{sorted(visibleReservations).map((r, i, a) => renderDesktopRow(r, i, a))}</tbody>
+                    <tbody>{sorted(filteredReservations).map((r, i, a) => renderDesktopRow(r, i, a))}</tbody>
                   </table>
                 </div>
               </div>
@@ -471,9 +540,10 @@ export default function Dashboard() {
             return (
               <div className="hidden sm:block space-y-4">
                 {Object.entries(groups).map(([shiftName, rows]) => {
-                  if (rows.length === 0) return null;
+                  const visibleRows = activeShiftInfo ? rows.filter(r => timeToShift[r.time] === activeShiftInfo.name) : rows;
+                  if (visibleRows.length === 0) return null;
                   const label = shiftName === '__otros__' ? 'Sin turno' : shiftName;
-                  const active = rows.filter(r => r.status !== 'cancelled' && r.status !== 'no_show').length;
+                  const active = visibleRows.filter(r => r.status !== 'cancelled' && r.status !== 'no_show').length;
                   return (
                     <div key={shiftName} className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
                       <div className="flex items-center justify-between px-5 py-3 bg-gray-50 border-b border-gray-100">
@@ -485,7 +555,7 @@ export default function Dashboard() {
                       <div className="overflow-x-auto">
                         <table className="w-full table-fixed text-sm">
                           {thead}
-                          <tbody>{rows.map((r, i, a) => renderDesktopRow(r, i, a))}</tbody>
+                          <tbody>{visibleRows.map((r, i, a) => renderDesktopRow(r, i, a))}</tbody>
                         </table>
                       </div>
                     </div>

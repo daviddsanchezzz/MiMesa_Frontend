@@ -1987,7 +1987,7 @@ function PagosSection() {
     setConnecting(true);
     setError('');
     try {
-      const r = await api.get('/stripe/connect/oauth-url');
+      const r = await api.post('/stripe/connect/onboarding-url');
       window.location.href = r.data.url;
     } catch (err) {
       setError(err?.response?.data?.message || 'No se pudo iniciar la conexión con Stripe');

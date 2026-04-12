@@ -485,16 +485,16 @@ export default function Dashboard() {
         <>
           {/* Mobile */}
           {filteredReservations.length === 0 ? (
-            <div className="sm:hidden bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden"><EmptyDay /></div>
+            <div className="lg:hidden bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden"><EmptyDay /></div>
           ) : (() => {
             const groups = groupedByShift();
             if (!groups) return (
-              <div className="sm:hidden bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+              <div className="lg:hidden bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
                 {sorted(filteredReservations).map(r => <ReservationCard key={r._id} {...cardProps(r)} />)}
               </div>
             );
             return (
-              <div className="sm:hidden space-y-3">
+              <div className="lg:hidden space-y-3">
                 {Object.entries(groups).map(([shiftName, rows]) => {
                   const visibleRows = activeShiftInfo ? rows.filter(r => timeToShift[r.time] === activeShiftInfo.name) : rows;
                   if (visibleRows.length === 0) return null;
@@ -524,11 +524,11 @@ export default function Dashboard() {
 
           {/* Desktop */}
           {filteredReservations.length === 0 ? (
-            <div className="hidden sm:block bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden"><EmptyDay /></div>
+            <div className="hidden lg:block bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden"><EmptyDay /></div>
           ) : (() => {
             const groups = groupedByShift();
             if (!groups) return (
-              <div className="hidden sm:block bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+              <div className="hidden lg:block bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
                 <div className="overflow-x-auto">
                   <table className="w-full table-fixed text-sm">
                     {thead}
@@ -538,7 +538,7 @@ export default function Dashboard() {
               </div>
             );
             return (
-              <div className="hidden sm:block space-y-4">
+              <div className="hidden lg:block space-y-4">
                 {Object.entries(groups).map(([shiftName, rows]) => {
                   const visibleRows = activeShiftInfo ? rows.filter(r => timeToShift[r.time] === activeShiftInfo.name) : rows;
                   if (visibleRows.length === 0) return null;
@@ -568,7 +568,7 @@ export default function Dashboard() {
       ) : (
         <>
           {/* Mobile */}
-          <div className="sm:hidden space-y-3">
+          <div className="lg:hidden space-y-3">
             {sortedDates.length === 0
               ? (
                 <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
@@ -597,7 +597,7 @@ export default function Dashboard() {
             }
           </div>
           {/* Desktop */}
-          <div className="hidden sm:block space-y-4">
+          <div className="hidden lg:block space-y-4">
             {sortedDates.length === 0
               ? (
                 <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">

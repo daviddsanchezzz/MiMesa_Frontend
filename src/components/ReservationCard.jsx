@@ -95,7 +95,7 @@ export function TableCell({ reservation, tables, onAssign }) {
       <div className="fixed inset-0 z-40 bg-black/20" onClick={() => setOpen(false)} />
 
       {/* Panel */}
-      <div ref={panelRef} className="fixed top-4 left-4 right-4 sm:left-auto sm:right-auto sm:w-72 z-50 bg-white rounded-2xl shadow-xl overflow-hidden"
+      <div ref={panelRef} className="fixed top-4 left-4 right-4 sm:left-1/2 sm:-translate-x-1/2 sm:right-auto sm:w-[480px] z-50 bg-white rounded-2xl shadow-xl overflow-hidden"
         style={{ boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }}
       >
         {/* Header */}
@@ -112,7 +112,7 @@ export function TableCell({ reservation, tables, onAssign }) {
           {/* Sin mesa chip */}
           <button
             onClick={() => setSelected([])}
-            className={`w-full text-xs font-medium px-3 py-2 rounded-xl border transition-colors ${
+            className={`w-full text-sm font-medium px-3 py-2.5 rounded-xl border transition-colors ${
               selected.length === 0
                 ? 'bg-gray-900 text-white border-gray-900'
                 : 'bg-gray-50 text-gray-500 border-gray-200 hover:bg-gray-100'
@@ -127,7 +127,7 @@ export function TableCell({ reservation, tables, onAssign }) {
               {Object.keys(grouped).length > 1 && (
                 <p className="text-[10px] font-semibold text-gray-400 uppercase tracking-widest mb-2">{roomName}</p>
               )}
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                 {roomTables.map(t => {
                   const id = t._id?.toString();
                   const isSelected = selected.includes(id);
@@ -135,7 +135,7 @@ export function TableCell({ reservation, tables, onAssign }) {
                     <button
                       key={id}
                       onClick={() => toggle(id)}
-                      className={`flex flex-col items-center justify-center px-2 py-2.5 rounded-xl border text-xs font-semibold transition-all ${
+                      className={`flex flex-col items-center justify-center px-2 py-3 sm:py-4 rounded-xl border text-sm font-semibold transition-all ${
                         isSelected
                           ? 'bg-violet-600 text-white border-violet-600 shadow-sm scale-[1.03]'
                           : 'bg-white text-gray-700 border-gray-200 hover:border-violet-300 hover:bg-violet-50'
@@ -143,7 +143,7 @@ export function TableCell({ reservation, tables, onAssign }) {
                     >
                       <span className="truncate w-full text-center">{t.name}</span>
                       {t.capacity && (
-                        <span className={`text-[10px] mt-0.5 ${isSelected ? 'text-violet-200' : 'text-gray-400'}`}>
+                        <span className={`text-xs mt-0.5 ${isSelected ? 'text-violet-200' : 'text-gray-400'}`}>
                           {t.capacity} pax
                         </span>
                       )}

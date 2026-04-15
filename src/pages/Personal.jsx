@@ -23,6 +23,10 @@ function addDays(dateStr, n) {
   return d.toISOString().slice(0, 10);
 }
 
+function toDayOfWeek(isoDate) {
+  return new Date(`${isoDate}T12:00:00`).getDay();
+}
+
 function weekDays(weekStart) {
   return [...Array(7)].map((_, i) => {
     const date = addDays(weekStart, i);
@@ -33,6 +37,29 @@ function weekDays(weekStart) {
       day: ui.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' }),
     };
   });
+}
+
+function compareShiftTime(a, b) {
+  return (a.startTime || '').localeCompare(b.startTime || '');
+}
+
+function shiftAppliesToDate(shift, date) {
+  const day = toDayOfWeek(date);
+  if (!Array.isArray(shift.days) || !shift.days.includes(day)) return false;
+  if (shift.startDate && date < shift.startDate) return false;
+  if (shift.endDate && date > shift.endDate) return false;
+  return true;
+}
+
+function getAssignmentShiftId(assignment) {
+  return assignment?.shiftId?._id || assignment?.shiftId || '__none__';
+}
+
+function getAssignmentEmployeeName(assignment) {
+  if (assignment?.employeeId?.firstName) {
+    return `${assignment.employeeId.firstName} ${assignment.employeeId.lastName || ''}`.trim();
+  }
+  return 'Empleado';
 }
 
 function EmployeeFormModal({ employee, onClose, onSaved }) {
@@ -134,7 +161,7 @@ function CompensationModal({ employee, onClose, onSaved }) {
   };
 
   return (
-    <Modal title={`Condiciones de pago · ${employee.firstName}`} onClose={onClose}>
+    <Modal title={`Condiciones de pago - ${employee.firstName}`} onClose={onClose}>
       <form onSubmit={submit} className="space-y-3">
         {error && <div className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</div>}
         <div>
@@ -174,93 +201,6 @@ function CompensationModal({ employee, onClose, onSaved }) {
   );
 }
 
-function AssignmentModal({ defaultData, employees, shifts, onClose, onSaved }) {
-  const [form, setForm] = useState({
-    employeeId: defaultData?.employeeId || '',
-    date: defaultData?.date || todayIso(),
-    shiftId: defaultData?.shiftId || '',
-    startTime: defaultData?.startTime || '',
-    endTime: defaultData?.endTime || '',
-    roleLabel: defaultData?.roleLabel || '',
-    notes: defaultData?.notes || '',
-  });
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-
-  const submit = async (e) => {
-    e.preventDefault();
-    setSaving(true);
-    setError('');
-    try {
-      await api.post('/staff/assignments', {
-        ...form,
-        shiftId: form.shiftId || null,
-      });
-      onSaved();
-    } catch (err) {
-      setError(err?.response?.data?.message || 'No se pudo crear la asignacion');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <Modal title="Nueva asignacion" onClose={onClose}>
-      <form onSubmit={submit} className="space-y-3">
-        {error && <div className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</div>}
-        <div>
-          <label className={labelCls}>Empleado</label>
-          <select className={inputCls} value={form.employeeId} onChange={(e) => setForm((f) => ({ ...f, employeeId: e.target.value }))} required>
-            <option value="">Seleccionar</option>
-            {employees.filter((e) => e.status === 'active').map((e) => (
-              <option key={e._id} value={e._id}>{`${e.firstName} ${e.lastName || ''}`.trim()}</option>
-            ))}
-          </select>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <label className={labelCls}>Fecha</label>
-            <input className={inputCls} type="date" value={form.date} onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))} required />
-          </div>
-          <div>
-            <label className={labelCls}>Turno base (opcional)</label>
-            <select className={inputCls} value={form.shiftId} onChange={(e) => setForm((f) => ({ ...f, shiftId: e.target.value }))}>
-              <option value="">Sin turno base</option>
-              {shifts.map((s) => (
-                <option key={s._id} value={s._id}>{`${s.name} (${s.startTime}-${s.endTime})`}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <label className={labelCls}>Hora inicio (opcional)</label>
-            <input className={inputCls} type="time" value={form.startTime} onChange={(e) => setForm((f) => ({ ...f, startTime: e.target.value }))} />
-          </div>
-          <div>
-            <label className={labelCls}>Hora fin (opcional)</label>
-            <input className={inputCls} type="time" value={form.endTime} onChange={(e) => setForm((f) => ({ ...f, endTime: e.target.value }))} />
-          </div>
-        </div>
-        <div>
-          <label className={labelCls}>Rol interno en ese turno</label>
-          <input className={inputCls} value={form.roleLabel} onChange={(e) => setForm((f) => ({ ...f, roleLabel: e.target.value }))} />
-        </div>
-        <div>
-          <label className={labelCls}>Notas</label>
-          <textarea rows={3} className={inputCls} value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} />
-        </div>
-        <div className="flex items-center justify-end gap-2 pt-1">
-          <button type="button" onClick={onClose} className="px-3 py-2 rounded-lg text-sm bg-gray-100 hover:bg-gray-200">Cancelar</button>
-          <button type="submit" disabled={saving} className="px-3 py-2 rounded-lg text-sm bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-60">
-            {saving ? 'Guardando...' : 'Crear asignacion'}
-          </button>
-        </div>
-      </form>
-    </Modal>
-  );
-}
-
 const tabs = [
   { key: 'employees', label: 'Empleados' },
   { key: 'planner', label: 'Planificacion semanal' },
@@ -276,12 +216,13 @@ export default function Personal() {
   const [costs, setCosts] = useState({ employeeCosts: [], totalsByCurrency: {}, monthlyEstimateByCurrency: {} });
   const [shifts, setShifts] = useState([]);
 
+  const [quickAssign, setQuickAssign] = useState({});
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   const [employeeModal, setEmployeeModal] = useState(null);
   const [compModalEmployee, setCompModalEmployee] = useState(null);
-  const [assignmentModalData, setAssignmentModalData] = useState(null);
 
   const loadCore = async () => {
     setLoading(true);
@@ -292,7 +233,7 @@ export default function Personal() {
         api.get('/shifts'),
       ]);
       setEmployees(empRes.data || []);
-      setShifts(shiftRes.data || []);
+      setShifts((shiftRes.data || []).slice().sort(compareShiftTime));
     } catch (err) {
       setError(err?.response?.data?.message || 'No se pudieron cargar los empleados');
     } finally {
@@ -309,7 +250,7 @@ export default function Personal() {
       setAssignments(aRes.data?.assignments || []);
       setCosts(cRes.data || { employeeCosts: [], totalsByCurrency: {}, monthlyEstimateByCurrency: {} });
     } catch (err) {
-      setError(err?.response?.data?.message || 'No se pudieron cargar asignaciones/costes');
+      setError(err?.response?.data?.message || 'No se pudieron cargar asignaciones o costes');
     }
   };
 
@@ -323,15 +264,30 @@ export default function Personal() {
 
   const days = useMemo(() => weekDays(weekStart), [weekStart]);
 
-  const assignmentsByEmployeeDate = useMemo(() => {
+  const activeEmployees = useMemo(
+    () => employees.filter((e) => e.status === 'active'),
+    [employees],
+  );
+
+  const assignmentsByDayShift = useMemo(() => {
     const map = {};
-    assignments.forEach((a) => {
-      const key = `${a.employeeId?._id || a.employeeId}__${a.date}`;
+    assignments.forEach((assignment) => {
+      const shiftId = getAssignmentShiftId(assignment);
+      const key = `${assignment.date}__${shiftId}`;
       if (!map[key]) map[key] = [];
-      map[key].push(a);
+      map[key].push(assignment);
     });
     return map;
   }, [assignments]);
+
+  const shiftRowsByDay = useMemo(() => {
+    const out = {};
+    days.forEach((day) => {
+      const applicable = shifts.filter((shift) => shiftAppliesToDate(shift, day.date));
+      out[day.date] = applicable;
+    });
+    return out;
+  }, [days, shifts]);
 
   const toggleEmployeeStatus = async (employee) => {
     try {
@@ -354,12 +310,30 @@ export default function Personal() {
     }
   };
 
+  const addAssignmentToShiftBox = async (date, shiftId) => {
+    const key = `${date}__${shiftId || '__none__'}`;
+    const employeeId = quickAssign[key];
+    if (!employeeId) return;
+
+    try {
+      await api.post('/staff/assignments', {
+        employeeId,
+        date,
+        shiftId: shiftId || null,
+      });
+      setQuickAssign((prev) => ({ ...prev, [key]: '' }));
+      await loadWeekData();
+    } catch (err) {
+      setError(err?.response?.data?.message || 'No se pudo asignar el empleado');
+    }
+  };
+
   return (
     <div className="space-y-5">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div>
           <h2 className="text-xl font-bold text-gray-900">Personal</h2>
-          <p className="text-sm text-gray-500">Gestion de empleados, planner semanal y costes estimados.</p>
+          <p className="text-sm text-gray-500">Gestion de empleados, planificacion semanal y costes estimados.</p>
         </div>
         <div className="flex items-center gap-2">
           {tabs.map((t) => (
@@ -407,7 +381,7 @@ export default function Personal() {
                       <td className="px-4 py-3 text-gray-700">{e.position || '-'}</td>
                       <td className="px-4 py-3 text-gray-700">
                         {e.activeCompensation
-                          ? `${e.activeCompensation.paymentType} · ${e.activeCompensation.baseAmount} ${e.activeCompensation.currency}`
+                          ? `${e.activeCompensation.paymentType} - ${e.activeCompensation.baseAmount} ${e.activeCompensation.currency}`
                           : 'Sin definir'}
                       </td>
                       <td className="px-4 py-3">
@@ -433,113 +407,151 @@ export default function Personal() {
         </div>
       )}
 
-      {!loading && tab !== 'employees' && (
+      {!loading && tab === 'planner' && (
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 space-y-4">
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <div className="flex items-center gap-2">
-              <button onClick={() => setWeekStart((w) => addDays(w, -7))} className="px-2 py-1 rounded-lg border border-gray-200 hover:bg-gray-50">?</button>
+              <button onClick={() => setWeekStart((w) => addDays(w, -7))} className="px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm">Semana anterior</button>
               <input type="date" value={weekStart} onChange={(e) => e.target.value && setWeekStart(mondayOf(e.target.value))} className={inputCls} />
-              <button onClick={() => setWeekStart((w) => addDays(w, 7))} className="px-2 py-1 rounded-lg border border-gray-200 hover:bg-gray-50">?</button>
+              <button onClick={() => setWeekStart((w) => addDays(w, 7))} className="px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm">Semana siguiente</button>
             </div>
-            {tab === 'planner' && (
-              <button onClick={() => setAssignmentModalData({ date: weekStart })} className="px-3 py-2 rounded-lg text-sm bg-violet-600 text-white hover:bg-violet-700">
-                Nueva asignacion
-              </button>
-            )}
           </div>
 
-          {tab === 'planner' && (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm min-w-[900px]">
-                <thead>
-                  <tr className="bg-gray-50 border-b border-gray-100">
-                    <th className="text-left px-3 py-2 w-56">Empleado</th>
-                    {days.map((d) => (
-                      <th key={d.date} className="text-left px-2 py-2">{`${d.short} ${d.day}`}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {employees.filter((e) => e.status === 'active').map((e) => (
-                    <tr key={e._id} className="border-b border-gray-50 align-top">
-                      <td className="px-3 py-3">
-                        <p className="font-semibold text-gray-900">{`${e.firstName} ${e.lastName || ''}`.trim()}</p>
-                        <p className="text-xs text-gray-500">{e.position || '-'}</p>
-                      </td>
-                      {days.map((d) => {
-                        const key = `${e._id}__${d.date}`;
-                        const list = assignmentsByEmployeeDate[key] || [];
-                        return (
-                          <td key={d.date} className="px-2 py-2">
-                            <div className="space-y-1 min-h-[52px]">
-                              {list.map((a) => (
-                                <div key={a._id} className="text-xs rounded-lg border border-violet-200 bg-violet-50 px-2 py-1.5">
-                                  <p className="font-semibold text-violet-700 truncate">{a.shiftId?.name || `${a.startTime || '--:--'}-${a.endTime || '--:--'}`}</p>
-                                  <div className="flex items-center justify-between gap-2 mt-1">
-                                    <span className="text-[10px] text-violet-600 truncate">{a.roleLabel || 'Turno'}</span>
-                                    <button onClick={() => removeAssignment(a._id)} className="text-[10px] text-rose-600 hover:underline">Eliminar</button>
-                                  </div>
-                                </div>
-                              ))}
-                              <button
-                                onClick={() => setAssignmentModalData({ employeeId: e._id, date: d.date })}
-                                className="text-[11px] text-violet-600 hover:underline"
-                              >
-                                + Asignar
-                              </button>
-                            </div>
-                          </td>
-                        );
-                      })}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+          <div className="overflow-x-auto">
+            <div className="grid grid-cols-7 gap-3 min-w-[1200px]">
+              {days.map((day) => {
+                const dayShifts = shiftRowsByDay[day.date] || [];
+                const unassigned = assignmentsByDayShift[`${day.date}____none__`] || [];
 
-          {tab === 'costs' && (
-            <div className="space-y-3">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2">
-                  <p className="text-xs text-gray-500">Total semanal</p>
-                  {Object.entries(costs.totalsByCurrency || {}).length === 0
-                    ? <p className="text-sm font-semibold text-gray-700">Sin datos</p>
-                    : Object.entries(costs.totalsByCurrency || {}).map(([c, v]) => <p key={c} className="text-sm font-semibold text-gray-800">{`${v} ${c}`}</p>)}
-                </div>
-                <div className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2">
-                  <p className="text-xs text-gray-500">Estimacion mensual</p>
-                  {Object.entries(costs.monthlyEstimateByCurrency || {}).length === 0
-                    ? <p className="text-sm font-semibold text-gray-700">Sin datos</p>
-                    : Object.entries(costs.monthlyEstimateByCurrency || {}).map(([c, v]) => <p key={c} className="text-sm font-semibold text-gray-800">{`${v} ${c}`}</p>)}
-                </div>
-              </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="bg-gray-50 border-b border-gray-100">
-                      <th className="text-left px-3 py-2">Empleado</th>
-                      <th className="text-left px-3 py-2">Asignaciones</th>
-                      <th className="text-left px-3 py-2">Horas</th>
-                      <th className="text-left px-3 py-2">Tipo pago</th>
-                      <th className="text-left px-3 py-2">Coste semanal</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {(costs.employeeCosts || []).map((r) => (
-                      <tr key={r.employeeId} className="border-b border-gray-50">
-                        <td className="px-3 py-2 font-medium text-gray-800">{r.employeeName}</td>
-                        <td className="px-3 py-2 text-gray-700">{r.assignments}</td>
-                        <td className="px-3 py-2 text-gray-700">{r.totalHours}</td>
-                        <td className="px-3 py-2 text-gray-700">{r.compensation?.paymentType || '-'}</td>
-                        <td className="px-3 py-2 font-semibold text-gray-900">{`${r.weeklyCost} ${r.currency}`}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+                return (
+                  <div key={day.date} className="rounded-xl border border-gray-200 bg-gray-50 p-2.5 space-y-2">
+                    <div className="px-1 pb-1 border-b border-gray-200">
+                      <p className="text-xs text-gray-500 uppercase">{day.short}</p>
+                      <p className="text-sm font-semibold text-gray-900">{day.day}</p>
+                    </div>
+
+                    {dayShifts.length === 0 && (
+                      <div className="text-xs text-gray-400 bg-white rounded-lg border border-dashed border-gray-200 p-3">
+                        Sin turnos configurados
+                      </div>
+                    )}
+
+                    {dayShifts.map((shift) => {
+                      const slotKey = `${day.date}__${shift._id}`;
+                      const list = assignmentsByDayShift[slotKey] || [];
+
+                      return (
+                        <div key={shift._id} className="bg-white rounded-lg border border-gray-200 p-2.5 space-y-2 min-h-[150px]">
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <p className="text-xs font-semibold text-gray-900">{shift.name}</p>
+                              <p className="text-[11px] text-gray-500">{`${shift.startTime} - ${shift.endTime}`}</p>
+                            </div>
+                            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-violet-50 text-violet-700">
+                              {list.length}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-1.5">
+                            <select
+                              value={quickAssign[slotKey] || ''}
+                              onChange={(e) => setQuickAssign((prev) => ({ ...prev, [slotKey]: e.target.value }))}
+                              className="flex-1 border border-gray-300 rounded-lg px-2 py-1.5 text-xs bg-white"
+                            >
+                              <option value="">Asignar empleado...</option>
+                              {activeEmployees.map((employee) => (
+                                <option key={employee._id} value={employee._id}>{`${employee.firstName} ${employee.lastName || ''}`.trim()}</option>
+                              ))}
+                            </select>
+                            <button
+                              onClick={() => addAssignmentToShiftBox(day.date, shift._id)}
+                              className="px-2 py-1.5 rounded-lg bg-violet-600 text-white text-xs hover:bg-violet-700"
+                            >
+                              Add
+                            </button>
+                          </div>
+
+                          <div className="space-y-1.5">
+                            {list.length === 0 && (
+                              <p className="text-[11px] text-gray-400">Sin personal asignado</p>
+                            )}
+                            {list.map((assignment) => (
+                              <div key={assignment._id} className="flex items-center justify-between gap-2 text-xs rounded-md border border-violet-200 bg-violet-50 px-2 py-1.5">
+                                <span className="font-medium text-violet-800 truncate">{getAssignmentEmployeeName(assignment)}</span>
+                                <button onClick={() => removeAssignment(assignment._id)} className="text-rose-600 hover:underline">Quitar</button>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {unassigned.length > 0 && (
+                      <div className="bg-white rounded-lg border border-amber-200 p-2.5 space-y-1.5">
+                        <p className="text-xs font-semibold text-amber-700">Sin turno base</p>
+                        {unassigned.map((assignment) => (
+                          <div key={assignment._id} className="flex items-center justify-between gap-2 text-xs rounded-md border border-amber-200 bg-amber-50 px-2 py-1.5">
+                            <span className="font-medium text-amber-800 truncate">{getAssignmentEmployeeName(assignment)}</span>
+                            <button onClick={() => removeAssignment(assignment._id)} className="text-rose-600 hover:underline">Quitar</button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
-          )}
+          </div>
+        </div>
+      )}
+
+      {!loading && tab === 'costs' && (
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 space-y-3">
+          <div className="flex items-center gap-2">
+            <button onClick={() => setWeekStart((w) => addDays(w, -7))} className="px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm">Semana anterior</button>
+            <input type="date" value={weekStart} onChange={(e) => e.target.value && setWeekStart(mondayOf(e.target.value))} className={inputCls} />
+            <button onClick={() => setWeekStart((w) => addDays(w, 7))} className="px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm">Semana siguiente</button>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2">
+              <p className="text-xs text-gray-500">Total semanal</p>
+              {Object.entries(costs.totalsByCurrency || {}).length === 0
+                ? <p className="text-sm font-semibold text-gray-700">Sin datos</p>
+                : Object.entries(costs.totalsByCurrency || {}).map(([c, v]) => <p key={c} className="text-sm font-semibold text-gray-800">{`${v} ${c}`}</p>)}
+            </div>
+            <div className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2">
+              <p className="text-xs text-gray-500">Estimacion mensual</p>
+              {Object.entries(costs.monthlyEstimateByCurrency || {}).length === 0
+                ? <p className="text-sm font-semibold text-gray-700">Sin datos</p>
+                : Object.entries(costs.monthlyEstimateByCurrency || {}).map(([c, v]) => <p key={c} className="text-sm font-semibold text-gray-800">{`${v} ${c}`}</p>)}
+            </div>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-gray-50 border-b border-gray-100">
+                  <th className="text-left px-3 py-2">Empleado</th>
+                  <th className="text-left px-3 py-2">Asignaciones</th>
+                  <th className="text-left px-3 py-2">Horas</th>
+                  <th className="text-left px-3 py-2">Tipo pago</th>
+                  <th className="text-left px-3 py-2">Coste semanal</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(costs.employeeCosts || []).map((row) => (
+                  <tr key={row.employeeId} className="border-b border-gray-50">
+                    <td className="px-3 py-2 font-medium text-gray-800">{row.employeeName}</td>
+                    <td className="px-3 py-2 text-gray-700">{row.assignments}</td>
+                    <td className="px-3 py-2 text-gray-700">{row.totalHours}</td>
+                    <td className="px-3 py-2 text-gray-700">{row.compensation?.paymentType || '-'}</td>
+                    <td className="px-3 py-2 font-semibold text-gray-900">{`${row.weeklyCost} ${row.currency}`}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 
@@ -562,19 +574,6 @@ export default function Personal() {
           onSaved={async () => {
             setCompModalEmployee(null);
             await loadCore();
-            await loadWeekData();
-          }}
-        />
-      )}
-
-      {assignmentModalData && (
-        <AssignmentModal
-          defaultData={assignmentModalData}
-          employees={employees}
-          shifts={shifts}
-          onClose={() => setAssignmentModalData(null)}
-          onSaved={async () => {
-            setAssignmentModalData(null);
             await loadWeekData();
           }}
         />

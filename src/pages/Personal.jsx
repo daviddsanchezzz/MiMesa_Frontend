@@ -35,13 +35,9 @@ function weekDays(weekStart) {
       date,
       short: ui.toLocaleDateString('es-ES', { weekday: 'short' }),
       day: ui.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' }),
-      label: ui.toLocaleDateString('es-ES', { weekday: 'short', day: '2-digit', month: '2-digit' }),
+      fullLabel: ui.toLocaleDateString('es-ES', { weekday: 'long', day: '2-digit', month: '2-digit' }),
     };
   });
-}
-
-function compareShiftTime(a, b) {
-  return (a.startTime || '').localeCompare(b.startTime || '');
 }
 
 function shiftAppliesToDate(shift, date) {
@@ -52,12 +48,8 @@ function shiftAppliesToDate(shift, date) {
   return true;
 }
 
-function dayShiftKey(date, shiftId) {
-  return `${date}__${shiftId || '__none__'}`;
-}
-
-function getAssignmentShiftId(assignment) {
-  return assignment?.shiftId?._id || assignment?.shiftId || '__none__';
+function compareShiftTime(a, b) {
+  return (a.startTime || '').localeCompare(b.startTime || '');
 }
 
 function normalizeText(value = '') {
@@ -71,34 +63,19 @@ function positionColor(position) {
   const p = normalizeText(position);
 
   if (p.includes('cocina') || p.includes('chef')) {
-    return {
-      chip: 'bg-amber-50 border-amber-200 text-amber-700',
-      dot: 'bg-amber-500',
-    };
+    return 'bg-amber-50 text-amber-700 border-amber-200';
   }
   if (p.includes('camarer') || p.includes('sala')) {
-    return {
-      chip: 'bg-sky-50 border-sky-200 text-sky-700',
-      dot: 'bg-sky-500',
-    };
+    return 'bg-sky-50 text-sky-700 border-sky-200';
   }
   if (p.includes('encarg') || p.includes('manager')) {
-    return {
-      chip: 'bg-violet-50 border-violet-200 text-violet-700',
-      dot: 'bg-violet-500',
-    };
+    return 'bg-violet-50 text-violet-700 border-violet-200';
   }
   if (p.includes('barra') || p.includes('bar')) {
-    return {
-      chip: 'bg-emerald-50 border-emerald-200 text-emerald-700',
-      dot: 'bg-emerald-500',
-    };
+    return 'bg-emerald-50 text-emerald-700 border-emerald-200';
   }
 
-  return {
-    chip: 'bg-slate-50 border-slate-200 text-slate-700',
-    dot: 'bg-slate-500',
-  };
+  return 'bg-slate-50 text-slate-700 border-slate-200';
 }
 
 function EmployeeFormModal({ employee, onClose, onSaved }) {
@@ -240,31 +217,103 @@ function CompensationModal({ employee, onClose, onSaved }) {
   );
 }
 
-function AssignmentChip({ assignment, employeeById, onRemove, onDragStart, onDragEnd }) {
-  const employeeId = assignment?.employeeId?._id || assignment?.employeeId;
-  const employee = assignment?.employeeId?.firstName ? assignment.employeeId : employeeById[String(employeeId)];
-  const employeeName = employee
-    ? `${employee.firstName} ${employee.lastName || ''}`.trim()
-    : 'Empleado';
-  const role = employee?.position || assignment?.roleLabel || 'Sin puesto';
-  const color = positionColor(role);
+function ShiftEditorModal({ day, shift, assignments, activeEmployees, onClose, onRefresh }) {
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const assignedIds = new Set(assignments.map((a) => String(a.employeeId?._id || a.employeeId)));
+  const availableEmployees = activeEmployees.filter((employee) => !assignedIds.has(String(employee._id)));
+
+  const addEmployee = async () => {
+    if (!selectedEmployeeId) return;
+    setSaving(true);
+    setError('');
+    try {
+      await api.post('/staff/assignments', {
+        employeeId: selectedEmployeeId,
+        date: day.date,
+        shiftId: shift._id,
+      });
+      setSelectedEmployeeId('');
+      await onRefresh();
+    } catch (err) {
+      setError(err?.response?.data?.message || 'No se pudo asignar el empleado');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const removeEmployee = async (assignmentId) => {
+    setSaving(true);
+    setError('');
+    try {
+      await api.delete(`/staff/assignments/${assignmentId}`);
+      await onRefresh();
+    } catch (err) {
+      setError(err?.response?.data?.message || 'No se pudo quitar el empleado');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
-    <div
-      draggable
-      onDragStart={(e) => onDragStart(e, assignment)}
-      onDragEnd={onDragEnd}
-      className={`group flex items-center justify-between gap-2 text-xs rounded-md border px-2 py-1.5 cursor-grab active:cursor-grabbing ${color.chip}`}
-    >
-      <div className="min-w-0">
-        <p className="font-semibold truncate">{employeeName}</p>
-        <p className="text-[10px] opacity-80 truncate flex items-center gap-1">
-          <span className={`inline-block w-1.5 h-1.5 rounded-full ${color.dot}`} />
-          {role}
-        </p>
+    <Modal title={`Editar turno · ${shift.name}`} subtitle={`${day.fullLabel} · ${shift.startTime}-${shift.endTime}`} onClose={onClose}>
+      <div className="space-y-3">
+        {error && <div className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</div>}
+
+        <div className="flex items-center gap-2">
+          <select
+            value={selectedEmployeeId}
+            onChange={(e) => setSelectedEmployeeId(e.target.value)}
+            className="flex-1 border border-gray-300 rounded-lg px-3 py-2 text-sm"
+            disabled={saving}
+          >
+            <option value="">Añadir empleado...</option>
+            {availableEmployees.map((employee) => (
+              <option key={employee._id} value={employee._id}>{`${employee.firstName} ${employee.lastName || ''}`.trim()}</option>
+            ))}
+          </select>
+          <button
+            onClick={addEmployee}
+            disabled={saving || !selectedEmployeeId}
+            className="px-3 py-2 rounded-lg bg-violet-600 text-white text-sm hover:bg-violet-700 disabled:opacity-60"
+          >
+            Añadir
+          </button>
+        </div>
+
+        <div className="space-y-2 max-h-[360px] overflow-auto pr-1">
+          {assignments.length === 0 && (
+            <div className="text-sm text-gray-500 border border-dashed border-gray-200 rounded-xl px-3 py-6 text-center">
+              Sin personal asignado
+            </div>
+          )}
+          {assignments.map((assignment) => {
+            const employee = assignment.employeeId;
+            const employeeName = employee?.firstName
+              ? `${employee.firstName} ${employee.lastName || ''}`.trim()
+              : 'Empleado';
+            const role = employee?.position || assignment?.roleLabel || 'Sin puesto';
+            return (
+              <div key={assignment._id} className="flex items-center justify-between gap-2 border border-gray-200 rounded-xl px-3 py-2.5">
+                <div>
+                  <p className="text-sm font-semibold text-gray-900">{employeeName}</p>
+                  <p className="text-xs text-gray-500">{role}</p>
+                </div>
+                <button
+                  onClick={() => removeEmployee(assignment._id)}
+                  disabled={saving}
+                  className="text-xs text-rose-600 hover:underline disabled:opacity-60"
+                >
+                  Quitar
+                </button>
+              </div>
+            );
+          })}
+        </div>
       </div>
-      <button onClick={() => onRemove(assignment._id)} className="text-rose-600 hover:underline shrink-0">Quitar</button>
-    </div>
+    </Modal>
   );
 }
 
@@ -284,15 +333,12 @@ export default function Personal() {
   const [costs, setCosts] = useState({ employeeCosts: [], totalsByCurrency: {}, monthlyEstimateByCurrency: {} });
   const [shifts, setShifts] = useState([]);
 
-  const [quickAssign, setQuickAssign] = useState({});
-  const [dragAssignmentId, setDragAssignmentId] = useState(null);
-  const [dragOverSlot, setDragOverSlot] = useState('');
-
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
   const [employeeModal, setEmployeeModal] = useState(null);
   const [compModalEmployee, setCompModalEmployee] = useState(null);
+  const [slotEditor, setSlotEditor] = useState(null);
 
   const loadCore = async () => {
     setLoading(true);
@@ -339,23 +385,16 @@ export default function Personal() {
   const days = useMemo(() => weekDays(weekStart), [weekStart]);
 
   const activeEmployees = useMemo(
-    () => employees.filter((e) => e.status === 'active'),
+    () => employees.filter((employee) => employee.status === 'active'),
     [employees],
   );
-
-  const employeeById = useMemo(() => {
-    const map = {};
-    employees.forEach((employee) => {
-      map[String(employee._id)] = employee;
-    });
-    return map;
-  }, [employees]);
 
   const assignmentsByDayShift = useMemo(() => {
     const map = {};
     assignments.forEach((assignment) => {
-      const shiftId = getAssignmentShiftId(assignment);
-      const key = dayShiftKey(assignment.date, shiftId);
+      const shiftId = assignment?.shiftId?._id || assignment?.shiftId;
+      if (!shiftId) return;
+      const key = `${assignment.date}__${shiftId}`;
       if (!map[key]) map[key] = [];
       map[key].push(assignment);
     });
@@ -383,137 +422,44 @@ export default function Personal() {
     }
   };
 
-  const removeAssignment = async (assignmentId) => {
-    if (!window.confirm('Eliminar asignacion?')) return;
-    try {
-      await api.delete(`/staff/assignments/${assignmentId}`);
-      await loadWeekData();
-    } catch (err) {
-      setError(err?.response?.data?.message || 'No se pudo eliminar la asignacion');
-    }
-  };
-
-  const addAssignmentToShiftBox = async (date, shiftId) => {
-    const key = dayShiftKey(date, shiftId);
-    const employeeId = quickAssign[key];
-    if (!employeeId) return;
-
-    try {
-      await api.post('/staff/assignments', {
-        employeeId,
-        date,
-        shiftId: shiftId === '__none__' ? null : shiftId,
-      });
-      setQuickAssign((prev) => ({ ...prev, [key]: '' }));
-      await loadWeekData();
-    } catch (err) {
-      setError(err?.response?.data?.message || 'No se pudo asignar el empleado');
-    }
-  };
-
-  const onChipDragStart = (event, assignment) => {
-    setDragAssignmentId(assignment._id);
-    event.dataTransfer.effectAllowed = 'move';
-    event.dataTransfer.setData('text/plain', assignment._id);
-  };
-
-  const onChipDragEnd = () => {
-    setDragAssignmentId(null);
-    setDragOverSlot('');
-  };
-
-  const onSlotDragOver = (event, slotKey) => {
-    event.preventDefault();
-    event.dataTransfer.dropEffect = 'move';
-    if (dragOverSlot !== slotKey) setDragOverSlot(slotKey);
-  };
-
-  const onSlotDragLeave = (slotKey) => {
-    if (dragOverSlot === slotKey) setDragOverSlot('');
-  };
-
-  const onSlotDrop = async (event, date, shiftId) => {
-    event.preventDefault();
-    const assignmentId = dragAssignmentId || event.dataTransfer.getData('text/plain');
-    setDragOverSlot('');
-    setDragAssignmentId(null);
-
-    if (!assignmentId) return;
-
-    const assignment = assignments.find((row) => String(row._id) === String(assignmentId));
-    if (!assignment) return;
-
-    const currentShiftId = getAssignmentShiftId(assignment);
-    const targetShiftId = shiftId || '__none__';
-
-    if (assignment.date === date && String(currentShiftId) === String(targetShiftId)) return;
-
-    try {
-      await api.put(`/staff/assignments/${assignment._id}`, {
-        date,
-        shiftId: targetShiftId === '__none__' ? null : targetShiftId,
-      });
-      await loadWeekData();
-    } catch (err) {
-      setError(err?.response?.data?.message || 'No se pudo mover la asignacion');
-    }
-  };
-
-  const renderShiftBox = (day, shift) => {
-    const shiftId = shift?._id || '__none__';
-    const slotKey = dayShiftKey(day.date, shiftId);
-    const list = assignmentsByDayShift[slotKey] || [];
-    const isDropTarget = dragOverSlot === slotKey;
+  const renderShiftCard = (day, shift) => {
+    const key = `${day.date}__${shift._id}`;
+    const list = assignmentsByDayShift[key] || [];
 
     return (
-      <div
-        key={slotKey}
-        onDragOver={(event) => onSlotDragOver(event, slotKey)}
-        onDragLeave={() => onSlotDragLeave(slotKey)}
-        onDrop={(event) => onSlotDrop(event, day.date, shiftId)}
-        className={`bg-white rounded-lg border p-2.5 space-y-2 min-h-[170px] transition-colors ${
-          isDropTarget ? 'border-violet-400 bg-violet-50/50' : 'border-gray-200'
-        }`}
-      >
+      <div key={shift._id} className="bg-white rounded-lg border border-gray-200 p-2.5 space-y-2 min-h-[132px]">
         <div className="flex items-start justify-between gap-2">
           <div>
-            <p className="text-xs font-semibold text-gray-900">{shift?.name || 'Sin turno base'}</p>
-            <p className="text-[11px] text-gray-500">
-              {shift ? `${shift.startTime} - ${shift.endTime}` : 'Asignaciones manuales'}
-            </p>
+            <p className="text-xs font-semibold text-gray-900">{shift.name}</p>
+            <p className="text-[11px] text-gray-500">{`${shift.startTime} - ${shift.endTime}`}</p>
           </div>
           <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-violet-50 text-violet-700">{list.length}</span>
         </div>
 
-        <div className="flex items-center gap-1.5">
-          <select
-            value={quickAssign[slotKey] || ''}
-            onChange={(e) => setQuickAssign((prev) => ({ ...prev, [slotKey]: e.target.value }))}
-            className="flex-1 border border-gray-300 rounded-lg px-2 py-1.5 text-xs bg-white"
-          >
-            <option value="">Asignar empleado...</option>
-            {activeEmployees.map((employee) => (
-              <option key={employee._id} value={employee._id}>{`${employee.firstName} ${employee.lastName || ''}`.trim()}</option>
-            ))}
-          </select>
-          <button onClick={() => addAssignmentToShiftBox(day.date, shiftId)} className="px-2 py-1.5 rounded-lg bg-violet-600 text-white text-xs hover:bg-violet-700">
-            Add
-          </button>
-        </div>
-
         <div className="space-y-1.5">
           {list.length === 0 && <p className="text-[11px] text-gray-400">Sin personal asignado</p>}
-          {list.map((assignment) => (
-            <AssignmentChip
-              key={assignment._id}
-              assignment={assignment}
-              employeeById={employeeById}
-              onRemove={removeAssignment}
-              onDragStart={onChipDragStart}
-              onDragEnd={onChipDragEnd}
-            />
-          ))}
+          {list.slice(0, 4).map((assignment) => {
+            const employee = assignment.employeeId;
+            const employeeName = employee?.firstName
+              ? `${employee.firstName} ${employee.lastName || ''}`.trim()
+              : 'Empleado';
+            const role = employee?.position || assignment?.roleLabel || 'Sin puesto';
+            return (
+              <div key={assignment._id} className={`text-[11px] rounded-md border px-2 py-1 ${positionColor(role)}`}>
+                <p className="font-semibold truncate">{employeeName}</p>
+                <p className="opacity-80 truncate">{role}</p>
+              </div>
+            );
+          })}
+          {list.length > 4 && <p className="text-[11px] text-gray-500">+{list.length - 4} más</p>}
         </div>
+
+        <button
+          onClick={() => setSlotEditor({ day, shift })}
+          className="w-full text-xs font-semibold px-2 py-1.5 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200"
+        >
+          Editar turno
+        </button>
       </div>
     );
   };
@@ -526,13 +472,13 @@ export default function Personal() {
           <p className="text-sm text-gray-500">Gestion de empleados, planificacion semanal y costes estimados.</p>
         </div>
         <div className="flex items-center gap-2">
-          {tabs.map((t) => (
+          {tabs.map((item) => (
             <button
-              key={t.key}
-              onClick={() => setTab(t.key)}
-              className={`px-3 py-2 rounded-xl text-sm font-semibold ${tab === t.key ? 'bg-violet-600 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+              key={item.key}
+              onClick={() => setTab(item.key)}
+              className={`px-3 py-2 rounded-xl text-sm font-semibold ${tab === item.key ? 'bg-violet-600 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}`}
             >
-              {t.label}
+              {item.label}
             </button>
           ))}
         </div>
@@ -601,11 +547,11 @@ export default function Personal() {
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 space-y-4">
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <div className="flex items-center gap-2">
-              <button onClick={() => setWeekStart((w) => addDays(w, -7))} className="px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm">Semana anterior</button>
+              <button onClick={() => setWeekStart((value) => addDays(value, -7))} className="px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm">Semana anterior</button>
               <input type="date" value={weekStart} onChange={(e) => e.target.value && setWeekStart(mondayOf(e.target.value))} className={inputCls} />
-              <button onClick={() => setWeekStart((w) => addDays(w, 7))} className="px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm">Semana siguiente</button>
+              <button onClick={() => setWeekStart((value) => addDays(value, 7))} className="px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm">Semana siguiente</button>
             </div>
-            <span className="text-xs text-gray-500">Tip: arrastra una tarjeta para moverla a otro turno o dia</span>
+            <span className="text-xs text-gray-500">Vista lectura · toca “Editar turno” para asignar o quitar personal</span>
           </div>
 
           <div className="md:hidden space-y-3">
@@ -616,21 +562,25 @@ export default function Personal() {
                   onClick={() => setMobileDayIndex(index)}
                   className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold border ${mobileDayIndex === index ? 'bg-violet-600 text-white border-violet-600' : 'bg-white text-gray-600 border-gray-200'}`}
                 >
-                  {day.label}
+                  {day.fullLabel}
                 </button>
               ))}
             </div>
 
             {currentMobileDay && (
               <div className="space-y-2">
-                {(shiftRowsByDay[currentMobileDay.date] || []).map((shift) => renderShiftBox(currentMobileDay, shift))}
-                {renderShiftBox(currentMobileDay, null)}
+                {(shiftRowsByDay[currentMobileDay.date] || []).length === 0 && (
+                  <div className="text-xs text-gray-400 bg-white rounded-lg border border-dashed border-gray-200 p-3">
+                    Sin turnos configurados
+                  </div>
+                )}
+                {(shiftRowsByDay[currentMobileDay.date] || []).map((shift) => renderShiftCard(currentMobileDay, shift))}
               </div>
             )}
           </div>
 
           <div className="hidden md:block overflow-x-auto">
-            <div className="grid grid-cols-7 gap-3 min-w-[1320px]">
+            <div className="grid grid-cols-7 gap-3 min-w-[1280px]">
               {days.map((day) => (
                 <div key={day.date} className="rounded-xl border border-gray-200 bg-gray-50 p-2.5 space-y-2">
                   <div className="px-1 pb-1 border-b border-gray-200">
@@ -644,9 +594,7 @@ export default function Personal() {
                     </div>
                   )}
 
-                  {(shiftRowsByDay[day.date] || []).map((shift) => renderShiftBox(day, shift))}
-
-                  {renderShiftBox(day, null)}
+                  {(shiftRowsByDay[day.date] || []).map((shift) => renderShiftCard(day, shift))}
                 </div>
               ))}
             </div>
@@ -657,9 +605,9 @@ export default function Personal() {
       {!loading && tab === 'costs' && (
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 space-y-3">
           <div className="flex items-center gap-2">
-            <button onClick={() => setWeekStart((w) => addDays(w, -7))} className="px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm">Semana anterior</button>
+            <button onClick={() => setWeekStart((value) => addDays(value, -7))} className="px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm">Semana anterior</button>
             <input type="date" value={weekStart} onChange={(e) => e.target.value && setWeekStart(mondayOf(e.target.value))} className={inputCls} />
-            <button onClick={() => setWeekStart((w) => addDays(w, 7))} className="px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm">Semana siguiente</button>
+            <button onClick={() => setWeekStart((value) => addDays(value, 7))} className="px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm">Semana siguiente</button>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -725,6 +673,17 @@ export default function Personal() {
             await loadCore();
             await loadWeekData();
           }}
+        />
+      )}
+
+      {slotEditor && (
+        <ShiftEditorModal
+          day={slotEditor.day}
+          shift={slotEditor.shift}
+          assignments={assignmentsByDayShift[`${slotEditor.day.date}__${slotEditor.shift._id}`] || []}
+          activeEmployees={activeEmployees}
+          onClose={() => setSlotEditor(null)}
+          onRefresh={loadWeekData}
         />
       )}
     </div>

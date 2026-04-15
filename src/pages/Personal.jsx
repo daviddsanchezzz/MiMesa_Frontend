@@ -44,14 +44,6 @@ const shiftAppliesToDate = (shift, date) => {
   if (shift.endDate && date > shift.endDate) return false;
   return true;
 };
-const positionColor = (position) => {
-  const p = normalizeText(position);
-  if (p.includes('cocina') || p.includes('chef')) return 'bg-amber-50 text-amber-700 border-amber-200';
-  if (p.includes('camarer') || p.includes('sala')) return 'bg-sky-50 text-sky-700 border-sky-200';
-  if (p.includes('encarg') || p.includes('manager')) return 'bg-violet-50 text-violet-700 border-violet-200';
-  return 'bg-slate-50 text-slate-700 border-slate-200';
-};
-
 function EmployeeFormModal({ employee, positions, onClose, onSaved }) {
   const [form, setForm] = useState({
     firstName: employee?.firstName || '',
@@ -137,24 +129,51 @@ function CompensationModal({ employee, onClose, onSaved }) {
     </Modal>
   );
 }
-function ShiftEditorModal({ day, shift, assignments, activeEmployees, onClose, onRefresh }) {
-  const [query, setQuery] = useState('');
-  const [roleFilter, setRoleFilter] = useState('all');
+function ShiftEditorModal({ day, shift, assignments, activeEmployees, positions, onClose, onRefresh }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
   const assignedIds = new Set(assignments.map((a) => String(a.employeeId?._id || a.employeeId)));
-  const availableEmployees = activeEmployees.filter((employee) => !assignedIds.has(String(employee._id)));
-  const roleOptions = useMemo(() => [...new Set(activeEmployees.map((e) => (e.position || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b)), [activeEmployees]);
-  const filteredAvailableEmployees = useMemo(() => {
-    const q = normalizeText(query.trim());
-    return availableEmployees.filter((employee) => {
-      const employeeName = `${employee.firstName} ${employee.lastName || ''}`.trim();
-      const matchesQuery = !q || normalizeText(employeeName).includes(q) || normalizeText(employee.position || '').includes(q);
-      const matchesRole = roleFilter === 'all' || (employee.position || '') === roleFilter;
-      return matchesQuery && matchesRole;
+  const availableEmployees = useMemo(
+    () => activeEmployees.filter((employee) => !assignedIds.has(String(employee._id))),
+    [activeEmployees, assignments],
+  );
+
+  const columns = useMemo(() => {
+    const activePositions = (positions || []).filter((position) => position.status === 'active');
+    const baseColumns = activePositions.map((position) => ({
+      key: String(position._id),
+      label: position.name,
+      color: position.color || '#64748B',
+      assigned: [],
+      available: [],
+    }));
+
+    baseColumns.push({
+      key: 'no_position',
+      label: 'Sin puesto',
+      color: '#64748B',
+      assigned: [],
+      available: [],
     });
-  }, [availableEmployees, query, roleFilter]);
+
+    const byKey = new Map(baseColumns.map((column) => [column.key, column]));
+
+    assignments.forEach((assignment) => {
+      const employee = assignment.employeeId;
+      const key = String(employee?.positionId || 'no_position');
+      const column = byKey.get(key) || byKey.get('no_position');
+      column.assigned.push(assignment);
+    });
+
+    availableEmployees.forEach((employee) => {
+      const key = String(employee?.positionId || 'no_position');
+      const column = byKey.get(key) || byKey.get('no_position');
+      column.available.push(employee);
+    });
+
+    return baseColumns;
+  }, [positions, assignments, availableEmployees]);
 
   const addEmployee = async (employeeId) => {
     if (!employeeId) return;
@@ -184,47 +203,61 @@ function ShiftEditorModal({ day, shift, assignments, activeEmployees, onClose, o
   };
 
   return (
-    <Modal title={`Editar turno - ${shift.name}`} subtitle={`${day.fullLabel} - ${shift.startTime}-${shift.endTime}`} onClose={onClose}>
+    <Modal title={`Detalle del turno - ${shift.name}`} subtitle={`${day.fullLabel} - ${shift.startTime}-${shift.endTime}`} onClose={onClose}>
       <div className="space-y-3">
         {error && <div className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</div>}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <section className="rounded-xl border border-gray-200 bg-white p-3 space-y-2">
-            <div className="flex items-center justify-between"><p className="text-xs font-semibold text-gray-700">Asignados</p><span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-violet-50 text-violet-700">{assignments.length}</span></div>
-            <div className="space-y-2 max-h-[320px] overflow-auto pr-1">
-              {assignments.length === 0 && <div className="text-sm text-gray-500 border border-dashed border-gray-200 rounded-xl px-3 py-6 text-center">Sin personal asignado</div>}
-              {assignments.map((assignment) => {
-                const employee = assignment.employeeId;
-                const employeeName = employee?.firstName ? `${employee.firstName} ${employee.lastName || ''}`.trim() : 'Empleado';
-                const role = employee?.position || assignment?.roleLabel || 'Sin puesto';
-                return (
-                  <div key={assignment._id} className="flex items-center justify-between gap-2 border border-gray-200 rounded-xl px-3 py-2.5">
-                    <div><p className="text-sm font-semibold text-gray-900">{employeeName}</p><p className="text-xs text-gray-500">{role}</p></div>
-                    <button onClick={() => removeEmployee(assignment._id)} disabled={saving} className="text-xs text-rose-600 hover:underline disabled:opacity-60">Quitar</button>
-                  </div>
-                );
-              })}
-            </div>
-          </section>
+        <div className="overflow-x-auto">
+          <div className="grid grid-flow-col auto-cols-[260px] gap-3">
+            {columns.map((column) => (
+              <section key={column.key} className="rounded-xl border border-gray-200 bg-white p-3 space-y-3">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: column.color }} />
+                  <p className="text-sm font-semibold text-gray-900">{column.label}</p>
+                </div>
 
-          <section className="rounded-xl border border-gray-200 bg-gray-50 p-3 space-y-2">
-            <p className="text-xs font-semibold text-gray-700">Disponible para asignar</p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Buscar empleado..." className="border border-gray-300 rounded-lg px-3 py-2 text-sm" disabled={saving} />
-              <select value={roleFilter} onChange={(e) => setRoleFilter(e.target.value)} className="border border-gray-300 rounded-lg px-3 py-2 text-sm" disabled={saving}><option value="all">Todos los puestos</option>{roleOptions.map((role) => <option key={role} value={role}>{role}</option>)}</select>
-            </div>
-            <div className="space-y-2 max-h-[274px] overflow-auto pr-1">
-              {filteredAvailableEmployees.length === 0 && <div className="text-sm text-gray-500 border border-dashed border-gray-200 rounded-xl px-3 py-4 text-center">No hay empleados para este filtro</div>}
-              {filteredAvailableEmployees.map((employee) => {
-                const employeeName = `${employee.firstName} ${employee.lastName || ''}`.trim();
-                return (
-                  <div key={employee._id} className="flex items-center justify-between gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2">
-                    <div><p className="text-sm font-semibold text-gray-800">{employeeName}</p><p className="text-xs text-gray-500">{employee.position || 'Sin puesto'}</p></div>
-                    <button onClick={() => addEmployee(employee._id)} disabled={saving} className="px-2.5 py-1 rounded-md text-xs font-semibold bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-60">Anadir</button>
-                  </div>
-                );
-              })}
-            </div>
-          </section>
+                <div className="space-y-1.5">
+                  <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Asignados</p>
+                  {column.assigned.length === 0 && <p className="text-xs text-gray-400">Sin asignados</p>}
+                  {column.assigned.map((assignment) => {
+                    const employee = assignment.employeeId;
+                    const employeeName = employee?.firstName ? `${employee.firstName} ${employee.lastName || ''}`.trim() : 'Empleado';
+                    return (
+                      <div key={assignment._id} className="flex items-center justify-between gap-2 rounded-lg border border-gray-200 px-2 py-1.5">
+                        <span className="text-xs text-gray-800 truncate">{employeeName}</span>
+                        <button
+                          onClick={() => removeEmployee(assignment._id)}
+                          disabled={saving}
+                          className="text-[11px] text-rose-600 hover:underline disabled:opacity-60"
+                        >
+                          Quitar
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+
+                <div className="space-y-1.5">
+                  <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Disponibles</p>
+                  {column.available.length === 0 && <p className="text-xs text-gray-400">Sin disponibles</p>}
+                  {column.available.map((employee) => {
+                    const employeeName = `${employee.firstName} ${employee.lastName || ''}`.trim();
+                    return (
+                      <div key={employee._id} className="flex items-center justify-between gap-2 rounded-lg border border-gray-200 px-2 py-1.5">
+                        <span className="text-xs text-gray-800 truncate">{employeeName}</span>
+                        <button
+                          onClick={() => addEmployee(employee._id)}
+                          disabled={saving}
+                          className="text-[11px] text-violet-700 hover:underline disabled:opacity-60"
+                        >
+                          Anadir
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+            ))}
+          </div>
         </div>
       </div>
     </Modal>
@@ -278,6 +311,9 @@ function PositionManagerModal({ positions, onClose, onSaved }) {
       <div className="space-y-3">
         {error && <div className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</div>}
 
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+          {editing ? 'Editando puesto' : 'Nuevo puesto'}
+        </p>
         <form onSubmit={submit} className="grid grid-cols-1 sm:grid-cols-[1fr_140px_auto] gap-2">
           <input
             className={inputCls}
@@ -305,14 +341,14 @@ function PositionManagerModal({ positions, onClose, onSaved }) {
           </div>
         </form>
 
-        <div className="space-y-2 max-h-[360px] overflow-auto pr-1">
+        <div className="divide-y divide-gray-100 border border-gray-200 rounded-xl overflow-hidden">
           {positions.length === 0 && (
-            <div className="text-sm text-gray-500 border border-dashed border-gray-200 rounded-xl px-3 py-6 text-center">
+            <div className="text-sm text-gray-500 px-3 py-6 text-center">
               Todavia no hay puestos
             </div>
           )}
           {positions.map((position) => (
-            <div key={position._id} className="flex items-center justify-between gap-2 border border-gray-200 rounded-xl px-3 py-2.5">
+            <div key={position._id} className="flex items-center justify-between gap-2 px-3 py-2.5 bg-white">
               <div className="flex items-center gap-2">
                 <span className="w-3 h-3 rounded-full border border-gray-200" style={{ backgroundColor: position.color || '#64748B' }} />
                 <div>
@@ -439,20 +475,57 @@ export default function Personal() {
       return normalizeText(employeeName).includes(plannerFilterText) || normalizeText(employee?.position || '').includes(plannerFilterText);
     });
 
+    const grouped = list.reduce((acc, assignment) => {
+      const employee = assignment.employeeId || {};
+      const roleName = employee.position || assignment.roleLabel || 'Sin puesto';
+      const roleColor = employee.positionColor || '#64748B';
+      const groupKey = `${roleName}__${roleColor}`;
+      if (!acc[groupKey]) acc[groupKey] = { roleName, roleColor, items: [] };
+      acc[groupKey].items.push(assignment);
+      return acc;
+    }, {});
+
     return (
-      <div key={shift._id} className="bg-white rounded-lg border border-gray-200 p-2.5 space-y-2 min-h-[132px]">
-        <div className="flex items-start justify-between gap-2"><div><p className="text-xs font-semibold text-gray-900">{shift.name}</p><p className="text-[11px] text-gray-500">{`${shift.startTime} - ${shift.endTime}`}</p></div><span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-violet-50 text-violet-700">{rawList.length}</span></div>
-        <div className="space-y-1.5">
-          {list.length === 0 && <p className="text-[11px] text-gray-400">Sin personal asignado</p>}
-          {list.slice(0, 2).map((assignment) => {
-            const employee = assignment.employeeId;
-            const employeeName = employee?.firstName ? `${employee.firstName} ${employee.lastName || ''}`.trim() : 'Empleado';
-            const role = employee?.position || assignment?.roleLabel || 'Sin puesto';
-            return <div key={assignment._id} className={`text-[11px] rounded-md border px-2 py-1 ${positionColor(role)}`}><p className="font-semibold truncate">{employeeName}</p><p className="opacity-80 truncate">{role}</p></div>;
-          })}
-          {list.length > 2 && <p className="text-[11px] text-gray-500">+{list.length - 2} mas</p>}
+      <div key={shift._id} className="bg-white rounded-lg border border-gray-200 p-2.5 space-y-2">
+        <div className="flex items-start justify-between gap-2">
+          <div>
+            <p className="text-xs font-semibold text-gray-900">{shift.name}</p>
+            <p className="text-[11px] text-gray-500">{`${shift.startTime} - ${shift.endTime}`}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-violet-50 text-violet-700">{rawList.length}</span>
+            <button
+              onClick={() => setSlotEditor({ day, shift })}
+              className="text-[11px] font-semibold px-2 py-1 rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200"
+            >
+              Detalle
+            </button>
+          </div>
         </div>
-        <button onClick={() => setSlotEditor({ day, shift })} className="w-full text-xs font-semibold px-2 py-1.5 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200">Editar turno</button>
+
+        {list.length === 0 && <p className="text-[11px] text-gray-400">Sin personal asignado</p>}
+
+        <div className="space-y-2">
+          {Object.values(grouped).map((group) => (
+            <div key={`${group.roleName}-${group.roleColor}`} className="space-y-1">
+              <div className="flex items-center gap-1.5">
+                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: group.roleColor }} />
+                <p className="text-[11px] font-semibold text-gray-600">{group.roleName}</p>
+              </div>
+              <div className="space-y-1 pl-3.5">
+                {group.items.map((assignment) => {
+                  const employee = assignment.employeeId;
+                  const employeeName = employee?.firstName ? `${employee.firstName} ${employee.lastName || ''}`.trim() : 'Empleado';
+                  return (
+                    <p key={assignment._id} className="text-[12px] text-gray-800 truncate">
+                      {employeeName}
+                    </p>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   };
@@ -533,7 +606,75 @@ export default function Personal() {
         </div>
       )}
 
-      {!loading && tab === 'planner' && <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 space-y-4"><div className="flex items-center justify-between gap-3 flex-wrap"><div className="flex items-center gap-2"><button onClick={() => setWeekStart((v) => addDays(v, -7))} className="px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm">Semana anterior</button><input type="date" value={weekStart} onChange={(e) => e.target.value && setWeekStart(mondayOf(e.target.value))} className={inputCls} /><button onClick={() => setWeekStart((v) => addDays(v, 7))} className="px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm">Semana siguiente</button></div><span className="text-xs text-gray-500">Vista lectura - usa Editar turno para asignar o quitar personal</span></div><div className="grid grid-cols-1 md:grid-cols-3 gap-2"><input value={plannerEmployeeFilter} onChange={(e) => setPlannerEmployeeFilter(e.target.value)} placeholder="Buscar por empleado o puesto..." className={inputCls} /><label className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 bg-gray-50 text-sm text-gray-700"><input type="checkbox" checked={showOnlyAssignedShifts} onChange={(e) => setShowOnlyAssignedShifts(e.target.checked)} />Solo turnos con personal</label><button onClick={() => { setPlannerEmployeeFilter(''); setShowOnlyAssignedShifts(false); }} className="px-3 py-2 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm">Limpiar filtros</button></div><div className="hidden md:block overflow-x-auto"><div className="grid grid-cols-7 gap-3 min-w-[1280px]">{days.map((day) => <div key={day.date} className="rounded-xl border border-gray-200 bg-gray-50 p-2.5 space-y-2 max-h-[74vh] overflow-auto"><div className="px-1 pb-1 border-b border-gray-200 sticky top-0 bg-gray-50 z-10"><p className="text-xs text-gray-500 uppercase">{day.short}</p><p className="text-sm font-semibold text-gray-900">{day.day}</p></div>{(shiftRowsByDay[day.date] || []).length === 0 && <div className="text-xs text-gray-400 bg-white rounded-lg border border-dashed border-gray-200 p-3">Sin turnos configurados</div>}{(shiftRowsByDay[day.date] || []).map((shift) => renderShiftCard(day, shift))}</div>)}</div></div><div className="md:hidden space-y-3"><div className="flex gap-2 overflow-x-auto pb-1">{days.map((day, index) => <button key={day.date} onClick={() => setMobileDayIndex(index)} className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold border ${mobileDayIndex === index ? 'bg-violet-600 text-white border-violet-600' : 'bg-white text-gray-600 border-gray-200'}`}>{day.fullLabel}</button>)}</div>{currentMobileDay && <div className="space-y-2">{(shiftRowsByDay[currentMobileDay.date] || []).length === 0 && <div className="text-xs text-gray-400 bg-white rounded-lg border border-dashed border-gray-200 p-3">Sin turnos configurados</div>}{(shiftRowsByDay[currentMobileDay.date] || []).map((shift) => renderShiftCard(currentMobileDay, shift))}</div>}</div></div>}
+            {!loading && tab === 'planner' && (
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 space-y-4">
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-2">
+              <button onClick={() => setWeekStart((v) => addDays(v, -7))} className="w-9 h-9 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm" aria-label="Semana anterior">◀</button>
+              <input type="date" value={weekStart} onChange={(e) => e.target.value && setWeekStart(mondayOf(e.target.value))} className={inputCls} />
+              <button onClick={() => setWeekStart((v) => addDays(v, 7))} className="w-9 h-9 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm" aria-label="Semana siguiente">▶</button>
+            </div>
+            <span className="text-xs text-gray-500">Vista semanal agrupada por puestos · usa Detalle para editar</span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+            <input
+              value={plannerEmployeeFilter}
+              onChange={(e) => setPlannerEmployeeFilter(e.target.value)}
+              placeholder="Buscar por empleado o puesto..."
+              className={inputCls}
+            />
+            <label className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 bg-gray-50 text-sm text-gray-700">
+              <input type="checkbox" checked={showOnlyAssignedShifts} onChange={(e) => setShowOnlyAssignedShifts(e.target.checked)} />
+              Solo turnos con personal
+            </label>
+            <button onClick={() => { setPlannerEmployeeFilter(''); setShowOnlyAssignedShifts(false); }} className="px-3 py-2 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm">
+              Limpiar filtros
+            </button>
+          </div>
+
+          <div className="hidden md:block overflow-x-auto">
+            <div className="grid grid-cols-7 gap-3 min-w-[1280px]">
+              {days.map((day) => (
+                <div key={day.date} className="rounded-xl border border-gray-200 bg-gray-50 p-2.5 space-y-2 max-h-[74vh] overflow-auto">
+                  <div className="px-1 pb-1 border-b border-gray-200 sticky top-0 bg-gray-50 z-10">
+                    <p className="text-xs text-gray-500 uppercase">{day.short}</p>
+                    <p className="text-sm font-semibold text-gray-900">{day.day}</p>
+                  </div>
+
+                  {(shiftRowsByDay[day.date] || []).length === 0 && (
+                    <div className="text-xs text-gray-400 bg-white rounded-lg border border-dashed border-gray-200 p-3">Sin turnos configurados</div>
+                  )}
+
+                  {(shiftRowsByDay[day.date] || []).map((shift) => renderShiftCard(day, shift))}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="md:hidden space-y-3">
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              {days.map((day, index) => (
+                <button
+                  key={day.date}
+                  onClick={() => setMobileDayIndex(index)}
+                  className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold border ${mobileDayIndex === index ? 'bg-violet-600 text-white border-violet-600' : 'bg-white text-gray-600 border-gray-200'}`}
+                >
+                  {day.fullLabel}
+                </button>
+              ))}
+            </div>
+            {currentMobileDay && (
+              <div className="space-y-2">
+                {(shiftRowsByDay[currentMobileDay.date] || []).length === 0 && (
+                  <div className="text-xs text-gray-400 bg-white rounded-lg border border-dashed border-gray-200 p-3">Sin turnos configurados</div>
+                )}
+                {(shiftRowsByDay[currentMobileDay.date] || []).map((shift) => renderShiftCard(currentMobileDay, shift))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {!loading && tab === 'costs' && <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 space-y-3"><div className="flex items-center gap-2"><button onClick={() => setWeekStart((v) => addDays(v, -7))} className="px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm">Semana anterior</button><input type="date" value={weekStart} onChange={(e) => e.target.value && setWeekStart(mondayOf(e.target.value))} className={inputCls} /><button onClick={() => setWeekStart((v) => addDays(v, 7))} className="px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm">Semana siguiente</button></div><div className="grid grid-cols-1 sm:grid-cols-2 gap-3"><div className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2"><p className="text-xs text-gray-500">Total semanal</p>{Object.entries(costs.totalsByCurrency || {}).length === 0 ? <p className="text-sm font-semibold text-gray-700">Sin datos</p> : Object.entries(costs.totalsByCurrency || {}).map(([currency, value]) => <p key={currency} className="text-sm font-semibold text-gray-800">{`${value} ${currency}`}</p>)}</div><div className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2"><p className="text-xs text-gray-500">Estimacion mensual</p>{Object.entries(costs.monthlyEstimateByCurrency || {}).length === 0 ? <p className="text-sm font-semibold text-gray-700">Sin datos</p> : Object.entries(costs.monthlyEstimateByCurrency || {}).map(([currency, value]) => <p key={currency} className="text-sm font-semibold text-gray-800">{`${value} ${currency}`}</p>)}</div></div><div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="bg-gray-50 border-b border-gray-100"><th className="text-left px-3 py-2">Empleado</th><th className="text-left px-3 py-2">Asignaciones</th><th className="text-left px-3 py-2">Horas</th><th className="text-left px-3 py-2">Tipo pago</th><th className="text-left px-3 py-2">Coste semanal</th></tr></thead><tbody>{(costs.employeeCosts || []).map((row) => <tr key={row.employeeId} className="border-b border-gray-50"><td className="px-3 py-2 font-medium text-gray-800">{row.employeeName}</td><td className="px-3 py-2 text-gray-700">{row.assignments}</td><td className="px-3 py-2 text-gray-700">{row.totalHours}</td><td className="px-3 py-2 text-gray-700">{row.compensation?.paymentType || '-'}</td><td className="px-3 py-2 font-semibold text-gray-900">{`${row.weeklyCost} ${row.currency}`}</td></tr>)}</tbody></table></div></div>}
 
@@ -557,7 +698,18 @@ export default function Personal() {
         />
       )}
       {compModalEmployee && <CompensationModal employee={compModalEmployee} onClose={() => setCompModalEmployee(null)} onSaved={async () => { setCompModalEmployee(null); await loadCore(); await loadWeekData(); }} />}
-      {slotEditor && <ShiftEditorModal day={slotEditor.day} shift={slotEditor.shift} assignments={assignmentsByDayShift[`${slotEditor.day.date}__${slotEditor.shift._id}`] || []} activeEmployees={activeEmployees} onClose={() => setSlotEditor(null)} onRefresh={loadWeekData} />}
+      {slotEditor && (
+        <ShiftEditorModal
+          day={slotEditor.day}
+          shift={slotEditor.shift}
+          assignments={assignmentsByDayShift[`${slotEditor.day.date}__${slotEditor.shift._id}`] || []}
+          activeEmployees={activeEmployees}
+          positions={positions}
+          onClose={() => setSlotEditor(null)}
+          onRefresh={loadWeekData}
+        />
+      )}
     </div>
   );
 }
+

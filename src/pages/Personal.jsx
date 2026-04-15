@@ -463,7 +463,6 @@ export default function Personal() {
   const renderShiftCard = (day, shift) => {
     const key = `${day.date}__${shift._id}`;
     const rawList = assignmentsByDayShift[key] || [];
-    if (rawList.length === 0) return null;
     const list = rawList;
 
     const grouped = list.reduce((acc, assignment) => {

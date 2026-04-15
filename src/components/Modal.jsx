@@ -1,12 +1,17 @@
 export default function Modal({ title, subtitle, children, onClose, size = 'sm' }) {
-  const widths = { sm: 'sm:max-w-sm', md: 'sm:max-w-md', lg: 'sm:max-w-lg', xl: 'sm:max-w-[98vw]' };
+  const widths = {
+    sm: 'w-full sm:max-w-sm',
+    md: 'w-full sm:max-w-md',
+    lg: 'w-full sm:max-w-lg',
+    xl: 'w-full sm:w-auto sm:max-w-[98vw]',
+  };
   const heights = { sm: 'max-h-[92vh]', md: 'max-h-[92vh]', lg: 'max-h-[92vh]', xl: 'max-h-[98vh]' };
   return (
     <div
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"
       style={{ backgroundColor: 'rgba(15,23,42,0.55)', backdropFilter: 'blur(4px)' }}
     >
-      <div className={`bg-white w-full ${widths[size]} sm:rounded-2xl rounded-t-2xl shadow-2xl ${heights[size]} flex flex-col`}>
+      <div className={`bg-white ${widths[size]} sm:rounded-2xl rounded-t-2xl shadow-2xl ${heights[size]} flex flex-col`}>
         <div className="flex items-start justify-between px-5 pt-5 pb-4 border-b border-gray-100">
           <div>
             <h3 className="text-base font-semibold text-gray-900">{title}</h3>

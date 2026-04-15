@@ -20,6 +20,7 @@ import Onboarding from './pages/Onboarding';
 import Publicidad from './pages/Publicidad';
 import Analytics from './pages/Analytics';
 import Calendar from './pages/Calendar';
+import Personal from './pages/Personal';
 import PublicReservation from './pages/PublicReservation';
 import PublicCancel from './pages/PublicCancel';
 import PublicUnsubscribe from './pages/PublicUnsubscribe';
@@ -152,6 +153,13 @@ function RoleRoute({ minRole, children }) {
   return children;
 }
 
+function ModuleRoute({ moduleKey, children }) {
+  const { loading, isModuleEnabled } = useAuth();
+  if (loading) return <LoadingScreen />;
+  if (!isModuleEnabled(moduleKey)) return <Navigate to="/" replace />;
+  return children;
+}
+
 export default function App() {
   return (
     <AuthProvider>
@@ -182,6 +190,7 @@ export default function App() {
           <Route path="/analytics"    element={<RoleRoute minRole="manager"><PrivateLayout><Analytics /></PrivateLayout></RoleRoute>} />
           <Route path="/calendario"   element={<RoleRoute minRole="staff"><FullBleedLayout><Calendar /></FullBleedLayout></RoleRoute>} />
           <Route path="/publicidad"   element={<RoleRoute minRole="manager"><PrivateLayout><Publicidad /></PrivateLayout></RoleRoute>} />
+          <Route path="/personal"     element={<ModuleRoute moduleKey="staff"><RoleRoute minRole="manager"><PrivateLayout><Personal /></PrivateLayout></RoleRoute></ModuleRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>

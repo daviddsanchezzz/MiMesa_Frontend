@@ -35,7 +35,7 @@ function planPillClass(plan) {
   return 'bg-gray-50 text-gray-600 border-gray-200';
 }
 
-function MobileBusinessCard({ b, changingPlan, deleting, onPlanChange, onDelete }) {
+function MobileBusinessCard({ b, changingPlan, deleting, onPlanChange, onDelete, moduleCatalog, onModuleToggle }) {
   return (
     <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 space-y-3">
       <div>
@@ -73,6 +73,28 @@ function MobileBusinessCard({ b, changingPlan, deleting, onPlanChange, onDelete 
           <p className="text-sm font-semibold text-gray-900">{b.totalReservations}</p>
         </div>
       </div>
+
+      {moduleCatalog.length > 0 && (
+        <div className="rounded-xl bg-gray-50 border border-gray-100 p-2 space-y-1">
+          <p className="text-[11px] text-gray-500">Modulos</p>
+          {moduleCatalog.map((m) => {
+            const enabled = !!b.modules?.[m.key]?.enabled;
+            return (
+              <button
+                key={m.key}
+                onClick={() => onModuleToggle(b.id, m.key, enabled)}
+                className={`w-full text-left text-xs px-2 py-1 rounded-lg border transition-colors ${
+                  enabled
+                    ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
+                    : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+                }`}
+              >
+                {m.name}: {enabled ? 'ON' : 'OFF'}
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       <div className="flex items-center justify-between">
         <p className="text-xs text-gray-400">
@@ -123,14 +145,19 @@ export default function DevDashboard() {
   const [inviteResult, setInviteResult] = useState(null);
   const [copied, setCopied] = useState(false);
   const [users, setUsers] = useState([]);
+  const [moduleCatalog, setModuleCatalog] = useState([]);
   const [usersLoading, setUsersLoading] = useState(false);
   const [userSearch, setUserSearch] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const { data } = await api.get('/dev/businesses');
+      const [{ data }, { data: modules }] = await Promise.all([
+        api.get('/dev/businesses'),
+        api.get('/dev/modules/catalog'),
+      ]);
       setBusinesses(data);
+      setModuleCatalog(modules || []);
     } finally {
       setLoading(false);
     }
@@ -194,6 +221,23 @@ export default function DevDashboard() {
     } finally {
       setChangingPlan(null);
     }
+  };
+
+  const handleModuleToggle = async (businessId, moduleKey, currentEnabled) => {
+    await api.patch(`/dev/businesses/${businessId}/modules/${moduleKey}`, { enabled: !currentEnabled });
+    setBusinesses((prev) => prev.map((b) => {
+      if (b.id !== businessId) return b;
+      return {
+        ...b,
+        modules: {
+          ...(b.modules || {}),
+          [moduleKey]: {
+            ...(b.modules?.[moduleKey] || {}),
+            enabled: !currentEnabled,
+          },
+        },
+      };
+    }));
   };
 
   const handleInviteUser = async (e) => {
@@ -301,6 +345,8 @@ export default function DevDashboard() {
                   deleting={deleting}
                   onPlanChange={handlePlanChange}
                   onDelete={handleDelete}
+                  moduleCatalog={moduleCatalog}
+                  onModuleToggle={handleModuleToggle}
                 />
               ))
             )}
@@ -318,6 +364,7 @@ export default function DevDashboard() {
                     <tr className="border-b border-gray-100 bg-gray-50">
                       <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Negocio</th>
                       <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Plan</th>
+                      <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Modulos</th>
                       <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Miembros</th>
                       <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Reservas 30d</th>
                       <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Total</th>
@@ -347,6 +394,26 @@ export default function DevDashboard() {
                               <option value="basic">Basic</option>
                               <option value="pro">Pro</option>
                             </select>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3.5">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            {moduleCatalog.map((m) => {
+                              const enabled = !!b.modules?.[m.key]?.enabled;
+                              return (
+                                <button
+                                  key={m.key}
+                                  onClick={() => handleModuleToggle(b.id, m.key, enabled)}
+                                  className={`text-[11px] font-semibold px-2 py-1 rounded-lg border transition-colors ${
+                                    enabled
+                                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                      : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                                  }`}
+                                >
+                                  {m.name}: {enabled ? 'ON' : 'OFF'}
+                                </button>
+                              );
+                            })}
                           </div>
                         </td>
                         <td className="px-4 py-3.5 text-center text-gray-700">{b.memberCount}</td>

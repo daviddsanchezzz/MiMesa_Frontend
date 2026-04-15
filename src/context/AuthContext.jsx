@@ -149,6 +149,8 @@ export function AuthProvider({ children }) {
   const planCaps = isSubscribed ? BASIC_CAPS : FREE_CAPS;
   const canUse    = (feature) => !!planCaps[feature];
   const planLimit = (key) => planCaps[key] ?? Infinity;
+  const moduleAccess = business?.modules ?? {};
+  const isModuleEnabled = (moduleKey) => !!moduleAccess?.[moduleKey]?.enabled;
 
   // Minimal session object for pages that need the logged-in user's identity
   const session = business
@@ -168,6 +170,7 @@ export function AuthProvider({ children }) {
       isDev, role, plan, subscriptionStatus,
       trialEndsAt, currentPeriodEnd, cancelAtPeriodEnd,
       hasRole, isSubscribed, canUse, planLimit,
+      moduleAccess, isModuleEnabled,
       session,
     }}>
       {children}

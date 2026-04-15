@@ -430,8 +430,27 @@ export default function Personal() {
     }
   };
 
+  const loadAssignments = async () => {
+    try {
+      const aRes = await api.get(`/staff/assignments?weekStart=${weekStart}`);
+      setAssignments(aRes.data?.assignments || []);
+    } catch (err) {
+      setError(err?.response?.data?.message || 'No se pudieron cargar asignaciones');
+    }
+  };
+
+  const loadCosts = async () => {
+    try {
+      const cRes = await api.get(`/staff/costs?weekStart=${weekStart}`);
+      setCosts(cRes.data || { employeeCosts: [], totalsByCurrency: {}, monthlyEstimateByCurrency: {} });
+    } catch (err) {
+      setError(err?.response?.data?.message || 'No se pudieron cargar costes');
+    }
+  };
+
   useEffect(() => { loadCore(); }, []);
   useEffect(() => { loadWeekData(); }, [weekStart]);
+  useEffect(() => { if (tab === 'costs') loadCosts(); }, [tab]);
   useEffect(() => { setMobileDayIndex(0); }, [weekStart]);
 
   const days = useMemo(() => weekDays(weekStart), [weekStart]);
@@ -459,7 +478,8 @@ export default function Personal() {
       const status = employee.status === 'active' ? 'inactive' : 'active';
       await api.patch(`/staff/employees/${employee._id}/status`, { status });
       await loadCore();
-      await loadWeekData();
+      await loadAssignments();
+      if (tab === 'costs') await loadCosts();
     } catch (err) {
       setError(err?.response?.data?.message || 'No se pudo actualizar el estado');
     }
@@ -676,7 +696,7 @@ export default function Personal() {
           activeEmployees={activeEmployees}
           positions={positions}
           onClose={() => setSlotEditor(null)}
-          onRefresh={loadWeekData}
+          onRefresh={loadAssignments}
         />
       )}
     </div>

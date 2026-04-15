@@ -1,6 +1,6 @@
 export default function Modal({ title, subtitle, children, onClose, size = 'sm' }) {
-  const widths = { sm: 'sm:max-w-sm', md: 'sm:max-w-md', lg: 'sm:max-w-lg', xl: 'sm:max-w-[96vw]' };
-  const heights = { sm: 'max-h-[92vh]', md: 'max-h-[92vh]', lg: 'max-h-[92vh]', xl: 'max-h-[96vh]' };
+  const widths = { sm: 'sm:max-w-sm', md: 'sm:max-w-md', lg: 'sm:max-w-lg', xl: 'sm:max-w-[98vw]' };
+  const heights = { sm: 'max-h-[92vh]', md: 'max-h-[92vh]', lg: 'max-h-[92vh]', xl: 'max-h-[98vh]' };
   return (
     <div
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center"

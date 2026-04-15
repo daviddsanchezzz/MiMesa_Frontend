@@ -131,6 +131,7 @@ function CompensationModal({ employee, onClose, onSaved }) {
 function ShiftEditorModal({ day, shift, assignments, activeEmployees, positions, onClose, onRefresh }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [selectedByColumn, setSelectedByColumn] = useState({});
 
   const assignedIds = new Set(assignments.map((a) => String(a.employeeId?._id || a.employeeId)));
   const availableEmployees = useMemo(
@@ -147,14 +148,17 @@ function ShiftEditorModal({ day, shift, assignments, activeEmployees, positions,
       assigned: [],
       available: [],
     }));
-
-    baseColumns.push({
-      key: 'no_position',
-      label: 'Sin puesto',
-      color: '#64748B',
-      assigned: [],
-      available: [],
-    });
+    const hasNoPositionAssigned = assignments.some((assignment) => !assignment?.employeeId?.positionId);
+    const hasNoPositionAvailable = availableEmployees.some((employee) => !employee?.positionId);
+    if (hasNoPositionAssigned || hasNoPositionAvailable) {
+      baseColumns.push({
+        key: 'no_position',
+        label: 'Sin puesto',
+        color: '#64748B',
+        assigned: [],
+        available: [],
+      });
+    }
 
     const byKey = new Map(baseColumns.map((column) => [column.key, column]));
 
@@ -214,8 +218,7 @@ function ShiftEditorModal({ day, shift, assignments, activeEmployees, positions,
                   <p className="text-sm font-semibold text-gray-900">{column.label}</p>
                 </div>
 
-                <div className="space-y-1.5">
-                  <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Asignados</p>
+                <div className="space-y-1.5 min-h-[180px]">
                   {column.assigned.length === 0 && <p className="text-xs text-gray-400">Sin asignados</p>}
                   {column.assigned.map((assignment) => {
                     const employee = assignment.employeeId;
@@ -235,24 +238,35 @@ function ShiftEditorModal({ day, shift, assignments, activeEmployees, positions,
                   })}
                 </div>
 
-                <div className="space-y-1.5">
-                  <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">Disponibles</p>
-                  {column.available.length === 0 && <p className="text-xs text-gray-400">Sin disponibles</p>}
-                  {column.available.map((employee) => {
-                    const employeeName = `${employee.firstName} ${employee.lastName || ''}`.trim();
-                    return (
-                      <div key={employee._id} className="flex items-center justify-between gap-2 rounded-lg border border-gray-200 px-2 py-1.5">
-                        <span className="text-xs text-gray-800 truncate">{employeeName}</span>
-                        <button
-                          onClick={() => addEmployee(employee._id)}
-                          disabled={saving}
-                          className="text-[11px] text-violet-700 hover:underline disabled:opacity-60"
-                        >
-                          Anadir
-                        </button>
-                      </div>
-                    );
-                  })}
+                <div className="pt-2 border-t border-gray-100 space-y-2">
+                  <select
+                    className="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs"
+                    value={selectedByColumn[column.key] || ''}
+                    onChange={(e) => setSelectedByColumn((prev) => ({ ...prev, [column.key]: e.target.value }))}
+                    disabled={saving}
+                  >
+                    <option value="">Seleccionar empleado...</option>
+                    {column.available.map((employee) => {
+                      const employeeName = `${employee.firstName} ${employee.lastName || ''}`.trim();
+                      return (
+                        <option key={employee._id} value={employee._id}>
+                          {employeeName}
+                        </option>
+                      );
+                    })}
+                  </select>
+                  <button
+                    onClick={async () => {
+                      const selectedId = selectedByColumn[column.key];
+                      if (!selectedId) return;
+                      await addEmployee(selectedId);
+                      setSelectedByColumn((prev) => ({ ...prev, [column.key]: '' }));
+                    }}
+                    disabled={saving || !selectedByColumn[column.key]}
+                    className="w-full text-xs font-semibold px-2 py-1.5 rounded-lg bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-60"
+                  >
+                    Anadir
+                  </button>
                 </div>
               </section>
             ))}

@@ -52,8 +52,15 @@ const positionColor = (position) => {
   return 'bg-slate-50 text-slate-700 border-slate-200';
 };
 
-function EmployeeFormModal({ employee, onClose, onSaved }) {
-  const [form, setForm] = useState({ firstName: employee?.firstName || '', lastName: employee?.lastName || '', phone: employee?.phone || '', email: employee?.email || '', position: employee?.position || '', notes: employee?.notes || '' });
+function EmployeeFormModal({ employee, positions, onClose, onSaved }) {
+  const [form, setForm] = useState({
+    firstName: employee?.firstName || '',
+    lastName: employee?.lastName || '',
+    phone: employee?.phone || '',
+    email: employee?.email || '',
+    positionId: employee?.positionId || '',
+    notes: employee?.notes || '',
+  });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const submit = async (e) => {
@@ -82,7 +89,17 @@ function EmployeeFormModal({ employee, onClose, onSaved }) {
           <div><label className={labelCls}>Telefono</label><input className={inputCls} value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} /></div>
           <div><label className={labelCls}>Email</label><input className={inputCls} type="email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} /></div>
         </div>
-        <div><label className={labelCls}>Puesto</label><input className={inputCls} value={form.position} onChange={(e) => setForm((f) => ({ ...f, position: e.target.value }))} /></div>
+        <div>
+          <label className={labelCls}>Puesto</label>
+          <select className={inputCls} value={form.positionId} onChange={(e) => setForm((f) => ({ ...f, positionId: e.target.value }))}>
+            <option value="">Sin puesto</option>
+            {positions.map((position) => (
+              <option key={position._id} value={position._id}>
+                {position.name}
+              </option>
+            ))}
+          </select>
+        </div>
         <div><label className={labelCls}>Notas</label><textarea rows={3} className={inputCls} value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} /></div>
         <div className="flex items-center justify-end gap-2"><button type="button" onClick={onClose} className="px-3 py-2 rounded-lg text-sm bg-gray-100 hover:bg-gray-200">Cancelar</button><button type="submit" disabled={saving} className="px-3 py-2 rounded-lg text-sm bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-60">{saving ? 'Guardando...' : 'Guardar'}</button></div>
       </form>
@@ -214,17 +231,133 @@ function ShiftEditorModal({ day, shift, assignments, activeEmployees, onClose, o
   );
 }
 
+function PositionManagerModal({ positions, onClose, onSaved }) {
+  const [form, setForm] = useState({ name: '', color: '#64748B' });
+  const [editing, setEditing] = useState(null);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const resetForm = () => {
+    setEditing(null);
+    setForm({ name: '', color: '#64748B' });
+  };
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setSaving(true);
+    setError('');
+    try {
+      if (editing?._id) await api.put(`/staff/positions/${editing._id}`, form);
+      else await api.post('/staff/positions', form);
+      resetForm();
+      await onSaved();
+    } catch (err) {
+      setError(err?.response?.data?.message || 'No se pudo guardar el puesto');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const toggleStatus = async (position) => {
+    setSaving(true);
+    setError('');
+    try {
+      await api.patch(`/staff/positions/${position._id}/status`, {
+        status: position.status === 'active' ? 'inactive' : 'active',
+      });
+      await onSaved();
+    } catch (err) {
+      setError(err?.response?.data?.message || 'No se pudo actualizar el estado del puesto');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <Modal title="Puestos" onClose={onClose}>
+      <div className="space-y-3">
+        {error && <div className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</div>}
+
+        <form onSubmit={submit} className="grid grid-cols-1 sm:grid-cols-[1fr_140px_auto] gap-2">
+          <input
+            className={inputCls}
+            placeholder="Nombre del puesto"
+            value={form.name}
+            onChange={(e) => setForm((v) => ({ ...v, name: e.target.value }))}
+            required
+          />
+          <input
+            className={inputCls}
+            type="color"
+            value={form.color}
+            onChange={(e) => setForm((v) => ({ ...v, color: e.target.value.toUpperCase() }))}
+            required
+          />
+          <div className="flex gap-2">
+            <button type="submit" disabled={saving} className="px-3 py-2 rounded-lg text-sm bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-60">
+              {editing ? 'Guardar' : 'Crear'}
+            </button>
+            {editing && (
+              <button type="button" onClick={resetForm} className="px-3 py-2 rounded-lg text-sm bg-gray-100 hover:bg-gray-200">
+                Cancelar
+              </button>
+            )}
+          </div>
+        </form>
+
+        <div className="space-y-2 max-h-[360px] overflow-auto pr-1">
+          {positions.length === 0 && (
+            <div className="text-sm text-gray-500 border border-dashed border-gray-200 rounded-xl px-3 py-6 text-center">
+              Todavia no hay puestos
+            </div>
+          )}
+          {positions.map((position) => (
+            <div key={position._id} className="flex items-center justify-between gap-2 border border-gray-200 rounded-xl px-3 py-2.5">
+              <div className="flex items-center gap-2">
+                <span className="w-3 h-3 rounded-full border border-gray-200" style={{ backgroundColor: position.color || '#64748B' }} />
+                <div>
+                  <p className="text-sm font-semibold text-gray-900">{position.name}</p>
+                  <p className="text-xs text-gray-500">{position.status === 'active' ? 'Activo' : 'Inactivo'}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    setEditing(position);
+                    setForm({ name: position.name || '', color: position.color || '#64748B' });
+                  }}
+                  className="text-xs px-2 py-1 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200"
+                >
+                  Editar
+                </button>
+                <button
+                  onClick={() => toggleStatus(position)}
+                  className="text-xs px-2 py-1 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200"
+                >
+                  {position.status === 'active' ? 'Desactivar' : 'Activar'}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
 export default function Personal() {
   const [tab, setTab] = useState('employees');
   const [weekStart, setWeekStart] = useState(mondayOf(todayIso()));
   const [mobileDayIndex, setMobileDayIndex] = useState(0);
   const [employees, setEmployees] = useState([]);
+  const [positions, setPositions] = useState([]);
   const [assignments, setAssignments] = useState([]);
   const [costs, setCosts] = useState({ employeeCosts: [], totalsByCurrency: {}, monthlyEstimateByCurrency: {} });
   const [shifts, setShifts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [employeeModal, setEmployeeModal] = useState(null);
+  const [positionModalOpen, setPositionModalOpen] = useState(false);
   const [compModalEmployee, setCompModalEmployee] = useState(null);
   const [slotEditor, setSlotEditor] = useState(null);
   const [plannerEmployeeFilter, setPlannerEmployeeFilter] = useState('');
@@ -234,9 +367,14 @@ export default function Personal() {
     setLoading(true);
     setError('');
     try {
-      const [empRes, shiftRes] = await Promise.all([api.get('/staff/employees?includeInactive=true'), api.get('/shifts')]);
+      const [empRes, shiftRes, posRes] = await Promise.all([
+        api.get('/staff/employees?includeInactive=true'),
+        api.get('/shifts'),
+        api.get('/staff/positions?includeInactive=true'),
+      ]);
       setEmployees(empRes.data || []);
       setShifts((shiftRes.data || []).slice().sort(compareShiftTime));
+      setPositions(posRes.data || []);
     } catch (err) {
       setError(err?.response?.data?.message || 'No se pudieron cargar los empleados');
     } finally {
@@ -329,13 +467,95 @@ export default function Personal() {
       {error && <div className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-4 py-3">{error}</div>}
       {loading && <div className="h-28 rounded-2xl bg-gray-100 animate-pulse" />}
 
-      {!loading && tab === 'employees' && <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden"><div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between"><p className="text-sm font-semibold text-gray-800">Empleados ({employees.length})</p><button onClick={() => setEmployeeModal({})} className="px-3 py-2 rounded-lg text-sm bg-violet-600 text-white hover:bg-violet-700">Nuevo empleado</button></div><div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="bg-gray-50 border-b border-gray-100"><th className="text-left px-4 py-2">Empleado</th><th className="text-left px-4 py-2">Puesto</th><th className="text-left px-4 py-2">Pago activo</th><th className="text-left px-4 py-2">Estado</th><th className="px-4 py-2" /></tr></thead><tbody>{employees.map((employee) => <tr key={employee._id} className="border-b border-gray-50"><td className="px-4 py-3"><p className="font-semibold text-gray-900">{`${employee.firstName} ${employee.lastName || ''}`.trim()}</p><p className="text-xs text-gray-500">{employee.email || employee.phone || '-'}</p></td><td className="px-4 py-3 text-gray-700">{employee.position || '-'}</td><td className="px-4 py-3 text-gray-700">{employee.activeCompensation ? `${employee.activeCompensation.paymentType} - ${employee.activeCompensation.baseAmount} ${employee.activeCompensation.currency}` : 'Sin definir'}</td><td className="px-4 py-3"><span className={`text-xs font-semibold px-2 py-1 rounded-full ${employee.status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-600'}`}>{employee.status === 'active' ? 'Activo' : 'Inactivo'}</span></td><td className="px-4 py-3"><div className="flex items-center justify-end gap-2"><button onClick={() => setCompModalEmployee(employee)} className="text-xs px-2 py-1 rounded-lg bg-violet-50 text-violet-700 hover:bg-violet-100">Pago</button><button onClick={() => setEmployeeModal(employee)} className="text-xs px-2 py-1 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200">Editar</button><button onClick={() => toggleEmployeeStatus(employee)} className="text-xs px-2 py-1 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200">{employee.status === 'active' ? 'Desactivar' : 'Activar'}</button></div></td></tr>)}</tbody></table></div></div>}
+      {!loading && tab === 'employees' && (
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+          <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+            <p className="text-sm font-semibold text-gray-800">Empleados ({employees.length})</p>
+            <div className="flex items-center gap-2">
+              <button onClick={() => setPositionModalOpen(true)} className="px-3 py-2 rounded-lg text-sm bg-gray-100 text-gray-700 hover:bg-gray-200">
+                Puestos
+              </button>
+              <button onClick={() => setEmployeeModal({})} className="px-3 py-2 rounded-lg text-sm bg-violet-600 text-white hover:bg-violet-700">
+                Nuevo empleado
+              </button>
+            </div>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="bg-gray-50 border-b border-gray-100">
+                  <th className="text-left px-4 py-2">Empleado</th>
+                  <th className="text-left px-4 py-2">Puesto</th>
+                  <th className="text-left px-4 py-2">Pago activo</th>
+                  <th className="text-left px-4 py-2">Estado</th>
+                  <th className="px-4 py-2" />
+                </tr>
+              </thead>
+              <tbody>
+                {employees.map((employee) => (
+                  <tr key={employee._id} className="border-b border-gray-50">
+                    <td className="px-4 py-3">
+                      <p className="font-semibold text-gray-900">{`${employee.firstName} ${employee.lastName || ''}`.trim()}</p>
+                      <p className="text-xs text-gray-500">{employee.email || employee.phone || '-'}</p>
+                    </td>
+                    <td className="px-4 py-3 text-gray-700">
+                      {employee.position ? (
+                        <span className="inline-flex items-center gap-1.5 text-xs font-semibold rounded-full px-2 py-1 border border-gray-200">
+                          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: employee.positionColor || '#64748B' }} />
+                          {employee.position}
+                        </span>
+                      ) : '-'}
+                    </td>
+                    <td className="px-4 py-3 text-gray-700">
+                      {employee.activeCompensation
+                        ? `${employee.activeCompensation.paymentType} - ${employee.activeCompensation.baseAmount} ${employee.activeCompensation.currency}`
+                        : 'Sin definir'}
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`text-xs font-semibold px-2 py-1 rounded-full ${employee.status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-600'}`}>
+                        {employee.status === 'active' ? 'Activo' : 'Inactivo'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center justify-end gap-2">
+                        <button onClick={() => setCompModalEmployee(employee)} className="text-xs px-2 py-1 rounded-lg bg-violet-50 text-violet-700 hover:bg-violet-100">Pago</button>
+                        <button onClick={() => setEmployeeModal(employee)} className="text-xs px-2 py-1 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200">Editar</button>
+                        <button onClick={() => toggleEmployeeStatus(employee)} className="text-xs px-2 py-1 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200">
+                          {employee.status === 'active' ? 'Desactivar' : 'Activar'}
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {!loading && tab === 'planner' && <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 space-y-4"><div className="flex items-center justify-between gap-3 flex-wrap"><div className="flex items-center gap-2"><button onClick={() => setWeekStart((v) => addDays(v, -7))} className="px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm">Semana anterior</button><input type="date" value={weekStart} onChange={(e) => e.target.value && setWeekStart(mondayOf(e.target.value))} className={inputCls} /><button onClick={() => setWeekStart((v) => addDays(v, 7))} className="px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm">Semana siguiente</button></div><span className="text-xs text-gray-500">Vista lectura - usa Editar turno para asignar o quitar personal</span></div><div className="grid grid-cols-1 md:grid-cols-3 gap-2"><input value={plannerEmployeeFilter} onChange={(e) => setPlannerEmployeeFilter(e.target.value)} placeholder="Buscar por empleado o puesto..." className={inputCls} /><label className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 bg-gray-50 text-sm text-gray-700"><input type="checkbox" checked={showOnlyAssignedShifts} onChange={(e) => setShowOnlyAssignedShifts(e.target.checked)} />Solo turnos con personal</label><button onClick={() => { setPlannerEmployeeFilter(''); setShowOnlyAssignedShifts(false); }} className="px-3 py-2 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm">Limpiar filtros</button></div><div className="hidden md:block overflow-x-auto"><div className="grid grid-cols-7 gap-3 min-w-[1280px]">{days.map((day) => <div key={day.date} className="rounded-xl border border-gray-200 bg-gray-50 p-2.5 space-y-2 max-h-[74vh] overflow-auto"><div className="px-1 pb-1 border-b border-gray-200 sticky top-0 bg-gray-50 z-10"><p className="text-xs text-gray-500 uppercase">{day.short}</p><p className="text-sm font-semibold text-gray-900">{day.day}</p></div>{(shiftRowsByDay[day.date] || []).length === 0 && <div className="text-xs text-gray-400 bg-white rounded-lg border border-dashed border-gray-200 p-3">Sin turnos configurados</div>}{(shiftRowsByDay[day.date] || []).map((shift) => renderShiftCard(day, shift))}</div>)}</div></div><div className="md:hidden space-y-3"><div className="flex gap-2 overflow-x-auto pb-1">{days.map((day, index) => <button key={day.date} onClick={() => setMobileDayIndex(index)} className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold border ${mobileDayIndex === index ? 'bg-violet-600 text-white border-violet-600' : 'bg-white text-gray-600 border-gray-200'}`}>{day.fullLabel}</button>)}</div>{currentMobileDay && <div className="space-y-2">{(shiftRowsByDay[currentMobileDay.date] || []).length === 0 && <div className="text-xs text-gray-400 bg-white rounded-lg border border-dashed border-gray-200 p-3">Sin turnos configurados</div>}{(shiftRowsByDay[currentMobileDay.date] || []).map((shift) => renderShiftCard(currentMobileDay, shift))}</div>}</div></div>}
 
       {!loading && tab === 'costs' && <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 space-y-3"><div className="flex items-center gap-2"><button onClick={() => setWeekStart((v) => addDays(v, -7))} className="px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm">Semana anterior</button><input type="date" value={weekStart} onChange={(e) => e.target.value && setWeekStart(mondayOf(e.target.value))} className={inputCls} /><button onClick={() => setWeekStart((v) => addDays(v, 7))} className="px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm">Semana siguiente</button></div><div className="grid grid-cols-1 sm:grid-cols-2 gap-3"><div className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2"><p className="text-xs text-gray-500">Total semanal</p>{Object.entries(costs.totalsByCurrency || {}).length === 0 ? <p className="text-sm font-semibold text-gray-700">Sin datos</p> : Object.entries(costs.totalsByCurrency || {}).map(([currency, value]) => <p key={currency} className="text-sm font-semibold text-gray-800">{`${value} ${currency}`}</p>)}</div><div className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2"><p className="text-xs text-gray-500">Estimacion mensual</p>{Object.entries(costs.monthlyEstimateByCurrency || {}).length === 0 ? <p className="text-sm font-semibold text-gray-700">Sin datos</p> : Object.entries(costs.monthlyEstimateByCurrency || {}).map(([currency, value]) => <p key={currency} className="text-sm font-semibold text-gray-800">{`${value} ${currency}`}</p>)}</div></div><div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="bg-gray-50 border-b border-gray-100"><th className="text-left px-3 py-2">Empleado</th><th className="text-left px-3 py-2">Asignaciones</th><th className="text-left px-3 py-2">Horas</th><th className="text-left px-3 py-2">Tipo pago</th><th className="text-left px-3 py-2">Coste semanal</th></tr></thead><tbody>{(costs.employeeCosts || []).map((row) => <tr key={row.employeeId} className="border-b border-gray-50"><td className="px-3 py-2 font-medium text-gray-800">{row.employeeName}</td><td className="px-3 py-2 text-gray-700">{row.assignments}</td><td className="px-3 py-2 text-gray-700">{row.totalHours}</td><td className="px-3 py-2 text-gray-700">{row.compensation?.paymentType || '-'}</td><td className="px-3 py-2 font-semibold text-gray-900">{`${row.weeklyCost} ${row.currency}`}</td></tr>)}</tbody></table></div></div>}
 
-      {employeeModal && <EmployeeFormModal employee={employeeModal._id ? employeeModal : null} onClose={() => setEmployeeModal(null)} onSaved={async () => { setEmployeeModal(null); await loadCore(); await loadWeekData(); }} />}
+      {employeeModal && (
+        <EmployeeFormModal
+          employee={employeeModal._id ? employeeModal : null}
+          positions={positions.filter((position) => position.status === 'active')}
+          onClose={() => setEmployeeModal(null)}
+          onSaved={async () => {
+            setEmployeeModal(null);
+            await loadCore();
+            await loadWeekData();
+          }}
+        />
+      )}
+      {positionModalOpen && (
+        <PositionManagerModal
+          positions={positions}
+          onClose={() => setPositionModalOpen(false)}
+          onSaved={loadCore}
+        />
+      )}
       {compModalEmployee && <CompensationModal employee={compModalEmployee} onClose={() => setCompModalEmployee(null)} onSaved={async () => { setCompModalEmployee(null); await loadCore(); await loadWeekData(); }} />}
       {slotEditor && <ShiftEditorModal day={slotEditor.day} shift={slotEditor.shift} assignments={assignmentsByDayShift[`${slotEditor.day.date}__${slotEditor.shift._id}`] || []} activeEmployees={activeEmployees} onClose={() => setSlotEditor(null)} onRefresh={loadWeekData} />}
     </div>

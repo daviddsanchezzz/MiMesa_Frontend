@@ -148,30 +148,21 @@ function ShiftEditorModal({ day, shift, assignments, activeEmployees, positions,
       assigned: [],
       available: [],
     }));
-    const hasNoPositionAssigned = assignments.some((assignment) => !assignment?.employeeId?.positionId);
-    const hasNoPositionAvailable = availableEmployees.some((employee) => !employee?.positionId);
-    if (hasNoPositionAssigned || hasNoPositionAvailable) {
-      baseColumns.push({
-        key: 'no_position',
-        label: 'Sin puesto',
-        color: '#64748B',
-        assigned: [],
-        available: [],
-      });
-    }
 
     const byKey = new Map(baseColumns.map((column) => [column.key, column]));
 
     assignments.forEach((assignment) => {
       const employee = assignment.employeeId;
-      const key = String(employee?.positionId || 'no_position');
-      const column = byKey.get(key) || byKey.get('no_position');
+      const key = employee?.positionId ? String(employee.positionId) : null;
+      const column = key ? byKey.get(key) : null;
+      if (!column) return;
       column.assigned.push(assignment);
     });
 
     availableEmployees.forEach((employee) => {
-      const key = String(employee?.positionId || 'no_position');
-      const column = byKey.get(key) || byKey.get('no_position');
+      const key = employee?.positionId ? String(employee.positionId) : null;
+      const column = key ? byKey.get(key) : null;
+      if (!column) return;
       column.available.push(employee);
     });
 

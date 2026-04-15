@@ -36,7 +36,6 @@ const weekDays = (weekStart) => [...Array(7)].map((_, i) => {
   };
 });
 const compareShiftTime = (a, b) => (a.startTime || '').localeCompare(b.startTime || '');
-const normalizeText = (value = '') => value.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
 const shiftAppliesToDate = (shift, date) => {
   const day = toDayOfWeek(date);
   if (!Array.isArray(shift.days) || !shift.days.includes(day)) return false;
@@ -203,7 +202,7 @@ function ShiftEditorModal({ day, shift, assignments, activeEmployees, positions,
   };
 
   return (
-    <Modal title={`Detalle del turno - ${shift.name}`} subtitle={`${day.fullLabel} - ${shift.startTime}-${shift.endTime}`} onClose={onClose}>
+    <Modal title={`Detalle del turno - ${shift.name}`} subtitle={`${day.fullLabel} - ${shift.startTime}-${shift.endTime}`} onClose={onClose} size="xl">
       <div className="space-y-3">
         {error && <div className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</div>}
         <div className="overflow-x-auto">
@@ -396,8 +395,6 @@ export default function Personal() {
   const [positionModalOpen, setPositionModalOpen] = useState(false);
   const [compModalEmployee, setCompModalEmployee] = useState(null);
   const [slotEditor, setSlotEditor] = useState(null);
-  const [plannerEmployeeFilter, setPlannerEmployeeFilter] = useState('');
-  const [showOnlyAssignedShifts, setShowOnlyAssignedShifts] = useState(false);
 
   const loadCore = async () => {
     setLoading(true);
@@ -451,7 +448,6 @@ export default function Personal() {
     return out;
   }, [days, shifts]);
   const currentMobileDay = days[mobileDayIndex] || days[0];
-  const plannerFilterText = normalizeText(plannerEmployeeFilter.trim());
 
   const toggleEmployeeStatus = async (employee) => {
     try {
@@ -467,20 +463,15 @@ export default function Personal() {
   const renderShiftCard = (day, shift) => {
     const key = `${day.date}__${shift._id}`;
     const rawList = assignmentsByDayShift[key] || [];
-    if (showOnlyAssignedShifts && rawList.length === 0) return null;
-    const list = rawList.filter((assignment) => {
-      if (!plannerFilterText) return true;
-      const employee = assignment.employeeId;
-      const employeeName = employee?.firstName ? `${employee.firstName} ${employee.lastName || ''}`.trim() : '';
-      return normalizeText(employeeName).includes(plannerFilterText) || normalizeText(employee?.position || '').includes(plannerFilterText);
-    });
+    if (rawList.length === 0) return null;
+    const list = rawList;
 
     const grouped = list.reduce((acc, assignment) => {
       const employee = assignment.employeeId || {};
       const roleName = employee.position || assignment.roleLabel || 'Sin puesto';
       const roleColor = employee.positionColor || '#64748B';
       const groupKey = `${roleName}__${roleColor}`;
-      if (!acc[groupKey]) acc[groupKey] = { roleName, roleColor, items: [] };
+      if (!acc[groupKey]) acc[groupKey] = { roleColor, items: [] };
       acc[groupKey].items.push(assignment);
       return acc;
     }, {});
@@ -503,21 +494,19 @@ export default function Personal() {
           </div>
         </div>
 
-        {list.length === 0 && <p className="text-[11px] text-gray-400">Sin personal asignado</p>}
-
         <div className="space-y-2">
-          {Object.values(grouped).map((group) => (
-            <div key={`${group.roleName}-${group.roleColor}`} className="space-y-1">
-              <div className="flex items-center gap-1.5">
-                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: group.roleColor }} />
-                <p className="text-[11px] font-semibold text-gray-600">{group.roleName}</p>
-              </div>
-              <div className="space-y-1 pl-3.5">
+          {Object.values(grouped).map((group, index) => (
+            <div key={`${group.roleColor}-${index}`} className="space-y-1">
+              <div className="space-y-1">
                 {group.items.map((assignment) => {
                   const employee = assignment.employeeId;
                   const employeeName = employee?.firstName ? `${employee.firstName} ${employee.lastName || ''}`.trim() : 'Empleado';
                   return (
-                    <p key={assignment._id} className="text-[12px] text-gray-800 truncate">
+                    <p
+                      key={assignment._id}
+                      className="text-[12px] text-gray-800 truncate px-2 py-1 rounded-md border"
+                      style={{ borderColor: group.roleColor, backgroundColor: `${group.roleColor}1A` }}
+                    >
                       {employeeName}
                     </p>
                   );
@@ -606,7 +595,7 @@ export default function Personal() {
         </div>
       )}
 
-            {!loading && tab === 'planner' && (
+      {!loading && tab === 'planner' && (
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 space-y-4">
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <div className="flex items-center gap-2">
@@ -617,22 +606,6 @@ export default function Personal() {
             <span className="text-xs text-gray-500">Vista semanal agrupada por puestos · usa Detalle para editar</span>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-            <input
-              value={plannerEmployeeFilter}
-              onChange={(e) => setPlannerEmployeeFilter(e.target.value)}
-              placeholder="Buscar por empleado o puesto..."
-              className={inputCls}
-            />
-            <label className="inline-flex items-center gap-2 px-3 py-2 rounded-lg border border-gray-200 bg-gray-50 text-sm text-gray-700">
-              <input type="checkbox" checked={showOnlyAssignedShifts} onChange={(e) => setShowOnlyAssignedShifts(e.target.checked)} />
-              Solo turnos con personal
-            </label>
-            <button onClick={() => { setPlannerEmployeeFilter(''); setShowOnlyAssignedShifts(false); }} className="px-3 py-2 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm">
-              Limpiar filtros
-            </button>
-          </div>
-
           <div className="hidden md:block overflow-x-auto">
             <div className="grid grid-cols-7 gap-3 min-w-[1280px]">
               {days.map((day) => (
@@ -641,10 +614,6 @@ export default function Personal() {
                     <p className="text-xs text-gray-500 uppercase">{day.short}</p>
                     <p className="text-sm font-semibold text-gray-900">{day.day}</p>
                   </div>
-
-                  {(shiftRowsByDay[day.date] || []).length === 0 && (
-                    <div className="text-xs text-gray-400 bg-white rounded-lg border border-dashed border-gray-200 p-3">Sin turnos configurados</div>
-                  )}
 
                   {(shiftRowsByDay[day.date] || []).map((shift) => renderShiftCard(day, shift))}
                 </div>
@@ -666,9 +635,6 @@ export default function Personal() {
             </div>
             {currentMobileDay && (
               <div className="space-y-2">
-                {(shiftRowsByDay[currentMobileDay.date] || []).length === 0 && (
-                  <div className="text-xs text-gray-400 bg-white rounded-lg border border-dashed border-gray-200 p-3">Sin turnos configurados</div>
-                )}
                 {(shiftRowsByDay[currentMobileDay.date] || []).map((shift) => renderShiftCard(currentMobileDay, shift))}
               </div>
             )}

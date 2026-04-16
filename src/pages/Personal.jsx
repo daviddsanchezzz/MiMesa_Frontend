@@ -853,20 +853,6 @@ export default function Personal() {
     return out;
   }, [days, shifts]);
 
-  const assignmentsTotalByDay = useMemo(() => {
-    const out = {};
-    days.forEach((day) => {
-      const dayShifts = shiftRowsByDay[day.date] || [];
-      let total = 0;
-      dayShifts.forEach((shift) => {
-        const key = `${day.date}__${shift._id}`;
-        total += (assignmentsByDayShift[key] || []).length;
-      });
-      out[day.date] = total;
-    });
-    return out;
-  }, [days, shiftRowsByDay, assignmentsByDayShift]);
-
   const addMonths = (ym, n) => {
     const [y, m] = ym.split('-').map(Number);
     const d = new Date(y, m - 1 + n, 1);
@@ -891,11 +877,6 @@ export default function Personal() {
     }
     return `${first.toLocaleDateString('es-ES', opts)} – ${last.toLocaleDateString('es-ES', opts)} ${last.getFullYear()}`;
   }, [days]);
-
-  const weekTotalAssignments = useMemo(
-    () => Object.values(assignmentsTotalByDay).reduce((a, b) => a + b, 0),
-    [assignmentsTotalByDay],
-  );
 
   const weekCostSummary = useMemo(() => {
     const totals = costs.totalsByCurrency || {};
@@ -963,10 +944,6 @@ export default function Personal() {
     (positions || []).forEach((position) => map.set(position.name, position.color || '#64748B'));
     return map;
   }, [positions]);
-  const plannerLegend = useMemo(
-    () => (positions || []).filter((position) => position.status === 'active'),
-    [positions],
-  );
 
   const toggleEmployeeStatus = async (employee) => {
     try {
@@ -1452,17 +1429,6 @@ export default function Personal() {
                 )}
               </div>
             </div>
-            {/* Legend */}
-            {plannerLegend.length > 0 && (
-              <div className="flex flex-wrap items-center gap-1.5">
-                {plannerLegend.map((position) => (
-                  <span key={position._id} className="inline-flex items-center gap-1.5 text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-full px-2.5 py-1">
-                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: position.color || '#64748B' }} />
-                    {position.name}
-                  </span>
-                ))}
-              </div>
-            )}
           </div>
 
           {/* Desktop grid */}
@@ -1470,7 +1436,6 @@ export default function Personal() {
             <div className="grid grid-cols-7 gap-2.5 min-w-[1280px]">
               {days.map((day) => {
                 const isToday = day.date === today;
-                const totalForDay = assignmentsTotalByDay[day.date] || 0;
                 const confirmedReservationsForDay = weekReservations[day.date] || 0;
                 const dayShifts = shiftRowsByDay[day.date] || [];
                 return (
@@ -1481,28 +1446,21 @@ export default function Personal() {
                     }`}
                   >
                     <div className={`px-1 pb-1.5 border-b sticky top-0 z-10 ${isToday ? 'border-violet-200 bg-violet-50/40' : 'border-gray-200 bg-gray-50'}`}>
-                      <div className="flex items-center justify-between gap-1">
-                        <div>
-                          <p className={`text-xs uppercase font-semibold ${isToday ? 'text-violet-600' : 'text-gray-400'}`}>{day.short}</p>
-                          <p className={`text-sm font-bold ${isToday ? 'text-violet-700' : 'text-gray-900'}`}>{day.day}</p>
-                        </div>
-                        {totalForDay > 0 && (
-                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${isToday ? 'bg-violet-100 text-violet-700' : 'bg-gray-200 text-gray-600'}`}>
-                            {totalForDay}
-                          </span>
-                        )}
+                      <div>
+                        <p className={`text-xs uppercase font-semibold ${isToday ? 'text-violet-600' : 'text-gray-400'}`}>{day.short}</p>
+                        <p className={`text-sm font-bold ${isToday ? 'text-violet-700' : 'text-gray-900'}`}>{day.day}</p>
                       </div>
+                    </div>
+                    <div className={`rounded-lg border px-2.5 py-2 text-xs ${
+                      isToday ? 'border-violet-200 bg-white/80 text-violet-700' : 'border-gray-200 bg-white text-gray-600'
+                    }`}>
+                      <span className="font-semibold">{confirmedReservationsForDay}</span> reservas confirmadas
                     </div>
                     {dayShifts.length === 0 ? (
                       <p className="text-[11px] text-gray-300 text-center pt-2">Sin turnos</p>
                     ) : (
                       dayShifts.map((shift) => renderShiftCard(day, shift))
                     )}
-                    <div className={`rounded-lg border px-2.5 py-2 text-xs ${
-                      isToday ? 'border-violet-200 bg-white/80 text-violet-700' : 'border-gray-200 bg-white text-gray-600'
-                    }`}>
-                      <span className="font-semibold">{confirmedReservationsForDay}</span> reservas confirmadas
-                    </div>
                   </div>
                 );
               })}
@@ -1535,14 +1493,14 @@ export default function Personal() {
             </div>
             {currentMobileDay && (
               <div className="space-y-2">
+                <div className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-600">
+                  <span className="font-semibold">{weekReservations[currentMobileDay.date] || 0}</span> reservas confirmadas
+                </div>
                 {(shiftRowsByDay[currentMobileDay.date] || []).length === 0 ? (
                   <p className="text-sm text-gray-400 text-center py-8">Sin turnos para este día</p>
                 ) : (
                   (shiftRowsByDay[currentMobileDay.date] || []).map((shift) => renderShiftCard(currentMobileDay, shift))
                 )}
-                <div className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-600">
-                  <span className="font-semibold">{weekReservations[currentMobileDay.date] || 0}</span> reservas confirmadas
-                </div>
               </div>
             )}
           </div>

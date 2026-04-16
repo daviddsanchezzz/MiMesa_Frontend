@@ -141,6 +141,7 @@ function MobileEmployeeRow({ employee, onEdit, onPago, onToggle }) {
 }
 
 function EmployeeFormModal({ employee, positions, onClose, onSaved }) {
+  const [positionQuery, setPositionQuery] = useState('');
   const [form, setForm] = useState({
     firstName: employee?.firstName || '',
     lastName: employee?.lastName || '',
@@ -155,6 +156,11 @@ function EmployeeFormModal({ employee, positions, onClose, onSaved }) {
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const filteredPositions = useMemo(() => {
+    const q = positionQuery.trim().toLowerCase();
+    if (!q) return positions;
+    return positions.filter((position) => (position.name || '').toLowerCase().includes(q));
+  }, [positions, positionQuery]);
   const submit = async (e) => {
     e.preventDefault();
     setSaving(true);
@@ -183,30 +189,68 @@ function EmployeeFormModal({ employee, positions, onClose, onSaved }) {
         </div>
         <div className="space-y-2">
           <label className={labelCls}>Puestos</label>
-          <div className="border border-gray-200 rounded-xl p-2 max-h-40 overflow-auto space-y-1">
-            {positions.map((position) => {
-              const checked = form.positionIds.includes(String(position._id));
-              return (
-                <label key={position._id} className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={checked}
-                    onChange={(e) => {
-                      const id = String(position._id);
+          <div className="border border-gray-200 rounded-xl p-2 bg-white space-y-2">
+            <div className="flex flex-wrap gap-1.5 min-h-7">
+              {form.positionIds.map((id) => {
+                const position = positions.find((item) => String(item._id) === String(id));
+                if (!position) return null;
+                return (
+                  <span key={id} className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-semibold border border-gray-200 bg-gray-50 text-gray-700">
+                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: position.color || '#64748B' }} />
+                    {position.name}
+                    <button
+                      type="button"
+                      onClick={() => setForm((prev) => ({ ...prev, positionIds: prev.positionIds.filter((value) => value !== String(id)) }))}
+                      className="text-gray-500 hover:text-gray-700"
+                      aria-label={`Quitar ${position.name}`}
+                    >
+                      x
+                    </button>
+                  </span>
+                );
+              })}
+              {form.positionIds.length === 0 && <p className="text-xs text-gray-400 py-1">Sin puestos seleccionados</p>}
+            </div>
+
+            <input
+              className={inputCls}
+              placeholder="Buscar puesto..."
+              value={positionQuery}
+              onChange={(e) => setPositionQuery(e.target.value)}
+            />
+
+            <div className="max-h-40 overflow-auto space-y-1">
+              {filteredPositions.map((position) => {
+                const id = String(position._id);
+                const checked = form.positionIds.includes(id);
+                return (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => {
                       setForm((prev) => ({
                         ...prev,
-                        positionIds: e.target.checked
-                          ? [...prev.positionIds, id]
-                          : prev.positionIds.filter((value) => value !== id),
+                        positionIds: checked
+                          ? prev.positionIds.filter((value) => value !== id)
+                          : [...prev.positionIds, id],
                       }));
                     }}
-                  />
-                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: position.color || '#64748B' }} />
-                  {position.name}
-                </label>
-              );
-            })}
-            {positions.length === 0 && <p className="text-xs text-gray-400">No hay puestos activos</p>}
+                    className={`w-full text-left flex items-center justify-between gap-2 px-2 py-1.5 rounded-lg border ${
+                      checked ? 'border-violet-300 bg-violet-50' : 'border-gray-200 hover:bg-gray-50'
+                    }`}
+                  >
+                    <span className="inline-flex items-center gap-2 text-sm text-gray-700">
+                      <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: position.color || '#64748B' }} />
+                      {position.name}
+                    </span>
+                    <span className={`text-xs font-semibold ${checked ? 'text-violet-700' : 'text-gray-400'}`}>
+                      {checked ? 'Seleccionado' : 'Seleccionar'}
+                    </span>
+                  </button>
+                );
+              })}
+              {filteredPositions.length === 0 && <p className="text-xs text-gray-400 px-1 py-2">No hay puestos para ese filtro</p>}
+            </div>
           </div>
         </div>
         <div><label className={labelCls}>Notas</label><textarea rows={3} className={inputCls} value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} /></div>
@@ -456,8 +500,8 @@ function PositionFormModal({ position, onClose, onSaved }) {
   };
 
   return (
-    <Modal title={position?._id ? 'Editar puesto' : 'Nuevo puesto'} onClose={onClose}>
-      <div className="space-y-3">
+    <Modal title={position?._id ? 'Editar puesto' : 'Nuevo puesto'} onClose={onClose} size="md">
+      <div className="space-y-4">
         {error && <div className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</div>}
         <form onSubmit={submit} className="space-y-3">
           <div>
@@ -470,7 +514,7 @@ function PositionFormModal({ position, onClose, onSaved }) {
               required
             />
           </div>
-          <div>
+          <div className="rounded-xl border border-gray-200 bg-gray-50 p-3 space-y-2">
             <label className={labelCls}>Color identificativo</label>
             <div className="flex items-center gap-3">
               <input
@@ -480,7 +524,7 @@ function PositionFormModal({ position, onClose, onSaved }) {
                 onChange={(e) => setForm((v) => ({ ...v, color: e.target.value.toUpperCase() }))}
               />
               <span className="text-sm text-gray-600 font-mono">{form.color}</span>
-              <span className="inline-flex items-center gap-1.5 text-xs font-semibold rounded-full px-3 py-1 border border-gray-200">
+              <span className="inline-flex items-center gap-1.5 text-xs font-semibold rounded-full px-3 py-1 border border-gray-200 bg-white">
                 <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: form.color }} />
                 Vista previa
               </span>
@@ -517,8 +561,8 @@ export default function Personal() {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
 
-  const loadCore = async () => {
-    setLoading(true);
+  const loadCore = async ({ silent = false } = {}) => {
+    if (!silent) setLoading(true);
     setError('');
     try {
       const [empRes, shiftRes, posRes] = await Promise.all([
@@ -532,7 +576,7 @@ export default function Personal() {
     } catch (err) {
       setError(err?.response?.data?.message || 'No se pudieron cargar los empleados');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
@@ -653,7 +697,7 @@ export default function Personal() {
     try {
       const status = employee.status === 'active' ? 'inactive' : 'active';
       await api.patch(`/staff/employees/${employee._id}/status`, { status });
-      await loadCore();
+      await loadCore({ silent: true });
       await loadAssignments();
       if (tab === 'costs') await loadCosts();
     } catch (err) {
@@ -666,7 +710,7 @@ export default function Personal() {
       await api.patch(`/staff/positions/${position._id}/status`, {
         status: position.status === 'active' ? 'inactive' : 'active',
       });
-      await loadCore();
+      await loadCore({ silent: true });
     } catch (err) {
       setError(err?.response?.data?.message || 'No se pudo actualizar el estado del puesto');
     }
@@ -1253,7 +1297,7 @@ export default function Personal() {
           onClose={() => setEmployeeModal(null)}
           onSaved={async () => {
             setEmployeeModal(null);
-            await loadCore();
+            await loadCore({ silent: true });
             await loadWeekData();
           }}
         />
@@ -1262,7 +1306,7 @@ export default function Personal() {
         <PositionFormModal
           position={positionModal._id ? positionModal : null}
           onClose={() => setPositionModal(null)}
-          onSaved={loadCore}
+          onSaved={() => loadCore({ silent: true })}
         />
       )}
       {compModalEmployee && (
@@ -1271,7 +1315,7 @@ export default function Personal() {
           onClose={() => setCompModalEmployee(null)}
           onSaved={async () => {
             setCompModalEmployee(null);
-            await loadCore();
+            await loadCore({ silent: true });
             await loadWeekData();
           }}
         />

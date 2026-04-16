@@ -1544,9 +1544,7 @@ export default function Personal() {
                       <thead>
                         <tr className="border-b border-gray-100">
                           <th className="text-left px-5 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Empleado</th>
-                          <th className="hidden sm:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Generado</th>
-                          <th className="hidden sm:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Pagado</th>
-                          <th className="hidden sm:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Último pago</th>
+                          <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Último pago</th>
                           <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Pendiente</th>
                           <th className="px-4 py-3" />
                         </tr>
@@ -1563,9 +1561,7 @@ export default function Personal() {
                                   <span className="font-medium text-gray-800">{row.employeeName}</span>
                                 </div>
                               </td>
-                              <td className="hidden sm:table-cell px-4 py-3.5 text-gray-600">{row.totalEarned} <span className="text-xs text-gray-400">{row.currency}</span></td>
-                              <td className="hidden sm:table-cell px-4 py-3.5 text-gray-600">{row.totalPaid} <span className="text-xs text-gray-400">{row.currency}</span></td>
-                              <td className="hidden sm:table-cell px-4 py-3.5 text-gray-400 text-xs">
+                              <td className="px-4 py-3.5 text-gray-400 text-xs">
                                 {row.lastPaidAt
                                   ? new Date(row.lastPaidAt).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })
                                   : '—'}

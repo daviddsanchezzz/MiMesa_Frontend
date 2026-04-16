@@ -82,17 +82,6 @@ const compTypeLabel = (type) => {
   return type || '-';
 };
 
-function Avatar({ name, size = 'md' }) {
-  const colors = ['bg-violet-500', 'bg-blue-500', 'bg-rose-500', 'bg-amber-500', 'bg-emerald-500', 'bg-cyan-500'];
-  const idx = (name?.charCodeAt(0) || 0) % colors.length;
-  const sz = size === 'lg' ? 'w-11 h-11 text-base' : 'w-9 h-9 text-sm';
-  return (
-    <div className={`${sz} rounded-full ${colors[idx]} flex items-center justify-center text-white font-semibold shrink-0`}>
-      {name?.[0]?.toUpperCase() || '?'}
-    </div>
-  );
-}
-
 function MobileEmployeeRow({ employee, onEdit, onPago, onToggle }) {
   const [open, setOpen] = useState(false);
   const fullName = `${employee.firstName} ${employee.lastName || ''}`.trim();
@@ -104,7 +93,6 @@ function MobileEmployeeRow({ employee, onEdit, onPago, onToggle }) {
         className="w-full text-left px-4 py-3 flex items-center gap-3 active:bg-gray-50 transition-colors"
         onClick={() => setOpen((v) => !v)}
       >
-        <Avatar name={employee.firstName} />
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-gray-900 truncate">{fullName}</p>
           <p className="text-xs text-gray-500 truncate mt-0.5">
@@ -1689,14 +1677,11 @@ export default function Personal() {
                             className={`hover:bg-gray-50/60 transition-colors ${i < filteredEmployees.length - 1 ? 'border-b border-gray-50' : ''}`}
                           >
                             <td className="px-5 py-3.5">
-                              <div className="flex items-center gap-3">
-                                <Avatar name={employee.firstName} />
-                                <div>
-                                  <p className="font-semibold text-gray-900 leading-tight">{fullName}</p>
-                                  <p className="text-xs text-gray-400 mt-0.5">
-                                    {employee.email || employee.phone || 'Sin contacto'}
-                                  </p>
-                                </div>
+                              <div>
+                                <p className="font-semibold text-gray-900 leading-tight">{fullName}</p>
+                                <p className="text-xs text-gray-400 mt-0.5">
+                                  {employee.email || employee.phone || 'Sin contacto'}
+                                </p>
                               </div>
                             </td>
                             <td className="px-4 py-3.5">
@@ -2147,41 +2132,60 @@ export default function Personal() {
               {(monthlyCosts.employeeCosts || []).length === 0 ? (
                 <div className="py-16 text-center text-sm text-gray-400">Sin asignaciones en {monthLabel}</div>
               ) : (
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-gray-100">
-                      <th className="text-left px-5 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Empleado</th>
-                      <th className="hidden sm:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Asignaciones</th>
-                      <th className="hidden sm:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Horas</th>
-                      <th className="hidden sm:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Tipo pago</th>
-                      <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Coste mes</th>
-                    </tr>
-                  </thead>
-                  <tbody>
+                <>
+                  <div className="sm:hidden divide-y divide-gray-100">
                     {(monthlyCosts.employeeCosts || []).map((row) => (
-                      <tr key={String(row.employeeId)} className="border-b border-gray-50 hover:bg-gray-50/60 transition-colors">
-                        <td className="px-5 py-3.5">
-                          <div className="flex items-center gap-2.5">
-                            <Avatar name={row.employeeName} />
-                            <span className="font-medium text-gray-800">{row.employeeName}</span>
-                          </div>
-                        </td>
-                        <td className="hidden sm:table-cell px-4 py-3.5 text-gray-600">{row.assignments}</td>
-                        <td className="hidden sm:table-cell px-4 py-3.5 text-gray-600">{row.totalHours}h</td>
-                        <td className="hidden sm:table-cell px-4 py-3.5 text-gray-500 text-xs">{compTypeLabel(row.compensation?.paymentType)}</td>
-                        <td className="px-4 py-3.5 text-gray-800">{formatMoney(row.monthlyCost, row.currency)}</td>
-                      </tr>
+                      <div key={String(row.employeeId)} className="px-4 py-3 space-y-1.5">
+                        <div className="flex items-center justify-between gap-3">
+                          <p className="font-semibold text-gray-900 truncate">{row.employeeName}</p>
+                          <p className="font-semibold text-gray-900 shrink-0">{formatMoney(row.monthlyCost, row.currency)}</p>
+                        </div>
+                        <p className="text-xs text-gray-400">
+                          {row.assignments} asignaciones · {row.totalHours}h · {compTypeLabel(row.compensation?.paymentType)}
+                        </p>
+                      </div>
                     ))}
-                  </tbody>
-                  <tfoot>
                     {Object.entries(monthlyCosts.totalsByCurrency || {}).map(([currency, value]) => (
-                      <tr key={currency} className="border-t-2 border-gray-200 bg-gray-50">
-                        <td className="px-5 py-3 font-semibold text-gray-700" colSpan={4}><span className="hidden sm:inline">Total {monthLabel}</span><span className="sm:hidden">Total</span></td>
-                        <td className="px-4 py-3 font-bold text-gray-900 text-base">{formatMoney(value, currency)}</td>
-                      </tr>
+                      <div key={currency} className="px-4 py-3 bg-gray-50 flex items-center justify-between">
+                        <p className="text-sm font-semibold text-gray-700">Total {monthLabel}</p>
+                        <p className="text-base font-bold text-gray-900">{formatMoney(value, currency)}</p>
+                      </div>
                     ))}
-                  </tfoot>
-                </table>
+                  </div>
+
+                  <table className="hidden sm:table w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-100">
+                        <th className="text-left px-5 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Empleado</th>
+                        <th className="hidden sm:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Asignaciones</th>
+                        <th className="hidden sm:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Horas</th>
+                        <th className="hidden sm:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Tipo pago</th>
+                        <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Coste mes</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(monthlyCosts.employeeCosts || []).map((row) => (
+                        <tr key={String(row.employeeId)} className="border-b border-gray-50 hover:bg-gray-50/60 transition-colors">
+                          <td className="px-5 py-3.5">
+                            <span className="font-medium text-gray-800">{row.employeeName}</span>
+                          </td>
+                          <td className="hidden sm:table-cell px-4 py-3.5 text-gray-600">{row.assignments}</td>
+                          <td className="hidden sm:table-cell px-4 py-3.5 text-gray-600">{row.totalHours}h</td>
+                          <td className="hidden sm:table-cell px-4 py-3.5 text-gray-500 text-xs">{compTypeLabel(row.compensation?.paymentType)}</td>
+                          <td className="px-4 py-3.5 text-gray-800">{formatMoney(row.monthlyCost, row.currency)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                    <tfoot>
+                      {Object.entries(monthlyCosts.totalsByCurrency || {}).map(([currency, value]) => (
+                        <tr key={currency} className="border-t-2 border-gray-200 bg-gray-50">
+                          <td className="px-5 py-3 font-semibold text-gray-700" colSpan={4}>Total {monthLabel}</td>
+                          <td className="px-4 py-3 font-bold text-gray-900 text-base">{formatMoney(value, currency)}</td>
+                        </tr>
+                      ))}
+                    </tfoot>
+                  </table>
+                </>
               )}
             </div>
           )}
@@ -2202,90 +2206,152 @@ export default function Personal() {
                     return acc;
                   }, {});
                   return (
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b border-gray-100">
-                          <th className="text-left px-5 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Empleado</th>
-                          <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Último pago</th>
-                          <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Pendiente</th>
-                          <th className="px-4 py-3" />
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {visibleRows.map((row, i, arr) => {
+                    <>
+                      <div className="sm:hidden divide-y divide-gray-100">
+                        {visibleRows.map((row) => {
                           const isConfirming = confirmingPayment === String(row.employeeId);
                           const empObj = employees.find((e) => String(e._id) === String(row.employeeId));
                           return (
-                            <tr key={String(row.employeeId)} className={`hover:bg-gray-50/60 transition-colors ${i < arr.length - 1 ? 'border-b border-gray-50' : ''}`}>
-                              <td className="px-5 py-3.5">
-                                <div className="flex items-center gap-2.5">
-                                  <Avatar name={row.employeeName} />
-                                  <span className="font-medium text-gray-800">{row.employeeName}</span>
-                                </div>
-                              </td>
-                              <td className="px-4 py-3.5 text-gray-400 text-xs">
-                                {row.lastPaidAt
+                            <div key={String(row.employeeId)} className="px-4 py-3 space-y-2">
+                              <div className="flex items-center justify-between gap-3">
+                                <p className="font-semibold text-gray-900 truncate">{row.employeeName}</p>
+                                <p className={`font-bold ${row.balance > 0 ? 'text-gray-900' : 'text-gray-400'}`}>
+                                  {formatMoney(row.balance, row.currency)}
+                                </p>
+                              </div>
+                              <p className="text-xs text-gray-400">
+                                Último pago: {row.lastPaidAt
                                   ? new Date(row.lastPaidAt).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })
                                   : '—'}
-                              </td>
-                              <td className="px-4 py-3.5">
-                                <span className={`font-bold text-base ${row.balance > 0 ? 'text-gray-900' : 'text-gray-400'}`}>
-                                  {formatMoney(row.balance, row.currency)}
-                                </span>
-                              </td>
-                              <td className="px-4 py-3.5">
-                                <div className="flex items-center justify-end gap-1.5">
-                                  {empObj && (
+                              </p>
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                {empObj && (
+                                  <button
+                                    onClick={() => setAssignmentsModal(empObj)}
+                                    className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
+                                  >
+                                    Ver turnos
+                                  </button>
+                                )}
+                                {isConfirming ? (
+                                  <>
+                                    <span className="text-xs text-gray-500 whitespace-nowrap">¿{formatMoney(row.balance, row.currency)}?</span>
                                     <button
-                                      onClick={() => setAssignmentsModal(empObj)}
+                                      onClick={() => registerPayment(String(row.employeeId), row.balance, row.currency)}
+                                      className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
+                                    >
+                                      Confirmar
+                                    </button>
+                                    <button
+                                      onClick={() => setConfirmingPayment(null)}
                                       className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
                                     >
-                                      Ver turnos
+                                      Cancelar
                                     </button>
-                                  )}
-                                  {isConfirming ? (
-                                    <div className="flex items-center gap-1.5">
-                                      <span className="text-xs text-gray-500 whitespace-nowrap">¿{formatMoney(row.balance, row.currency)}?</span>
-                                      <button
-                                        onClick={() => registerPayment(String(row.employeeId), row.balance, row.currency)}
-                                        className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
-                                      >
-                                        Confirmar
-                                      </button>
-                                      <button
-                                        onClick={() => setConfirmingPayment(null)}
-                                        className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
-                                      >
-                                        Cancelar
-                                      </button>
-                                    </div>
-                                  ) : (
-                                    <button
-                                      disabled={row.balance <= 0}
-                                      onClick={() => setConfirmingPayment(String(row.employeeId))}
-                                      className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                                    >
-                                      Pagado
-                                    </button>
-                                  )}
-                                </div>
-                              </td>
-                            </tr>
+                                  </>
+                                ) : (
+                                  <button
+                                    disabled={row.balance <= 0}
+                                    onClick={() => setConfirmingPayment(String(row.employeeId))}
+                                    className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                  >
+                                    Pagado
+                                  </button>
+                                )}
+                              </div>
+                            </div>
                           );
                         })}
-                      </tbody>
-                      {Object.keys(totalPendingByCurrency).length > 0 && (
-                        <tfoot>
-                          {Object.entries(totalPendingByCurrency).map(([currency, value]) => (
-                            <tr key={currency} className="border-t-2 border-gray-200 bg-gray-50">
-                              <td className="px-5 py-3 font-semibold text-gray-700" colSpan={2}>Total pendiente</td>
-                              <td className="px-4 py-3 font-bold text-gray-900 text-base">{formatMoney(value, currency)}</td>
-                              <td className="px-4 py-3" />
-                            </tr>
-                          ))}
-                        </tfoot>
-                      )}
-                    </table>
+                        {Object.entries(totalPendingByCurrency).map(([currency, value]) => (
+                          <div key={currency} className="px-4 py-3 bg-gray-50 flex items-center justify-between">
+                            <p className="text-sm font-semibold text-gray-700">Total pendiente</p>
+                            <p className="text-base font-bold text-gray-900">{formatMoney(value, currency)}</p>
+                          </div>
+                        ))}
+                      </div>
+
+                      <table className="hidden sm:table w-full text-sm">
+                        <thead>
+                          <tr className="border-b border-gray-100">
+                            <th className="text-left px-5 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Empleado</th>
+                            <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Último pago</th>
+                            <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Pendiente</th>
+                            <th className="px-4 py-3" />
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {visibleRows.map((row, i, arr) => {
+                            const isConfirming = confirmingPayment === String(row.employeeId);
+                            const empObj = employees.find((e) => String(e._id) === String(row.employeeId));
+                            return (
+                              <tr key={String(row.employeeId)} className={`hover:bg-gray-50/60 transition-colors ${i < arr.length - 1 ? 'border-b border-gray-50' : ''}`}>
+                                <td className="px-5 py-3.5">
+                                  <span className="font-medium text-gray-800">{row.employeeName}</span>
+                                </td>
+                                <td className="px-4 py-3.5 text-gray-400 text-xs">
+                                  {row.lastPaidAt
+                                    ? new Date(row.lastPaidAt).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })
+                                    : '—'}
+                                </td>
+                                <td className="px-4 py-3.5">
+                                  <span className={`font-bold text-base ${row.balance > 0 ? 'text-gray-900' : 'text-gray-400'}`}>
+                                    {formatMoney(row.balance, row.currency)}
+                                  </span>
+                                </td>
+                                <td className="px-4 py-3.5">
+                                  <div className="flex items-center justify-end gap-1.5">
+                                    {empObj && (
+                                      <button
+                                        onClick={() => setAssignmentsModal(empObj)}
+                                        className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
+                                      >
+                                        Ver turnos
+                                      </button>
+                                    )}
+                                    {isConfirming ? (
+                                      <div className="flex items-center gap-1.5">
+                                        <span className="text-xs text-gray-500 whitespace-nowrap">¿{formatMoney(row.balance, row.currency)}?</span>
+                                        <button
+                                          onClick={() => registerPayment(String(row.employeeId), row.balance, row.currency)}
+                                          className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
+                                        >
+                                          Confirmar
+                                        </button>
+                                        <button
+                                          onClick={() => setConfirmingPayment(null)}
+                                          className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
+                                        >
+                                          Cancelar
+                                        </button>
+                                      </div>
+                                    ) : (
+                                      <button
+                                        disabled={row.balance <= 0}
+                                        onClick={() => setConfirmingPayment(String(row.employeeId))}
+                                        className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                      >
+                                        Pagado
+                                      </button>
+                                    )}
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                        {Object.keys(totalPendingByCurrency).length > 0 && (
+                          <tfoot>
+                            {Object.entries(totalPendingByCurrency).map(([currency, value]) => (
+                              <tr key={currency} className="border-t-2 border-gray-200 bg-gray-50">
+                                <td className="px-5 py-3 font-semibold text-gray-700" colSpan={2}>Total pendiente</td>
+                                <td className="px-4 py-3 font-bold text-gray-900 text-base">{formatMoney(value, currency)}</td>
+                                <td className="px-4 py-3" />
+                              </tr>
+                            ))}
+                          </tfoot>
+                        )}
+                      </table>
+                    </>
                   );
                 })()}
               </div>

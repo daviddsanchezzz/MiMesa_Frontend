@@ -345,6 +345,7 @@ function ShiftEditorModal({ day, shift, assignments, activeEmployees, positions,
   const [error, setError] = useState('');
   const [selectedPositionId, setSelectedPositionId] = useState('');
   const [selectedEmployeeId, setSelectedEmployeeId] = useState('');
+  const [employeeQuery, setEmployeeQuery] = useState('');
   const [draftAssignments, setDraftAssignments] = useState(assignments || []);
 
   useEffect(() => {
@@ -410,6 +411,18 @@ function ShiftEditorModal({ day, shift, assignments, activeEmployees, positions,
       return ids.includes(String(selectedPositionId));
     });
   }, [availableEmployees, selectedPositionId]);
+  const filteredEligibleEmployees = useMemo(() => {
+    const q = employeeQuery.trim().toLowerCase();
+    if (!q) return eligibleEmployeesForSelectedPosition;
+    return eligibleEmployeesForSelectedPosition.filter((employee) => {
+      const fullName = `${employee.firstName || ''} ${employee.lastName || ''}`.trim().toLowerCase();
+      return (
+        fullName.includes(q) ||
+        (employee.email || '').toLowerCase().includes(q) ||
+        (employee.phone || '').toLowerCase().includes(q)
+      );
+    });
+  }, [eligibleEmployeesForSelectedPosition, employeeQuery]);
 
   const totalAssigned = draftAssignments.length;
   const hasChanges = useMemo(() => {
@@ -543,6 +556,7 @@ function ShiftEditorModal({ day, shift, assignments, activeEmployees, positions,
                 onChange={(e) => {
                   setSelectedPositionId(e.target.value);
                   setSelectedEmployeeId('');
+                  setEmployeeQuery('');
                 }}
                 disabled={saving}
               >
@@ -551,6 +565,19 @@ function ShiftEditorModal({ day, shift, assignments, activeEmployees, positions,
                   <option key={position._id} value={position._id}>{position.name}</option>
                 ))}
               </select>
+            </div>
+            <div>
+              <label className={labelCls}>Buscar empleado</label>
+              <input
+                className={inputCls}
+                value={employeeQuery}
+                onChange={(e) => {
+                  setEmployeeQuery(e.target.value);
+                  setSelectedEmployeeId('');
+                }}
+                disabled={saving || !selectedPositionId}
+                placeholder={selectedPositionId ? 'Filtrar por nombre, email o telefono...' : 'Primero elige puesto'}
+              />
             </div>
             <div>
               <label className={labelCls}>Empleado</label>
@@ -563,7 +590,7 @@ function ShiftEditorModal({ day, shift, assignments, activeEmployees, positions,
                 <option value="">
                   {selectedPositionId ? 'Selecciona empleado...' : 'Primero elige puesto'}
                 </option>
-                {eligibleEmployeesForSelectedPosition.map((employee) => (
+                {filteredEligibleEmployees.map((employee) => (
                   <option key={employee._id} value={employee._id}>
                     {`${employee.firstName} ${employee.lastName || ''}`.trim()}
                   </option>
@@ -577,7 +604,7 @@ function ShiftEditorModal({ day, shift, assignments, activeEmployees, positions,
             >
               Añadir
             </button>
-            {selectedPositionId && eligibleEmployeesForSelectedPosition.length === 0 && (
+            {selectedPositionId && filteredEligibleEmployees.length === 0 && (
               <p className="text-xs text-amber-600">No hay empleados disponibles para este puesto.</p>
             )}
           </aside>

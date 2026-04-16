@@ -845,7 +845,8 @@ export default function Personal() {
   const monthLabel = useMemo(() => {
     if (!costMonth) return '';
     const [y, m] = costMonth.split('-').map(Number);
-    return new Date(y, m - 1, 1).toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+    const raw = new Date(y, m - 1, 1).toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+    return raw.charAt(0).toUpperCase() + raw.slice(1);
   }, [costMonth]);
 
   const weekLabel = useMemo(() => {
@@ -961,17 +962,17 @@ export default function Personal() {
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+      <div className="flex items-center justify-between gap-3">
         <div>
           <h2 className="text-xl font-bold text-gray-900">Personal</h2>
-          <p className="text-sm text-gray-500">Gestion de empleados, planificacion semanal y costes estimados.</p>
+          <p className="hidden sm:block text-sm text-gray-500">Gestion de empleados, planificacion semanal y costes estimados.</p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 overflow-x-auto">
           {tabs.filter((item) => allowedTabs.includes(item.key)).map((item) => (
             <button
               key={item.key}
               onClick={() => setTab(item.key)}
-              className={`px-3 py-2 rounded-xl text-sm font-semibold transition-colors ${tab === item.key ? 'bg-violet-600 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+              className={`shrink-0 px-3 py-2 rounded-xl text-sm font-semibold transition-colors ${tab === item.key ? 'bg-violet-600 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}`}
             >
               {item.label}
             </button>
@@ -1005,22 +1006,22 @@ export default function Personal() {
               {employeeSubTab === 'employees' ? (
                 <button
                   onClick={() => setEmployeeModal({})}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm bg-violet-600 text-white hover:bg-violet-700 font-semibold"
+                  className="w-9 h-9 sm:w-auto sm:h-auto sm:px-3 sm:py-2 sm:gap-1.5 flex items-center justify-center rounded-lg bg-violet-600 text-white hover:bg-violet-700 font-semibold"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 shrink-0">
                     <path d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z" />
                   </svg>
-                  Nuevo empleado
+                  <span className="hidden sm:inline text-sm">Nuevo empleado</span>
                 </button>
               ) : (
                 <button
                   onClick={() => setPositionModal({})}
-                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm bg-violet-600 text-white hover:bg-violet-700 font-semibold"
+                  className="w-9 h-9 sm:w-auto sm:h-auto sm:px-3 sm:py-2 sm:gap-1.5 flex items-center justify-center rounded-lg bg-violet-600 text-white hover:bg-violet-700 font-semibold"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 shrink-0">
                     <path d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z" />
                   </svg>
-                  Nuevo puesto
+                  <span className="hidden sm:inline text-sm">Nuevo puesto</span>
                 </button>
               )}
             </div>
@@ -1030,35 +1031,49 @@ export default function Personal() {
           {employeeSubTab === 'employees' && (
             <>
               {/* Stats bar */}
-              <div className="px-4 py-3 border-b border-gray-100 flex flex-wrap items-center gap-2">
-                <button
-                  onClick={() => setStatusFilter('all')}
-                  className={`text-xs font-semibold px-3 py-1.5 rounded-xl border transition-colors ${statusFilter === 'all' ? 'bg-violet-50 border-violet-200 text-violet-700' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}
-                >
-                  {employeeStats.total} total
-                </button>
-                <button
-                  onClick={() => setStatusFilter('active')}
-                  className={`text-xs font-semibold px-3 py-1.5 rounded-xl border transition-colors ${statusFilter === 'active' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}
-                >
-                  {employeeStats.active} activos
-                </button>
-                <button
-                  onClick={() => setStatusFilter('inactive')}
-                  className={`text-xs font-semibold px-3 py-1.5 rounded-xl border transition-colors ${statusFilter === 'inactive' ? 'bg-gray-100 border-gray-300 text-gray-700' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}
-                >
-                  {employeeStats.inactive} inactivos
-                </button>
-                {employeeStats.noPay > 0 && (
+              <div className="px-4 py-3 border-b border-gray-100 space-y-2">
+                <div className="grid grid-cols-2 sm:flex sm:flex-wrap sm:items-center gap-2">
                   <button
-                    onClick={() => setStatusFilter('no_pay')}
-                    className={`text-xs font-semibold px-3 py-1.5 rounded-xl border transition-colors ${statusFilter === 'no_pay' ? 'bg-amber-50 border-amber-200 text-amber-700' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+                    onClick={() => setStatusFilter('all')}
+                    className={`text-xs font-semibold px-3 py-1.5 rounded-xl border transition-colors ${statusFilter === 'all' ? 'bg-violet-50 border-violet-200 text-violet-700' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}
                   >
-                    {employeeStats.noPay} sin pago
+                    {employeeStats.total} total
                   </button>
-                )}
-                {/* Search */}
-                <div className="relative ml-auto">
+                  <button
+                    onClick={() => setStatusFilter('active')}
+                    className={`text-xs font-semibold px-3 py-1.5 rounded-xl border transition-colors ${statusFilter === 'active' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+                  >
+                    {employeeStats.active} activos
+                  </button>
+                  <button
+                    onClick={() => setStatusFilter('inactive')}
+                    className={`text-xs font-semibold px-3 py-1.5 rounded-xl border transition-colors ${statusFilter === 'inactive' ? 'bg-gray-100 border-gray-300 text-gray-700' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+                  >
+                    {employeeStats.inactive} inactivos
+                  </button>
+                  {employeeStats.noPay > 0 && (
+                    <button
+                      onClick={() => setStatusFilter('no_pay')}
+                      className={`text-xs font-semibold px-3 py-1.5 rounded-xl border transition-colors ${statusFilter === 'no_pay' ? 'bg-amber-50 border-amber-200 text-amber-700' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+                    >
+                      {employeeStats.noPay} sin pago
+                    </button>
+                  )}
+                  {/* Search — inline on desktop, full-width on mobile */}
+                  <div className="relative hidden sm:block ml-auto">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                      <path fillRule="evenodd" d="M9.965 11.026a5 5 0 1 1 1.06-1.06l2.755 2.754a.75.75 0 1 1-1.06 1.06l-2.755-2.754ZM10.5 7a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0Z" clipRule="evenodd" />
+                    </svg>
+                    <input
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      placeholder="Buscar empleado..."
+                      className="border border-gray-300 rounded-xl pl-9 pr-4 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white w-52"
+                    />
+                  </div>
+                </div>
+                {/* Search full-width on mobile */}
+                <div className="relative sm:hidden">
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
                     <path fillRule="evenodd" d="M9.965 11.026a5 5 0 1 1 1.06-1.06l2.755 2.754a.75.75 0 1 1-1.06 1.06l-2.755-2.754ZM10.5 7a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0Z" clipRule="evenodd" />
                   </svg>
@@ -1066,7 +1081,7 @@ export default function Personal() {
                     value={search}
                     onChange={(e) => setSearch(e.target.value)}
                     placeholder="Buscar empleado..."
-                    className="border border-gray-300 rounded-xl pl-9 pr-4 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white w-52"
+                    className="w-full border border-gray-300 rounded-xl pl-9 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white"
                   />
                 </div>
               </div>
@@ -1410,7 +1425,7 @@ export default function Personal() {
       {!loading && tab === 'costs' && allowedTabs.includes('costs') && (
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
           {/* Sub-tab header */}
-          <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+          <div className="px-4 py-3 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center gap-2">
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setCostsSubTab('monthly')}
@@ -1425,9 +1440,9 @@ export default function Personal() {
                 Balance acumulado
               </button>
             </div>
-            {/* Month nav — only for monthly sub-tab */}
+            {/* Month nav */}
             {costsSubTab === 'monthly' && (
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-1 sm:ml-auto">
                 <button
                   onClick={() => setCostMonth((v) => addMonths(v, -1))}
                   className="w-8 h-8 rounded-lg hover:bg-gray-100 transition-colors flex items-center justify-center text-gray-400 hover:text-gray-700"
@@ -1438,7 +1453,7 @@ export default function Personal() {
                   </svg>
                 </button>
                 <label className="relative cursor-pointer group">
-                  <span className="px-3 py-1.5 rounded-lg text-sm font-semibold text-gray-800 group-hover:bg-gray-100 transition-colors block capitalize">
+                  <span className="px-3 py-1.5 rounded-lg text-sm font-semibold text-gray-800 group-hover:bg-gray-100 transition-colors block">
                     {monthLabel}
                   </span>
                   <input
@@ -1474,9 +1489,9 @@ export default function Personal() {
                   <thead>
                     <tr className="border-b border-gray-100">
                       <th className="text-left px-5 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Empleado</th>
-                      <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Asignaciones</th>
-                      <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Horas</th>
-                      <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Tipo pago</th>
+                      <th className="hidden sm:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Asignaciones</th>
+                      <th className="hidden sm:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Horas</th>
+                      <th className="hidden sm:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Tipo pago</th>
                       <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Coste mes</th>
                     </tr>
                   </thead>
@@ -1489,9 +1504,9 @@ export default function Personal() {
                             <span className="font-medium text-gray-800">{row.employeeName}</span>
                           </div>
                         </td>
-                        <td className="px-4 py-3.5 text-gray-600">{row.assignments}</td>
-                        <td className="px-4 py-3.5 text-gray-600">{row.totalHours}h</td>
-                        <td className="px-4 py-3.5 text-gray-500 text-xs">{compTypeLabel(row.compensation?.paymentType)}</td>
+                        <td className="hidden sm:table-cell px-4 py-3.5 text-gray-600">{row.assignments}</td>
+                        <td className="hidden sm:table-cell px-4 py-3.5 text-gray-600">{row.totalHours}h</td>
+                        <td className="hidden sm:table-cell px-4 py-3.5 text-gray-500 text-xs">{compTypeLabel(row.compensation?.paymentType)}</td>
                         <td className="px-4 py-3.5 text-gray-800">{row.monthlyCost} <span className="text-xs text-gray-400">{row.currency}</span></td>
                       </tr>
                     ))}
@@ -1499,7 +1514,7 @@ export default function Personal() {
                   <tfoot>
                     {Object.entries(monthlyCosts.totalsByCurrency || {}).map(([currency, value]) => (
                       <tr key={currency} className="border-t-2 border-gray-200 bg-gray-50">
-                        <td className="px-5 py-3 font-semibold text-gray-700" colSpan={4}>Total {monthLabel}</td>
+                        <td className="px-5 py-3 font-semibold text-gray-700" colSpan={4}><span className="hidden sm:inline">Total {monthLabel}</span><span className="sm:hidden">Total</span></td>
                         <td className="px-4 py-3 font-bold text-gray-900 text-base">{value} <span className="text-sm font-semibold text-gray-500">{currency}</span></td>
                       </tr>
                     ))}
@@ -1529,9 +1544,9 @@ export default function Personal() {
                       <thead>
                         <tr className="border-b border-gray-100">
                           <th className="text-left px-5 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Empleado</th>
-                          <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Generado</th>
-                          <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Pagado</th>
-                          <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Último pago</th>
+                          <th className="hidden sm:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Generado</th>
+                          <th className="hidden sm:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Pagado</th>
+                          <th className="hidden sm:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Último pago</th>
                           <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Pendiente</th>
                           <th className="px-4 py-3" />
                         </tr>
@@ -1548,9 +1563,9 @@ export default function Personal() {
                                   <span className="font-medium text-gray-800">{row.employeeName}</span>
                                 </div>
                               </td>
-                              <td className="px-4 py-3.5 text-gray-600">{row.totalEarned} <span className="text-xs text-gray-400">{row.currency}</span></td>
-                              <td className="px-4 py-3.5 text-gray-600">{row.totalPaid} <span className="text-xs text-gray-400">{row.currency}</span></td>
-                              <td className="px-4 py-3.5 text-gray-400 text-xs">
+                              <td className="hidden sm:table-cell px-4 py-3.5 text-gray-600">{row.totalEarned} <span className="text-xs text-gray-400">{row.currency}</span></td>
+                              <td className="hidden sm:table-cell px-4 py-3.5 text-gray-600">{row.totalPaid} <span className="text-xs text-gray-400">{row.currency}</span></td>
+                              <td className="hidden sm:table-cell px-4 py-3.5 text-gray-400 text-xs">
                                 {row.lastPaidAt
                                   ? new Date(row.lastPaidAt).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })
                                   : '—'}
@@ -1605,7 +1620,8 @@ export default function Personal() {
                         <tfoot>
                           {Object.entries(totalPendingByCurrency).map(([currency, value]) => (
                             <tr key={currency} className="border-t-2 border-gray-200 bg-gray-50">
-                              <td className="px-5 py-3 font-semibold text-gray-700" colSpan={4}>Total pendiente</td>
+                              <td className="px-5 py-3 font-semibold text-gray-700 hidden sm:table-cell" colSpan={4}>Total pendiente</td>
+                              <td className="px-5 py-3 font-semibold text-gray-700 sm:hidden">Total pend.</td>
                               <td className="px-4 py-3 font-bold text-gray-900 text-base">{value} <span className="text-sm font-semibold text-gray-500">{currency}</span></td>
                               <td className="px-4 py-3" />
                             </tr>

@@ -751,7 +751,8 @@ function EmployeeAssignmentsModal({ employee, onClose, onDeleted }) {
   const [loadingList, setLoadingList] = useState(true);
   const [deletingId, setDeletingId] = useState(null);
   const [savingPriceId, setSavingPriceId] = useState(null);
-  const [priceByAssignmentId, setPriceByAssignmentId] = useState({});
+  const [editingAssignmentId, setEditingAssignmentId] = useState(null);
+  const [editingPriceValue, setEditingPriceValue] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
 
   const compensation = employee?.activeCompensation || null;
@@ -791,12 +792,6 @@ function EmployeeAssignmentsModal({ employee, onClose, onDeleted }) {
       .then((r) => {
         const rows = r.data?.assignments || [];
         setAssignments(rows);
-        const initialPriceMap = {};
-        rows.forEach((row) => {
-          const effective = row.customPrice ?? autoPriceForAssignment(row);
-          initialPriceMap[row._id] = effective === null ? '' : formattedPrice(effective);
-        });
-        setPriceByAssignmentId(initialPriceMap);
       })
       .catch(() => setErrorMsg('No se pudieron cargar los turnos'))
       .finally(() => setLoadingList(false));
@@ -808,6 +803,10 @@ function EmployeeAssignmentsModal({ employee, onClose, onDeleted }) {
     try {
       await api.delete(`/staff/assignments/${id}`);
       setAssignments((prev) => prev.filter((a) => a._id !== id));
+      if (editingAssignmentId === id) {
+        setEditingAssignmentId(null);
+        setEditingPriceValue('');
+      }
       onDeleted?.();
     } catch (err) {
       setErrorMsg(err?.response?.data?.message || 'No se pudo eliminar el turno');
@@ -816,23 +815,35 @@ function EmployeeAssignmentsModal({ employee, onClose, onDeleted }) {
     }
   };
 
-  const saveAssignmentPrice = async (assignmentId, forcedRawValue = null) => {
+  const startEditingPrice = (assignment) => {
+    const effective = assignment.customPrice ?? autoPriceForAssignment(assignment);
+    setEditingAssignmentId(assignment._id);
+    setEditingPriceValue(effective === null ? '' : formattedPrice(effective));
+  };
+
+  const cancelEditingPrice = () => {
+    setEditingAssignmentId(null);
+    setEditingPriceValue('');
+  };
+
+  const saveAssignmentPrice = async (assignmentId, rawValue) => {
     const assignment = assignments.find((item) => item._id === assignmentId);
     if (!assignment) return;
-    const raw = String(forcedRawValue !== null ? forcedRawValue : (priceByAssignmentId[assignmentId] ?? '')).trim();
+    const raw = String(rawValue ?? '').trim();
     let customPrice = null;
     if (raw !== '') {
       const parsed = Number(raw.replace(',', '.'));
       if (!Number.isFinite(parsed) || parsed < 0) {
         setErrorMsg('El precio debe ser un numero mayor o igual a 0');
-        const fallback = assignment.customPrice ?? autoPriceForAssignment(assignment);
-        setPriceByAssignmentId((prev) => ({ ...prev, [assignmentId]: fallback === null ? '' : formattedPrice(fallback) }));
         return;
       }
       customPrice = Number(parsed.toFixed(2));
     }
 
-    if ((assignment.customPrice ?? null) === customPrice) return;
+    if ((assignment.customPrice ?? null) === customPrice) {
+      cancelEditingPrice();
+      return;
+    }
 
     setSavingPriceId(assignmentId);
     setErrorMsg('');
@@ -840,21 +851,13 @@ function EmployeeAssignmentsModal({ employee, onClose, onDeleted }) {
       const res = await api.put(`/staff/assignments/${assignmentId}`, { customPrice });
       const updated = res.data;
       setAssignments((prev) => prev.map((row) => (row._id === assignmentId ? { ...row, ...updated } : row)));
-      const effective = updated.customPrice ?? autoPriceForAssignment(updated);
-      setPriceByAssignmentId((prev) => ({ ...prev, [assignmentId]: effective === null ? '' : formattedPrice(effective) }));
+      cancelEditingPrice();
       onDeleted?.();
     } catch (err) {
       setErrorMsg(err?.response?.data?.message || 'No se pudo actualizar el precio');
-      const fallback = assignment.customPrice ?? autoPriceForAssignment(assignment);
-      setPriceByAssignmentId((prev) => ({ ...prev, [assignmentId]: fallback === null ? '' : formattedPrice(fallback) }));
     } finally {
       setSavingPriceId(null);
     }
-  };
-
-  const resetToAuto = async (assignmentId) => {
-    setPriceByAssignmentId((prev) => ({ ...prev, [assignmentId]: '' }));
-    await saveAssignmentPrice(assignmentId, '');
   };
 
   const fullName = `${employee.firstName} ${employee.lastName || ''}`.trim();
@@ -884,48 +887,83 @@ function EmployeeAssignmentsModal({ employee, onClose, onDeleted }) {
                   const dateLabel = new Date(`${a.date}T12:00:00`).toLocaleDateString('es-ES', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' });
                   const autoPrice = autoPriceForAssignment(a);
                   const isSavingPrice = savingPriceId === a._id;
+                  const isEditingPrice = editingAssignmentId === a._id;
+                  const effectivePrice = a.customPrice ?? autoPrice;
                   return (
                     <tr key={a._id} className={`hover:bg-gray-50/60 transition-colors ${i < assignments.length - 1 ? 'border-b border-gray-50' : ''}`}>
                       <td className="px-3 py-2.5 text-gray-700 capitalize">{dateLabel}</td>
                       <td className="px-3 py-2.5 font-medium text-gray-800">{shift?.name || '—'}</td>
                       <td className="px-3 py-2.5">
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            value={priceByAssignmentId[a._id] ?? ''}
-                            onChange={(e) => setPriceByAssignmentId((prev) => ({ ...prev, [a._id]: e.target.value }))}
-                            onBlur={() => saveAssignmentPrice(a._id)}
-                            disabled={isSavingPrice}
-                            className="w-24 border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-violet-500"
-                          />
-                          <span className="text-xs text-gray-500">{currency}</span>
-                        </div>
-                        <div className="mt-1 flex items-center gap-2">
-                          {a.customPrice === null && autoPrice !== null && (
-                            <span className="text-[11px] text-gray-400">Auto: {formattedPrice(autoPrice)} {currency}</span>
-                          )}
-                          {a.customPrice !== null && (
+                        {!isEditingPrice ? (
+                          <div>
+                            <span className="text-sm text-gray-800">
+                              {effectivePrice === null ? '—' : `${formattedPrice(effectivePrice)} ${currency}`}
+                            </span>
+                            {a.customPrice === null && autoPrice !== null && (
+                              <p className="text-[11px] text-gray-400">Automático</p>
+                            )}
+                          </div>
+                        ) : (
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={editingPriceValue}
+                                onChange={(e) => setEditingPriceValue(e.target.value)}
+                                disabled={isSavingPrice}
+                                className="w-24 border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-violet-500"
+                              />
+                              <span className="text-xs text-gray-500">{currency}</span>
+                            </div>
                             <button
                               type="button"
-                              onClick={() => resetToAuto(a._id)}
+                              onClick={() => setEditingPriceValue('')}
                               disabled={isSavingPrice}
                               className="text-[11px] text-violet-600 hover:underline disabled:opacity-50"
                             >
                               Usar automático
                             </button>
-                          )}
-                        </div>
+                          </div>
+                        )}
                       </td>
                       <td className="px-3 py-2.5 text-right">
-                        <button
-                          onClick={() => deleteAssignment(a._id)}
-                          disabled={deletingId === a._id || isSavingPrice}
-                          className="text-xs text-rose-500 hover:text-rose-700 hover:underline disabled:opacity-40 transition-colors"
-                        >
-                          Eliminar
-                        </button>
+                        <div className="inline-flex items-center gap-2">
+                          {!isEditingPrice ? (
+                            <button
+                              onClick={() => startEditingPrice(a)}
+                              disabled={isSavingPrice || deletingId === a._id}
+                              className="text-xs text-gray-600 hover:text-gray-800 hover:underline disabled:opacity-40 transition-colors"
+                            >
+                              Editar
+                            </button>
+                          ) : (
+                            <>
+                              <button
+                                onClick={() => saveAssignmentPrice(a._id, editingPriceValue)}
+                                disabled={isSavingPrice}
+                                className="text-xs text-violet-600 hover:text-violet-700 hover:underline disabled:opacity-40 transition-colors"
+                              >
+                                Guardar
+                              </button>
+                              <button
+                                onClick={cancelEditingPrice}
+                                disabled={isSavingPrice}
+                                className="text-xs text-gray-500 hover:text-gray-700 hover:underline disabled:opacity-40 transition-colors"
+                              >
+                                Cancelar
+                              </button>
+                            </>
+                          )}
+                          <button
+                            onClick={() => deleteAssignment(a._id)}
+                            disabled={deletingId === a._id || isSavingPrice}
+                            className="text-xs text-rose-500 hover:text-rose-700 hover:underline disabled:opacity-40 transition-colors"
+                          >
+                            Eliminar
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );

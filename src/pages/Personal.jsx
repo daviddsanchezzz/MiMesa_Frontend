@@ -1053,6 +1053,7 @@ export default function Personal() {
   const plannerGridRef = useRef(null);
   const exportMenuRef = useRef(null);
   const mobileDayButtonRefs = useRef({});
+  const mobileDayScrollerRef = useRef(null);
 
   const loadCore = async ({ silent = false } = {}) => {
     if (!silent) setLoading(true);
@@ -1151,7 +1152,7 @@ export default function Personal() {
     if (tab === 'costs' && costsSubTab === 'monthly') loadMonthlyCosts(costMonth);
   }, [costMonth]);
   useEffect(() => {
-    const diff = Math.round((new Date(todayIso()) - new Date(weekStart)) / 86400000);
+    const diff = Math.round((new Date(`${todayIso()}T12:00:00`) - new Date(`${weekStart}T12:00:00`)) / 86400000);
     setMobileDayIndex(diff >= 0 && diff <= 6 ? diff : 0);
   }, [weekStart]);
 
@@ -1162,7 +1163,13 @@ export default function Personal() {
     if (!selectedDay) return;
     const buttonNode = mobileDayButtonRefs.current[selectedDay.date];
     if (!buttonNode) return;
-    buttonNode.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'center' });
+    const scroller = mobileDayScrollerRef.current;
+    if (!scroller) {
+      buttonNode.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'center' });
+      return;
+    }
+    const centeredLeft = buttonNode.offsetLeft - (scroller.clientWidth - buttonNode.offsetWidth) / 2;
+    scroller.scrollTo({ left: Math.max(0, centeredLeft), behavior: 'auto' });
   }, [tab, mobileDayIndex, days]);
   const today = todayIso();
   const activeEmployees = useMemo(() => employees.filter((e) => e.status === 'active'), [employees]);
@@ -1815,9 +1822,22 @@ export default function Personal() {
               <button
                 onClick={copyPreviousWeekAssignments}
                 disabled={isCopyingWeek}
-                className="ml-1 px-2.5 py-1 rounded-lg border border-gray-200 hover:bg-gray-50 text-xs font-semibold text-gray-600 transition-colors disabled:opacity-50"
+                className="hidden sm:inline-flex ml-1 px-2.5 py-1 rounded-lg border border-gray-200 hover:bg-gray-50 text-xs font-semibold text-gray-600 transition-colors disabled:opacity-50"
               >
                 {isCopyingWeek ? 'Copiando...' : 'Copiar semana anterior'}
+              </button>
+              <button
+                onClick={copyPreviousWeekAssignments}
+                disabled={isCopyingWeek}
+                className="sm:hidden ml-1 h-8 px-2 rounded-lg border border-gray-200 hover:bg-gray-50 text-xs font-semibold text-gray-600 transition-colors disabled:opacity-50 inline-flex items-center gap-1"
+                aria-label="Copiar semana anterior"
+                title="Copiar semana anterior"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
+                  <path d="M3.75 2a1.75 1.75 0 0 0-1.75 1.75v7.5C2 12.216 2.784 13 3.75 13h6.5A1.75 1.75 0 0 0 12 11.25v-1a.75.75 0 0 0-1.5 0v1a.25.25 0 0 1-.25.25h-6.5a.25.25 0 0 1-.25-.25v-7.5a.25.25 0 0 1 .25-.25h1a.75.75 0 0 0 0-1.5h-1Z" />
+                  <path d="M7.75 3A1.75 1.75 0 0 1 9.5 1.25h2.75A1.75 1.75 0 0 1 14 3v7.25A1.75 1.75 0 0 1 12.25 12h-2.5a.75.75 0 0 1 0-1.5h2.5a.25.25 0 0 0 .25-.25V3a.25.25 0 0 0-.25-.25H9.5a.25.25 0 0 0-.25.25v7a.75.75 0 0 1-1.5 0V3Z" />
+                </svg>
+                <span>{isCopyingWeek ? '...' : 'Copiar'}</span>
               </button>
               {/* Export button */}
               <div className="relative ml-1" ref={exportMenuRef}>
@@ -1897,7 +1917,7 @@ export default function Personal() {
 
           {/* Mobile day selector */}
           <div className="md:hidden space-y-3">
-            <div className="flex gap-2 overflow-x-auto pb-1">
+            <div className="flex gap-2 overflow-x-auto pb-1" ref={mobileDayScrollerRef}>
               {days.map((day, index) => {
                 const isToday = day.date === today;
                 return (

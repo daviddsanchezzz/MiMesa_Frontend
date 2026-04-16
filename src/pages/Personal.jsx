@@ -9,8 +9,8 @@ const labelCls = 'block text-xs font-semibold text-gray-600 mb-1';
 
 const tabs = [
   { key: 'employees', label: 'Empleados' },
-  { key: 'planner', label: 'Planificacion semanal' },
-  { key: 'costs', label: 'Costes estimados' },
+  { key: 'planner', label: 'Planificacion' },
+  { key: 'costs', label: 'Costes' },
 ];
 
 const todayIso = () => new Date().toISOString().slice(0, 10);
@@ -915,10 +915,20 @@ export default function Personal() {
       } else {
         const { jsPDF } = await import('jspdf');
         const imgData = canvas.toDataURL('image/png');
-        const w = canvas.width / 2;
-        const h = canvas.height / 2;
-        const pdf = new jsPDF({ orientation: w > h ? 'landscape' : 'portrait', unit: 'px', format: [w, h] });
-        pdf.addImage(imgData, 'PNG', 0, 0, w, h);
+        const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+        const pageW = pdf.internal.pageSize.getWidth();  // 297mm
+        const pageH = pdf.internal.pageSize.getHeight(); // 210mm
+        const imgRatio = canvas.width / canvas.height;
+        const pageRatio = pageW / pageH;
+        let drawW = pageW, drawH = pageH, offsetX = 0, offsetY = 0;
+        if (imgRatio > pageRatio) {
+          drawH = pageW / imgRatio;
+          offsetY = (pageH - drawH) / 2;
+        } else {
+          drawW = pageH * imgRatio;
+          offsetX = (pageW - drawW) / 2;
+        }
+        pdf.addImage(imgData, 'PNG', offsetX, offsetY, drawW, drawH);
         pdf.save(`planificacion_${safeLabel}.pdf`);
       }
     } catch (err) {
@@ -981,21 +991,21 @@ export default function Personal() {
         <div className="flex items-start justify-between gap-2">
           <div>
             <p className="text-xs font-semibold text-gray-900">{shift.name}</p>
-            <p className="text-[11px] text-gray-500">{shift.startTime} - {shift.endTime}</p>
+            {!isExporting && <p className="text-[11px] text-gray-500">{shift.startTime} - {shift.endTime}</p>}
           </div>
-          <div className="flex items-center gap-2">
-            <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-md ${rawList.length > 0 ? 'bg-violet-50 text-violet-700' : 'bg-gray-100 text-gray-400'}`}>
-              {rawList.length}
-            </span>
-            {!isExporting && (
+          {!isExporting && (
+            <div className="flex items-center gap-2">
+              <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-md ${rawList.length > 0 ? 'bg-violet-50 text-violet-700' : 'bg-gray-100 text-gray-400'}`}>
+                {rawList.length}
+              </span>
               <button
                 onClick={() => setSlotEditor({ day, shift })}
                 className="text-[11px] font-semibold px-2 py-1 rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200"
               >
                 Detalle
               </button>
-            )}
-          </div>
+            </div>
+          )}
         </div>
 
         {rawList.length === 0 ? (
@@ -1447,7 +1457,7 @@ export default function Personal() {
                 <div className="mb-5 pb-4 border-b border-gray-200 flex items-end justify-between">
                   <div>
                     <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-0.5">{business?.name || 'Planificación'}</p>
-                    <p className="text-xl font-bold text-gray-900">Planificación semanal</p>
+                    <p className="text-xl font-bold text-gray-900">Planificación</p>
                   </div>
                   <p className="text-sm font-semibold text-gray-500">{weekLabel}</p>
                 </div>
@@ -1460,19 +1470,19 @@ export default function Personal() {
                 return (
                   <div
                     key={day.date}
-                    className={`rounded-xl border p-2.5 space-y-2 max-h-[74vh] overflow-auto ${
-                      isToday
+                    className={`rounded-xl border p-2.5 space-y-2 ${isExporting ? '' : 'max-h-[74vh] overflow-auto'} ${
+                      !isExporting && isToday
                         ? 'border-violet-300 bg-violet-50/40'
                         : 'border-gray-200 bg-gray-50'
                     }`}
                   >
-                    <div className={`px-1 pb-1.5 border-b sticky top-0 z-10 ${isToday ? 'border-violet-200 bg-violet-50/40' : 'border-gray-200 bg-gray-50'}`}>
+                    <div className={`px-1 pb-1.5 border-b ${isExporting ? '' : 'sticky top-0 z-10'} ${!isExporting && isToday ? 'border-violet-200 bg-violet-50/40' : 'border-gray-200 bg-gray-50'}`}>
                       <div className="flex items-center justify-between gap-1">
                         <div>
-                          <p className={`text-xs uppercase font-semibold ${isToday ? 'text-violet-600' : 'text-gray-400'}`}>{day.short}</p>
-                          <p className={`text-sm font-bold ${isToday ? 'text-violet-700' : 'text-gray-900'}`}>{day.day}</p>
+                          <p className={`text-xs uppercase font-semibold ${!isExporting && isToday ? 'text-violet-600' : 'text-gray-400'}`}>{day.short}</p>
+                          <p className={`text-sm font-bold ${!isExporting && isToday ? 'text-violet-700' : 'text-gray-900'}`}>{day.day}</p>
                         </div>
-                        {totalForDay > 0 && (
+                        {!isExporting && totalForDay > 0 && (
                           <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${isToday ? 'bg-violet-100 text-violet-700' : 'bg-gray-200 text-gray-600'}`}>
                             {totalForDay}
                           </span>

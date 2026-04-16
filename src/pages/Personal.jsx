@@ -142,6 +142,7 @@ function MobileEmployeeRow({ employee, onEdit, onPago, onToggle }) {
 
 function EmployeeFormModal({ employee, positions, onClose, onSaved }) {
   const [positionQuery, setPositionQuery] = useState('');
+  const [positionOpen, setPositionOpen] = useState(false);
   const [form, setForm] = useState({
     firstName: employee?.firstName || '',
     lastName: employee?.lastName || '',
@@ -156,6 +157,10 @@ function EmployeeFormModal({ employee, positions, onClose, onSaved }) {
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const selectedPositions = useMemo(
+    () => positions.filter((position) => form.positionIds.includes(String(position._id))),
+    [positions, form.positionIds],
+  );
   const filteredPositions = useMemo(() => {
     const q = positionQuery.trim().toLowerCase();
     if (!q) return positions;
@@ -189,68 +194,65 @@ function EmployeeFormModal({ employee, positions, onClose, onSaved }) {
         </div>
         <div className="space-y-2">
           <label className={labelCls}>Puestos</label>
-          <div className="border border-gray-200 rounded-xl p-2 bg-white space-y-2">
-            <div className="flex flex-wrap gap-1.5 min-h-7">
-              {form.positionIds.map((id) => {
-                const position = positions.find((item) => String(item._id) === String(id));
-                if (!position) return null;
-                return (
-                  <span key={id} className="inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-semibold border border-gray-200 bg-gray-50 text-gray-700">
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => setPositionOpen((v) => !v)}
+              className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm bg-white text-left flex items-center justify-between gap-2"
+            >
+              <div className="flex flex-wrap gap-1.5 min-h-6">
+                {selectedPositions.length > 0 ? selectedPositions.map((position) => (
+                  <span key={position._id} className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-semibold border border-gray-200 bg-gray-50 text-gray-700">
                     <span className="w-2 h-2 rounded-full" style={{ backgroundColor: position.color || '#64748B' }} />
                     {position.name}
-                    <button
-                      type="button"
-                      onClick={() => setForm((prev) => ({ ...prev, positionIds: prev.positionIds.filter((value) => value !== String(id)) }))}
-                      className="text-gray-500 hover:text-gray-700"
-                      aria-label={`Quitar ${position.name}`}
-                    >
-                      x
-                    </button>
                   </span>
-                );
-              })}
-              {form.positionIds.length === 0 && <p className="text-xs text-gray-400 py-1">Sin puestos seleccionados</p>}
-            </div>
+                )) : <span className="text-gray-400">Selecciona uno o varios puestos...</span>}
+              </div>
+              <span className="text-gray-400 text-xs">{positionOpen ? '▲' : '▼'}</span>
+            </button>
 
-            <input
-              className={inputCls}
-              placeholder="Buscar puesto..."
-              value={positionQuery}
-              onChange={(e) => setPositionQuery(e.target.value)}
-            />
-
-            <div className="max-h-40 overflow-auto space-y-1">
-              {filteredPositions.map((position) => {
-                const id = String(position._id);
-                const checked = form.positionIds.includes(id);
-                return (
-                  <button
-                    key={id}
-                    type="button"
-                    onClick={() => {
-                      setForm((prev) => ({
-                        ...prev,
-                        positionIds: checked
-                          ? prev.positionIds.filter((value) => value !== id)
-                          : [...prev.positionIds, id],
-                      }));
-                    }}
-                    className={`w-full text-left flex items-center justify-between gap-2 px-2 py-1.5 rounded-lg border ${
-                      checked ? 'border-violet-300 bg-violet-50' : 'border-gray-200 hover:bg-gray-50'
-                    }`}
-                  >
-                    <span className="inline-flex items-center gap-2 text-sm text-gray-700">
-                      <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: position.color || '#64748B' }} />
-                      {position.name}
-                    </span>
-                    <span className={`text-xs font-semibold ${checked ? 'text-violet-700' : 'text-gray-400'}`}>
-                      {checked ? 'Seleccionado' : 'Seleccionar'}
-                    </span>
-                  </button>
-                );
-              })}
-              {filteredPositions.length === 0 && <p className="text-xs text-gray-400 px-1 py-2">No hay puestos para ese filtro</p>}
-            </div>
+            {positionOpen && (
+              <div className="absolute z-20 left-0 right-0 mt-2 border border-gray-200 rounded-xl bg-white shadow-lg p-2 space-y-2">
+                <input
+                  className={inputCls}
+                  placeholder="Buscar puesto..."
+                  value={positionQuery}
+                  onChange={(e) => setPositionQuery(e.target.value)}
+                />
+                <div className="max-h-44 overflow-auto space-y-1">
+                  {filteredPositions.map((position) => {
+                    const id = String(position._id);
+                    const checked = form.positionIds.includes(id);
+                    return (
+                      <button
+                        key={id}
+                        type="button"
+                        onClick={() => {
+                          setForm((prev) => ({
+                            ...prev,
+                            positionIds: checked
+                              ? prev.positionIds.filter((value) => value !== id)
+                              : [...prev.positionIds, id],
+                          }));
+                        }}
+                        className={`w-full text-left flex items-center justify-between gap-2 px-2 py-1.5 rounded-lg ${
+                          checked ? 'bg-violet-50 text-violet-700' : 'hover:bg-gray-50 text-gray-700'
+                        }`}
+                      >
+                        <span className="inline-flex items-center gap-2 text-sm">
+                          <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: position.color || '#64748B' }} />
+                          {position.name}
+                        </span>
+                        <span className={`text-xs font-semibold ${checked ? 'text-violet-600' : 'text-gray-300'}`}>
+                          {checked ? '✓' : ''}
+                        </span>
+                      </button>
+                    );
+                  })}
+                  {filteredPositions.length === 0 && <p className="text-xs text-gray-400 px-1 py-2">No hay puestos para ese filtro</p>}
+                </div>
+              </div>
+            )}
           </div>
         </div>
         <div><label className={labelCls}>Notas</label><textarea rows={3} className={inputCls} value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} /></div>

@@ -492,6 +492,88 @@ function ShiftEditorModal({ day, shift, assignments, activeEmployees, positions,
   );
 }
 
+function EmployeeAssignmentsModal({ employee, onClose, onDeleted }) {
+  const [assignments, setAssignments] = useState([]);
+  const [loadingList, setLoadingList] = useState(true);
+  const [deletingId, setDeletingId] = useState(null);
+  const [errorMsg, setErrorMsg] = useState('');
+
+  useEffect(() => {
+    api.get(`/staff/employees/${employee._id}/assignments`)
+      .then((r) => setAssignments(r.data?.assignments || []))
+      .catch(() => setErrorMsg('No se pudieron cargar los turnos'))
+      .finally(() => setLoadingList(false));
+  }, [employee._id]);
+
+  const deleteAssignment = async (id) => {
+    setDeletingId(id);
+    setErrorMsg('');
+    try {
+      await api.delete(`/staff/assignments/${id}`);
+      setAssignments((prev) => prev.filter((a) => a._id !== id));
+      onDeleted?.();
+    } catch (err) {
+      setErrorMsg(err?.response?.data?.message || 'No se pudo eliminar el turno');
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
+  const fullName = `${employee.firstName} ${employee.lastName || ''}`.trim();
+
+  return (
+    <Modal title={`Turnos — ${fullName}`} subtitle={`${assignments.length} asignaciones en total`} onClose={onClose} size="lg">
+      <div className="space-y-2">
+        {errorMsg && <div className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{errorMsg}</div>}
+        {loadingList && <div className="h-16 rounded-xl bg-gray-100 animate-pulse" />}
+        {!loadingList && assignments.length === 0 && (
+          <p className="text-sm text-gray-400 text-center py-8">Sin turnos registrados</p>
+        )}
+        {!loadingList && assignments.length > 0 && (
+          <div className="overflow-y-auto max-h-[60vh]">
+            <table className="w-full text-sm">
+              <thead className="sticky top-0 bg-white z-10">
+                <tr className="border-b border-gray-100">
+                  <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Fecha</th>
+                  <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Turno</th>
+                  <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Horario</th>
+                  <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Rol</th>
+                  <th className="px-3 py-2.5" />
+                </tr>
+              </thead>
+              <tbody>
+                {assignments.map((a, i) => {
+                  const shift = a.shiftId;
+                  const start = a.startTime || shift?.startTime || '—';
+                  const end = a.endTime || shift?.endTime || '—';
+                  const dateLabel = new Date(`${a.date}T12:00:00`).toLocaleDateString('es-ES', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' });
+                  return (
+                    <tr key={a._id} className={`hover:bg-gray-50/60 transition-colors ${i < assignments.length - 1 ? 'border-b border-gray-50' : ''}`}>
+                      <td className="px-3 py-2.5 text-gray-700 capitalize">{dateLabel}</td>
+                      <td className="px-3 py-2.5 font-medium text-gray-800">{shift?.name || '—'}</td>
+                      <td className="px-3 py-2.5 text-gray-500 text-xs tabular-nums">{start} – {end}</td>
+                      <td className="px-3 py-2.5 text-gray-500 text-xs">{a.roleLabel || '—'}</td>
+                      <td className="px-3 py-2.5 text-right">
+                        <button
+                          onClick={() => deleteAssignment(a._id)}
+                          disabled={deletingId === a._id}
+                          className="text-xs text-rose-500 hover:text-rose-700 hover:underline disabled:opacity-40 transition-colors"
+                        >
+                          Eliminar
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </Modal>
+  );
+}
+
 function PositionFormModal({ position, onClose, onSaved }) {
   const [form, setForm] = useState({ name: position?.name || '', color: position?.color || '#64748B' });
   const [saving, setSaving] = useState(false);
@@ -594,6 +676,7 @@ export default function Personal() {
   const [balances, setBalances] = useState([]);
   const [costsLoading, setCostsLoading] = useState(false);
   const [confirmingPayment, setConfirmingPayment] = useState(null); // employeeId
+  const [assignmentsModal, setAssignmentsModal] = useState(null); // employee object
 
   const loadCore = async ({ silent = false } = {}) => {
     if (!silent) setLoading(true);
@@ -1435,23 +1518,28 @@ export default function Personal() {
               <div className="overflow-x-auto">
                 {balances.filter((b) => b.employeeStatus === 'active' || b.balance !== 0).length === 0 ? (
                   <div className="py-16 text-center text-sm text-gray-400">Sin datos de balance</div>
-                ) : (
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-gray-100">
-                        <th className="text-left px-5 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Empleado</th>
-                        <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Generado</th>
-                        <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Pagado</th>
-                        <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Último pago</th>
-                        <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Pendiente</th>
-                        <th className="px-4 py-3" />
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {balances
-                        .filter((b) => b.employeeStatus === 'active' || b.balance !== 0)
-                        .map((row, i, arr) => {
+                ) : (() => {
+                  const visibleRows = balances.filter((b) => b.employeeStatus === 'active' || b.balance !== 0);
+                  const totalPendingByCurrency = visibleRows.reduce((acc, row) => {
+                    if (row.balance > 0) acc[row.currency] = Number(((acc[row.currency] || 0) + row.balance).toFixed(2));
+                    return acc;
+                  }, {});
+                  return (
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-gray-100">
+                          <th className="text-left px-5 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Empleado</th>
+                          <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Generado</th>
+                          <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Pagado</th>
+                          <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Último pago</th>
+                          <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Pendiente</th>
+                          <th className="px-4 py-3" />
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {visibleRows.map((row, i, arr) => {
                           const isConfirming = confirmingPayment === String(row.employeeId);
+                          const empObj = employees.find((e) => String(e._id) === String(row.employeeId));
                           return (
                             <tr key={String(row.employeeId)} className={`hover:bg-gray-50/60 transition-colors ${i < arr.length - 1 ? 'border-b border-gray-50' : ''}`}>
                               <td className="px-5 py-3.5">
@@ -1472,39 +1560,61 @@ export default function Personal() {
                                   {row.balance} <span className="text-xs font-semibold text-gray-400">{row.currency}</span>
                                 </span>
                               </td>
-                              <td className="px-4 py-3.5 text-right">
-                                {isConfirming ? (
-                                  <div className="flex items-center justify-end gap-2">
-                                    <span className="text-xs text-gray-500">¿Confirmar {row.balance} {row.currency}?</span>
+                              <td className="px-4 py-3.5">
+                                <div className="flex items-center justify-end gap-1.5">
+                                  {empObj && (
                                     <button
-                                      onClick={() => registerPayment(String(row.employeeId), row.balance, row.currency)}
-                                      className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
-                                    >
-                                      Confirmar
-                                    </button>
-                                    <button
-                                      onClick={() => setConfirmingPayment(null)}
+                                      onClick={() => setAssignmentsModal(empObj)}
                                       className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
                                     >
-                                      Cancelar
+                                      Ver turnos
                                     </button>
-                                  </div>
-                                ) : (
-                                  <button
-                                    disabled={row.balance <= 0}
-                                    onClick={() => setConfirmingPayment(String(row.employeeId))}
-                                    className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                                  >
-                                    Pagado
-                                  </button>
-                                )}
+                                  )}
+                                  {isConfirming ? (
+                                    <div className="flex items-center gap-1.5">
+                                      <span className="text-xs text-gray-500 whitespace-nowrap">¿{row.balance} {row.currency}?</span>
+                                      <button
+                                        onClick={() => registerPayment(String(row.employeeId), row.balance, row.currency)}
+                                        className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
+                                      >
+                                        Confirmar
+                                      </button>
+                                      <button
+                                        onClick={() => setConfirmingPayment(null)}
+                                        className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
+                                      >
+                                        Cancelar
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <button
+                                      disabled={row.balance <= 0}
+                                      onClick={() => setConfirmingPayment(String(row.employeeId))}
+                                      className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                    >
+                                      Pagado
+                                    </button>
+                                  )}
+                                </div>
                               </td>
                             </tr>
                           );
                         })}
-                    </tbody>
-                  </table>
-                )}
+                      </tbody>
+                      {Object.keys(totalPendingByCurrency).length > 0 && (
+                        <tfoot>
+                          {Object.entries(totalPendingByCurrency).map(([currency, value]) => (
+                            <tr key={currency} className="border-t-2 border-gray-200 bg-gray-50">
+                              <td className="px-5 py-3 font-semibold text-gray-700" colSpan={4}>Total pendiente</td>
+                              <td className="px-4 py-3 font-bold text-gray-900 text-base">{value} <span className="text-sm font-semibold text-gray-500">{currency}</span></td>
+                              <td className="px-4 py-3" />
+                            </tr>
+                          ))}
+                        </tfoot>
+                      )}
+                    </table>
+                  );
+                })()}
               </div>
             </>
           )}
@@ -1551,6 +1661,13 @@ export default function Personal() {
           positions={positions}
           onClose={() => setSlotEditor(null)}
           onRefresh={loadAssignments}
+        />
+      )}
+      {assignmentsModal && (
+        <EmployeeAssignmentsModal
+          employee={assignmentsModal}
+          onClose={() => setAssignmentsModal(null)}
+          onDeleted={() => { loadBalances(); loadAssignments(); }}
         />
       )}
     </div>

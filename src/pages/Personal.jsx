@@ -905,6 +905,7 @@ export default function Personal() {
   const [confirmingPayment, setConfirmingPayment] = useState(null); // employeeId
   const [assignmentsModal, setAssignmentsModal] = useState(null); // employee object
   const [isExporting, setIsExporting] = useState(false);
+  const [isCopyingWeek, setIsCopyingWeek] = useState(false);
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
   const [weekReservations, setWeekReservations] = useState({}); // date -> count
   const plannerGridRef = useRef(null);
@@ -1159,6 +1160,60 @@ export default function Personal() {
       console.error('Export error', err);
     } finally {
       setIsExporting(false);
+    }
+  };
+
+  const copyPreviousWeekAssignments = async () => {
+    if (isCopyingWeek) return;
+    setError('');
+    try {
+      const previousWeekStart = addDays(weekStart, -7);
+      const prevRes = await api.get(`/staff/assignments?weekStart=${previousWeekStart}`);
+      const previousAssignments = prevRes.data?.assignments || [];
+
+      if (previousAssignments.length === 0) {
+        setError('La semana anterior no tiene asignaciones para copiar.');
+        return;
+      }
+
+      if ((assignments || []).length > 0) {
+        const confirmed = window.confirm(
+          'Esta semana ya tiene asignaciones. Si continúas se borrarán las actuales y se copiarán las de la semana anterior. ¿Quieres continuar?',
+        );
+        if (!confirmed) return;
+      }
+
+      setIsCopyingWeek(true);
+
+      const currentAssignments = assignments || [];
+      if (currentAssignments.length > 0) {
+        await Promise.all(
+          currentAssignments
+            .filter((assignment) => assignment?._id)
+            .map((assignment) => api.delete(`/staff/assignments/${assignment._id}`)),
+        );
+      }
+
+      const payloads = previousAssignments
+        .map((assignment) => ({
+          employeeId: assignment?.employeeId?._id || assignment?.employeeId,
+          shiftId: assignment?.shiftId?._id || assignment?.shiftId,
+          date: assignment?.date ? addDays(assignment.date, 7) : '',
+          roleLabel: assignment?.roleLabel || '',
+        }))
+        .filter((payload) => payload.employeeId && payload.shiftId && payload.date);
+
+      if (payloads.length === 0) {
+        setError('No hay asignaciones válidas en la semana anterior para copiar.');
+        return;
+      }
+
+      await Promise.all(payloads.map((payload) => api.post('/staff/assignments', payload)));
+      await loadWeekData();
+    } catch (err) {
+      setError(err?.response?.data?.message || 'No se pudo copiar la semana anterior');
+    } finally {
+      setIsCopyingWeek(false);
     }
   };
 
@@ -1613,6 +1668,13 @@ export default function Personal() {
                 className="ml-1 px-2.5 py-1 rounded-lg border border-gray-200 hover:bg-gray-50 text-xs font-semibold text-gray-500 transition-colors"
               >
                 Hoy
+              </button>
+              <button
+                onClick={copyPreviousWeekAssignments}
+                disabled={isCopyingWeek}
+                className="ml-1 px-2.5 py-1 rounded-lg border border-gray-200 hover:bg-gray-50 text-xs font-semibold text-gray-600 transition-colors disabled:opacity-50"
+              >
+                {isCopyingWeek ? 'Copiando...' : 'Copiar semana anterior'}
               </button>
               {/* Export button */}
               <div className="relative ml-1" ref={exportMenuRef}>

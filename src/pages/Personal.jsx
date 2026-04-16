@@ -572,6 +572,12 @@ export default function Personal() {
   const [slotEditor, setSlotEditor] = useState(null);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [costsSubTab, setCostsSubTab] = useState('monthly');
+  const [costMonth, setCostMonth] = useState(() => todayIso().slice(0, 7));
+  const [monthlyCosts, setMonthlyCosts] = useState({ employeeCosts: [], totalsByCurrency: {} });
+  const [balances, setBalances] = useState([]);
+  const [costsLoading, setCostsLoading] = useState(false);
+  const [confirmingPayment, setConfirmingPayment] = useState(null); // employeeId
 
   const loadCore = async ({ silent = false } = {}) => {
     if (!silent) setLoading(true);
@@ -614,18 +620,51 @@ export default function Personal() {
     }
   };
 
-  const loadCosts = async () => {
+  const loadMonthlyCosts = async (month = costMonth) => {
+    setCostsLoading(true);
     try {
-      const cRes = await api.get(`/staff/costs?weekStart=${weekStart}`);
-      setCosts(cRes.data || { employeeCosts: [], totalsByCurrency: {}, monthlyEstimateByCurrency: {} });
+      const res = await api.get(`/staff/costs/monthly?month=${month}`);
+      setMonthlyCosts(res.data || { employeeCosts: [], totalsByCurrency: {} });
     } catch (err) {
-      setError(err?.response?.data?.message || 'No se pudieron cargar costes');
+      setError(err?.response?.data?.message || 'No se pudieron cargar los costes mensuales');
+    } finally {
+      setCostsLoading(false);
+    }
+  };
+
+  const loadBalances = async () => {
+    setCostsLoading(true);
+    try {
+      const res = await api.get('/staff/balances');
+      setBalances(res.data?.balances || []);
+    } catch (err) {
+      setError(err?.response?.data?.message || 'No se pudieron cargar los balances');
+    } finally {
+      setCostsLoading(false);
+    }
+  };
+
+  const registerPayment = async (employeeId, amount, currency) => {
+    try {
+      await api.post('/staff/payments', { employeeId, amount, currency });
+      setConfirmingPayment(null);
+      await loadBalances();
+    } catch (err) {
+      setError(err?.response?.data?.message || 'No se pudo registrar el pago');
     }
   };
 
   useEffect(() => { loadCore(); }, []);
   useEffect(() => { loadWeekData(); }, [weekStart]);
-  useEffect(() => { if (tab === 'costs') loadCosts(); }, [tab]);
+  useEffect(() => {
+    if (tab === 'costs') {
+      if (costsSubTab === 'monthly') loadMonthlyCosts(costMonth);
+      else loadBalances();
+    }
+  }, [tab, costsSubTab]);
+  useEffect(() => {
+    if (tab === 'costs' && costsSubTab === 'monthly') loadMonthlyCosts(costMonth);
+  }, [costMonth]);
   useEffect(() => { setMobileDayIndex(0); }, [weekStart]);
 
   const days = useMemo(() => weekDays(weekStart), [weekStart]);
@@ -697,6 +736,18 @@ export default function Personal() {
     });
     return out;
   }, [days, shiftRowsByDay, assignmentsByDayShift]);
+
+  const addMonths = (ym, n) => {
+    const [y, m] = ym.split('-').map(Number);
+    const d = new Date(y, m - 1 + n, 1);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  };
+
+  const monthLabel = useMemo(() => {
+    if (!costMonth) return '';
+    const [y, m] = costMonth.split('-').map(Number);
+    return new Date(y, m - 1, 1).toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+  }, [costMonth]);
 
   const weekLabel = useMemo(() => {
     if (!days.length) return '';
@@ -1258,105 +1309,194 @@ export default function Personal() {
 
       {/* -- COSTS TAB -- */}
       {!loading && tab === 'costs' && (
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 space-y-4">
-          {/* Week navigation */}
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setWeekStart((v) => addDays(v, -7))}
-              className="w-8 h-8 rounded-lg hover:bg-gray-100 transition-colors flex items-center justify-center text-gray-400 hover:text-gray-700"
-              aria-label="Semana anterior"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
-                <path fillRule="evenodd" d="M9.78 4.22a.75.75 0 0 1 0 1.06L7.06 8l2.72 2.72a.75.75 0 1 1-1.06 1.06L5.47 8.53a.75.75 0 0 1 0-1.06l3.25-3.25a.75.75 0 0 1 1.06 0Z" clipRule="evenodd" />
-              </svg>
-            </button>
-            <label className="relative cursor-pointer group">
-              <span className="px-3 py-1.5 rounded-lg text-sm font-semibold text-gray-800 group-hover:bg-gray-100 transition-colors block">
-                {weekLabel}
-              </span>
-              <input
-                type="date"
-                value={weekStart}
-                onChange={(e) => e.target.value && setWeekStart(mondayOf(e.target.value))}
-                className="absolute inset-0 opacity-0 cursor-pointer w-full"
-                tabIndex={-1}
-              />
-            </label>
-            <button
-              onClick={() => setWeekStart((v) => addDays(v, 7))}
-              className="w-8 h-8 rounded-lg hover:bg-gray-100 transition-colors flex items-center justify-center text-gray-400 hover:text-gray-700"
-              aria-label="Semana siguiente"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
-                <path fillRule="evenodd" d="M6.22 4.22a.75.75 0 0 1 1.06 0l3.25 3.25a.75.75 0 0 1 0 1.06L7.28 11.78a.75.75 0 0 1-1.06-1.06L9.94 8 6.22 4.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
-              </svg>
-            </button>
-            <button
-              onClick={() => setWeekStart(mondayOf(todayIso()))}
-              className="ml-1 px-2.5 py-1 rounded-lg border border-gray-200 hover:bg-gray-50 text-xs font-semibold text-gray-500 transition-colors"
-            >
-              Hoy
-            </button>
-          </div>
-
-          {/* Summary cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Total semanal</p>
-              {Object.entries(costs.totalsByCurrency || {}).length === 0 ? (
-                <p className="text-sm font-semibold text-gray-400">Sin datos</p>
-              ) : (
-                Object.entries(costs.totalsByCurrency || {}).map(([currency, value]) => (
-                  <p key={currency} className="text-xl font-bold text-gray-900">{value} <span className="text-sm font-semibold text-gray-500">{currency}</span></p>
-                ))
-              )}
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+          {/* Sub-tab header */}
+          <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setCostsSubTab('monthly')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${costsSubTab === 'monthly' ? 'bg-violet-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+              >
+                Mes
+              </button>
+              <button
+                onClick={() => setCostsSubTab('balance')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${costsSubTab === 'balance' ? 'bg-violet-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
+              >
+                Balance acumulado
+              </button>
             </div>
-            <div className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Estimacion mensual</p>
-              {Object.entries(costs.monthlyEstimateByCurrency || {}).length === 0 ? (
-                <p className="text-sm font-semibold text-gray-400">Sin datos</p>
-              ) : (
-                Object.entries(costs.monthlyEstimateByCurrency || {}).map(([currency, value]) => (
-                  <p key={currency} className="text-xl font-bold text-gray-900">{value} <span className="text-sm font-semibold text-gray-500">{currency}</span></p>
-                ))
-              )}
-            </div>
-          </div>
-
-          {/* Cost breakdown table */}
-          <div className="overflow-x-auto">
-            {(costs.employeeCosts || []).length === 0 ? (
-              <div className="py-12 text-center text-sm text-gray-400">Sin datos de coste para esta semana</div>
-            ) : (
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-gray-100">
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Empleado</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Asignaciones</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Horas</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Tipo pago</th>
-                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Coste semanal</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(costs.employeeCosts || []).map((row, i) => (
-                    <tr key={row.employeeId} className={`hover:bg-gray-50/60 transition-colors ${i < costs.employeeCosts.length - 1 ? 'border-b border-gray-50' : ''}`}>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-2.5">
-                          <Avatar name={row.employeeName} />
-                          <span className="font-medium text-gray-800">{row.employeeName}</span>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-gray-600">{row.assignments}</td>
-                      <td className="px-4 py-3 text-gray-600">{row.totalHours}h</td>
-                      <td className="px-4 py-3 text-gray-600">{compTypeLabel(row.compensation?.paymentType)}</td>
-                      <td className="px-4 py-3 font-bold text-gray-900">{row.weeklyCost} <span className="text-xs font-semibold text-gray-500">{row.currency}</span></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            {/* Month nav — only for monthly sub-tab */}
+            {costsSubTab === 'monthly' && (
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setCostMonth((v) => addMonths(v, -1))}
+                  className="w-8 h-8 rounded-lg hover:bg-gray-100 transition-colors flex items-center justify-center text-gray-400 hover:text-gray-700"
+                  aria-label="Mes anterior"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
+                    <path fillRule="evenodd" d="M9.78 4.22a.75.75 0 0 1 0 1.06L7.06 8l2.72 2.72a.75.75 0 1 1-1.06 1.06L5.47 8.53a.75.75 0 0 1 0-1.06l3.25-3.25a.75.75 0 0 1 1.06 0Z" clipRule="evenodd" />
+                  </svg>
+                </button>
+                <label className="relative cursor-pointer group">
+                  <span className="px-3 py-1.5 rounded-lg text-sm font-semibold text-gray-800 group-hover:bg-gray-100 transition-colors block capitalize">
+                    {monthLabel}
+                  </span>
+                  <input
+                    type="month"
+                    value={costMonth}
+                    onChange={(e) => e.target.value && setCostMonth(e.target.value)}
+                    className="absolute inset-0 opacity-0 cursor-pointer w-full"
+                    tabIndex={-1}
+                  />
+                </label>
+                <button
+                  onClick={() => setCostMonth((v) => addMonths(v, 1))}
+                  className="w-8 h-8 rounded-lg hover:bg-gray-100 transition-colors flex items-center justify-center text-gray-400 hover:text-gray-700"
+                  aria-label="Mes siguiente"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
+                    <path fillRule="evenodd" d="M6.22 4.22a.75.75 0 0 1 1.06 0l3.25 3.25a.75.75 0 0 1 0 1.06L7.28 11.78a.75.75 0 0 1-1.06-1.06L9.94 8 6.22 4.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
+                  </svg>
+                </button>
+              </div>
             )}
           </div>
+
+          {costsLoading && <div className="h-20 mx-4 my-4 rounded-xl bg-gray-100 animate-pulse" />}
+
+          {/* ── MONTHLY SUB-TAB ── */}
+          {!costsLoading && costsSubTab === 'monthly' && (
+            <>
+              {/* Total card */}
+              {Object.entries(monthlyCosts.totalsByCurrency || {}).length > 0 && (
+                <div className="px-4 pt-4 pb-2 flex flex-wrap gap-3">
+                  {Object.entries(monthlyCosts.totalsByCurrency).map(([currency, value]) => (
+                    <div key={currency} className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5">
+                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Total {monthLabel}</p>
+                      <p className="text-2xl font-bold text-gray-900 mt-0.5">{value} <span className="text-sm font-semibold text-gray-500">{currency}</span></p>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="overflow-x-auto">
+                {(monthlyCosts.employeeCosts || []).length === 0 ? (
+                  <div className="py-16 text-center text-sm text-gray-400">Sin asignaciones en {monthLabel}</div>
+                ) : (
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-100">
+                        <th className="text-left px-5 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Empleado</th>
+                        <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Asignaciones</th>
+                        <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Horas</th>
+                        <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Tipo pago</th>
+                        <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Coste mes</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {(monthlyCosts.employeeCosts || []).map((row, i) => (
+                        <tr key={String(row.employeeId)} className={`hover:bg-gray-50/60 transition-colors ${i < monthlyCosts.employeeCosts.length - 1 ? 'border-b border-gray-50' : ''}`}>
+                          <td className="px-5 py-3.5">
+                            <div className="flex items-center gap-2.5">
+                              <Avatar name={row.employeeName} />
+                              <span className="font-medium text-gray-800">{row.employeeName}</span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3.5 text-gray-600">{row.assignments}</td>
+                          <td className="px-4 py-3.5 text-gray-600">{row.totalHours}h</td>
+                          <td className="px-4 py-3.5 text-gray-500 text-xs">{compTypeLabel(row.compensation?.paymentType)}</td>
+                          <td className="px-4 py-3.5 font-bold text-gray-900">{row.monthlyCost} <span className="text-xs font-semibold text-gray-400">{row.currency}</span></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </>
+          )}
+
+          {/* ── BALANCE SUB-TAB ── */}
+          {!costsLoading && costsSubTab === 'balance' && (
+            <>
+              <div className="px-5 py-3 border-b border-gray-50">
+                <p className="text-xs text-gray-400">Acumulado total generado menos pagos registrados. Pulsa <span className="font-semibold">Pagado</span> para registrar un cobro y resetear el saldo.</p>
+              </div>
+              <div className="overflow-x-auto">
+                {balances.filter((b) => b.employeeStatus === 'active' || b.balance !== 0).length === 0 ? (
+                  <div className="py-16 text-center text-sm text-gray-400">Sin datos de balance</div>
+                ) : (
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-100">
+                        <th className="text-left px-5 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Empleado</th>
+                        <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Generado</th>
+                        <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Pagado</th>
+                        <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Último pago</th>
+                        <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Pendiente</th>
+                        <th className="px-4 py-3" />
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {balances
+                        .filter((b) => b.employeeStatus === 'active' || b.balance !== 0)
+                        .map((row, i, arr) => {
+                          const isConfirming = confirmingPayment === String(row.employeeId);
+                          return (
+                            <tr key={String(row.employeeId)} className={`hover:bg-gray-50/60 transition-colors ${i < arr.length - 1 ? 'border-b border-gray-50' : ''}`}>
+                              <td className="px-5 py-3.5">
+                                <div className="flex items-center gap-2.5">
+                                  <Avatar name={row.employeeName} />
+                                  <span className="font-medium text-gray-800">{row.employeeName}</span>
+                                </div>
+                              </td>
+                              <td className="px-4 py-3.5 text-gray-600">{row.totalEarned} <span className="text-xs text-gray-400">{row.currency}</span></td>
+                              <td className="px-4 py-3.5 text-gray-600">{row.totalPaid} <span className="text-xs text-gray-400">{row.currency}</span></td>
+                              <td className="px-4 py-3.5 text-gray-400 text-xs">
+                                {row.lastPaidAt
+                                  ? new Date(row.lastPaidAt).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })
+                                  : '—'}
+                              </td>
+                              <td className="px-4 py-3.5">
+                                <span className={`font-bold text-base ${row.balance > 0 ? 'text-gray-900' : 'text-gray-400'}`}>
+                                  {row.balance} <span className="text-xs font-semibold text-gray-400">{row.currency}</span>
+                                </span>
+                              </td>
+                              <td className="px-4 py-3.5 text-right">
+                                {isConfirming ? (
+                                  <div className="flex items-center justify-end gap-2">
+                                    <span className="text-xs text-gray-500">¿Confirmar {row.balance} {row.currency}?</span>
+                                    <button
+                                      onClick={() => registerPayment(String(row.employeeId), row.balance, row.currency)}
+                                      className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
+                                    >
+                                      Confirmar
+                                    </button>
+                                    <button
+                                      onClick={() => setConfirmingPayment(null)}
+                                      className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
+                                    >
+                                      Cancelar
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <button
+                                    disabled={row.balance <= 0}
+                                    onClick={() => setConfirmingPayment(String(row.employeeId))}
+                                    className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+                                  >
+                                    Pagado
+                                  </button>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </>
+          )}
         </div>
       )}
 

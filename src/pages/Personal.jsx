@@ -346,7 +346,9 @@ function ShiftEditorModal({ day, shift, assignments, activeEmployees, positions,
   const [selectedPositionId, setSelectedPositionId] = useState('');
   const [selectedEmployeeId, setSelectedEmployeeId] = useState('');
   const [employeeQuery, setEmployeeQuery] = useState('');
+  const [employeePickerOpen, setEmployeePickerOpen] = useState(false);
   const [draftAssignments, setDraftAssignments] = useState(assignments || []);
+  const employeePickerRef = useRef(null);
 
   useEffect(() => {
     setDraftAssignments(assignments || []);
@@ -423,6 +425,12 @@ function ShiftEditorModal({ day, shift, assignments, activeEmployees, positions,
       );
     });
   }, [eligibleEmployeesForSelectedPosition, employeeQuery]);
+  const selectedEmployee = useMemo(
+    () => filteredEligibleEmployees.find((employee) => String(employee._id) === String(selectedEmployeeId))
+      || eligibleEmployeesForSelectedPosition.find((employee) => String(employee._id) === String(selectedEmployeeId))
+      || null,
+    [filteredEligibleEmployees, eligibleEmployeesForSelectedPosition, selectedEmployeeId],
+  );
 
   const totalAssigned = draftAssignments.length;
   const hasChanges = useMemo(() => {
@@ -456,11 +464,22 @@ function ShiftEditorModal({ day, shift, assignments, activeEmployees, positions,
       },
     ]);
     setSelectedEmployeeId('');
+    setEmployeeQuery('');
+    setEmployeePickerOpen(false);
   };
 
   const removeFromDraft = (assignmentId) => {
     setDraftAssignments((prev) => prev.filter((assignment) => String(assignment._id) !== String(assignmentId)));
   };
+  useEffect(() => {
+    if (!employeePickerOpen) return undefined;
+    const handleClickOutside = (event) => {
+      if (!employeePickerRef.current) return;
+      if (!employeePickerRef.current.contains(event.target)) setEmployeePickerOpen(false);
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [employeePickerOpen]);
 
   const saveChanges = async () => {
     if (!hasChanges) {
@@ -557,6 +576,7 @@ function ShiftEditorModal({ day, shift, assignments, activeEmployees, positions,
                   setSelectedPositionId(e.target.value);
                   setSelectedEmployeeId('');
                   setEmployeeQuery('');
+                  setEmployeePickerOpen(false);
                 }}
                 disabled={saving}
               >
@@ -567,35 +587,69 @@ function ShiftEditorModal({ day, shift, assignments, activeEmployees, positions,
               </select>
             </div>
             <div>
-              <label className={labelCls}>Buscar empleado</label>
-              <input
-                className={inputCls}
-                value={employeeQuery}
-                onChange={(e) => {
-                  setEmployeeQuery(e.target.value);
-                  setSelectedEmployeeId('');
-                }}
-                disabled={saving || !selectedPositionId}
-                placeholder={selectedPositionId ? 'Filtrar por nombre, email o telefono...' : 'Primero elige puesto'}
-              />
-            </div>
-            <div>
               <label className={labelCls}>Empleado</label>
-              <select
-                className={inputCls}
-                value={selectedEmployeeId}
-                onChange={(e) => setSelectedEmployeeId(e.target.value)}
-                disabled={saving || !selectedPositionId}
-              >
-                <option value="">
-                  {selectedPositionId ? 'Selecciona empleado...' : 'Primero elige puesto'}
-                </option>
-                {filteredEligibleEmployees.map((employee) => (
-                  <option key={employee._id} value={employee._id}>
-                    {`${employee.firstName} ${employee.lastName || ''}`.trim()}
-                  </option>
-                ))}
-              </select>
+              <div className="relative" ref={employeePickerRef}>
+                <input
+                  className={inputCls}
+                  value={employeeQuery}
+                  onFocus={() => {
+                    if (!selectedPositionId) return;
+                    setEmployeePickerOpen(true);
+                  }}
+                  onChange={(e) => {
+                    setEmployeeQuery(e.target.value);
+                    setSelectedEmployeeId('');
+                    if (selectedPositionId) setEmployeePickerOpen(true);
+                  }}
+                  disabled={saving || !selectedPositionId}
+                  placeholder={selectedPositionId ? 'Busca por nombre, email o telefono...' : 'Primero elige puesto'}
+                />
+                {selectedEmployee && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedEmployeeId('');
+                      setEmployeeQuery('');
+                      setEmployeePickerOpen(true);
+                    }}
+                    className="absolute right-2 top-2 text-[11px] px-2 py-1 rounded-md bg-violet-50 text-violet-700 hover:bg-violet-100"
+                  >
+                    Cambiar
+                  </button>
+                )}
+                {employeePickerOpen && selectedPositionId && (
+                  <div className="absolute z-20 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
+                    <div className="max-h-56 overflow-auto p-1.5 space-y-1">
+                      {filteredEligibleEmployees.length === 0 ? (
+                        <p className="text-xs text-gray-400 px-2 py-2">Sin resultados para la búsqueda</p>
+                      ) : (
+                        filteredEligibleEmployees.map((employee) => {
+                          const employeeName = `${employee.firstName || ''} ${employee.lastName || ''}`.trim();
+                          return (
+                            <button
+                              key={employee._id}
+                              type="button"
+                              onClick={() => {
+                                setSelectedEmployeeId(String(employee._id));
+                                setEmployeeQuery(employeeName);
+                                setEmployeePickerOpen(false);
+                              }}
+                              className={`w-full text-left px-2.5 py-2 rounded-lg transition-colors ${
+                                String(selectedEmployeeId) === String(employee._id)
+                                  ? 'bg-violet-50 text-violet-700'
+                                  : 'hover:bg-gray-50 text-gray-700'
+                              }`}
+                            >
+                              <p className="text-sm font-medium truncate">{employeeName}</p>
+                              <p className="text-xs text-gray-400 truncate">{employee.email || employee.phone || 'Sin contacto'}</p>
+                            </button>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
             <button
               onClick={addToDraft}

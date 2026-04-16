@@ -797,29 +797,10 @@ export default function Personal() {
           <div className="space-y-1.5">
             {Object.values(grouped).map((group, index) => (
               <div key={`${group.roleColor}-${index}`}>
-                <p className="text-[10px] font-semibold uppercase tracking-wide mb-1" style={{ color: group.roleColor }}>
+                <p className="text-[10px] font-semibold uppercase tracking-wide mb-0.5" style={{ color: group.roleColor }}>
                   {group.roleName}
                 </p>
-                <div className="flex flex-wrap gap-1">
-                  {group.names.map((name, ni) => {
-                    const initial = name?.[0]?.toUpperCase() || '?';
-                    return (
-                      <span
-                        key={ni}
-                        className="inline-flex items-center gap-1 text-[11px] font-medium rounded-full pl-0.5 pr-2 py-0.5 border"
-                        style={{ borderColor: group.roleColor, backgroundColor: `${group.roleColor}18` }}
-                      >
-                        <span
-                          className="w-4 h-4 rounded-full flex items-center justify-center text-white text-[9px] font-bold shrink-0"
-                          style={{ backgroundColor: group.roleColor }}
-                        >
-                          {initial}
-                        </span>
-                        <span className="text-gray-800 truncate max-w-[80px]">{name.split(' ')[0]}</span>
-                      </span>
-                    );
-                  })}
-                </div>
+                <p className="text-[12px] text-gray-700 leading-5">{group.names.join(', ')}</p>
               </div>
             ))}
           </div>

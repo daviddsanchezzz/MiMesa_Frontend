@@ -418,11 +418,7 @@ function ShiftEditorModal({ day, shift, assignments, activeEmployees, positions,
     if (!q) return eligibleEmployeesForSelectedPosition;
     return eligibleEmployeesForSelectedPosition.filter((employee) => {
       const fullName = `${employee.firstName || ''} ${employee.lastName || ''}`.trim().toLowerCase();
-      return (
-        fullName.includes(q) ||
-        (employee.email || '').toLowerCase().includes(q) ||
-        (employee.phone || '').toLowerCase().includes(q)
-      );
+      return fullName.includes(q);
     });
   }, [eligibleEmployeesForSelectedPosition, employeeQuery]);
   const selectedEmployee = useMemo(
@@ -602,7 +598,7 @@ function ShiftEditorModal({ day, shift, assignments, activeEmployees, positions,
                     if (selectedPositionId) setEmployeePickerOpen(true);
                   }}
                   disabled={saving || !selectedPositionId}
-                  placeholder={selectedPositionId ? 'Busca por nombre, email o telefono...' : 'Primero elige puesto'}
+                  placeholder={selectedPositionId ? 'Busca por nombre...' : 'Primero elige puesto'}
                 />
                 {selectedEmployee && (
                   <button
@@ -618,7 +614,7 @@ function ShiftEditorModal({ day, shift, assignments, activeEmployees, positions,
                   </button>
                 )}
                 {employeePickerOpen && selectedPositionId && (
-                  <div className="absolute z-20 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
+                  <div className="absolute z-30 -left-1 -right-1 mt-2 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden">
                     <div className="max-h-56 overflow-auto p-1.5 space-y-1">
                       {filteredEligibleEmployees.length === 0 ? (
                         <p className="text-xs text-gray-400 px-2 py-2">Sin resultados para la búsqueda</p>
@@ -641,7 +637,6 @@ function ShiftEditorModal({ day, shift, assignments, activeEmployees, positions,
                               }`}
                             >
                               <p className="text-sm font-medium truncate">{employeeName}</p>
-                              <p className="text-xs text-gray-400 truncate">{employee.email || employee.phone || 'Sin contacto'}</p>
                             </button>
                           );
                         })

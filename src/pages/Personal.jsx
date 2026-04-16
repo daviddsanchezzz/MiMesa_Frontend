@@ -1,6 +1,8 @@
 ﻿import { useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import Modal from '../components/Modal';
+import { useAuth } from '../context/AuthContext';
 
 const inputCls = 'w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white';
 const labelCls = 'block text-xs font-semibold text-gray-600 mb-1';
@@ -555,7 +557,21 @@ function PositionFormModal({ position, onClose, onSaved }) {
 }
 
 export default function Personal() {
-  const [tab, setTab] = useState('employees');
+  const { role } = useAuth();
+  const navigate = useNavigate();
+
+  // staff no tiene acceso a esta página
+  useEffect(() => {
+    if (role === 'staff') navigate('/', { replace: true });
+  }, [role]);
+
+  const allowedTabs = useMemo(() => {
+    if (role === 'owner') return ['employees', 'planner', 'costs'];
+    if (role === 'manager') return ['planner'];
+    return [];
+  }, [role]);
+
+  const [tab, setTab] = useState(() => (role === 'owner' ? 'employees' : 'planner'));
   const [weekStart, setWeekStart] = useState(mondayOf(todayIso()));
   const [mobileDayIndex, setMobileDayIndex] = useState(0);
   const [employees, setEmployees] = useState([]);
@@ -868,7 +884,7 @@ export default function Personal() {
           <p className="text-sm text-gray-500">Gestion de empleados, planificacion semanal y costes estimados.</p>
         </div>
         <div className="flex items-center gap-2">
-          {tabs.map((item) => (
+          {tabs.filter((item) => allowedTabs.includes(item.key)).map((item) => (
             <button
               key={item.key}
               onClick={() => setTab(item.key)}
@@ -884,7 +900,7 @@ export default function Personal() {
       {loading && <div className="h-28 rounded-2xl bg-gray-100 animate-pulse" />}
 
       {/* -- EMPLEADOS TAB -- */}
-      {!loading && tab === 'employees' && (
+      {!loading && tab === 'employees' && allowedTabs.includes('employees') && (
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
           {/* Sub-tab header */}
           <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
@@ -1178,7 +1194,7 @@ export default function Personal() {
       )}
 
       {/* -- PLANNER TAB -- */}
-      {!loading && tab === 'planner' && (
+      {!loading && tab === 'planner' && allowedTabs.includes('planner') && (
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 space-y-4">
           {/* Nav row */}
           <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -1308,7 +1324,7 @@ export default function Personal() {
       )}
 
       {/* -- COSTS TAB -- */}
-      {!loading && tab === 'costs' && (
+      {!loading && tab === 'costs' && allowedTabs.includes('costs') && (
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
           {/* Sub-tab header */}
           <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">

@@ -47,10 +47,32 @@ const shiftAppliesToDate = (shift, date) => {
   return true;
 };
 
+const formatMoney = (value, currency = 'EUR') => {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return '';
+  try {
+    return new Intl.NumberFormat('es-ES', {
+      style: 'currency',
+      currency,
+      currencyDisplay: 'narrowSymbol',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(parsed);
+  } catch {
+    return `${parsed.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}`;
+  }
+};
+
+const currencySymbol = (currency = 'EUR') => {
+  const sample = formatMoney(0, currency);
+  const symbol = sample.replace(/[0-9\s.,-]/g, '').trim();
+  return symbol || currency;
+};
+
 const compLabel = (comp) => {
   if (!comp) return null;
   const suffix = comp.paymentType === 'hourly' ? '/h' : comp.paymentType === 'per_shift' ? '/asignación' : '/mes';
-  return `${comp.baseAmount} ${comp.currency}${suffix}`;
+  return `${formatMoney(comp.baseAmount, comp.currency)}${suffix}`;
 };
 
 const compTypeLabel = (type) => {
@@ -757,6 +779,7 @@ function EmployeeAssignmentsModal({ employee, onClose, onDeleted }) {
 
   const compensation = employee?.activeCompensation || null;
   const currency = compensation?.currency || 'EUR';
+  const currencySign = currencySymbol(currency);
 
   const assignmentMinutes = (assignment) => {
     const shift = assignment?.shiftId || {};
@@ -897,7 +920,7 @@ function EmployeeAssignmentsModal({ employee, onClose, onDeleted }) {
                         {!isEditingPrice ? (
                           <div>
                             <span className="text-sm text-gray-800">
-                              {effectivePrice === null ? '—' : `${formattedPrice(effectivePrice)} ${currency}`}
+                              {effectivePrice === null ? '—' : formatMoney(effectivePrice, currency)}
                             </span>
                             {a.customPrice === null && autoPrice !== null && (
                               <p className="text-[11px] text-gray-400">Automático</p>
@@ -915,7 +938,7 @@ function EmployeeAssignmentsModal({ employee, onClose, onDeleted }) {
                                 disabled={isSavingPrice}
                                 className="w-24 border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-violet-500"
                               />
-                              <span className="text-xs text-gray-500">{currency}</span>
+                              <span className="text-xs text-gray-500">{currencySign}</span>
                             </div>
                             <button
                               type="button"
@@ -1306,7 +1329,7 @@ export default function Personal() {
     const totals = costs.totalsByCurrency || {};
     const entries = Object.entries(totals);
     if (!entries.length) return null;
-    return entries.map(([cur, val]) => `${val} ${cur}`).join(' · ');
+    return entries.map(([cur, val]) => formatMoney(val, cur)).join(' · ');
   }, [costs]);
 
   const currentMobileDay = days[mobileDayIndex] || days[0];
@@ -2146,7 +2169,7 @@ export default function Personal() {
                         <td className="hidden sm:table-cell px-4 py-3.5 text-gray-600">{row.assignments}</td>
                         <td className="hidden sm:table-cell px-4 py-3.5 text-gray-600">{row.totalHours}h</td>
                         <td className="hidden sm:table-cell px-4 py-3.5 text-gray-500 text-xs">{compTypeLabel(row.compensation?.paymentType)}</td>
-                        <td className="px-4 py-3.5 text-gray-800">{row.monthlyCost} <span className="text-xs text-gray-400">{row.currency}</span></td>
+                        <td className="px-4 py-3.5 text-gray-800">{formatMoney(row.monthlyCost, row.currency)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -2154,7 +2177,7 @@ export default function Personal() {
                     {Object.entries(monthlyCosts.totalsByCurrency || {}).map(([currency, value]) => (
                       <tr key={currency} className="border-t-2 border-gray-200 bg-gray-50">
                         <td className="px-5 py-3 font-semibold text-gray-700" colSpan={4}><span className="hidden sm:inline">Total {monthLabel}</span><span className="sm:hidden">Total</span></td>
-                        <td className="px-4 py-3 font-bold text-gray-900 text-base">{value} <span className="text-sm font-semibold text-gray-500">{currency}</span></td>
+                        <td className="px-4 py-3 font-bold text-gray-900 text-base">{formatMoney(value, currency)}</td>
                       </tr>
                     ))}
                   </tfoot>
@@ -2207,7 +2230,7 @@ export default function Personal() {
                               </td>
                               <td className="px-4 py-3.5">
                                 <span className={`font-bold text-base ${row.balance > 0 ? 'text-gray-900' : 'text-gray-400'}`}>
-                                  {row.balance} <span className="text-xs font-semibold text-gray-400">{row.currency}</span>
+                                  {formatMoney(row.balance, row.currency)}
                                 </span>
                               </td>
                               <td className="px-4 py-3.5">
@@ -2222,7 +2245,7 @@ export default function Personal() {
                                   )}
                                   {isConfirming ? (
                                     <div className="flex items-center gap-1.5">
-                                      <span className="text-xs text-gray-500 whitespace-nowrap">¿{row.balance} {row.currency}?</span>
+                                      <span className="text-xs text-gray-500 whitespace-nowrap">¿{formatMoney(row.balance, row.currency)}?</span>
                                       <button
                                         onClick={() => registerPayment(String(row.employeeId), row.balance, row.currency)}
                                         className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
@@ -2256,7 +2279,7 @@ export default function Personal() {
                           {Object.entries(totalPendingByCurrency).map(([currency, value]) => (
                             <tr key={currency} className="border-t-2 border-gray-200 bg-gray-50">
                               <td className="px-5 py-3 font-semibold text-gray-700" colSpan={2}>Total pendiente</td>
-                              <td className="px-4 py-3 font-bold text-gray-900 text-base">{value} <span className="text-sm font-semibold text-gray-500">{currency}</span></td>
+                              <td className="px-4 py-3 font-bold text-gray-900 text-base">{formatMoney(value, currency)}</td>
                               <td className="px-4 py-3" />
                             </tr>
                           ))}

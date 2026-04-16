@@ -1,4 +1,5 @@
 ﻿import { useEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import Modal from '../components/Modal';
@@ -991,21 +992,19 @@ export default function Personal() {
         <div className="flex items-start justify-between gap-2">
           <div>
             <p className="text-xs font-semibold text-gray-900">{shift.name}</p>
-            {!isExporting && <p className="text-[11px] text-gray-500">{shift.startTime} - {shift.endTime}</p>}
+            <p className="text-[11px] text-gray-500">{shift.startTime} - {shift.endTime}</p>
           </div>
-          {!isExporting && (
-            <div className="flex items-center gap-2">
-              <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-md ${rawList.length > 0 ? 'bg-violet-50 text-violet-700' : 'bg-gray-100 text-gray-400'}`}>
-                {rawList.length}
-              </span>
-              <button
-                onClick={() => setSlotEditor({ day, shift })}
-                className="text-[11px] font-semibold px-2 py-1 rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200"
-              >
-                Detalle
-              </button>
-            </div>
-          )}
+          <div className="flex items-center gap-2">
+            <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-md ${rawList.length > 0 ? 'bg-violet-50 text-violet-700' : 'bg-gray-100 text-gray-400'}`}>
+              {rawList.length}
+            </span>
+            <button
+              onClick={() => setSlotEditor({ day, shift })}
+              className="text-[11px] font-semibold px-2 py-1 rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200"
+            >
+              Detalle
+            </button>
+          </div>
         </div>
 
         {rawList.length === 0 ? (
@@ -1425,13 +1424,13 @@ export default function Personal() {
                       onClick={() => exportPlanner('png')}
                       className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2.5"
                     >
-                      <span className="text-base">🖼️</span> Imagen PNG
+                      <span className="text-base"></span> Imagen PNG
                     </button>
                     <button
                       onClick={() => exportPlanner('pdf')}
                       className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2.5"
                     >
-                      <span className="text-base">📄</span> PDF
+                      <span className="text-base"></span> PDF
                     </button>
                   </div>
                 )}
@@ -1451,17 +1450,7 @@ export default function Personal() {
           </div>
 
           {/* Desktop grid */}
-          <div className={isExporting ? 'block overflow-x-visible' : 'hidden md:block overflow-x-auto'}>
-            <div ref={plannerGridRef} className={isExporting ? 'bg-white p-6 rounded-xl' : ''}>
-              {isExporting && (
-                <div className="mb-5 pb-4 border-b border-gray-200 flex items-end justify-between">
-                  <div>
-                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-0.5">{business?.name || 'Planificación'}</p>
-                    <p className="text-xl font-bold text-gray-900">Planificación</p>
-                  </div>
-                  <p className="text-sm font-semibold text-gray-500">{weekLabel}</p>
-                </div>
-              )}
+          <div className="hidden md:block overflow-x-auto">
             <div className="grid grid-cols-7 gap-2.5 min-w-[1280px]">
               {days.map((day) => {
                 const isToday = day.date === today;
@@ -1470,26 +1459,23 @@ export default function Personal() {
                 return (
                   <div
                     key={day.date}
-                    className={`rounded-xl border p-2.5 space-y-2 ${isExporting ? '' : 'max-h-[74vh] overflow-auto'} ${
-                      !isExporting && isToday
-                        ? 'border-violet-300 bg-violet-50/40'
-                        : 'border-gray-200 bg-gray-50'
+                    className={`rounded-xl border p-2.5 space-y-2 max-h-[74vh] overflow-auto ${
+                      isToday ? 'border-violet-300 bg-violet-50/40' : 'border-gray-200 bg-gray-50'
                     }`}
                   >
-                    <div className={`px-1 pb-1.5 border-b ${isExporting ? '' : 'sticky top-0 z-10'} ${!isExporting && isToday ? 'border-violet-200 bg-violet-50/40' : 'border-gray-200 bg-gray-50'}`}>
+                    <div className={`px-1 pb-1.5 border-b sticky top-0 z-10 ${isToday ? 'border-violet-200 bg-violet-50/40' : 'border-gray-200 bg-gray-50'}`}>
                       <div className="flex items-center justify-between gap-1">
                         <div>
-                          <p className={`text-xs uppercase font-semibold ${!isExporting && isToday ? 'text-violet-600' : 'text-gray-400'}`}>{day.short}</p>
-                          <p className={`text-sm font-bold ${!isExporting && isToday ? 'text-violet-700' : 'text-gray-900'}`}>{day.day}</p>
+                          <p className={`text-xs uppercase font-semibold ${isToday ? 'text-violet-600' : 'text-gray-400'}`}>{day.short}</p>
+                          <p className={`text-sm font-bold ${isToday ? 'text-violet-700' : 'text-gray-900'}`}>{day.day}</p>
                         </div>
-                        {!isExporting && totalForDay > 0 && (
+                        {totalForDay > 0 && (
                           <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${isToday ? 'bg-violet-100 text-violet-700' : 'bg-gray-200 text-gray-600'}`}>
                             {totalForDay}
                           </span>
                         )}
                       </div>
                     </div>
-
                     {dayShifts.length === 0 ? (
                       <p className="text-[11px] text-gray-300 text-center pt-2">Sin turnos</p>
                     ) : (
@@ -1499,7 +1485,6 @@ export default function Personal() {
                 );
               })}
             </div>
-            </div>{/* /plannerGridRef */}
           </div>
 
           {/* Mobile day selector */}
@@ -1532,6 +1517,70 @@ export default function Personal() {
               </div>
             )}
           </div>
+
+          {/* Export portal — rendered off-screen, always full 7-day grid */}
+          {isExporting && createPortal(
+            <div
+              ref={plannerGridRef}
+              style={{ position: 'fixed', left: '-9999px', top: 0, width: '1500px', backgroundColor: '#ffffff', padding: '32px', boxSizing: 'border-box', fontFamily: 'system-ui, -apple-system, sans-serif' }}
+            >
+              {/* Header */}
+              <div style={{ marginBottom: '20px', paddingBottom: '16px', borderBottom: '1px solid #e5e7eb', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
+                <div>
+                  <p style={{ fontSize: '11px', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '4px' }}>{business?.name || 'Planificación'}</p>
+                  <p style={{ fontSize: '22px', fontWeight: 700, color: '#111827', margin: 0 }}>Planificación semanal</p>
+                </div>
+                <p style={{ fontSize: '14px', fontWeight: 600, color: '#6b7280', margin: 0 }}>{weekLabel}</p>
+              </div>
+              {/* Grid */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '10px' }}>
+                {days.map((day) => {
+                  const dayShifts = shiftRowsByDay[day.date] || [];
+                  return (
+                    <div key={day.date} style={{ borderRadius: '12px', border: '1px solid #e5e7eb', padding: '10px', backgroundColor: '#f9fafb' }}>
+                      <div style={{ paddingBottom: '8px', borderBottom: '1px solid #e5e7eb', marginBottom: '8px' }}>
+                        <p style={{ fontSize: '10px', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 2px' }}>{day.short}</p>
+                        <p style={{ fontSize: '15px', fontWeight: 700, color: '#111827', margin: 0 }}>{day.day}</p>
+                      </div>
+                      {dayShifts.length === 0 ? (
+                        <p style={{ fontSize: '11px', color: '#d1d5db', textAlign: 'center', paddingTop: '8px', margin: 0 }}>Sin turnos</p>
+                      ) : (
+                        dayShifts.map((shift) => {
+                          const key = `${day.date}__${shift._id}`;
+                          const rawList = assignmentsByDayShift[key] || [];
+                          const grouped = rawList.reduce((acc, a) => {
+                            const emp = a.employeeId || {};
+                            const role = a.roleLabel || emp.position || 'Sin puesto';
+                            const color = positionColorByName.get(role) || emp.positionColor || '#64748B';
+                            const gk = `${role}__${color}`;
+                            if (!acc[gk]) acc[gk] = { role, color, names: [] };
+                            acc[gk].names.push(emp?.firstName ? `${emp.firstName} ${emp.lastName || ''}`.trim() : 'Empleado');
+                            return acc;
+                          }, {});
+                          return (
+                            <div key={shift._id} style={{ backgroundColor: '#fff', borderRadius: '8px', border: '1px solid #e5e7eb', padding: '8px 10px', marginBottom: '6px' }}>
+                              <p style={{ fontSize: '12px', fontWeight: 600, color: '#111827', margin: '0 0 6px' }}>{shift.name}</p>
+                              {rawList.length === 0 ? (
+                                <p style={{ fontSize: '11px', color: '#d1d5db', fontStyle: 'italic', margin: 0 }}>Sin empleados asignados</p>
+                              ) : (
+                                Object.values(grouped).map((g, i) => (
+                                  <div key={i} style={{ marginBottom: '4px' }}>
+                                    <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: g.color, margin: '0 0 2px' }}>{g.role}</p>
+                                    <p style={{ fontSize: '11px', color: '#374151', margin: 0 }}>{g.names.join(', ')}</p>
+                                  </div>
+                                ))
+                              )}
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>,
+            document.body
+          )}
         </div>
       )}
 

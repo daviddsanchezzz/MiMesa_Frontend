@@ -1383,52 +1383,47 @@ export default function Personal() {
 
           {/* ── MONTHLY SUB-TAB ── */}
           {!costsLoading && costsSubTab === 'monthly' && (
-            <>
-              {/* Total card */}
-              {Object.entries(monthlyCosts.totalsByCurrency || {}).length > 0 && (
-                <div className="px-4 pt-4 pb-2 flex flex-wrap gap-3">
-                  {Object.entries(monthlyCosts.totalsByCurrency).map(([currency, value]) => (
-                    <div key={currency} className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-2.5">
-                      <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Total {monthLabel}</p>
-                      <p className="text-2xl font-bold text-gray-900 mt-0.5">{value} <span className="text-sm font-semibold text-gray-500">{currency}</span></p>
-                    </div>
-                  ))}
-                </div>
-              )}
-              <div className="overflow-x-auto">
-                {(monthlyCosts.employeeCosts || []).length === 0 ? (
-                  <div className="py-16 text-center text-sm text-gray-400">Sin asignaciones en {monthLabel}</div>
-                ) : (
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-gray-100">
-                        <th className="text-left px-5 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Empleado</th>
-                        <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Asignaciones</th>
-                        <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Horas</th>
-                        <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Tipo pago</th>
-                        <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Coste mes</th>
+            <div className="overflow-x-auto">
+              {(monthlyCosts.employeeCosts || []).length === 0 ? (
+                <div className="py-16 text-center text-sm text-gray-400">Sin asignaciones en {monthLabel}</div>
+              ) : (
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-100">
+                      <th className="text-left px-5 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Empleado</th>
+                      <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Asignaciones</th>
+                      <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Horas</th>
+                      <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Tipo pago</th>
+                      <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Coste mes</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(monthlyCosts.employeeCosts || []).map((row) => (
+                      <tr key={String(row.employeeId)} className="border-b border-gray-50 hover:bg-gray-50/60 transition-colors">
+                        <td className="px-5 py-3.5">
+                          <div className="flex items-center gap-2.5">
+                            <Avatar name={row.employeeName} />
+                            <span className="font-medium text-gray-800">{row.employeeName}</span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3.5 text-gray-600">{row.assignments}</td>
+                        <td className="px-4 py-3.5 text-gray-600">{row.totalHours}h</td>
+                        <td className="px-4 py-3.5 text-gray-500 text-xs">{compTypeLabel(row.compensation?.paymentType)}</td>
+                        <td className="px-4 py-3.5 text-gray-800">{row.monthlyCost} <span className="text-xs text-gray-400">{row.currency}</span></td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {(monthlyCosts.employeeCosts || []).map((row, i) => (
-                        <tr key={String(row.employeeId)} className={`hover:bg-gray-50/60 transition-colors ${i < monthlyCosts.employeeCosts.length - 1 ? 'border-b border-gray-50' : ''}`}>
-                          <td className="px-5 py-3.5">
-                            <div className="flex items-center gap-2.5">
-                              <Avatar name={row.employeeName} />
-                              <span className="font-medium text-gray-800">{row.employeeName}</span>
-                            </div>
-                          </td>
-                          <td className="px-4 py-3.5 text-gray-600">{row.assignments}</td>
-                          <td className="px-4 py-3.5 text-gray-600">{row.totalHours}h</td>
-                          <td className="px-4 py-3.5 text-gray-500 text-xs">{compTypeLabel(row.compensation?.paymentType)}</td>
-                          <td className="px-4 py-3.5 font-bold text-gray-900">{row.monthlyCost} <span className="text-xs font-semibold text-gray-400">{row.currency}</span></td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                )}
-              </div>
-            </>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    {Object.entries(monthlyCosts.totalsByCurrency || {}).map(([currency, value]) => (
+                      <tr key={currency} className="border-t-2 border-gray-200 bg-gray-50">
+                        <td className="px-5 py-3 font-semibold text-gray-700" colSpan={4}>Total {monthLabel}</td>
+                        <td className="px-4 py-3 font-bold text-gray-900 text-base">{value} <span className="text-sm font-semibold text-gray-500">{currency}</span></td>
+                      </tr>
+                    ))}
+                  </tfoot>
+                </table>
+              )}
+            </div>
           )}
 
           {/* ── BALANCE SUB-TAB ── */}

@@ -343,150 +343,263 @@ function CompensationModal({ employee, onClose, onSaved }) {
 function ShiftEditorModal({ day, shift, assignments, activeEmployees, positions, onClose, onRefresh }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-  const [selectedByColumn, setSelectedByColumn] = useState({});
+  const [selectedPositionId, setSelectedPositionId] = useState('');
+  const [selectedEmployeeId, setSelectedEmployeeId] = useState('');
+  const [draftAssignments, setDraftAssignments] = useState(assignments || []);
 
-  const assignedIds = new Set(assignments.map((a) => String(a.employeeId?._id || a.employeeId)));
-  const availableEmployees = useMemo(
-    () => activeEmployees.filter((employee) => !assignedIds.has(String(employee._id))),
-    [activeEmployees, assignments],
+  useEffect(() => {
+    setDraftAssignments(assignments || []);
+  }, [assignments]);
+
+  const activePositions = useMemo(
+    () => (positions || []).filter((position) => position.status === 'active'),
+    [positions],
   );
 
-  const columns = useMemo(() => {
-    const activePositions = (positions || []).filter((position) => position.status === 'active');
-    const baseColumns = activePositions.map((position) => ({
+  const employeeById = useMemo(() => {
+    const map = new Map();
+    (activeEmployees || []).forEach((employee) => map.set(String(employee._id), employee));
+    return map;
+  }, [activeEmployees]);
+
+  const initialAssignmentIds = useMemo(
+    () => new Set((assignments || []).map((assignment) => String(assignment._id))),
+    [assignments],
+  );
+
+  const assignmentsByPosition = useMemo(() => {
+    const base = activePositions.map((position) => ({
       key: String(position._id),
       label: position.name,
       color: position.color || '#64748B',
-      assigned: [],
-      available: [],
+      assignments: [],
     }));
+    const byKey = new Map(base.map((column) => [column.key, column]));
+    const byName = new Map(base.map((column) => [column.label, column]));
 
-    const byKey = new Map(baseColumns.map((column) => [column.key, column]));
-    const byName = new Map(baseColumns.map((column) => [column.label, column]));
-
-    assignments.forEach((assignment) => {
-      const employee = assignment.employeeId;
-      const key = employee?.positionId ? String(employee.positionId) : null;
-      const column = (assignment.roleLabel && byName.get(assignment.roleLabel)) || (key ? byKey.get(key) : null);
+    draftAssignments.forEach((assignment) => {
+      const employee = assignment.employeeId || {};
+      const roleMatch = assignment.roleLabel ? byName.get(assignment.roleLabel) : null;
+      const legacyKey = employee?.positionId ? String(employee.positionId) : null;
+      const column = roleMatch || (legacyKey ? byKey.get(legacyKey) : null);
       if (!column) return;
-      column.assigned.push(assignment);
+      column.assignments.push(assignment);
     });
 
-    availableEmployees.forEach((employee) => {
+    return base;
+  }, [activePositions, draftAssignments]);
+
+  const assignedEmployeeIds = useMemo(
+    () => new Set(draftAssignments.map((assignment) => String(assignment.employeeId?._id || assignment.employeeId))),
+    [draftAssignments],
+  );
+
+  const availableEmployees = useMemo(
+    () => activeEmployees.filter((employee) => !assignedEmployeeIds.has(String(employee._id))),
+    [activeEmployees, assignedEmployeeIds],
+  );
+
+  const eligibleEmployeesForSelectedPosition = useMemo(() => {
+    if (!selectedPositionId) return [];
+    return availableEmployees.filter((employee) => {
       const ids = Array.isArray(employee?.positionIds) && employee.positionIds.length
         ? employee.positionIds.map(String)
         : employee?.positionId
           ? [String(employee.positionId)]
           : [];
-      ids.forEach((id) => {
-        const column = byKey.get(id);
-        if (column) column.available.push(employee);
-      });
+      return ids.includes(String(selectedPositionId));
     });
+  }, [availableEmployees, selectedPositionId]);
 
-    return baseColumns;
-  }, [positions, assignments, availableEmployees]);
-
-  const addEmployee = async (employeeId, columnKey) => {
-    if (!employeeId) return;
-    setSaving(true);
-    setError('');
-    try {
-      const column = columns.find((item) => String(item.key) === String(columnKey));
-      await api.post('/staff/assignments', {
-        employeeId,
-        date: day.date,
-        shiftId: shift._id,
-        roleLabel: column?.label || '',
-      });
-      await onRefresh();
-    } catch (err) {
-      setError(err?.response?.data?.message || 'No se pudo asignar el empleado');
-    } finally {
-      setSaving(false);
+  const totalAssigned = draftAssignments.length;
+  const hasChanges = useMemo(() => {
+    if ((assignments || []).length !== draftAssignments.length) return true;
+    const currentSet = new Set(draftAssignments.filter((assignment) => assignment._id).map((assignment) => String(assignment._id)));
+    if (currentSet.size !== initialAssignmentIds.size) return true;
+    for (const id of initialAssignmentIds) {
+      if (!currentSet.has(id)) return true;
     }
+    return draftAssignments.some((assignment) => !assignment._id);
+  }, [assignments, draftAssignments, initialAssignmentIds]);
+
+  const addToDraft = () => {
+    if (!selectedPositionId || !selectedEmployeeId) return;
+    const position = activePositions.find((item) => String(item._id) === String(selectedPositionId));
+    const employee = employeeById.get(String(selectedEmployeeId));
+    if (!position || !employee) return;
+    const employeeId = String(employee._id);
+    if (assignedEmployeeIds.has(employeeId)) return;
+
+    const tempId = `tmp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    setDraftAssignments((prev) => [
+      ...prev,
+      {
+        _id: tempId,
+        __temp: true,
+        date: day.date,
+        shiftId: shift,
+        roleLabel: position.name,
+        employeeId: employee,
+      },
+    ]);
+    setSelectedEmployeeId('');
   };
 
-  const removeEmployee = async (assignmentId) => {
+  const removeFromDraft = (assignmentId) => {
+    setDraftAssignments((prev) => prev.filter((assignment) => String(assignment._id) !== String(assignmentId)));
+  };
+
+  const saveChanges = async () => {
+    if (!hasChanges) {
+      onClose();
+      return;
+    }
     setSaving(true);
     setError('');
     try {
-      await api.delete(`/staff/assignments/${assignmentId}`);
+      const persistedNow = draftAssignments.filter((assignment) => assignment._id && !String(assignment._id).startsWith('tmp_'));
+      const persistedIdsNow = new Set(persistedNow.map((assignment) => String(assignment._id)));
+      const toDeleteIds = [...initialAssignmentIds].filter((id) => !persistedIdsNow.has(id));
+      const toCreate = draftAssignments.filter((assignment) => String(assignment._id).startsWith('tmp_'));
+
+      await Promise.all(toDeleteIds.map((id) => api.delete(`/staff/assignments/${id}`)));
+      await Promise.all(toCreate.map((assignment) => api.post('/staff/assignments', {
+        employeeId: assignment.employeeId?._id || assignment.employeeId,
+        date: day.date,
+        shiftId: shift._id,
+        roleLabel: assignment.roleLabel || '',
+      })));
+
       await onRefresh();
+      onClose();
     } catch (err) {
-      setError(err?.response?.data?.message || 'No se pudo quitar el empleado');
+      setError(err?.response?.data?.message || 'No se pudieron guardar los cambios del turno');
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <Modal title={`Detalle del turno - ${shift.name}`} subtitle={`${day.fullLabel} · ${shift.startTime}-${shift.endTime}`} onClose={onClose} size="xl">
-      <div className="space-y-3">
+    <Modal
+      title={`Detalle del turno · ${shift.name}`}
+      subtitle={`${day.fullLabel} · ${shift.startTime}-${shift.endTime}`}
+      onClose={onClose}
+      size="xl"
+    >
+      <div className="space-y-4">
         {error && <div className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</div>}
-        <div className="overflow-x-auto">
-          <div className="grid grid-flow-col auto-cols-[260px] gap-3">
-            {columns.map((column) => (
-              <section key={column.key} className="rounded-xl border border-gray-200 bg-white p-3 space-y-3">
-                <div className="flex items-center gap-2">
-                  <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: column.color }} />
-                  <p className="text-sm font-semibold text-gray-900">{column.label}</p>
-                  <span className="ml-auto text-xs font-semibold px-1.5 py-0.5 rounded-md bg-gray-100 text-gray-600">{column.assigned.length}</span>
-                </div>
 
-                <div className="space-y-1.5 min-h-[180px]">
-                  {column.assigned.length === 0 && <p className="text-xs text-gray-400 italic">Sin asignados</p>}
-                  {column.assigned.map((assignment) => {
-                    const employee = assignment.employeeId;
-                    const employeeName = employee?.firstName ? `${employee.firstName} ${employee.lastName || ''}`.trim() : 'Empleado';
-                    return (
-                      <div key={assignment._id} className="flex items-center justify-between gap-2 rounded-lg border border-gray-200 px-2 py-1.5 bg-gray-50/60">
-                        <span className="text-xs text-gray-800 truncate font-medium">{employeeName}</span>
-                        <button
-                          onClick={() => removeEmployee(assignment._id)}
-                          disabled={saving}
-                          className="text-[11px] text-rose-600 hover:underline disabled:opacity-60 shrink-0"
-                        >
-                          Quitar
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
+        <div className="rounded-xl border border-gray-200 bg-gray-50/70 px-3 py-2 flex items-center justify-between">
+          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Resumen</p>
+          <span className="inline-flex items-center rounded-full bg-white border border-gray-200 px-2.5 py-1 text-xs font-semibold text-gray-700">
+            {totalAssigned} asignados
+          </span>
+        </div>
 
-                <div className="pt-2 border-t border-gray-100 space-y-2">
-                  <select
-                    className="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-violet-500"
-                    value={selectedByColumn[column.key] || ''}
-                    onChange={(e) => setSelectedByColumn((prev) => ({ ...prev, [column.key]: e.target.value }))}
-                    disabled={saving}
-                  >
-                    <option value="">Seleccionar empleado...</option>
-                    {column.available.map((employee) => {
-                      const employeeName = `${employee.firstName} ${employee.lastName || ''}`.trim();
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_290px] gap-4">
+          <div className="space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
+              {assignmentsByPosition.map((column) => (
+                <section key={column.key} className="rounded-xl border border-gray-200 bg-white p-3 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: column.color }} />
+                    <p className="text-sm font-semibold text-gray-900">{column.label}</p>
+                    <span className="ml-auto text-xs font-semibold px-1.5 py-0.5 rounded-md bg-gray-100 text-gray-600">{column.assignments.length}</span>
+                  </div>
+
+                  <div className="space-y-1.5 min-h-[120px]">
+                    {column.assignments.length === 0 && (
+                      <p className="text-xs italic text-gray-400">Sin asignados</p>
+                    )}
+                    {column.assignments.map((assignment) => {
+                      const employee = assignment.employeeId || {};
+                      const employeeName = employee?.firstName ? `${employee.firstName} ${employee.lastName || ''}`.trim() : 'Empleado';
                       return (
-                        <option key={employee._id} value={employee._id}>
-                          {employeeName}
-                        </option>
+                        <div key={assignment._id} className="flex items-center justify-between gap-2 px-2 py-1.5 rounded-lg hover:bg-gray-50">
+                          <span className="text-sm text-gray-800 truncate">{employeeName}</span>
+                          <button
+                            onClick={() => removeFromDraft(assignment._id)}
+                            disabled={saving}
+                            className="text-[11px] text-rose-600 hover:underline disabled:opacity-60 shrink-0"
+                          >
+                            Quitar
+                          </button>
+                        </div>
                       );
                     })}
-                  </select>
-                  <button
-                    onClick={async () => {
-                      const selectedId = selectedByColumn[column.key];
-                      if (!selectedId) return;
-                      await addEmployee(selectedId, column.key);
-                      setSelectedByColumn((prev) => ({ ...prev, [column.key]: '' }));
-                    }}
-                    disabled={saving || !selectedByColumn[column.key]}
-                    className="w-full text-xs font-semibold px-2 py-1.5 rounded-lg bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-60"
-                  >
-                    Añadir
-                  </button>
-                </div>
-              </section>
-            ))}
+                  </div>
+                </section>
+              ))}
+            </div>
           </div>
+
+          <aside className="rounded-xl border border-gray-200 bg-white p-3 space-y-3 h-fit">
+            <p className="text-sm font-semibold text-gray-900">Añadir personal</p>
+            <div>
+              <label className={labelCls}>Puesto</label>
+              <select
+                className={inputCls}
+                value={selectedPositionId}
+                onChange={(e) => {
+                  setSelectedPositionId(e.target.value);
+                  setSelectedEmployeeId('');
+                }}
+                disabled={saving}
+              >
+                <option value="">Selecciona puesto...</option>
+                {activePositions.map((position) => (
+                  <option key={position._id} value={position._id}>{position.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className={labelCls}>Empleado</label>
+              <select
+                className={inputCls}
+                value={selectedEmployeeId}
+                onChange={(e) => setSelectedEmployeeId(e.target.value)}
+                disabled={saving || !selectedPositionId}
+              >
+                <option value="">
+                  {selectedPositionId ? 'Selecciona empleado...' : 'Primero elige puesto'}
+                </option>
+                {eligibleEmployeesForSelectedPosition.map((employee) => (
+                  <option key={employee._id} value={employee._id}>
+                    {`${employee.firstName} ${employee.lastName || ''}`.trim()}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <button
+              onClick={addToDraft}
+              disabled={saving || !selectedPositionId || !selectedEmployeeId}
+              className="w-full text-sm font-semibold px-3 py-2 rounded-lg bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-60"
+            >
+              Añadir
+            </button>
+            {selectedPositionId && eligibleEmployeesForSelectedPosition.length === 0 && (
+              <p className="text-xs text-amber-600">No hay empleados disponibles para este puesto.</p>
+            )}
+          </aside>
+        </div>
+
+        <div className="pt-2 border-t border-gray-100 flex items-center justify-end gap-2">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={saving}
+            className="px-3 py-2 rounded-lg text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-60"
+          >
+            Cerrar
+          </button>
+          <button
+            type="button"
+            onClick={saveChanges}
+            disabled={saving || !hasChanges}
+            className="px-3 py-2 rounded-lg text-sm bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-60"
+          >
+            {saving ? 'Guardando...' : 'Guardar cambios'}
+          </button>
         </div>
       </div>
     </Modal>

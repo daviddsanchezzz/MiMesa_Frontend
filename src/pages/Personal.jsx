@@ -9,8 +9,8 @@ const inputCls = 'w-full border border-gray-300 rounded-xl px-3 py-2 text-sm foc
 const labelCls = 'block text-xs font-semibold text-gray-600 mb-1';
 
 const tabs = [
-  { key: 'employees', label: 'Empleados' },
   { key: 'planner', label: 'Planificacion' },
+  { key: 'employees', label: 'Empleados' },
   { key: 'costs', label: 'Costes' },
 ];
 
@@ -654,7 +654,7 @@ export default function Personal() {
     return [];
   }, [role]);
 
-  const [tab, setTab] = useState(() => (role === 'owner' ? 'employees' : 'planner'));
+  const [tab, setTab] = useState('planner');
   const [weekStart, setWeekStart] = useState(mondayOf(todayIso()));
   const [mobileDayIndex, setMobileDayIndex] = useState(() => {
     const ws = mondayOf(todayIso());

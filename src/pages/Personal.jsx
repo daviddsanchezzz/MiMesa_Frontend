@@ -655,7 +655,11 @@ export default function Personal() {
 
   const [tab, setTab] = useState(() => (role === 'owner' ? 'employees' : 'planner'));
   const [weekStart, setWeekStart] = useState(mondayOf(todayIso()));
-  const [mobileDayIndex, setMobileDayIndex] = useState(0);
+  const [mobileDayIndex, setMobileDayIndex] = useState(() => {
+    const ws = mondayOf(todayIso());
+    const diff = Math.round((new Date(todayIso()) - new Date(ws)) / 86400000);
+    return diff >= 0 && diff <= 6 ? diff : 0;
+  });
   const [employees, setEmployees] = useState([]);
   const [positions, setPositions] = useState([]);
   const [assignments, setAssignments] = useState([]);
@@ -764,7 +768,10 @@ export default function Personal() {
   useEffect(() => {
     if (tab === 'costs' && costsSubTab === 'monthly') loadMonthlyCosts(costMonth);
   }, [costMonth]);
-  useEffect(() => { setMobileDayIndex(0); }, [weekStart]);
+  useEffect(() => {
+    const diff = Math.round((new Date(todayIso()) - new Date(weekStart)) / 86400000);
+    setMobileDayIndex(diff >= 0 && diff <= 6 ? diff : 0);
+  }, [weekStart]);
 
   const days = useMemo(() => weekDays(weekStart), [weekStart]);
   const today = todayIso();

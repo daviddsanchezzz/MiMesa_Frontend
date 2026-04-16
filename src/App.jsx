@@ -79,7 +79,7 @@ function LayoutShell({ children, fullBleed = false }) {
   if (!business.id && !business.isDev) return <Navigate to="/onboarding" replace />;
 
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden">
+    <div className="flex h-[100dvh] bg-gray-50 overflow-hidden">
       {sidebarOpen && (
         <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={() => setSidebarOpen(false)} />
       )}

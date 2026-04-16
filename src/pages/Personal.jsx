@@ -347,8 +347,10 @@ function ShiftEditorModal({ day, shift, assignments, activeEmployees, positions,
   const [selectedEmployeeId, setSelectedEmployeeId] = useState('');
   const [employeeQuery, setEmployeeQuery] = useState('');
   const [employeePickerOpen, setEmployeePickerOpen] = useState(false);
+  const [employeePickerMenuStyle, setEmployeePickerMenuStyle] = useState(null);
   const [draftAssignments, setDraftAssignments] = useState(assignments || []);
   const employeePickerRef = useRef(null);
+  const employeePickerMenuRef = useRef(null);
 
   useEffect(() => {
     setDraftAssignments(assignments || []);
@@ -470,12 +472,32 @@ function ShiftEditorModal({ day, shift, assignments, activeEmployees, positions,
   useEffect(() => {
     if (!employeePickerOpen) return undefined;
     const handleClickOutside = (event) => {
-      if (!employeePickerRef.current) return;
-      if (!employeePickerRef.current.contains(event.target)) setEmployeePickerOpen(false);
+      const inTrigger = employeePickerRef.current && employeePickerRef.current.contains(event.target);
+      const inMenu = employeePickerMenuRef.current && employeePickerMenuRef.current.contains(event.target);
+      if (!inTrigger && !inMenu) setEmployeePickerOpen(false);
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [employeePickerOpen]);
+  useEffect(() => {
+    if (!employeePickerOpen || !selectedPositionId) return undefined;
+    const updateMenuPosition = () => {
+      if (!employeePickerRef.current) return;
+      const rect = employeePickerRef.current.getBoundingClientRect();
+      setEmployeePickerMenuStyle({
+        top: rect.bottom + 8,
+        left: rect.left - 4,
+        width: rect.width + 8,
+      });
+    };
+    updateMenuPosition();
+    window.addEventListener('resize', updateMenuPosition);
+    window.addEventListener('scroll', updateMenuPosition, true);
+    return () => {
+      window.removeEventListener('resize', updateMenuPosition);
+      window.removeEventListener('scroll', updateMenuPosition, true);
+    };
+  }, [employeePickerOpen, selectedPositionId]);
 
   const saveChanges = async () => {
     if (!hasChanges) {
@@ -614,37 +636,6 @@ function ShiftEditorModal({ day, shift, assignments, activeEmployees, positions,
                     Cambiar
                   </button>
                 )}
-                {employeePickerOpen && selectedPositionId && (
-                  <div className="absolute z-30 -left-1 -right-1 mt-2 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden">
-                    <div className="p-1.5 space-y-1">
-                      {filteredEligibleEmployees.length === 0 ? (
-                        <p className="text-xs text-gray-400 px-2 py-2">Sin resultados para la búsqueda</p>
-                      ) : (
-                        filteredEligibleEmployees.map((employee) => {
-                          const employeeName = `${employee.firstName || ''} ${employee.lastName || ''}`.trim();
-                          return (
-                            <button
-                              key={employee._id}
-                              type="button"
-                              onClick={() => {
-                                setSelectedEmployeeId(String(employee._id));
-                                setEmployeeQuery(employeeName);
-                                setEmployeePickerOpen(false);
-                              }}
-                              className={`w-full text-left px-2.5 py-2 rounded-lg transition-colors ${
-                                String(selectedEmployeeId) === String(employee._id)
-                                  ? 'bg-violet-50 text-violet-700'
-                                  : 'hover:bg-gray-50 text-gray-700'
-                              }`}
-                            >
-                              <p className="text-sm font-medium truncate">{employeeName}</p>
-                            </button>
-                          );
-                        })
-                      )}
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
             <button
@@ -659,6 +650,47 @@ function ShiftEditorModal({ day, shift, assignments, activeEmployees, positions,
             )}
           </aside>
         </div>
+
+        {employeePickerOpen && selectedPositionId && employeePickerMenuStyle && createPortal(
+          <div
+            ref={employeePickerMenuRef}
+            className="fixed z-[90] bg-white border border-gray-200 rounded-xl shadow-2xl overflow-hidden"
+            style={{
+              top: employeePickerMenuStyle.top,
+              left: employeePickerMenuStyle.left,
+              width: employeePickerMenuStyle.width,
+            }}
+          >
+            <div className="p-1.5 space-y-1">
+              {filteredEligibleEmployees.length === 0 ? (
+                <p className="text-xs text-gray-400 px-2 py-2">Sin resultados para la búsqueda</p>
+              ) : (
+                filteredEligibleEmployees.map((employee) => {
+                  const employeeName = `${employee.firstName || ''} ${employee.lastName || ''}`.trim();
+                  return (
+                    <button
+                      key={employee._id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedEmployeeId(String(employee._id));
+                        setEmployeeQuery(employeeName);
+                        setEmployeePickerOpen(false);
+                      }}
+                      className={`w-full text-left px-2.5 py-2 rounded-lg transition-colors ${
+                        String(selectedEmployeeId) === String(employee._id)
+                          ? 'bg-violet-50 text-violet-700'
+                          : 'hover:bg-gray-50 text-gray-700'
+                      }`}
+                    >
+                      <p className="text-sm font-medium truncate">{employeeName}</p>
+                    </button>
+                  );
+                })
+              )}
+            </div>
+          </div>,
+          document.body
+        )}
 
         <div className="pt-2 border-t border-gray-100 flex items-center justify-end gap-2">
           <button

@@ -698,6 +698,30 @@ export default function Personal() {
     return out;
   }, [days, shiftRowsByDay, assignmentsByDayShift]);
 
+  const weekLabel = useMemo(() => {
+    if (!days.length) return '';
+    const first = new Date(`${days[0].date}T12:00:00`);
+    const last = new Date(`${days[6].date}T12:00:00`);
+    const sameMonth = first.getMonth() === last.getMonth();
+    const opts = { day: 'numeric', month: 'short' };
+    if (sameMonth) {
+      return `${first.getDate()} – ${last.toLocaleDateString('es-ES', opts)} ${last.getFullYear()}`;
+    }
+    return `${first.toLocaleDateString('es-ES', opts)} – ${last.toLocaleDateString('es-ES', opts)} ${last.getFullYear()}`;
+  }, [days]);
+
+  const weekTotalAssignments = useMemo(
+    () => Object.values(assignmentsTotalByDay).reduce((a, b) => a + b, 0),
+    [assignmentsTotalByDay],
+  );
+
+  const weekCostSummary = useMemo(() => {
+    const totals = costs.totalsByCurrency || {};
+    const entries = Object.entries(totals);
+    if (!entries.length) return null;
+    return entries.map(([cur, val]) => `${val} ${cur}`).join(' · ');
+  }, [costs]);
+
   const currentMobileDay = days[mobileDayIndex] || days[0];
   const positionColorByName = useMemo(() => {
     const map = new Map();
@@ -772,9 +796,30 @@ export default function Personal() {
         ) : (
           <div className="space-y-1.5">
             {Object.values(grouped).map((group, index) => (
-              <div key={`${group.roleColor}-${index}`} className="flex items-start gap-2">
-                <span className="w-2 h-2 rounded-full mt-1.5 shrink-0" style={{ backgroundColor: group.roleColor }} />
-                <p className="text-[12px] text-gray-700 leading-5">{group.roleName}: {group.names.join(', ')}</p>
+              <div key={`${group.roleColor}-${index}`}>
+                <p className="text-[10px] font-semibold uppercase tracking-wide mb-1" style={{ color: group.roleColor }}>
+                  {group.roleName}
+                </p>
+                <div className="flex flex-wrap gap-1">
+                  {group.names.map((name, ni) => {
+                    const initial = name?.[0]?.toUpperCase() || '?';
+                    return (
+                      <span
+                        key={ni}
+                        className="inline-flex items-center gap-1 text-[11px] font-medium rounded-full pl-0.5 pr-2 py-0.5 border"
+                        style={{ borderColor: group.roleColor, backgroundColor: `${group.roleColor}18` }}
+                      >
+                        <span
+                          className="w-4 h-4 rounded-full flex items-center justify-center text-white text-[9px] font-bold shrink-0"
+                          style={{ backgroundColor: group.roleColor }}
+                        >
+                          {initial}
+                        </span>
+                        <span className="text-gray-800 truncate max-w-[80px]">{name.split(' ')[0]}</span>
+                      </span>
+                    );
+                  })}
+                </div>
               </div>
             ))}
           </div>
@@ -1103,27 +1148,35 @@ export default function Personal() {
       {/* -- PLANNER TAB -- */}
       {!loading && tab === 'planner' && (
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 space-y-4">
+          {/* Nav row */}
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setWeekStart((v) => addDays(v, -7))}
-                className="w-9 h-9 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm font-semibold transition-colors"
+                className="w-9 h-9 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors flex items-center justify-center text-gray-500"
                 aria-label="Semana anterior"
               >
-                â—€
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
+                  <path fillRule="evenodd" d="M9.78 4.22a.75.75 0 0 1 0 1.06L7.06 8l2.72 2.72a.75.75 0 1 1-1.06 1.06L5.47 8.53a.75.75 0 0 1 0-1.06l3.25-3.25a.75.75 0 0 1 1.06 0Z" clipRule="evenodd" />
+                </svg>
               </button>
-              <input
-                type="date"
-                value={weekStart}
-                onChange={(e) => e.target.value && setWeekStart(mondayOf(e.target.value))}
-                className={inputCls + ' w-40'}
-              />
+              <div className="flex flex-col items-center">
+                <span className="text-sm font-bold text-gray-900 leading-tight">{weekLabel}</span>
+                <input
+                  type="date"
+                  value={weekStart}
+                  onChange={(e) => e.target.value && setWeekStart(mondayOf(e.target.value))}
+                  className="text-[10px] text-gray-400 border-0 bg-transparent cursor-pointer focus:outline-none p-0 w-28 text-center"
+                />
+              </div>
               <button
                 onClick={() => setWeekStart((v) => addDays(v, 7))}
-                className="w-9 h-9 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm font-semibold transition-colors"
+                className="w-9 h-9 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors flex items-center justify-center text-gray-500"
                 aria-label="Semana siguiente"
               >
-                â–¶
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
+                  <path fillRule="evenodd" d="M6.22 4.22a.75.75 0 0 1 1.06 0l3.25 3.25a.75.75 0 0 1 0 1.06L7.28 11.78a.75.75 0 0 1-1.06-1.06L9.94 8 6.22 4.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
+                </svg>
               </button>
               <button
                 onClick={() => setWeekStart(mondayOf(todayIso()))}
@@ -1132,18 +1185,42 @@ export default function Personal() {
                 Hoy
               </button>
             </div>
-            <span className="text-xs text-gray-400">Usa Detalle para editar asignaciones</span>
+            {/* Legend */}
+            {plannerLegend.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5">
+                {plannerLegend.map((position) => (
+                  <span key={position._id} className="inline-flex items-center gap-1.5 text-xs text-gray-600 bg-gray-50 border border-gray-200 rounded-full px-2.5 py-1">
+                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: position.color || '#64748B' }} />
+                    {position.name}
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
-          {plannerLegend.length > 0 && (
-            <div className="flex flex-wrap items-center gap-2">
-              {plannerLegend.map((position) => (
-                <span key={position._id} className="inline-flex items-center gap-1.5 text-xs text-gray-600 bg-white border border-gray-200 rounded-full px-2 py-1">
-                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: position.color || '#64748B' }} />
-                  {position.name}
-                </span>
-              ))}
+
+          {/* Weekly summary strip */}
+          <div className="flex items-center gap-3 px-3 py-2 rounded-xl bg-gray-50 border border-gray-100">
+            <div className="flex items-center gap-1.5">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5 text-gray-400">
+                <path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM12.735 14c.618 0 1.093-.561.872-1.139a6.002 6.002 0 0 0-11.215 0c-.22.578.254 1.139.872 1.139h9.47Z" />
+              </svg>
+              <span className="text-xs text-gray-500">
+                <span className="font-semibold text-gray-800">{weekTotalAssignments}</span> asignaciones esta semana
+              </span>
             </div>
-          )}
+            {weekCostSummary && (
+              <>
+                <span className="text-gray-200 text-xs">|</span>
+                <div className="flex items-center gap-1.5">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5 text-gray-400">
+                    <path d="M8 1a7 7 0 1 1 0 14A7 7 0 0 1 8 1Zm-.75 9.5v.75a.75.75 0 0 0 1.5 0V10.5h.25a1.75 1.75 0 0 0 0-3.5h-.25V5.5h.25a.25.25 0 0 1 0 .5H9a.75.75 0 0 0 0 1.5h.25A1.75 1.75 0 0 0 9 4H8.75V3.25a.75.75 0 0 0-1.5 0V4H7a1.75 1.75 0 0 0 0 3.5h.25V9h-.5A1.75 1.75 0 0 0 5 10.75c0 .966.784 1.75 1.75 1.75H7.25ZM7 7.5a.25.25 0 0 1-.25-.25V6h.25a.25.25 0 0 1 0 .5.75.75 0 0 0 0 1.5V7.5H7ZM8.75 9h.5a.25.25 0 0 1 0 .5H8.75V9Z" />
+                  </svg>
+                  <span className="text-xs text-gray-500">Coste semana: <span className="font-semibold text-gray-800">{weekCostSummary}</span></span>
+                </div>
+              </>
+            )}
+            <span className="ml-auto text-xs text-gray-400">Usa Detalle para editar</span>
+          </div>
 
           {/* Desktop grid */}
           <div className="hidden md:block overflow-x-auto">
@@ -1209,7 +1286,7 @@ export default function Personal() {
             {currentMobileDay && (
               <div className="space-y-2">
                 {(shiftRowsByDay[currentMobileDay.date] || []).length === 0 ? (
-                  <p className="text-sm text-gray-400 text-center py-8">Sin turnos para este dÃ­a</p>
+                  <p className="text-sm text-gray-400 text-center py-8">Sin turnos para este día</p>
                 ) : (
                   (shiftRowsByDay[currentMobileDay.date] || []).map((shift) => renderShiftCard(currentMobileDay, shift))
                 )}

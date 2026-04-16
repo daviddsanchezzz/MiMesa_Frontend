@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import api from '../services/api';
 import Modal from '../components/Modal';
 
@@ -43,6 +43,103 @@ const shiftAppliesToDate = (shift, date) => {
   if (shift.endDate && date > shift.endDate) return false;
   return true;
 };
+
+const compLabel = (comp) => {
+  if (!comp) return null;
+  const suffix = comp.paymentType === 'hourly' ? '/h' : comp.paymentType === 'per_shift' ? '/turno' : '/mes';
+  return `${comp.baseAmount} ${comp.currency}${suffix}`;
+};
+
+const compTypeLabel = (type) => {
+  if (type === 'hourly') return 'Por hora';
+  if (type === 'per_shift') return 'Por turno';
+  if (type === 'monthly_fixed') return 'Fijo mensual';
+  return type || '-';
+};
+
+function Avatar({ name, size = 'md' }) {
+  const colors = ['bg-violet-500', 'bg-blue-500', 'bg-rose-500', 'bg-amber-500', 'bg-emerald-500', 'bg-cyan-500'];
+  const idx = (name?.charCodeAt(0) || 0) % colors.length;
+  const sz = size === 'lg' ? 'w-11 h-11 text-base' : 'w-9 h-9 text-sm';
+  return (
+    <div className={`${sz} rounded-full ${colors[idx]} flex items-center justify-center text-white font-semibold shrink-0`}>
+      {name?.[0]?.toUpperCase() || '?'}
+    </div>
+  );
+}
+
+function MobileEmployeeRow({ employee, onEdit, onPago, onToggle }) {
+  const [open, setOpen] = useState(false);
+  const fullName = `${employee.firstName} ${employee.lastName || ''}`.trim();
+  const comp = employee.activeCompensation;
+
+  return (
+    <div className="border-b border-gray-100 last:border-0">
+      <button
+        className="w-full text-left px-4 py-3 flex items-center gap-3 active:bg-gray-50 transition-colors"
+        onClick={() => setOpen((v) => !v)}
+      >
+        <Avatar name={employee.firstName} />
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-gray-900 truncate">{fullName}</p>
+          <p className="text-xs text-gray-500 truncate mt-0.5">
+            {employee.email || employee.phone || 'Sin contacto'}
+          </p>
+        </div>
+        <div className="flex items-center gap-1.5 shrink-0">
+          {(employee.positions || []).slice(0, 3).map((pos) => (
+            <span key={pos._id} className="w-2.5 h-2.5 rounded-full border border-white shadow-sm" style={{ backgroundColor: pos.color || '#64748B' }} title={pos.name} />
+          ))}
+          <span className={`text-[11px] border px-2 py-0.5 rounded-full font-semibold ${
+            employee.status === 'active'
+              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+              : 'bg-gray-50 text-gray-500 border-gray-200'
+          }`}>
+            {employee.status === 'active' ? 'Activo' : 'Inact.'}
+          </span>
+        </div>
+      </button>
+      {open && (
+        <div className="px-4 pb-3 pt-2 bg-gray-50/80 border-t border-gray-100 space-y-2">
+          {(employee.positions || []).length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {(employee.positions || []).map((pos) => (
+                <span key={pos._id} className="inline-flex items-center gap-1.5 text-xs font-semibold rounded-full px-2.5 py-0.5 border border-gray-200 bg-white">
+                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: pos.color || '#64748B' }} />
+                  {pos.name}
+                </span>
+              ))}
+            </div>
+          )}
+          {comp ? (
+            <p className="text-xs text-gray-600 font-medium">{compLabel(comp)} · {compTypeLabel(comp.paymentType)}</p>
+          ) : (
+            <p className="text-xs text-amber-600">Sin condiciones de pago</p>
+          )}
+          {employee.notes && (
+            <p className="text-xs text-gray-500 italic bg-white border border-gray-200 rounded-lg px-2.5 py-2">
+              "{employee.notes}"
+            </p>
+          )}
+          <div className="flex gap-2">
+            <button onClick={onPago} className="flex-1 text-center text-xs font-semibold py-2 rounded-xl bg-violet-50 text-violet-700 active:bg-violet-100 transition-colors">
+              Pago
+            </button>
+            <button onClick={onEdit} className="flex-1 text-center text-xs font-semibold py-2 rounded-xl bg-gray-100 text-gray-700 active:bg-gray-200 transition-colors">
+              Editar
+            </button>
+            <button onClick={onToggle} className={`px-3 py-2 rounded-xl text-xs font-semibold transition-colors ${
+              employee.status === 'active' ? 'bg-rose-50 text-rose-600 active:bg-rose-100' : 'bg-emerald-50 text-emerald-700 active:bg-emerald-100'
+            }`}>
+              {employee.status === 'active' ? 'Desactivar' : 'Activar'}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function EmployeeFormModal({ employee, positions, onClose, onSaved }) {
   const [form, setForm] = useState({
     firstName: employee?.firstName || '',
@@ -90,7 +187,7 @@ function EmployeeFormModal({ employee, positions, onClose, onSaved }) {
             {positions.map((position) => {
               const checked = form.positionIds.includes(String(position._id));
               return (
-                <label key={position._id} className="flex items-center gap-2 text-sm text-gray-700">
+                <label key={position._id} className="flex items-center gap-2 text-sm text-gray-700 cursor-pointer">
                   <input
                     type="checkbox"
                     checked={checked}
@@ -113,14 +210,23 @@ function EmployeeFormModal({ employee, positions, onClose, onSaved }) {
           </div>
         </div>
         <div><label className={labelCls}>Notas</label><textarea rows={3} className={inputCls} value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} /></div>
-        <div className="flex items-center justify-end gap-2"><button type="button" onClick={onClose} className="px-3 py-2 rounded-lg text-sm bg-gray-100 hover:bg-gray-200">Cancelar</button><button type="submit" disabled={saving} className="px-3 py-2 rounded-lg text-sm bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-60">{saving ? 'Guardando...' : 'Guardar'}</button></div>
+        <div className="flex items-center justify-end gap-2">
+          <button type="button" onClick={onClose} className="px-3 py-2 rounded-lg text-sm bg-gray-100 hover:bg-gray-200">Cancelar</button>
+          <button type="submit" disabled={saving} className="px-3 py-2 rounded-lg text-sm bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-60">{saving ? 'Guardando...' : 'Guardar'}</button>
+        </div>
       </form>
     </Modal>
   );
 }
 
 function CompensationModal({ employee, onClose, onSaved }) {
-  const [form, setForm] = useState({ paymentType: employee?.activeCompensation?.paymentType || 'hourly', baseAmount: employee?.activeCompensation?.baseAmount ?? 0, currency: employee?.activeCompensation?.currency || 'EUR', effectiveFrom: todayIso(), notes: '' });
+  const [form, setForm] = useState({
+    paymentType: employee?.activeCompensation?.paymentType || 'hourly',
+    baseAmount: employee?.activeCompensation?.baseAmount ?? 0,
+    currency: employee?.activeCompensation?.currency || 'EUR',
+    effectiveFrom: todayIso(),
+    notes: '',
+  });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const submit = async (e) => {
@@ -140,15 +246,41 @@ function CompensationModal({ employee, onClose, onSaved }) {
     <Modal title={`Condiciones de pago - ${employee.firstName}`} onClose={onClose}>
       <form onSubmit={submit} className="space-y-3">
         {error && <div className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</div>}
-        <div><label className={labelCls}>Tipo de pago</label><select className={inputCls} value={form.paymentType} onChange={(e) => setForm((f) => ({ ...f, paymentType: e.target.value }))}><option value="hourly">Por hora</option><option value="per_shift">Por turno</option><option value="monthly_fixed">Fijo mensual</option></select></div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3"><div className="sm:col-span-2"><label className={labelCls}>Importe base</label><input className={inputCls} type="number" min="0" step="0.01" value={form.baseAmount} onChange={(e) => setForm((f) => ({ ...f, baseAmount: e.target.value }))} required /></div><div><label className={labelCls}>Moneda</label><input className={inputCls} value={form.currency} onChange={(e) => setForm((f) => ({ ...f, currency: e.target.value.toUpperCase() }))} /></div></div>
-        <div><label className={labelCls}>Vigencia desde</label><input className={inputCls} type="date" value={form.effectiveFrom} onChange={(e) => setForm((f) => ({ ...f, effectiveFrom: e.target.value }))} required /></div>
-        <div><label className={labelCls}>Observaciones</label><textarea rows={3} className={inputCls} value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} /></div>
-        <div className="flex items-center justify-end gap-2"><button type="button" onClick={onClose} className="px-3 py-2 rounded-lg text-sm bg-gray-100 hover:bg-gray-200">Cancelar</button><button type="submit" disabled={saving} className="px-3 py-2 rounded-lg text-sm bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-60">{saving ? 'Guardando...' : 'Guardar'}</button></div>
+        <div>
+          <label className={labelCls}>Tipo de pago</label>
+          <select className={inputCls} value={form.paymentType} onChange={(e) => setForm((f) => ({ ...f, paymentType: e.target.value }))}>
+            <option value="hourly">Por hora</option>
+            <option value="per_shift">Por turno</option>
+            <option value="monthly_fixed">Fijo mensual</option>
+          </select>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="sm:col-span-2">
+            <label className={labelCls}>Importe base</label>
+            <input className={inputCls} type="number" min="0" step="0.01" value={form.baseAmount} onChange={(e) => setForm((f) => ({ ...f, baseAmount: e.target.value }))} required />
+          </div>
+          <div>
+            <label className={labelCls}>Moneda</label>
+            <input className={inputCls} value={form.currency} onChange={(e) => setForm((f) => ({ ...f, currency: e.target.value.toUpperCase() }))} />
+          </div>
+        </div>
+        <div>
+          <label className={labelCls}>Vigencia desde</label>
+          <input className={inputCls} type="date" value={form.effectiveFrom} onChange={(e) => setForm((f) => ({ ...f, effectiveFrom: e.target.value }))} required />
+        </div>
+        <div>
+          <label className={labelCls}>Observaciones</label>
+          <textarea rows={3} className={inputCls} value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} />
+        </div>
+        <div className="flex items-center justify-end gap-2">
+          <button type="button" onClick={onClose} className="px-3 py-2 rounded-lg text-sm bg-gray-100 hover:bg-gray-200">Cancelar</button>
+          <button type="submit" disabled={saving} className="px-3 py-2 rounded-lg text-sm bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-60">{saving ? 'Guardando...' : 'Guardar'}</button>
+        </div>
       </form>
     </Modal>
   );
 }
+
 function ShiftEditorModal({ day, shift, assignments, activeEmployees, positions, onClose, onRefresh }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -230,7 +362,7 @@ function ShiftEditorModal({ day, shift, assignments, activeEmployees, positions,
   };
 
   return (
-    <Modal title={`Detalle del turno - ${shift.name}`} subtitle={`${day.fullLabel} - ${shift.startTime}-${shift.endTime}`} onClose={onClose} size="xl">
+    <Modal title={`Detalle del turno - ${shift.name}`} subtitle={`${day.fullLabel} · ${shift.startTime}–${shift.endTime}`} onClose={onClose} size="xl">
       <div className="space-y-3">
         {error && <div className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</div>}
         <div className="overflow-x-auto">
@@ -240,20 +372,21 @@ function ShiftEditorModal({ day, shift, assignments, activeEmployees, positions,
                 <div className="flex items-center gap-2">
                   <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: column.color }} />
                   <p className="text-sm font-semibold text-gray-900">{column.label}</p>
+                  <span className="ml-auto text-xs font-semibold px-1.5 py-0.5 rounded-md bg-gray-100 text-gray-600">{column.assigned.length}</span>
                 </div>
 
                 <div className="space-y-1.5 min-h-[180px]">
-                  {column.assigned.length === 0 && <p className="text-xs text-gray-400">Sin asignados</p>}
+                  {column.assigned.length === 0 && <p className="text-xs text-gray-400 italic">Sin asignados</p>}
                   {column.assigned.map((assignment) => {
                     const employee = assignment.employeeId;
                     const employeeName = employee?.firstName ? `${employee.firstName} ${employee.lastName || ''}`.trim() : 'Empleado';
                     return (
-                      <div key={assignment._id} className="flex items-center justify-between gap-2 rounded-lg border border-gray-200 px-2 py-1.5">
-                        <span className="text-xs text-gray-800 truncate">{employeeName}</span>
+                      <div key={assignment._id} className="flex items-center justify-between gap-2 rounded-lg border border-gray-200 px-2 py-1.5 bg-gray-50/60">
+                        <span className="text-xs text-gray-800 truncate font-medium">{employeeName}</span>
                         <button
                           onClick={() => removeEmployee(assignment._id)}
                           disabled={saving}
-                          className="text-[11px] text-rose-600 hover:underline disabled:opacity-60"
+                          className="text-[11px] text-rose-600 hover:underline disabled:opacity-60 shrink-0"
                         >
                           Quitar
                         </button>
@@ -264,7 +397,7 @@ function ShiftEditorModal({ day, shift, assignments, activeEmployees, positions,
 
                 <div className="pt-2 border-t border-gray-100 space-y-2">
                   <select
-                    className="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs"
+                    className="w-full border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-violet-500"
                     value={selectedByColumn[column.key] || ''}
                     onChange={(e) => setSelectedByColumn((prev) => ({ ...prev, [column.key]: e.target.value }))}
                     disabled={saving}
@@ -289,7 +422,7 @@ function ShiftEditorModal({ day, shift, assignments, activeEmployees, positions,
                     disabled={saving || !selectedByColumn[column.key]}
                     className="w-full text-xs font-semibold px-2 py-1.5 rounded-lg bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-60"
                   >
-                    Anadir
+                    Añadir
                   </button>
                 </div>
               </section>
@@ -326,26 +459,38 @@ function PositionFormModal({ position, onClose, onSaved }) {
     <Modal title={position?._id ? 'Editar puesto' : 'Nuevo puesto'} onClose={onClose}>
       <div className="space-y-3">
         {error && <div className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</div>}
-        <form onSubmit={submit} className="grid grid-cols-1 sm:grid-cols-[1fr_140px_auto] gap-2">
-          <input
-            className={inputCls}
-            placeholder="Nombre del puesto"
-            value={form.name}
-            onChange={(e) => setForm((v) => ({ ...v, name: e.target.value }))}
-            required
-          />
-          <input
-            className={inputCls}
-            type="color"
-            value={form.color}
-            onChange={(e) => setForm((v) => ({ ...v, color: e.target.value.toUpperCase() }))}
-            required
-          />
-          <div className="flex gap-2">
-            <button type="submit" disabled={saving} className="px-3 py-2 rounded-lg text-sm bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-60">
-              {position?._id ? 'Guardar' : 'Crear'}
-            </button>
+        <form onSubmit={submit} className="space-y-3">
+          <div>
+            <label className={labelCls}>Nombre del puesto *</label>
+            <input
+              className={inputCls}
+              placeholder="Ej: Camarero, Cocinero..."
+              value={form.name}
+              onChange={(e) => setForm((v) => ({ ...v, name: e.target.value }))}
+              required
+            />
+          </div>
+          <div>
+            <label className={labelCls}>Color identificativo</label>
+            <div className="flex items-center gap-3">
+              <input
+                className="h-10 w-16 rounded-lg border border-gray-300 cursor-pointer p-1"
+                type="color"
+                value={form.color}
+                onChange={(e) => setForm((v) => ({ ...v, color: e.target.value.toUpperCase() }))}
+              />
+              <span className="text-sm text-gray-600 font-mono">{form.color}</span>
+              <span className="inline-flex items-center gap-1.5 text-xs font-semibold rounded-full px-3 py-1 border border-gray-200">
+                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: form.color }} />
+                Vista previa
+              </span>
+            </div>
+          </div>
+          <div className="flex items-center justify-end gap-2 pt-1">
             <button type="button" onClick={onClose} className="px-3 py-2 rounded-lg text-sm bg-gray-100 hover:bg-gray-200">Cancelar</button>
+            <button type="submit" disabled={saving} className="px-3 py-2 rounded-lg text-sm bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-60">
+              {position?._id ? 'Guardar cambios' : 'Crear puesto'}
+            </button>
           </div>
         </form>
       </div>
@@ -369,6 +514,8 @@ export default function Personal() {
   const [employeeSubTab, setEmployeeSubTab] = useState('employees');
   const [compModalEmployee, setCompModalEmployee] = useState(null);
   const [slotEditor, setSlotEditor] = useState(null);
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
 
   const loadCore = async () => {
     setLoading(true);
@@ -391,7 +538,10 @@ export default function Personal() {
 
   const loadWeekData = async () => {
     try {
-      const [aRes, cRes] = await Promise.all([api.get(`/staff/assignments?weekStart=${weekStart}`), api.get(`/staff/costs?weekStart=${weekStart}`)]);
+      const [aRes, cRes] = await Promise.all([
+        api.get(`/staff/assignments?weekStart=${weekStart}`),
+        api.get(`/staff/costs?weekStart=${weekStart}`),
+      ]);
       setAssignments(aRes.data?.assignments || []);
       setCosts(cRes.data || { employeeCosts: [], totalsByCurrency: {}, monthlyEstimateByCurrency: {} });
     } catch (err) {
@@ -423,7 +573,43 @@ export default function Personal() {
   useEffect(() => { setMobileDayIndex(0); }, [weekStart]);
 
   const days = useMemo(() => weekDays(weekStart), [weekStart]);
-  const activeEmployees = useMemo(() => employees.filter((employee) => employee.status === 'active'), [employees]);
+  const today = todayIso();
+  const activeEmployees = useMemo(() => employees.filter((e) => e.status === 'active'), [employees]);
+
+  const employeeStats = useMemo(() => ({
+    total: employees.length,
+    active: employees.filter((e) => e.status === 'active').length,
+    inactive: employees.filter((e) => e.status === 'inactive').length,
+    noPay: employees.filter((e) => !e.activeCompensation).length,
+  }), [employees]);
+
+  const filteredEmployees = useMemo(() => {
+    let list = employees;
+    if (search) {
+      const q = search.toLowerCase();
+      list = list.filter((e) =>
+        `${e.firstName} ${e.lastName || ''}`.toLowerCase().includes(q) ||
+        e.email?.toLowerCase().includes(q) ||
+        e.phone?.includes(q),
+      );
+    }
+    if (statusFilter === 'active') list = list.filter((e) => e.status === 'active');
+    if (statusFilter === 'inactive') list = list.filter((e) => e.status === 'inactive');
+    if (statusFilter === 'no_pay') list = list.filter((e) => !e.activeCompensation);
+    return list;
+  }, [employees, search, statusFilter]);
+
+  const employeeCountByPosition = useMemo(() => {
+    const map = new Map();
+    employees.filter((e) => e.status === 'active').forEach((e) => {
+      const ids = Array.isArray(e.positionIds) && e.positionIds.length
+        ? e.positionIds.map(String)
+        : e.positionId ? [String(e.positionId)] : [];
+      ids.forEach((id) => map.set(id, (map.get(id) || 0) + 1));
+    });
+    return map;
+  }, [employees]);
+
   const assignmentsByDayShift = useMemo(() => {
     const map = {};
     assignments.forEach((assignment) => {
@@ -435,11 +621,27 @@ export default function Personal() {
     });
     return map;
   }, [assignments]);
+
   const shiftRowsByDay = useMemo(() => {
     const out = {};
     days.forEach((day) => { out[day.date] = shifts.filter((shift) => shiftAppliesToDate(shift, day.date)); });
     return out;
   }, [days, shifts]);
+
+  const assignmentsTotalByDay = useMemo(() => {
+    const out = {};
+    days.forEach((day) => {
+      const dayShifts = shiftRowsByDay[day.date] || [];
+      let total = 0;
+      dayShifts.forEach((shift) => {
+        const key = `${day.date}__${shift._id}`;
+        total += (assignmentsByDayShift[key] || []).length;
+      });
+      out[day.date] = total;
+    });
+    return out;
+  }, [days, shiftRowsByDay, assignmentsByDayShift]);
+
   const currentMobileDay = days[mobileDayIndex] || days[0];
   const positionColorByName = useMemo(() => {
     const map = new Map();
@@ -473,9 +675,8 @@ export default function Personal() {
   const renderShiftCard = (day, shift) => {
     const key = `${day.date}__${shift._id}`;
     const rawList = assignmentsByDayShift[key] || [];
-    const list = rawList;
 
-    const grouped = list.reduce((acc, assignment) => {
+    const grouped = rawList.reduce((acc, assignment) => {
       const employee = assignment.employeeId || {};
       const roleName = assignment.roleLabel || employee.position || 'Sin puesto';
       const roleColor = positionColorByName.get(roleName) || employee.positionColor || '#64748B';
@@ -490,10 +691,12 @@ export default function Personal() {
         <div className="flex items-start justify-between gap-2">
           <div>
             <p className="text-xs font-semibold text-gray-900">{shift.name}</p>
-            <p className="text-[11px] text-gray-500">{`${shift.startTime} - ${shift.endTime}`}</p>
+            <p className="text-[11px] text-gray-500">{shift.startTime} – {shift.endTime}</p>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-md bg-violet-50 text-violet-700">{rawList.length}</span>
+            <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-md ${rawList.length > 0 ? 'bg-violet-50 text-violet-700' : 'bg-gray-100 text-gray-400'}`}>
+              {rawList.length}
+            </span>
             <button
               onClick={() => setSlotEditor({ day, shift })}
               className="text-[11px] font-semibold px-2 py-1 rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200"
@@ -503,10 +706,12 @@ export default function Personal() {
           </div>
         </div>
 
-        <div className="space-y-2">
-          {Object.values(grouped).map((group, index) => (
-            <div key={`${group.roleColor}-${index}`} className="space-y-1">
-              <div className="space-y-1">
+        {rawList.length === 0 ? (
+          <p className="text-[11px] text-gray-300 italic">Sin empleados asignados</p>
+        ) : (
+          <div className="space-y-1">
+            {Object.values(grouped).map((group, index) => (
+              <div key={`${group.roleColor}-${index}`} className="space-y-1">
                 {group.items.map((assignment) => {
                   const employee = assignment.employeeId;
                   const employeeName = employee?.firstName ? `${employee.firstName} ${employee.lastName || ''}`.trim() : 'Empleado';
@@ -521,9 +726,9 @@ export default function Personal() {
                   );
                 })}
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     );
   };
@@ -531,190 +736,516 @@ export default function Personal() {
   return (
     <div className="space-y-5">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-        <div><h2 className="text-xl font-bold text-gray-900">Personal</h2><p className="text-sm text-gray-500">Gestion de empleados, planificacion semanal y costes estimados.</p></div>
-        <div className="flex items-center gap-2">{tabs.map((item) => <button key={item.key} onClick={() => setTab(item.key)} className={`px-3 py-2 rounded-xl text-sm font-semibold ${tab === item.key ? 'bg-violet-600 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}`}>{item.label}</button>)}</div>
+        <div>
+          <h2 className="text-xl font-bold text-gray-900">Personal</h2>
+          <p className="text-sm text-gray-500">Gestion de empleados, planificacion semanal y costes estimados.</p>
+        </div>
+        <div className="flex items-center gap-2">
+          {tabs.map((item) => (
+            <button
+              key={item.key}
+              onClick={() => setTab(item.key)}
+              className={`px-3 py-2 rounded-xl text-sm font-semibold transition-colors ${tab === item.key ? 'bg-violet-600 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+            >
+              {item.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       {error && <div className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-4 py-3">{error}</div>}
       {loading && <div className="h-28 rounded-2xl bg-gray-100 animate-pulse" />}
 
+      {/* ── EMPLEADOS TAB ── */}
       {!loading && tab === 'employees' && (
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
+          {/* Sub-tab header */}
           <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setEmployeeSubTab('employees')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold ${employeeSubTab === 'employees' ? 'bg-violet-600 text-white' : 'bg-gray-100 text-gray-700'}`}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${employeeSubTab === 'employees' ? 'bg-violet-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
               >
                 Empleados
               </button>
               <button
                 onClick={() => setEmployeeSubTab('positions')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold ${employeeSubTab === 'positions' ? 'bg-violet-600 text-white' : 'bg-gray-100 text-gray-700'}`}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${employeeSubTab === 'positions' ? 'bg-violet-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
               >
                 Puestos
               </button>
             </div>
-            <div className="flex items-center gap-2">
+            <div>
               {employeeSubTab === 'employees' ? (
-                <button onClick={() => setEmployeeModal({})} className="px-3 py-2 rounded-lg text-sm bg-violet-600 text-white hover:bg-violet-700">
+                <button
+                  onClick={() => setEmployeeModal({})}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm bg-violet-600 text-white hover:bg-violet-700 font-semibold"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
+                    <path d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z" />
+                  </svg>
                   Nuevo empleado
                 </button>
               ) : (
-                <button onClick={() => setPositionModal({})} className="px-3 py-2 rounded-lg text-sm bg-violet-600 text-white hover:bg-violet-700">
+                <button
+                  onClick={() => setPositionModal({})}
+                  className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm bg-violet-600 text-white hover:bg-violet-700 font-semibold"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
+                    <path d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z" />
+                  </svg>
                   Nuevo puesto
                 </button>
               )}
             </div>
           </div>
+
+          {/* ── EMPLOYEES SUB-TAB ── */}
           {employeeSubTab === 'employees' && (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="bg-gray-50 border-b border-gray-100">
-                    <th className="text-left px-4 py-2">Empleado</th>
-                    <th className="text-left px-4 py-2">Puestos</th>
-                    <th className="text-left px-4 py-2">Pago activo</th>
-                    <th className="text-left px-4 py-2">Estado</th>
-                    <th className="px-4 py-2" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {employees.map((employee) => (
-                    <tr key={employee._id} className="border-b border-gray-50">
-                      <td className="px-4 py-3">
-                        <p className="font-semibold text-gray-900">{`${employee.firstName} ${employee.lastName || ''}`.trim()}</p>
-                        <p className="text-xs text-gray-500">{employee.email || employee.phone || '-'}</p>
-                      </td>
-                      <td className="px-4 py-3 text-gray-700">
-                        <div className="flex flex-wrap gap-1.5">
-                          {(employee.positions || []).map((position) => (
-                            <span key={position._id} className="inline-flex items-center gap-1.5 text-xs font-semibold rounded-full px-2 py-1 border border-gray-200">
-                              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: position.color || '#64748B' }} />
-                              {position.name}
-                            </span>
-                          ))}
-                          {(!employee.positions || employee.positions.length === 0) && <span>-</span>}
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 text-gray-700">
-                        {employee.activeCompensation
-                          ? `${employee.activeCompensation.paymentType} - ${employee.activeCompensation.baseAmount} ${employee.activeCompensation.currency}`
-                          : 'Sin definir'}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className={`text-xs font-semibold px-2 py-1 rounded-full ${employee.status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-600'}`}>
-                          {employee.status === 'active' ? 'Activo' : 'Inactivo'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center justify-end gap-2">
-                          <button onClick={() => setCompModalEmployee(employee)} className="text-xs px-2 py-1 rounded-lg bg-violet-50 text-violet-700 hover:bg-violet-100">Pago</button>
-                          <button onClick={() => setEmployeeModal(employee)} className="text-xs px-2 py-1 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200">Editar</button>
-                          <button onClick={() => toggleEmployeeStatus(employee)} className="text-xs px-2 py-1 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200">
-                            {employee.status === 'active' ? 'Desactivar' : 'Activar'}
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <>
+              {/* Stats bar */}
+              <div className="px-4 py-3 border-b border-gray-100 flex flex-wrap items-center gap-2">
+                <button
+                  onClick={() => setStatusFilter('all')}
+                  className={`text-xs font-semibold px-3 py-1.5 rounded-xl border transition-colors ${statusFilter === 'all' ? 'bg-violet-50 border-violet-200 text-violet-700' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+                >
+                  {employeeStats.total} total
+                </button>
+                <button
+                  onClick={() => setStatusFilter('active')}
+                  className={`text-xs font-semibold px-3 py-1.5 rounded-xl border transition-colors ${statusFilter === 'active' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+                >
+                  {employeeStats.active} activos
+                </button>
+                <button
+                  onClick={() => setStatusFilter('inactive')}
+                  className={`text-xs font-semibold px-3 py-1.5 rounded-xl border transition-colors ${statusFilter === 'inactive' ? 'bg-gray-100 border-gray-300 text-gray-700' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+                >
+                  {employeeStats.inactive} inactivos
+                </button>
+                {employeeStats.noPay > 0 && (
+                  <button
+                    onClick={() => setStatusFilter('no_pay')}
+                    className={`text-xs font-semibold px-3 py-1.5 rounded-xl border transition-colors ${statusFilter === 'no_pay' ? 'bg-amber-50 border-amber-200 text-amber-700' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+                  >
+                    {employeeStats.noPay} sin pago
+                  </button>
+                )}
+                {/* Search */}
+                <div className="relative ml-auto">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
+                    <path fillRule="evenodd" d="M9.965 11.026a5 5 0 1 1 1.06-1.06l2.755 2.754a.75.75 0 1 1-1.06 1.06l-2.755-2.754ZM10.5 7a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0Z" clipRule="evenodd" />
+                  </svg>
+                  <input
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Buscar empleado..."
+                    className="border border-gray-300 rounded-xl pl-9 pr-4 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white w-52"
+                  />
+                </div>
+              </div>
+
+              {/* Mobile list */}
+              <div className="sm:hidden divide-y divide-gray-100">
+                {filteredEmployees.length === 0 && (
+                  <div className="py-12 text-center text-sm text-gray-400">Sin empleados</div>
+                )}
+                {filteredEmployees.map((employee) => (
+                  <MobileEmployeeRow
+                    key={employee._id}
+                    employee={employee}
+                    onEdit={() => setEmployeeModal(employee)}
+                    onPago={() => setCompModalEmployee(employee)}
+                    onToggle={() => toggleEmployeeStatus(employee)}
+                  />
+                ))}
+              </div>
+
+              {/* Desktop table */}
+              <div className="hidden sm:block overflow-x-auto">
+                {filteredEmployees.length === 0 ? (
+                  <div className="py-16 text-center text-sm text-gray-400">
+                    {search ? 'No hay resultados para tu búsqueda' : 'Sin empleados'}
+                  </div>
+                ) : (
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-100">
+                        <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Empleado</th>
+                        <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Puestos</th>
+                        <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Pago activo</th>
+                        <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Estado</th>
+                        <th className="px-4 py-3.5" />
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredEmployees.map((employee, i) => {
+                        const fullName = `${employee.firstName} ${employee.lastName || ''}`.trim();
+                        const comp = employee.activeCompensation;
+                        return (
+                          <tr
+                            key={employee._id}
+                            className={`hover:bg-gray-50/60 transition-colors ${i < filteredEmployees.length - 1 ? 'border-b border-gray-50' : ''}`}
+                          >
+                            <td className="px-5 py-3.5">
+                              <div className="flex items-center gap-3">
+                                <Avatar name={employee.firstName} />
+                                <div>
+                                  <p className="font-semibold text-gray-900 leading-tight">{fullName}</p>
+                                  <p className="text-xs text-gray-400 mt-0.5">
+                                    {employee.email || employee.phone || 'Sin contacto'}
+                                  </p>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3.5">
+                              <div className="flex flex-wrap gap-1.5">
+                                {(employee.positions || []).map((position) => (
+                                  <span key={position._id} className="inline-flex items-center gap-1.5 text-xs font-semibold rounded-full px-2.5 py-1 border border-gray-200">
+                                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: position.color || '#64748B' }} />
+                                    {position.name}
+                                  </span>
+                                ))}
+                                {(!employee.positions || employee.positions.length === 0) && (
+                                  <span className="text-xs text-gray-300">Sin puesto</span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="px-4 py-3.5">
+                              {comp ? (
+                                <div>
+                                  <p className="text-sm font-semibold text-gray-800">{compLabel(comp)}</p>
+                                  <p className="text-xs text-gray-400">{compTypeLabel(comp.paymentType)}</p>
+                                </div>
+                              ) : (
+                                <span className="inline-flex items-center text-xs font-medium px-2 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+                                  Sin definir
+                                </span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3.5">
+                              <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${employee.status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>
+                                {employee.status === 'active' ? 'Activo' : 'Inactivo'}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3.5">
+                              <div className="flex items-center justify-end gap-1.5">
+                                <button
+                                  onClick={() => setCompModalEmployee(employee)}
+                                  className="text-xs px-2.5 py-1.5 rounded-lg bg-violet-50 text-violet-700 hover:bg-violet-100 font-medium transition-colors"
+                                >
+                                  Pago
+                                </button>
+                                <button
+                                  onClick={() => setEmployeeModal(employee)}
+                                  className="text-xs px-2.5 py-1.5 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 font-medium transition-colors"
+                                >
+                                  Editar
+                                </button>
+                                <button
+                                  onClick={() => toggleEmployeeStatus(employee)}
+                                  className="text-xs px-2.5 py-1.5 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 font-medium transition-colors"
+                                >
+                                  {employee.status === 'active' ? 'Desactivar' : 'Activar'}
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </>
           )}
 
+          {/* ── POSITIONS SUB-TAB ── */}
           {employeeSubTab === 'positions' && (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="bg-gray-50 border-b border-gray-100">
-                    <th className="text-left px-4 py-2">Puesto</th>
-                    <th className="text-left px-4 py-2">Color</th>
-                    <th className="text-left px-4 py-2">Estado</th>
-                    <th className="px-4 py-2" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {positions.map((position) => (
-                    <tr key={position._id} className="border-b border-gray-50">
-                      <td className="px-4 py-3 font-semibold text-gray-900">{position.name}</td>
-                      <td className="px-4 py-3">
-                        <span className="inline-flex items-center gap-2 text-xs text-gray-700">
-                          <span className="w-3 h-3 rounded-full border border-gray-200" style={{ backgroundColor: position.color || '#64748B' }} />
-                          {position.color || '#64748B'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <span className={`text-xs font-semibold px-2 py-1 rounded-full ${position.status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-600'}`}>
-                          {position.status === 'active' ? 'Activo' : 'Inactivo'}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center justify-end gap-2">
-                          <button onClick={() => setPositionModal(position)} className="text-xs px-2 py-1 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200">Editar</button>
-                          <button onClick={() => togglePositionStatus(position)} className="text-xs px-2 py-1 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200">
-                            {position.status === 'active' ? 'Desactivar' : 'Activar'}
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            <>
+              {/* Position stats */}
+              <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-3">
+                <span className="text-xs text-gray-500 font-semibold">
+                  {positions.filter((p) => p.status === 'active').length} puestos activos
+                </span>
+                {positions.filter((p) => p.status === 'inactive').length > 0 && (
+                  <span className="text-xs text-gray-400">
+                    · {positions.filter((p) => p.status === 'inactive').length} inactivos
+                  </span>
+                )}
+              </div>
+              <div className="overflow-x-auto">
+                {positions.length === 0 ? (
+                  <div className="py-16 text-center text-sm text-gray-400">Sin puestos definidos</div>
+                ) : (
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-100">
+                        <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Puesto</th>
+                        <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Color</th>
+                        <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Empleados activos</th>
+                        <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Estado</th>
+                        <th className="px-4 py-3.5" />
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {positions.map((position, i) => {
+                        const count = employeeCountByPosition.get(String(position._id)) || 0;
+                        return (
+                          <tr
+                            key={position._id}
+                            className={`hover:bg-gray-50/60 transition-colors ${i < positions.length - 1 ? 'border-b border-gray-50' : ''}`}
+                          >
+                            <td className="px-5 py-3.5">
+                              <div className="flex items-center gap-3">
+                                <span
+                                  className="w-8 h-8 rounded-xl shrink-0 shadow-sm border border-white"
+                                  style={{ backgroundColor: position.color || '#64748B' }}
+                                />
+                                <p className="font-semibold text-gray-900">{position.name}</p>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3.5">
+                              <span className="text-xs font-mono text-gray-500">{position.color || '#64748B'}</span>
+                            </td>
+                            <td className="px-4 py-3.5">
+                              {count > 0 ? (
+                                <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-violet-50 text-violet-700">
+                                  {count} {count === 1 ? 'empleado' : 'empleados'}
+                                </span>
+                              ) : (
+                                <span className="text-xs text-gray-300">Sin empleados</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3.5">
+                              <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${position.status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>
+                                {position.status === 'active' ? 'Activo' : 'Inactivo'}
+                              </span>
+                            </td>
+                            <td className="px-4 py-3.5">
+                              <div className="flex items-center justify-end gap-1.5">
+                                <button
+                                  onClick={() => setPositionModal(position)}
+                                  className="text-xs px-2.5 py-1.5 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 font-medium transition-colors"
+                                >
+                                  Editar
+                                </button>
+                                <button
+                                  onClick={() => togglePositionStatus(position)}
+                                  className="text-xs px-2.5 py-1.5 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 font-medium transition-colors"
+                                >
+                                  {position.status === 'active' ? 'Desactivar' : 'Activar'}
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </>
           )}
         </div>
       )}
 
+      {/* ── PLANNER TAB ── */}
       {!loading && tab === 'planner' && (
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 space-y-4">
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <div className="flex items-center gap-2">
-              <button onClick={() => setWeekStart((v) => addDays(v, -7))} className="w-9 h-9 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm" aria-label="Semana anterior">◀</button>
-              <input type="date" value={weekStart} onChange={(e) => e.target.value && setWeekStart(mondayOf(e.target.value))} className={inputCls} />
-              <button onClick={() => setWeekStart((v) => addDays(v, 7))} className="w-9 h-9 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm" aria-label="Semana siguiente">▶</button>
+              <button
+                onClick={() => setWeekStart((v) => addDays(v, -7))}
+                className="w-9 h-9 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm font-semibold transition-colors"
+                aria-label="Semana anterior"
+              >
+                ◀
+              </button>
+              <input
+                type="date"
+                value={weekStart}
+                onChange={(e) => e.target.value && setWeekStart(mondayOf(e.target.value))}
+                className={inputCls + ' w-40'}
+              />
+              <button
+                onClick={() => setWeekStart((v) => addDays(v, 7))}
+                className="w-9 h-9 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm font-semibold transition-colors"
+                aria-label="Semana siguiente"
+              >
+                ▶
+              </button>
+              <button
+                onClick={() => setWeekStart(mondayOf(todayIso()))}
+                className="hidden sm:block px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-xs font-semibold text-gray-600 transition-colors"
+              >
+                Hoy
+              </button>
             </div>
-            <span className="text-xs text-gray-500">Vista semanal agrupada por puestos · usa Detalle para editar</span>
+            <span className="text-xs text-gray-400">Usa Detalle para editar asignaciones</span>
           </div>
 
+          {/* Desktop grid */}
           <div className="hidden md:block overflow-x-auto">
-            <div className="grid grid-cols-7 gap-3 min-w-[1280px]">
-              {days.map((day) => (
-                <div key={day.date} className="rounded-xl border border-gray-200 bg-gray-50 p-2.5 space-y-2 max-h-[74vh] overflow-auto">
-                  <div className="px-1 pb-1 border-b border-gray-200 sticky top-0 bg-gray-50 z-10">
-                    <p className="text-xs text-gray-500 uppercase">{day.short}</p>
-                    <p className="text-sm font-semibold text-gray-900">{day.day}</p>
-                  </div>
+            <div className="grid grid-cols-7 gap-2.5 min-w-[1280px]">
+              {days.map((day) => {
+                const isToday = day.date === today;
+                const totalForDay = assignmentsTotalByDay[day.date] || 0;
+                const dayShifts = shiftRowsByDay[day.date] || [];
+                return (
+                  <div
+                    key={day.date}
+                    className={`rounded-xl border p-2.5 space-y-2 max-h-[74vh] overflow-auto ${
+                      isToday
+                        ? 'border-violet-300 bg-violet-50/40'
+                        : 'border-gray-200 bg-gray-50'
+                    }`}
+                  >
+                    <div className={`px-1 pb-1.5 border-b sticky top-0 z-10 ${isToday ? 'border-violet-200 bg-violet-50/40' : 'border-gray-200 bg-gray-50'}`}>
+                      <div className="flex items-center justify-between gap-1">
+                        <div>
+                          <p className={`text-xs uppercase font-semibold ${isToday ? 'text-violet-600' : 'text-gray-400'}`}>{day.short}</p>
+                          <p className={`text-sm font-bold ${isToday ? 'text-violet-700' : 'text-gray-900'}`}>{day.day}</p>
+                        </div>
+                        {totalForDay > 0 && (
+                          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-md ${isToday ? 'bg-violet-100 text-violet-700' : 'bg-gray-200 text-gray-600'}`}>
+                            {totalForDay}
+                          </span>
+                        )}
+                      </div>
+                    </div>
 
-                  {(shiftRowsByDay[day.date] || []).map((shift) => renderShiftCard(day, shift))}
-                </div>
-              ))}
+                    {dayShifts.length === 0 ? (
+                      <p className="text-[11px] text-gray-300 text-center pt-2">Sin turnos</p>
+                    ) : (
+                      dayShifts.map((shift) => renderShiftCard(day, shift))
+                    )}
+                  </div>
+                );
+              })}
             </div>
           </div>
 
+          {/* Mobile day selector */}
           <div className="md:hidden space-y-3">
             <div className="flex gap-2 overflow-x-auto pb-1">
-              {days.map((day, index) => (
-                <button
-                  key={day.date}
-                  onClick={() => setMobileDayIndex(index)}
-                  className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold border ${mobileDayIndex === index ? 'bg-violet-600 text-white border-violet-600' : 'bg-white text-gray-600 border-gray-200'}`}
-                >
-                  {day.fullLabel}
-                </button>
-              ))}
+              {days.map((day, index) => {
+                const isToday = day.date === today;
+                return (
+                  <button
+                    key={day.date}
+                    onClick={() => setMobileDayIndex(index)}
+                    className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                      mobileDayIndex === index
+                        ? isToday ? 'bg-violet-600 text-white border-violet-600' : 'bg-violet-600 text-white border-violet-600'
+                        : isToday ? 'bg-violet-50 text-violet-700 border-violet-200' : 'bg-white text-gray-600 border-gray-200'
+                    }`}
+                  >
+                    {day.fullLabel}
+                  </button>
+                );
+              })}
             </div>
             {currentMobileDay && (
               <div className="space-y-2">
-                {(shiftRowsByDay[currentMobileDay.date] || []).map((shift) => renderShiftCard(currentMobileDay, shift))}
+                {(shiftRowsByDay[currentMobileDay.date] || []).length === 0 ? (
+                  <p className="text-sm text-gray-400 text-center py-8">Sin turnos para este día</p>
+                ) : (
+                  (shiftRowsByDay[currentMobileDay.date] || []).map((shift) => renderShiftCard(currentMobileDay, shift))
+                )}
               </div>
             )}
           </div>
         </div>
       )}
 
-      {!loading && tab === 'costs' && <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 space-y-3"><div className="flex items-center gap-2"><button onClick={() => setWeekStart((v) => addDays(v, -7))} className="px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm">Semana anterior</button><input type="date" value={weekStart} onChange={(e) => e.target.value && setWeekStart(mondayOf(e.target.value))} className={inputCls} /><button onClick={() => setWeekStart((v) => addDays(v, 7))} className="px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm">Semana siguiente</button></div><div className="grid grid-cols-1 sm:grid-cols-2 gap-3"><div className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2"><p className="text-xs text-gray-500">Total semanal</p>{Object.entries(costs.totalsByCurrency || {}).length === 0 ? <p className="text-sm font-semibold text-gray-700">Sin datos</p> : Object.entries(costs.totalsByCurrency || {}).map(([currency, value]) => <p key={currency} className="text-sm font-semibold text-gray-800">{`${value} ${currency}`}</p>)}</div><div className="rounded-xl border border-gray-200 bg-gray-50 px-3 py-2"><p className="text-xs text-gray-500">Estimacion mensual</p>{Object.entries(costs.monthlyEstimateByCurrency || {}).length === 0 ? <p className="text-sm font-semibold text-gray-700">Sin datos</p> : Object.entries(costs.monthlyEstimateByCurrency || {}).map(([currency, value]) => <p key={currency} className="text-sm font-semibold text-gray-800">{`${value} ${currency}`}</p>)}</div></div><div className="overflow-x-auto"><table className="w-full text-sm"><thead><tr className="bg-gray-50 border-b border-gray-100"><th className="text-left px-3 py-2">Empleado</th><th className="text-left px-3 py-2">Asignaciones</th><th className="text-left px-3 py-2">Horas</th><th className="text-left px-3 py-2">Tipo pago</th><th className="text-left px-3 py-2">Coste semanal</th></tr></thead><tbody>{(costs.employeeCosts || []).map((row) => <tr key={row.employeeId} className="border-b border-gray-50"><td className="px-3 py-2 font-medium text-gray-800">{row.employeeName}</td><td className="px-3 py-2 text-gray-700">{row.assignments}</td><td className="px-3 py-2 text-gray-700">{row.totalHours}</td><td className="px-3 py-2 text-gray-700">{row.compensation?.paymentType || '-'}</td><td className="px-3 py-2 font-semibold text-gray-900">{`${row.weeklyCost} ${row.currency}`}</td></tr>)}</tbody></table></div></div>}
+      {/* ── COSTS TAB ── */}
+      {!loading && tab === 'costs' && (
+        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 space-y-4">
+          {/* Week navigation */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setWeekStart((v) => addDays(v, -7))}
+              className="px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm font-semibold transition-colors"
+            >
+              Semana anterior
+            </button>
+            <input
+              type="date"
+              value={weekStart}
+              onChange={(e) => e.target.value && setWeekStart(mondayOf(e.target.value))}
+              className={inputCls + ' w-40'}
+            />
+            <button
+              onClick={() => setWeekStart((v) => addDays(v, 7))}
+              className="px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm font-semibold transition-colors"
+            >
+              Semana siguiente
+            </button>
+          </div>
 
+          {/* Summary cards */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Total semanal</p>
+              {Object.entries(costs.totalsByCurrency || {}).length === 0 ? (
+                <p className="text-sm font-semibold text-gray-400">Sin datos</p>
+              ) : (
+                Object.entries(costs.totalsByCurrency || {}).map(([currency, value]) => (
+                  <p key={currency} className="text-xl font-bold text-gray-900">{value} <span className="text-sm font-semibold text-gray-500">{currency}</span></p>
+                ))
+              )}
+            </div>
+            <div className="rounded-xl border border-gray-200 bg-gray-50 px-4 py-3">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-1">Estimacion mensual</p>
+              {Object.entries(costs.monthlyEstimateByCurrency || {}).length === 0 ? (
+                <p className="text-sm font-semibold text-gray-400">Sin datos</p>
+              ) : (
+                Object.entries(costs.monthlyEstimateByCurrency || {}).map(([currency, value]) => (
+                  <p key={currency} className="text-xl font-bold text-gray-900">{value} <span className="text-sm font-semibold text-gray-500">{currency}</span></p>
+                ))
+              )}
+            </div>
+          </div>
+
+          {/* Cost breakdown table */}
+          <div className="overflow-x-auto">
+            {(costs.employeeCosts || []).length === 0 ? (
+              <div className="py-12 text-center text-sm text-gray-400">Sin datos de coste para esta semana</div>
+            ) : (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-100">
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Empleado</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Asignaciones</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Horas</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Tipo pago</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Coste semanal</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {(costs.employeeCosts || []).map((row, i) => (
+                    <tr key={row.employeeId} className={`hover:bg-gray-50/60 transition-colors ${i < costs.employeeCosts.length - 1 ? 'border-b border-gray-50' : ''}`}>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-2.5">
+                          <Avatar name={row.employeeName} />
+                          <span className="font-medium text-gray-800">{row.employeeName}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-gray-600">{row.assignments}</td>
+                      <td className="px-4 py-3 text-gray-600">{row.totalHours}h</td>
+                      <td className="px-4 py-3 text-gray-600">{compTypeLabel(row.compensation?.paymentType)}</td>
+                      <td className="px-4 py-3 font-bold text-gray-900">{row.weeklyCost} <span className="text-xs font-semibold text-gray-500">{row.currency}</span></td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── MODALS ── */}
       {employeeModal && (
         <EmployeeFormModal
           employee={employeeModal._id ? employeeModal : null}
@@ -734,7 +1265,17 @@ export default function Personal() {
           onSaved={loadCore}
         />
       )}
-      {compModalEmployee && <CompensationModal employee={compModalEmployee} onClose={() => setCompModalEmployee(null)} onSaved={async () => { setCompModalEmployee(null); await loadCore(); await loadWeekData(); }} />}
+      {compModalEmployee && (
+        <CompensationModal
+          employee={compModalEmployee}
+          onClose={() => setCompModalEmployee(null)}
+          onSaved={async () => {
+            setCompModalEmployee(null);
+            await loadCore();
+            await loadWeekData();
+          }}
+        />
+      )}
       {slotEditor && (
         <ShiftEditorModal
           day={slotEditor.day}
@@ -749,4 +1290,3 @@ export default function Personal() {
     </div>
   );
 }
-

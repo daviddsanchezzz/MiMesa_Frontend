@@ -788,6 +788,8 @@ export default function Personal() {
     const diff = Math.round((new Date(todayIso()) - new Date(weekStart)) / 86400000);
     setMobileDayIndex(diff >= 0 && diff <= 6 ? diff : 0);
   }, [weekStart]);
+
+  const days = useMemo(() => weekDays(weekStart), [weekStart]);
   useEffect(() => {
     if (tab !== 'planner') return;
     const selectedDay = days[mobileDayIndex];
@@ -796,8 +798,6 @@ export default function Personal() {
     if (!buttonNode) return;
     buttonNode.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'center' });
   }, [tab, mobileDayIndex, days]);
-
-  const days = useMemo(() => weekDays(weekStart), [weekStart]);
   const today = todayIso();
   const activeEmployees = useMemo(() => employees.filter((e) => e.status === 'active'), [employees]);
 

@@ -681,6 +681,10 @@ export default function Personal() {
   const [costsLoading, setCostsLoading] = useState(false);
   const [confirmingPayment, setConfirmingPayment] = useState(null); // employeeId
   const [assignmentsModal, setAssignmentsModal] = useState(null); // employee object
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const plannerGridRef = useRef(null);
+  const exportMenuRef = useRef(null);
 
   const loadCore = async ({ silent = false } = {}) => {
     if (!silent) setLoading(true);
@@ -881,6 +885,49 @@ export default function Personal() {
   }, [costs]);
 
   const currentMobileDay = days[mobileDayIndex] || days[0];
+
+  // Close export menu on outside click
+  useEffect(() => {
+    if (!exportMenuOpen) return;
+    const handler = (e) => { if (exportMenuRef.current && !exportMenuRef.current.contains(e.target)) setExportMenuOpen(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [exportMenuOpen]);
+
+  const exportPlanner = async (format) => {
+    setExportMenuOpen(false);
+    setIsExporting(true);
+    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+    try {
+      const { default: html2canvas } = await import('html2canvas');
+      const canvas = await html2canvas(plannerGridRef.current, {
+        scale: 2,
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        logging: false,
+      });
+      const safeLabel = weekLabel.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+      if (format === 'png') {
+        const link = document.createElement('a');
+        link.download = `planificacion_${safeLabel}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+      } else {
+        const { jsPDF } = await import('jspdf');
+        const imgData = canvas.toDataURL('image/png');
+        const w = canvas.width / 2;
+        const h = canvas.height / 2;
+        const pdf = new jsPDF({ orientation: w > h ? 'landscape' : 'portrait', unit: 'px', format: [w, h] });
+        pdf.addImage(imgData, 'PNG', 0, 0, w, h);
+        pdf.save(`planificacion_${safeLabel}.pdf`);
+      }
+    } catch (err) {
+      console.error('Export error', err);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   const positionColorByName = useMemo(() => {
     const map = new Map();
     (positions || []).forEach((position) => map.set(position.name, position.color || '#64748B'));
@@ -1340,6 +1387,43 @@ export default function Personal() {
               >
                 Hoy
               </button>
+              {/* Export button */}
+              <div className="relative ml-1" ref={exportMenuRef}>
+                <button
+                  onClick={() => setExportMenuOpen((v) => !v)}
+                  disabled={isExporting}
+                  className="w-8 h-8 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors flex items-center justify-center text-gray-500 disabled:opacity-40"
+                  aria-label="Exportar"
+                >
+                  {isExporting ? (
+                    <svg className="animate-spin w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" />
+                    </svg>
+                  ) : (
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
+                      <path d="M8.75 2.75a.75.75 0 0 0-1.5 0v5.69L5.03 6.22a.75.75 0 0 0-1.06 1.06l3.5 3.5a.75.75 0 0 0 1.06 0l3.5-3.5a.75.75 0 0 0-1.06-1.06L8.75 8.44V2.75Z" />
+                      <path d="M3.5 9.75a.75.75 0 0 0-1.5 0v1.5A2.75 2.75 0 0 0 4.75 14h6.5A2.75 2.75 0 0 0 14 11.25v-1.5a.75.75 0 0 0-1.5 0v1.5c0 .69-.56 1.25-1.25 1.25h-6.5c-.69 0-1.25-.56-1.25-1.25v-1.5Z" />
+                    </svg>
+                  )}
+                </button>
+                {exportMenuOpen && (
+                  <div className="absolute right-0 top-full mt-1.5 w-40 bg-white rounded-xl border border-gray-200 shadow-lg z-50 overflow-hidden">
+                    <button
+                      onClick={() => exportPlanner('png')}
+                      className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2.5"
+                    >
+                      <span className="text-base">🖼️</span> Imagen PNG
+                    </button>
+                    <button
+                      onClick={() => exportPlanner('pdf')}
+                      className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2.5"
+                    >
+                      <span className="text-base">📄</span> PDF
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
             {/* Legend */}
             {plannerLegend.length > 0 && (
@@ -1355,8 +1439,8 @@ export default function Personal() {
           </div>
 
           {/* Desktop grid */}
-          <div className="hidden md:block overflow-x-auto">
-            <div className="grid grid-cols-7 gap-2.5 min-w-[1280px]">
+          <div className={isExporting ? 'block overflow-x-visible' : 'hidden md:block overflow-x-auto'}>
+            <div ref={plannerGridRef} className="grid grid-cols-7 gap-2.5 min-w-[1280px]">
               {days.map((day) => {
                 const isToday = day.date === today;
                 const totalForDay = assignmentsTotalByDay[day.date] || 0;

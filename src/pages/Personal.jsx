@@ -1616,8 +1616,7 @@ export default function Personal() {
                         <tfoot>
                           {Object.entries(totalPendingByCurrency).map(([currency, value]) => (
                             <tr key={currency} className="border-t-2 border-gray-200 bg-gray-50">
-                              <td className="px-5 py-3 font-semibold text-gray-700 hidden sm:table-cell" colSpan={4}>Total pendiente</td>
-                              <td className="px-5 py-3 font-semibold text-gray-700 sm:hidden">Total pend.</td>
+                              <td className="px-5 py-3 font-semibold text-gray-700" colSpan={2}>Total pendiente</td>
                               <td className="px-4 py-3 font-bold text-gray-900 text-base">{value} <span className="text-sm font-semibold text-gray-500">{currency}</span></td>
                               <td className="px-4 py-3" />
                             </tr>

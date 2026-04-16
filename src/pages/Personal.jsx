@@ -1131,28 +1131,31 @@ export default function Personal() {
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 space-y-4">
           {/* Nav row */}
           <div className="flex items-center justify-between gap-3 flex-wrap">
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1">
               <button
                 onClick={() => setWeekStart((v) => addDays(v, -7))}
-                className="w-9 h-9 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors flex items-center justify-center text-gray-500"
+                className="w-8 h-8 rounded-lg hover:bg-gray-100 transition-colors flex items-center justify-center text-gray-400 hover:text-gray-700"
                 aria-label="Semana anterior"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
                   <path fillRule="evenodd" d="M9.78 4.22a.75.75 0 0 1 0 1.06L7.06 8l2.72 2.72a.75.75 0 1 1-1.06 1.06L5.47 8.53a.75.75 0 0 1 0-1.06l3.25-3.25a.75.75 0 0 1 1.06 0Z" clipRule="evenodd" />
                 </svg>
               </button>
-              <div className="flex flex-col items-center">
-                <span className="text-sm font-bold text-gray-900 leading-tight">{weekLabel}</span>
+              <label className="relative cursor-pointer group">
+                <span className="px-3 py-1.5 rounded-lg text-sm font-semibold text-gray-800 group-hover:bg-gray-100 transition-colors block">
+                  {weekLabel}
+                </span>
                 <input
                   type="date"
                   value={weekStart}
                   onChange={(e) => e.target.value && setWeekStart(mondayOf(e.target.value))}
-                  className="text-[10px] text-gray-400 border-0 bg-transparent cursor-pointer focus:outline-none p-0 w-28 text-center"
+                  className="absolute inset-0 opacity-0 cursor-pointer w-full"
+                  tabIndex={-1}
                 />
-              </div>
+              </label>
               <button
                 onClick={() => setWeekStart((v) => addDays(v, 7))}
-                className="w-9 h-9 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors flex items-center justify-center text-gray-500"
+                className="w-8 h-8 rounded-lg hover:bg-gray-100 transition-colors flex items-center justify-center text-gray-400 hover:text-gray-700"
                 aria-label="Semana siguiente"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
@@ -1161,7 +1164,7 @@ export default function Personal() {
               </button>
               <button
                 onClick={() => setWeekStart(mondayOf(todayIso()))}
-                className="hidden sm:block px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-xs font-semibold text-gray-600 transition-colors"
+                className="ml-1 px-2.5 py-1 rounded-lg border border-gray-200 hover:bg-gray-50 text-xs font-semibold text-gray-500 transition-colors"
               >
                 Hoy
               </button>
@@ -1177,30 +1180,6 @@ export default function Personal() {
                 ))}
               </div>
             )}
-          </div>
-
-          {/* Weekly summary strip */}
-          <div className="flex items-center gap-3 px-3 py-2 rounded-xl bg-gray-50 border border-gray-100">
-            <div className="flex items-center gap-1.5">
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5 text-gray-400">
-                <path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM12.735 14c.618 0 1.093-.561.872-1.139a6.002 6.002 0 0 0-11.215 0c-.22.578.254 1.139.872 1.139h9.47Z" />
-              </svg>
-              <span className="text-xs text-gray-500">
-                <span className="font-semibold text-gray-800">{weekTotalAssignments}</span> asignaciones esta semana
-              </span>
-            </div>
-            {weekCostSummary && (
-              <>
-                <span className="text-gray-200 text-xs">|</span>
-                <div className="flex items-center gap-1.5">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5 text-gray-400">
-                    <path d="M8 1a7 7 0 1 1 0 14A7 7 0 0 1 8 1Zm-.75 9.5v.75a.75.75 0 0 0 1.5 0V10.5h.25a1.75 1.75 0 0 0 0-3.5h-.25V5.5h.25a.25.25 0 0 1 0 .5H9a.75.75 0 0 0 0 1.5h.25A1.75 1.75 0 0 0 9 4H8.75V3.25a.75.75 0 0 0-1.5 0V4H7a1.75 1.75 0 0 0 0 3.5h.25V9h-.5A1.75 1.75 0 0 0 5 10.75c0 .966.784 1.75 1.75 1.75H7.25ZM7 7.5a.25.25 0 0 1-.25-.25V6h.25a.25.25 0 0 1 0 .5.75.75 0 0 0 0 1.5V7.5H7ZM8.75 9h.5a.25.25 0 0 1 0 .5H8.75V9Z" />
-                  </svg>
-                  <span className="text-xs text-gray-500">Coste semana: <span className="font-semibold text-gray-800">{weekCostSummary}</span></span>
-                </div>
-              </>
-            )}
-            <span className="ml-auto text-xs text-gray-400">Usa Detalle para editar</span>
           </div>
 
           {/* Desktop grid */}

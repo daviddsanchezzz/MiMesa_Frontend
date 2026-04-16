@@ -46,14 +46,14 @@ const shiftAppliesToDate = (shift, date) => {
 
 const compLabel = (comp) => {
   if (!comp) return null;
-  const suffix = comp.paymentType === 'hourly' ? '/h' : comp.paymentType === 'per_shift' ? '/turno' : '/mes';
+  const suffix = comp.paymentType === 'hourly' ? '/h' : comp.paymentType === 'per_shift' ? '/asignación' : '/mes';
   return `${comp.baseAmount} ${comp.currency}${suffix}`;
 };
 
 const compTypeLabel = (type) => {
   if (type === 'hourly') return 'Por hora';
-  if (type === 'per_shift') return 'Por turno';
-  if (type === 'monthly_fixed') return 'Fijo mensual';
+  if (type === 'per_shift') return 'Por asignación';
+  if (type === 'monthly_fixed') return 'Precio mensual';
   return type || '-';
 };
 
@@ -306,8 +306,8 @@ function CompensationModal({ employee, onClose, onSaved }) {
           <label className={labelCls}>Tipo de pago</label>
           <select className={inputCls} value={form.paymentType} onChange={(e) => setForm((f) => ({ ...f, paymentType: e.target.value }))}>
             <option value="hourly">Por hora</option>
-            <option value="per_shift">Por turno</option>
-            <option value="monthly_fixed">Fijo mensual</option>
+            <option value="per_shift">Por asignación</option>
+            <option value="monthly_fixed">Precio mensual</option>
           </select>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">

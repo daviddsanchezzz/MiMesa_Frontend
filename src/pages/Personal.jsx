@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useRef, useState } from 'react';
+﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
@@ -1195,20 +1195,33 @@ export default function Personal() {
   }, [weekStart]);
 
   const days = useMemo(() => weekDays(weekStart), [weekStart]);
-  useEffect(() => {
-    if (tab !== 'planner') return;
-    const selectedDay = days[mobileDayIndex];
-    if (!selectedDay) return;
-    const buttonNode = mobileDayButtonRefs.current[selectedDay.date];
-    if (!buttonNode) return;
+  const centerMobileDayButton = useCallback((buttonNode) => {
     const scroller = mobileDayScrollerRef.current;
-    if (!scroller) {
-      buttonNode.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'center' });
-      return;
-    }
-    const centeredLeft = buttonNode.offsetLeft - (scroller.clientWidth - buttonNode.offsetWidth) / 2;
-    scroller.scrollTo({ left: Math.max(0, centeredLeft), behavior: 'auto' });
-  }, [tab, mobileDayIndex, days]);
+    if (!buttonNode || !scroller) return;
+    const nodeCenter = buttonNode.offsetLeft + buttonNode.offsetWidth / 2;
+    const targetLeft = nodeCenter - scroller.clientWidth / 2;
+    const maxScroll = Math.max(0, scroller.scrollWidth - scroller.clientWidth);
+    scroller.scrollTo({
+      left: Math.max(0, Math.min(targetLeft, maxScroll)),
+      behavior: 'auto',
+    });
+  }, []);
+  useEffect(() => {
+    if (tab !== 'planner') return undefined;
+    const selectedDay = days[mobileDayIndex];
+    if (!selectedDay) return undefined;
+    const center = () => {
+      const buttonNode = mobileDayButtonRefs.current[selectedDay.date];
+      if (!buttonNode) return;
+      centerMobileDayButton(buttonNode);
+    };
+    const raf = requestAnimationFrame(center);
+    const timeoutId = setTimeout(center, 120);
+    return () => {
+      cancelAnimationFrame(raf);
+      clearTimeout(timeoutId);
+    };
+  }, [tab, mobileDayIndex, days, centerMobileDayButton]);
   const today = todayIso();
   const activeEmployees = useMemo(() => employees.filter((e) => e.status === 'active'), [employees]);
 
@@ -1864,19 +1877,6 @@ export default function Personal() {
               >
                 {isCopyingWeek ? 'Copiando...' : 'Copiar semana anterior'}
               </button>
-              <button
-                onClick={copyPreviousWeekAssignments}
-                disabled={isCopyingWeek}
-                className="sm:hidden ml-1 h-8 px-2 rounded-lg border border-gray-200 hover:bg-gray-50 text-xs font-semibold text-gray-600 transition-colors disabled:opacity-50 inline-flex items-center gap-1"
-                aria-label="Copiar semana anterior"
-                title="Copiar semana anterior"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
-                  <path d="M3.75 2a1.75 1.75 0 0 0-1.75 1.75v7.5C2 12.216 2.784 13 3.75 13h6.5A1.75 1.75 0 0 0 12 11.25v-1a.75.75 0 0 0-1.5 0v1a.25.25 0 0 1-.25.25h-6.5a.25.25 0 0 1-.25-.25v-7.5a.25.25 0 0 1 .25-.25h1a.75.75 0 0 0 0-1.5h-1Z" />
-                  <path d="M7.75 3A1.75 1.75 0 0 1 9.5 1.25h2.75A1.75 1.75 0 0 1 14 3v7.25A1.75 1.75 0 0 1 12.25 12h-2.5a.75.75 0 0 1 0-1.5h2.5a.25.25 0 0 0 .25-.25V3a.25.25 0 0 0-.25-.25H9.5a.25.25 0 0 0-.25.25v7a.75.75 0 0 1-1.5 0V3Z" />
-                </svg>
-                <span>{isCopyingWeek ? '...' : 'Copiar'}</span>
-              </button>
               {/* Export button */}
               <div className="relative ml-1" ref={exportMenuRef}>
                 <button
@@ -1965,7 +1965,10 @@ export default function Personal() {
                       if (node) mobileDayButtonRefs.current[day.date] = node;
                       else delete mobileDayButtonRefs.current[day.date];
                     }}
-                    onClick={() => setMobileDayIndex(index)}
+                    onClick={(e) => {
+                      setMobileDayIndex(index);
+                      centerMobileDayButton(e.currentTarget);
+                    }}
                     className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
                       mobileDayIndex === index
                         ? isToday ? 'bg-violet-600 text-white border-violet-600' : 'bg-violet-600 text-white border-violet-600'
@@ -2320,3 +2323,4 @@ export default function Personal() {
     </div>
   );
 }
+

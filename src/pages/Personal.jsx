@@ -639,7 +639,7 @@ function PositionFormModal({ position, onClose, onSaved }) {
 }
 
 export default function Personal() {
-  const { role } = useAuth();
+  const { role, business } = useAuth();
   const navigate = useNavigate();
 
   // staff no tiene acceso a esta página
@@ -987,12 +987,14 @@ export default function Personal() {
             <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-md ${rawList.length > 0 ? 'bg-violet-50 text-violet-700' : 'bg-gray-100 text-gray-400'}`}>
               {rawList.length}
             </span>
-            <button
-              onClick={() => setSlotEditor({ day, shift })}
-              className="text-[11px] font-semibold px-2 py-1 rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200"
-            >
-              Detalle
-            </button>
+            {!isExporting && (
+              <button
+                onClick={() => setSlotEditor({ day, shift })}
+                className="text-[11px] font-semibold px-2 py-1 rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200"
+              >
+                Detalle
+              </button>
+            )}
           </div>
         </div>
 
@@ -1440,7 +1442,17 @@ export default function Personal() {
 
           {/* Desktop grid */}
           <div className={isExporting ? 'block overflow-x-visible' : 'hidden md:block overflow-x-auto'}>
-            <div ref={plannerGridRef} className="grid grid-cols-7 gap-2.5 min-w-[1280px]">
+            <div ref={plannerGridRef} className={isExporting ? 'bg-white p-6 rounded-xl' : ''}>
+              {isExporting && (
+                <div className="mb-5 pb-4 border-b border-gray-200 flex items-end justify-between">
+                  <div>
+                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-0.5">{business?.name || 'Planificación'}</p>
+                    <p className="text-xl font-bold text-gray-900">Planificación semanal</p>
+                  </div>
+                  <p className="text-sm font-semibold text-gray-500">{weekLabel}</p>
+                </div>
+              )}
+            <div className="grid grid-cols-7 gap-2.5 min-w-[1280px]">
               {days.map((day) => {
                 const isToday = day.date === today;
                 const totalForDay = assignmentsTotalByDay[day.date] || 0;
@@ -1477,6 +1489,7 @@ export default function Personal() {
                 );
               })}
             </div>
+            </div>{/* /plannerGridRef */}
           </div>
 
           {/* Mobile day selector */}

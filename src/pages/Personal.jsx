@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+﻿import { useEffect, useMemo, useRef, useState } from 'react';
 import api from '../services/api';
 import Modal from '../components/Modal';
 
@@ -143,6 +143,7 @@ function MobileEmployeeRow({ employee, onEdit, onPago, onToggle }) {
 function EmployeeFormModal({ employee, positions, onClose, onSaved }) {
   const [positionQuery, setPositionQuery] = useState('');
   const [positionOpen, setPositionOpen] = useState(false);
+  const positionDropdownRef = useRef(null);
   const [form, setForm] = useState({
     firstName: employee?.firstName || '',
     lastName: employee?.lastName || '',
@@ -166,6 +167,15 @@ function EmployeeFormModal({ employee, positions, onClose, onSaved }) {
     if (!q) return positions;
     return positions.filter((position) => (position.name || '').toLowerCase().includes(q));
   }, [positions, positionQuery]);
+  useEffect(() => {
+    if (!positionOpen) return undefined;
+    const onClickOutside = (event) => {
+      if (!positionDropdownRef.current) return;
+      if (!positionDropdownRef.current.contains(event.target)) setPositionOpen(false);
+    };
+    document.addEventListener('mousedown', onClickOutside);
+    return () => document.removeEventListener('mousedown', onClickOutside);
+  }, [positionOpen]);
   const submit = async (e) => {
     e.preventDefault();
     setSaving(true);
@@ -194,7 +204,7 @@ function EmployeeFormModal({ employee, positions, onClose, onSaved }) {
         </div>
         <div className="space-y-2">
           <label className={labelCls}>Puestos</label>
-          <div className="relative">
+          <div className="relative" ref={positionDropdownRef}>
             <button
               type="button"
               onClick={() => setPositionOpen((v) => !v)}
@@ -208,7 +218,7 @@ function EmployeeFormModal({ employee, positions, onClose, onSaved }) {
                   </span>
                 )) : <span className="text-gray-400">Selecciona uno o varios puestos...</span>}
               </div>
-              <span className="text-gray-400 text-xs">{positionOpen ? '▲' : '▼'}</span>
+              <span className="text-gray-400 text-xs">{positionOpen ? 'â–²' : 'â–¼'}</span>
             </button>
 
             {positionOpen && (
@@ -408,7 +418,7 @@ function ShiftEditorModal({ day, shift, assignments, activeEmployees, positions,
   };
 
   return (
-    <Modal title={`Detalle del turno - ${shift.name}`} subtitle={`${day.fullLabel} · ${shift.startTime}–${shift.endTime}`} onClose={onClose} size="xl">
+    <Modal title={`Detalle del turno - ${shift.name}`} subtitle={`${day.fullLabel} · ${shift.startTime}-${shift.endTime}`} onClose={onClose} size="xl">
       <div className="space-y-3">
         {error && <div className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</div>}
         <div className="overflow-x-auto">
@@ -727,8 +737,9 @@ export default function Personal() {
       const roleName = assignment.roleLabel || employee.position || 'Sin puesto';
       const roleColor = positionColorByName.get(roleName) || employee.positionColor || '#64748B';
       const groupKey = `${roleName}__${roleColor}`;
-      if (!acc[groupKey]) acc[groupKey] = { roleColor, items: [] };
-      acc[groupKey].items.push(assignment);
+      if (!acc[groupKey]) acc[groupKey] = { roleName, roleColor, names: [] };
+      const employeeName = employee?.firstName ? `${employee.firstName} ${employee.lastName || ''}`.trim() : 'Empleado';
+      acc[groupKey].names.push(employeeName);
       return acc;
     }, {});
 
@@ -737,7 +748,7 @@ export default function Personal() {
         <div className="flex items-start justify-between gap-2">
           <div>
             <p className="text-xs font-semibold text-gray-900">{shift.name}</p>
-            <p className="text-[11px] text-gray-500">{shift.startTime} – {shift.endTime}</p>
+            <p className="text-[11px] text-gray-500">{shift.startTime} - {shift.endTime}</p>
           </div>
           <div className="flex items-center gap-2">
             <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-md ${rawList.length > 0 ? 'bg-violet-50 text-violet-700' : 'bg-gray-100 text-gray-400'}`}>
@@ -755,22 +766,13 @@ export default function Personal() {
         {rawList.length === 0 ? (
           <p className="text-[11px] text-gray-300 italic">Sin empleados asignados</p>
         ) : (
-          <div className="space-y-1">
+          <div className="space-y-1.5">
             {Object.values(grouped).map((group, index) => (
-              <div key={`${group.roleColor}-${index}`} className="space-y-1">
-                {group.items.map((assignment) => {
-                  const employee = assignment.employeeId;
-                  const employeeName = employee?.firstName ? `${employee.firstName} ${employee.lastName || ''}`.trim() : 'Empleado';
-                  return (
-                    <p
-                      key={assignment._id}
-                      className="text-[12px] text-gray-800 truncate px-2 py-1 rounded-md border"
-                      style={{ borderColor: group.roleColor, backgroundColor: `${group.roleColor}1A` }}
-                    >
-                      {employeeName}
-                    </p>
-                  );
-                })}
+              <div key={`${group.roleColor}-${index}`} className="flex items-start gap-2">
+                <span className="w-2 h-2 rounded-full mt-1.5 shrink-0" style={{ backgroundColor: group.roleColor }} />
+                <p className="text-[12px] text-gray-700 leading-5">
+                  <span className="font-semibold">{group.roleName}:</span> {group.names.join(', ')}
+                </p>
               </div>
             ))}
           </div>
@@ -802,7 +804,7 @@ export default function Personal() {
       {error && <div className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-4 py-3">{error}</div>}
       {loading && <div className="h-28 rounded-2xl bg-gray-100 animate-pulse" />}
 
-      {/* ── EMPLEADOS TAB ── */}
+      {/* -- EMPLEADOS TAB -- */}
       {!loading && tab === 'employees' && (
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
           {/* Sub-tab header */}
@@ -846,7 +848,7 @@ export default function Personal() {
             </div>
           </div>
 
-          {/* ── EMPLOYEES SUB-TAB ── */}
+          {/* -- EMPLOYEES SUB-TAB -- */}
           {employeeSubTab === 'employees' && (
             <>
               {/* Stats bar */}
@@ -1006,7 +1008,7 @@ export default function Personal() {
             </>
           )}
 
-          {/* ── POSITIONS SUB-TAB ── */}
+          {/* -- POSITIONS SUB-TAB -- */}
           {employeeSubTab === 'positions' && (
             <>
               {/* Position stats */}
@@ -1096,7 +1098,7 @@ export default function Personal() {
         </div>
       )}
 
-      {/* ── PLANNER TAB ── */}
+      {/* -- PLANNER TAB -- */}
       {!loading && tab === 'planner' && (
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 space-y-4">
           <div className="flex items-center justify-between gap-3 flex-wrap">
@@ -1106,7 +1108,7 @@ export default function Personal() {
                 className="w-9 h-9 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm font-semibold transition-colors"
                 aria-label="Semana anterior"
               >
-                ◀
+                â—€
               </button>
               <input
                 type="date"
@@ -1119,7 +1121,7 @@ export default function Personal() {
                 className="w-9 h-9 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm font-semibold transition-colors"
                 aria-label="Semana siguiente"
               >
-                ▶
+                â–¶
               </button>
               <button
                 onClick={() => setWeekStart(mondayOf(todayIso()))}
@@ -1195,7 +1197,7 @@ export default function Personal() {
             {currentMobileDay && (
               <div className="space-y-2">
                 {(shiftRowsByDay[currentMobileDay.date] || []).length === 0 ? (
-                  <p className="text-sm text-gray-400 text-center py-8">Sin turnos para este día</p>
+                  <p className="text-sm text-gray-400 text-center py-8">Sin turnos para este dÃ­a</p>
                 ) : (
                   (shiftRowsByDay[currentMobileDay.date] || []).map((shift) => renderShiftCard(currentMobileDay, shift))
                 )}
@@ -1205,7 +1207,7 @@ export default function Personal() {
         </div>
       )}
 
-      {/* ── COSTS TAB ── */}
+      {/* -- COSTS TAB -- */}
       {!loading && tab === 'costs' && (
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 space-y-4">
           {/* Week navigation */}
@@ -1291,7 +1293,7 @@ export default function Personal() {
         </div>
       )}
 
-      {/* ── MODALS ── */}
+      {/* -- MODALS -- */}
       {employeeModal && (
         <EmployeeFormModal
           employee={employeeModal._id ? employeeModal : null}
@@ -1336,3 +1338,4 @@ export default function Personal() {
     </div>
   );
 }
+

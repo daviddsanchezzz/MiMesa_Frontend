@@ -684,8 +684,10 @@ export default function Personal() {
   const [assignmentsModal, setAssignmentsModal] = useState(null); // employee object
   const [isExporting, setIsExporting] = useState(false);
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const [weekReservations, setWeekReservations] = useState({}); // date -> count
   const plannerGridRef = useRef(null);
   const exportMenuRef = useRef(null);
+  const mobileDayButtonRefs = useRef({});
 
   const loadCore = async ({ silent = false } = {}) => {
     if (!silent) setLoading(true);
@@ -708,12 +710,21 @@ export default function Personal() {
 
   const loadWeekData = async () => {
     try {
-      const [aRes, cRes] = await Promise.all([
+      const weekEnd = addDays(weekStart, 6);
+      const [aRes, cRes, reservationsRes] = await Promise.all([
         api.get(`/staff/assignments?weekStart=${weekStart}`),
         api.get(`/staff/costs?weekStart=${weekStart}`),
+        api.get(`/reservations?from=${weekStart}&to=${weekEnd}`),
       ]);
+      const reservationsCountByDate = {};
+      (reservationsRes.data || []).forEach((reservation) => {
+        if (!reservation?.date) return;
+        if (!['confirmed', 'seated'].includes(reservation.status)) return;
+        reservationsCountByDate[reservation.date] = (reservationsCountByDate[reservation.date] || 0) + 1;
+      });
       setAssignments(aRes.data?.assignments || []);
       setCosts(cRes.data || { employeeCosts: [], totalsByCurrency: {}, monthlyEstimateByCurrency: {} });
+      setWeekReservations(reservationsCountByDate);
     } catch (err) {
       setError(err?.response?.data?.message || 'No se pudieron cargar asignaciones o costes');
     }
@@ -777,6 +788,14 @@ export default function Personal() {
     const diff = Math.round((new Date(todayIso()) - new Date(weekStart)) / 86400000);
     setMobileDayIndex(diff >= 0 && diff <= 6 ? diff : 0);
   }, [weekStart]);
+  useEffect(() => {
+    if (tab !== 'planner') return;
+    const selectedDay = days[mobileDayIndex];
+    if (!selectedDay) return;
+    const buttonNode = mobileDayButtonRefs.current[selectedDay.date];
+    if (!buttonNode) return;
+    buttonNode.scrollIntoView({ behavior: 'auto', block: 'nearest', inline: 'center' });
+  }, [tab, mobileDayIndex, days]);
 
   const days = useMemo(() => weekDays(weekStart), [weekStart]);
   const today = todayIso();
@@ -995,9 +1014,6 @@ export default function Personal() {
             <p className="text-[11px] text-gray-500">{shift.startTime} - {shift.endTime}</p>
           </div>
           <div className="flex items-center gap-2">
-            <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded-md ${rawList.length > 0 ? 'bg-violet-50 text-violet-700' : 'bg-gray-100 text-gray-400'}`}>
-              {rawList.length}
-            </span>
             <button
               onClick={() => setSlotEditor({ day, shift })}
               className="text-[11px] font-semibold px-2 py-1 rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200"
@@ -1455,6 +1471,7 @@ export default function Personal() {
               {days.map((day) => {
                 const isToday = day.date === today;
                 const totalForDay = assignmentsTotalByDay[day.date] || 0;
+                const confirmedReservationsForDay = weekReservations[day.date] || 0;
                 const dayShifts = shiftRowsByDay[day.date] || [];
                 return (
                   <div
@@ -1481,6 +1498,11 @@ export default function Personal() {
                     ) : (
                       dayShifts.map((shift) => renderShiftCard(day, shift))
                     )}
+                    <div className={`rounded-lg border px-2.5 py-2 text-xs ${
+                      isToday ? 'border-violet-200 bg-white/80 text-violet-700' : 'border-gray-200 bg-white text-gray-600'
+                    }`}>
+                      <span className="font-semibold">{confirmedReservationsForDay}</span> reservas confirmadas
+                    </div>
                   </div>
                 );
               })}
@@ -1495,6 +1517,10 @@ export default function Personal() {
                 return (
                   <button
                     key={day.date}
+                    ref={(node) => {
+                      if (node) mobileDayButtonRefs.current[day.date] = node;
+                      else delete mobileDayButtonRefs.current[day.date];
+                    }}
                     onClick={() => setMobileDayIndex(index)}
                     className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
                       mobileDayIndex === index
@@ -1514,6 +1540,9 @@ export default function Personal() {
                 ) : (
                   (shiftRowsByDay[currentMobileDay.date] || []).map((shift) => renderShiftCard(currentMobileDay, shift))
                 )}
+                <div className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-600">
+                  <span className="font-semibold">{weekReservations[currentMobileDay.date] || 0}</span> reservas confirmadas
+                </div>
               </div>
             )}
           </div>
@@ -1847,4 +1876,3 @@ export default function Personal() {
     </div>
   );
 }
-

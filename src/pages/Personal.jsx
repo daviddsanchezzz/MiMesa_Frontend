@@ -719,11 +719,54 @@ function EmployeeAssignmentsModal({ employee, onClose, onDeleted }) {
   const [assignments, setAssignments] = useState([]);
   const [loadingList, setLoadingList] = useState(true);
   const [deletingId, setDeletingId] = useState(null);
+  const [savingPriceId, setSavingPriceId] = useState(null);
+  const [priceByAssignmentId, setPriceByAssignmentId] = useState({});
   const [errorMsg, setErrorMsg] = useState('');
+
+  const compensation = employee?.activeCompensation || null;
+  const currency = compensation?.currency || 'EUR';
+
+  const assignmentMinutes = (assignment) => {
+    const shift = assignment?.shiftId || {};
+    const start = assignment?.startTime || shift?.startTime;
+    const end = assignment?.endTime || shift?.endTime;
+    if (!start || !end) return 0;
+    const [sh, sm] = String(start).split(':').map(Number);
+    const [ehRaw, emRaw] = String(end).split(':').map(Number);
+    if (Number.isNaN(sh) || Number.isNaN(sm) || Number.isNaN(ehRaw) || Number.isNaN(emRaw)) return 0;
+    const startMin = sh * 60 + sm;
+    let endMin = ehRaw * 60 + emRaw;
+    if (endMin <= startMin) endMin += 24 * 60;
+    return Math.max(endMin - startMin, 0);
+  };
+
+  const autoPriceForAssignment = (assignment) => {
+    if (!compensation) return null;
+    if (compensation.paymentType === 'per_shift') return Number(compensation.baseAmount || 0);
+    if (compensation.paymentType === 'hourly') {
+      const hours = assignmentMinutes(assignment) / 60;
+      return Number((hours * Number(compensation.baseAmount || 0)).toFixed(2));
+    }
+    return null;
+  };
+
+  const formattedPrice = (value) => {
+    if (value === null || value === undefined || Number.isNaN(Number(value))) return '';
+    return Number(value).toFixed(2);
+  };
 
   useEffect(() => {
     api.get(`/staff/employees/${employee._id}/assignments`)
-      .then((r) => setAssignments(r.data?.assignments || []))
+      .then((r) => {
+        const rows = r.data?.assignments || [];
+        setAssignments(rows);
+        const initialPriceMap = {};
+        rows.forEach((row) => {
+          const effective = row.customPrice ?? autoPriceForAssignment(row);
+          initialPriceMap[row._id] = effective === null ? '' : formattedPrice(effective);
+        });
+        setPriceByAssignmentId(initialPriceMap);
+      })
       .catch(() => setErrorMsg('No se pudieron cargar los turnos'))
       .finally(() => setLoadingList(false));
   }, [employee._id]);
@@ -740,6 +783,47 @@ function EmployeeAssignmentsModal({ employee, onClose, onDeleted }) {
     } finally {
       setDeletingId(null);
     }
+  };
+
+  const saveAssignmentPrice = async (assignmentId, forcedRawValue = null) => {
+    const assignment = assignments.find((item) => item._id === assignmentId);
+    if (!assignment) return;
+    const raw = String(forcedRawValue !== null ? forcedRawValue : (priceByAssignmentId[assignmentId] ?? '')).trim();
+    let customPrice = null;
+    if (raw !== '') {
+      const parsed = Number(raw.replace(',', '.'));
+      if (!Number.isFinite(parsed) || parsed < 0) {
+        setErrorMsg('El precio debe ser un numero mayor o igual a 0');
+        const fallback = assignment.customPrice ?? autoPriceForAssignment(assignment);
+        setPriceByAssignmentId((prev) => ({ ...prev, [assignmentId]: fallback === null ? '' : formattedPrice(fallback) }));
+        return;
+      }
+      customPrice = Number(parsed.toFixed(2));
+    }
+
+    if ((assignment.customPrice ?? null) === customPrice) return;
+
+    setSavingPriceId(assignmentId);
+    setErrorMsg('');
+    try {
+      const res = await api.put(`/staff/assignments/${assignmentId}`, { customPrice });
+      const updated = res.data;
+      setAssignments((prev) => prev.map((row) => (row._id === assignmentId ? { ...row, ...updated } : row)));
+      const effective = updated.customPrice ?? autoPriceForAssignment(updated);
+      setPriceByAssignmentId((prev) => ({ ...prev, [assignmentId]: effective === null ? '' : formattedPrice(effective) }));
+      onDeleted?.();
+    } catch (err) {
+      setErrorMsg(err?.response?.data?.message || 'No se pudo actualizar el precio');
+      const fallback = assignment.customPrice ?? autoPriceForAssignment(assignment);
+      setPriceByAssignmentId((prev) => ({ ...prev, [assignmentId]: fallback === null ? '' : formattedPrice(fallback) }));
+    } finally {
+      setSavingPriceId(null);
+    }
+  };
+
+  const resetToAuto = async (assignmentId) => {
+    setPriceByAssignmentId((prev) => ({ ...prev, [assignmentId]: '' }));
+    await saveAssignmentPrice(assignmentId, '');
   };
 
   const fullName = `${employee.firstName} ${employee.lastName || ''}`.trim();
@@ -759,27 +843,54 @@ function EmployeeAssignmentsModal({ employee, onClose, onDeleted }) {
                 <tr className="border-b border-gray-100">
                   <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Fecha</th>
                   <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Turno</th>
-                  <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Horario</th>
-                  <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Rol</th>
+                  <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Precio</th>
                   <th className="px-3 py-2.5" />
                 </tr>
               </thead>
               <tbody>
                 {assignments.map((a, i) => {
                   const shift = a.shiftId;
-                  const start = a.startTime || shift?.startTime || '—';
-                  const end = a.endTime || shift?.endTime || '—';
                   const dateLabel = new Date(`${a.date}T12:00:00`).toLocaleDateString('es-ES', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' });
+                  const autoPrice = autoPriceForAssignment(a);
+                  const isSavingPrice = savingPriceId === a._id;
                   return (
                     <tr key={a._id} className={`hover:bg-gray-50/60 transition-colors ${i < assignments.length - 1 ? 'border-b border-gray-50' : ''}`}>
                       <td className="px-3 py-2.5 text-gray-700 capitalize">{dateLabel}</td>
                       <td className="px-3 py-2.5 font-medium text-gray-800">{shift?.name || '—'}</td>
-                      <td className="px-3 py-2.5 text-gray-500 text-xs tabular-nums">{start} – {end}</td>
-                      <td className="px-3 py-2.5 text-gray-500 text-xs">{a.roleLabel || '—'}</td>
+                      <td className="px-3 py-2.5">
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={priceByAssignmentId[a._id] ?? ''}
+                            onChange={(e) => setPriceByAssignmentId((prev) => ({ ...prev, [a._id]: e.target.value }))}
+                            onBlur={() => saveAssignmentPrice(a._id)}
+                            disabled={isSavingPrice}
+                            className="w-24 border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-violet-500"
+                          />
+                          <span className="text-xs text-gray-500">{currency}</span>
+                        </div>
+                        <div className="mt-1 flex items-center gap-2">
+                          {a.customPrice === null && autoPrice !== null && (
+                            <span className="text-[11px] text-gray-400">Auto: {formattedPrice(autoPrice)} {currency}</span>
+                          )}
+                          {a.customPrice !== null && (
+                            <button
+                              type="button"
+                              onClick={() => resetToAuto(a._id)}
+                              disabled={isSavingPrice}
+                              className="text-[11px] text-violet-600 hover:underline disabled:opacity-50"
+                            >
+                              Usar automático
+                            </button>
+                          )}
+                        </div>
+                      </td>
                       <td className="px-3 py-2.5 text-right">
                         <button
                           onClick={() => deleteAssignment(a._id)}
-                          disabled={deletingId === a._id}
+                          disabled={deletingId === a._id || isSavingPrice}
                           className="text-xs text-rose-500 hover:text-rose-700 hover:underline disabled:opacity-40 transition-colors"
                         >
                           Eliminar
@@ -1200,6 +1311,7 @@ export default function Personal() {
           shiftId: assignment?.shiftId?._id || assignment?.shiftId,
           date: assignment?.date ? addDays(assignment.date, 7) : '',
           roleLabel: assignment?.roleLabel || '',
+          customPrice: assignment?.customPrice ?? null,
         }))
         .filter((payload) => payload.employeeId && payload.shiftId && payload.date);
 

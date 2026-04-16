@@ -1260,24 +1260,42 @@ export default function Personal() {
       {!loading && tab === 'costs' && (
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 space-y-4">
           {/* Week navigation */}
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1">
             <button
               onClick={() => setWeekStart((v) => addDays(v, -7))}
-              className="px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm font-semibold transition-colors"
+              className="w-8 h-8 rounded-lg hover:bg-gray-100 transition-colors flex items-center justify-center text-gray-400 hover:text-gray-700"
+              aria-label="Semana anterior"
             >
-              Semana anterior
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
+                <path fillRule="evenodd" d="M9.78 4.22a.75.75 0 0 1 0 1.06L7.06 8l2.72 2.72a.75.75 0 1 1-1.06 1.06L5.47 8.53a.75.75 0 0 1 0-1.06l3.25-3.25a.75.75 0 0 1 1.06 0Z" clipRule="evenodd" />
+              </svg>
             </button>
-            <input
-              type="date"
-              value={weekStart}
-              onChange={(e) => e.target.value && setWeekStart(mondayOf(e.target.value))}
-              className={inputCls + ' w-40'}
-            />
+            <label className="relative cursor-pointer group">
+              <span className="px-3 py-1.5 rounded-lg text-sm font-semibold text-gray-800 group-hover:bg-gray-100 transition-colors block">
+                {weekLabel}
+              </span>
+              <input
+                type="date"
+                value={weekStart}
+                onChange={(e) => e.target.value && setWeekStart(mondayOf(e.target.value))}
+                className="absolute inset-0 opacity-0 cursor-pointer w-full"
+                tabIndex={-1}
+              />
+            </label>
             <button
               onClick={() => setWeekStart((v) => addDays(v, 7))}
-              className="px-3 py-1.5 rounded-lg border border-gray-200 hover:bg-gray-50 text-sm font-semibold transition-colors"
+              className="w-8 h-8 rounded-lg hover:bg-gray-100 transition-colors flex items-center justify-center text-gray-400 hover:text-gray-700"
+              aria-label="Semana siguiente"
             >
-              Semana siguiente
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
+                <path fillRule="evenodd" d="M6.22 4.22a.75.75 0 0 1 1.06 0l3.25 3.25a.75.75 0 0 1 0 1.06L7.28 11.78a.75.75 0 0 1-1.06-1.06L9.94 8 6.22 4.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
+              </svg>
+            </button>
+            <button
+              onClick={() => setWeekStart(mondayOf(todayIso()))}
+              className="ml-1 px-2.5 py-1 rounded-lg border border-gray-200 hover:bg-gray-50 text-xs font-semibold text-gray-500 transition-colors"
+            >
+              Hoy
             </button>
           </div>
 

@@ -704,6 +704,10 @@ export default function Personal() {
     (positions || []).forEach((position) => map.set(position.name, position.color || '#64748B'));
     return map;
   }, [positions]);
+  const plannerLegend = useMemo(
+    () => (positions || []).filter((position) => position.status === 'active'),
+    [positions],
+  );
 
   const toggleEmployeeStatus = async (employee) => {
     try {
@@ -770,9 +774,7 @@ export default function Personal() {
             {Object.values(grouped).map((group, index) => (
               <div key={`${group.roleColor}-${index}`} className="flex items-start gap-2">
                 <span className="w-2 h-2 rounded-full mt-1.5 shrink-0" style={{ backgroundColor: group.roleColor }} />
-                <p className="text-[12px] text-gray-700 leading-5">
-                  <span className="font-semibold">{group.roleName}:</span> {group.names.join(', ')}
-                </p>
+                <p className="text-[12px] text-gray-700 leading-5">{group.roleName}: {group.names.join(', ')}</p>
               </div>
             ))}
           </div>
@@ -1132,6 +1134,16 @@ export default function Personal() {
             </div>
             <span className="text-xs text-gray-400">Usa Detalle para editar asignaciones</span>
           </div>
+          {plannerLegend.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2">
+              {plannerLegend.map((position) => (
+                <span key={position._id} className="inline-flex items-center gap-1.5 text-xs text-gray-600 bg-white border border-gray-200 rounded-full px-2 py-1">
+                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: position.color || '#64748B' }} />
+                  {position.name}
+                </span>
+              ))}
+            </div>
+          )}
 
           {/* Desktop grid */}
           <div className="hidden md:block overflow-x-auto">

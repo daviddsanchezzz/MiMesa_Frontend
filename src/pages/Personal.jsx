@@ -49,7 +49,11 @@ function EmployeeFormModal({ employee, positions, onClose, onSaved }) {
     lastName: employee?.lastName || '',
     phone: employee?.phone || '',
     email: employee?.email || '',
-    positionId: employee?.positionId || '',
+    positionIds: Array.isArray(employee?.positionIds)
+      ? employee.positionIds.map(String)
+      : employee?.positionId
+        ? [String(employee.positionId)]
+        : [],
     notes: employee?.notes || '',
   });
   const [saving, setSaving] = useState(false);
@@ -80,16 +84,33 @@ function EmployeeFormModal({ employee, positions, onClose, onSaved }) {
           <div><label className={labelCls}>Telefono</label><input className={inputCls} value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} /></div>
           <div><label className={labelCls}>Email</label><input className={inputCls} type="email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} /></div>
         </div>
-        <div>
-          <label className={labelCls}>Puesto</label>
-          <select className={inputCls} value={form.positionId} onChange={(e) => setForm((f) => ({ ...f, positionId: e.target.value }))}>
-            <option value="">Sin puesto</option>
-            {positions.map((position) => (
-              <option key={position._id} value={position._id}>
-                {position.name}
-              </option>
-            ))}
-          </select>
+        <div className="space-y-2">
+          <label className={labelCls}>Puestos</label>
+          <div className="border border-gray-200 rounded-xl p-2 max-h-40 overflow-auto space-y-1">
+            {positions.map((position) => {
+              const checked = form.positionIds.includes(String(position._id));
+              return (
+                <label key={position._id} className="flex items-center gap-2 text-sm text-gray-700">
+                  <input
+                    type="checkbox"
+                    checked={checked}
+                    onChange={(e) => {
+                      const id = String(position._id);
+                      setForm((prev) => ({
+                        ...prev,
+                        positionIds: e.target.checked
+                          ? [...prev.positionIds, id]
+                          : prev.positionIds.filter((value) => value !== id),
+                      }));
+                    }}
+                  />
+                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: position.color || '#64748B' }} />
+                  {position.name}
+                </label>
+              );
+            })}
+            {positions.length === 0 && <p className="text-xs text-gray-400">No hay puestos activos</p>}
+          </div>
         </div>
         <div><label className={labelCls}>Notas</label><textarea rows={3} className={inputCls} value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} /></div>
         <div className="flex items-center justify-end gap-2"><button type="button" onClick={onClose} className="px-3 py-2 rounded-lg text-sm bg-gray-100 hover:bg-gray-200">Cancelar</button><button type="submit" disabled={saving} className="px-3 py-2 rounded-lg text-sm bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-60">{saving ? 'Guardando...' : 'Guardar'}</button></div>
@@ -150,31 +171,43 @@ function ShiftEditorModal({ day, shift, assignments, activeEmployees, positions,
     }));
 
     const byKey = new Map(baseColumns.map((column) => [column.key, column]));
+    const byName = new Map(baseColumns.map((column) => [column.label, column]));
 
     assignments.forEach((assignment) => {
       const employee = assignment.employeeId;
       const key = employee?.positionId ? String(employee.positionId) : null;
-      const column = key ? byKey.get(key) : null;
+      const column = (assignment.roleLabel && byName.get(assignment.roleLabel)) || (key ? byKey.get(key) : null);
       if (!column) return;
       column.assigned.push(assignment);
     });
 
     availableEmployees.forEach((employee) => {
-      const key = employee?.positionId ? String(employee.positionId) : null;
-      const column = key ? byKey.get(key) : null;
-      if (!column) return;
-      column.available.push(employee);
+      const ids = Array.isArray(employee?.positionIds) && employee.positionIds.length
+        ? employee.positionIds.map(String)
+        : employee?.positionId
+          ? [String(employee.positionId)]
+          : [];
+      ids.forEach((id) => {
+        const column = byKey.get(id);
+        if (column) column.available.push(employee);
+      });
     });
 
     return baseColumns;
   }, [positions, assignments, availableEmployees]);
 
-  const addEmployee = async (employeeId) => {
+  const addEmployee = async (employeeId, columnKey) => {
     if (!employeeId) return;
     setSaving(true);
     setError('');
     try {
-      await api.post('/staff/assignments', { employeeId, date: day.date, shiftId: shift._id });
+      const column = columns.find((item) => String(item.key) === String(columnKey));
+      await api.post('/staff/assignments', {
+        employeeId,
+        date: day.date,
+        shiftId: shift._id,
+        roleLabel: column?.label || '',
+      });
       await onRefresh();
     } catch (err) {
       setError(err?.response?.data?.message || 'No se pudo asignar el empleado');
@@ -250,7 +283,7 @@ function ShiftEditorModal({ day, shift, assignments, activeEmployees, positions,
                     onClick={async () => {
                       const selectedId = selectedByColumn[column.key];
                       if (!selectedId) return;
-                      await addEmployee(selectedId);
+                      await addEmployee(selectedId, column.key);
                       setSelectedByColumn((prev) => ({ ...prev, [column.key]: '' }));
                     }}
                     disabled={saving || !selectedByColumn[column.key]}
@@ -268,26 +301,20 @@ function ShiftEditorModal({ day, shift, assignments, activeEmployees, positions,
   );
 }
 
-function PositionManagerModal({ positions, onClose, onSaved }) {
-  const [form, setForm] = useState({ name: '', color: '#64748B' });
-  const [editing, setEditing] = useState(null);
+function PositionFormModal({ position, onClose, onSaved }) {
+  const [form, setForm] = useState({ name: position?.name || '', color: position?.color || '#64748B' });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
-
-  const resetForm = () => {
-    setEditing(null);
-    setForm({ name: '', color: '#64748B' });
-  };
 
   const submit = async (e) => {
     e.preventDefault();
     setSaving(true);
     setError('');
     try {
-      if (editing?._id) await api.put(`/staff/positions/${editing._id}`, form);
+      if (position?._id) await api.put(`/staff/positions/${position._id}`, form);
       else await api.post('/staff/positions', form);
-      resetForm();
       await onSaved();
+      onClose();
     } catch (err) {
       setError(err?.response?.data?.message || 'No se pudo guardar el puesto');
     } finally {
@@ -295,29 +322,10 @@ function PositionManagerModal({ positions, onClose, onSaved }) {
     }
   };
 
-  const toggleStatus = async (position) => {
-    setSaving(true);
-    setError('');
-    try {
-      await api.patch(`/staff/positions/${position._id}/status`, {
-        status: position.status === 'active' ? 'inactive' : 'active',
-      });
-      await onSaved();
-    } catch (err) {
-      setError(err?.response?.data?.message || 'No se pudo actualizar el estado del puesto');
-    } finally {
-      setSaving(false);
-    }
-  };
-
   return (
-    <Modal title="Puestos" onClose={onClose}>
+    <Modal title={position?._id ? 'Editar puesto' : 'Nuevo puesto'} onClose={onClose}>
       <div className="space-y-3">
         {error && <div className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</div>}
-
-        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-          {editing ? 'Editando puesto' : 'Nuevo puesto'}
-        </p>
         <form onSubmit={submit} className="grid grid-cols-1 sm:grid-cols-[1fr_140px_auto] gap-2">
           <input
             className={inputCls}
@@ -335,51 +343,11 @@ function PositionManagerModal({ positions, onClose, onSaved }) {
           />
           <div className="flex gap-2">
             <button type="submit" disabled={saving} className="px-3 py-2 rounded-lg text-sm bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-60">
-              {editing ? 'Guardar' : 'Crear'}
+              {position?._id ? 'Guardar' : 'Crear'}
             </button>
-            {editing && (
-              <button type="button" onClick={resetForm} className="px-3 py-2 rounded-lg text-sm bg-gray-100 hover:bg-gray-200">
-                Cancelar
-              </button>
-            )}
+            <button type="button" onClick={onClose} className="px-3 py-2 rounded-lg text-sm bg-gray-100 hover:bg-gray-200">Cancelar</button>
           </div>
         </form>
-
-        <div className="divide-y divide-gray-100 border border-gray-200 rounded-xl overflow-hidden">
-          {positions.length === 0 && (
-            <div className="text-sm text-gray-500 px-3 py-6 text-center">
-              Todavia no hay puestos
-            </div>
-          )}
-          {positions.map((position) => (
-            <div key={position._id} className="flex items-center justify-between gap-2 px-3 py-2.5 bg-white">
-              <div className="flex items-center gap-2">
-                <span className="w-3 h-3 rounded-full border border-gray-200" style={{ backgroundColor: position.color || '#64748B' }} />
-                <div>
-                  <p className="text-sm font-semibold text-gray-900">{position.name}</p>
-                  <p className="text-xs text-gray-500">{position.status === 'active' ? 'Activo' : 'Inactivo'}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => {
-                    setEditing(position);
-                    setForm({ name: position.name || '', color: position.color || '#64748B' });
-                  }}
-                  className="text-xs px-2 py-1 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200"
-                >
-                  Editar
-                </button>
-                <button
-                  onClick={() => toggleStatus(position)}
-                  className="text-xs px-2 py-1 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200"
-                >
-                  {position.status === 'active' ? 'Desactivar' : 'Activar'}
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
       </div>
     </Modal>
   );
@@ -397,7 +365,8 @@ export default function Personal() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [employeeModal, setEmployeeModal] = useState(null);
-  const [positionModalOpen, setPositionModalOpen] = useState(false);
+  const [positionModal, setPositionModal] = useState(null);
+  const [employeeSubTab, setEmployeeSubTab] = useState('employees');
   const [compModalEmployee, setCompModalEmployee] = useState(null);
   const [slotEditor, setSlotEditor] = useState(null);
 
@@ -472,6 +441,11 @@ export default function Personal() {
     return out;
   }, [days, shifts]);
   const currentMobileDay = days[mobileDayIndex] || days[0];
+  const positionColorByName = useMemo(() => {
+    const map = new Map();
+    (positions || []).forEach((position) => map.set(position.name, position.color || '#64748B'));
+    return map;
+  }, [positions]);
 
   const toggleEmployeeStatus = async (employee) => {
     try {
@@ -485,6 +459,17 @@ export default function Personal() {
     }
   };
 
+  const togglePositionStatus = async (position) => {
+    try {
+      await api.patch(`/staff/positions/${position._id}/status`, {
+        status: position.status === 'active' ? 'inactive' : 'active',
+      });
+      await loadCore();
+    } catch (err) {
+      setError(err?.response?.data?.message || 'No se pudo actualizar el estado del puesto');
+    }
+  };
+
   const renderShiftCard = (day, shift) => {
     const key = `${day.date}__${shift._id}`;
     const rawList = assignmentsByDayShift[key] || [];
@@ -492,8 +477,8 @@ export default function Personal() {
 
     const grouped = list.reduce((acc, assignment) => {
       const employee = assignment.employeeId || {};
-      const roleName = employee.position || assignment.roleLabel || 'Sin puesto';
-      const roleColor = employee.positionColor || '#64748B';
+      const roleName = assignment.roleLabel || employee.position || 'Sin puesto';
+      const roleColor = positionColorByName.get(roleName) || employee.positionColor || '#64748B';
       const groupKey = `${roleName}__${roleColor}`;
       if (!acc[groupKey]) acc[groupKey] = { roleColor, items: [] };
       acc[groupKey].items.push(assignment);
@@ -556,66 +541,128 @@ export default function Personal() {
       {!loading && tab === 'employees' && (
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
           <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-            <p className="text-sm font-semibold text-gray-800">Empleados ({employees.length})</p>
             <div className="flex items-center gap-2">
-              <button onClick={() => setPositionModalOpen(true)} className="px-3 py-2 rounded-lg text-sm bg-gray-100 text-gray-700 hover:bg-gray-200">
+              <button
+                onClick={() => setEmployeeSubTab('employees')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold ${employeeSubTab === 'employees' ? 'bg-violet-600 text-white' : 'bg-gray-100 text-gray-700'}`}
+              >
+                Empleados
+              </button>
+              <button
+                onClick={() => setEmployeeSubTab('positions')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold ${employeeSubTab === 'positions' ? 'bg-violet-600 text-white' : 'bg-gray-100 text-gray-700'}`}
+              >
                 Puestos
               </button>
-              <button onClick={() => setEmployeeModal({})} className="px-3 py-2 rounded-lg text-sm bg-violet-600 text-white hover:bg-violet-700">
-                Nuevo empleado
-              </button>
+            </div>
+            <div className="flex items-center gap-2">
+              {employeeSubTab === 'employees' ? (
+                <button onClick={() => setEmployeeModal({})} className="px-3 py-2 rounded-lg text-sm bg-violet-600 text-white hover:bg-violet-700">
+                  Nuevo empleado
+                </button>
+              ) : (
+                <button onClick={() => setPositionModal({})} className="px-3 py-2 rounded-lg text-sm bg-violet-600 text-white hover:bg-violet-700">
+                  Nuevo puesto
+                </button>
+              )}
             </div>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-gray-50 border-b border-gray-100">
-                  <th className="text-left px-4 py-2">Empleado</th>
-                  <th className="text-left px-4 py-2">Puesto</th>
-                  <th className="text-left px-4 py-2">Pago activo</th>
-                  <th className="text-left px-4 py-2">Estado</th>
-                  <th className="px-4 py-2" />
-                </tr>
-              </thead>
-              <tbody>
-                {employees.map((employee) => (
-                  <tr key={employee._id} className="border-b border-gray-50">
-                    <td className="px-4 py-3">
-                      <p className="font-semibold text-gray-900">{`${employee.firstName} ${employee.lastName || ''}`.trim()}</p>
-                      <p className="text-xs text-gray-500">{employee.email || employee.phone || '-'}</p>
-                    </td>
-                    <td className="px-4 py-3 text-gray-700">
-                      {employee.position ? (
-                        <span className="inline-flex items-center gap-1.5 text-xs font-semibold rounded-full px-2 py-1 border border-gray-200">
-                          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: employee.positionColor || '#64748B' }} />
-                          {employee.position}
-                        </span>
-                      ) : '-'}
-                    </td>
-                    <td className="px-4 py-3 text-gray-700">
-                      {employee.activeCompensation
-                        ? `${employee.activeCompensation.paymentType} - ${employee.activeCompensation.baseAmount} ${employee.activeCompensation.currency}`
-                        : 'Sin definir'}
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={`text-xs font-semibold px-2 py-1 rounded-full ${employee.status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-600'}`}>
-                        {employee.status === 'active' ? 'Activo' : 'Inactivo'}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center justify-end gap-2">
-                        <button onClick={() => setCompModalEmployee(employee)} className="text-xs px-2 py-1 rounded-lg bg-violet-50 text-violet-700 hover:bg-violet-100">Pago</button>
-                        <button onClick={() => setEmployeeModal(employee)} className="text-xs px-2 py-1 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200">Editar</button>
-                        <button onClick={() => toggleEmployeeStatus(employee)} className="text-xs px-2 py-1 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200">
-                          {employee.status === 'active' ? 'Desactivar' : 'Activar'}
-                        </button>
-                      </div>
-                    </td>
+          {employeeSubTab === 'employees' && (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-gray-50 border-b border-gray-100">
+                    <th className="text-left px-4 py-2">Empleado</th>
+                    <th className="text-left px-4 py-2">Puestos</th>
+                    <th className="text-left px-4 py-2">Pago activo</th>
+                    <th className="text-left px-4 py-2">Estado</th>
+                    <th className="px-4 py-2" />
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {employees.map((employee) => (
+                    <tr key={employee._id} className="border-b border-gray-50">
+                      <td className="px-4 py-3">
+                        <p className="font-semibold text-gray-900">{`${employee.firstName} ${employee.lastName || ''}`.trim()}</p>
+                        <p className="text-xs text-gray-500">{employee.email || employee.phone || '-'}</p>
+                      </td>
+                      <td className="px-4 py-3 text-gray-700">
+                        <div className="flex flex-wrap gap-1.5">
+                          {(employee.positions || []).map((position) => (
+                            <span key={position._id} className="inline-flex items-center gap-1.5 text-xs font-semibold rounded-full px-2 py-1 border border-gray-200">
+                              <span className="w-2 h-2 rounded-full" style={{ backgroundColor: position.color || '#64748B' }} />
+                              {position.name}
+                            </span>
+                          ))}
+                          {(!employee.positions || employee.positions.length === 0) && <span>-</span>}
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-gray-700">
+                        {employee.activeCompensation
+                          ? `${employee.activeCompensation.paymentType} - ${employee.activeCompensation.baseAmount} ${employee.activeCompensation.currency}`
+                          : 'Sin definir'}
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`text-xs font-semibold px-2 py-1 rounded-full ${employee.status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-600'}`}>
+                          {employee.status === 'active' ? 'Activo' : 'Inactivo'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center justify-end gap-2">
+                          <button onClick={() => setCompModalEmployee(employee)} className="text-xs px-2 py-1 rounded-lg bg-violet-50 text-violet-700 hover:bg-violet-100">Pago</button>
+                          <button onClick={() => setEmployeeModal(employee)} className="text-xs px-2 py-1 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200">Editar</button>
+                          <button onClick={() => toggleEmployeeStatus(employee)} className="text-xs px-2 py-1 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200">
+                            {employee.status === 'active' ? 'Desactivar' : 'Activar'}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {employeeSubTab === 'positions' && (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-gray-50 border-b border-gray-100">
+                    <th className="text-left px-4 py-2">Puesto</th>
+                    <th className="text-left px-4 py-2">Color</th>
+                    <th className="text-left px-4 py-2">Estado</th>
+                    <th className="px-4 py-2" />
+                  </tr>
+                </thead>
+                <tbody>
+                  {positions.map((position) => (
+                    <tr key={position._id} className="border-b border-gray-50">
+                      <td className="px-4 py-3 font-semibold text-gray-900">{position.name}</td>
+                      <td className="px-4 py-3">
+                        <span className="inline-flex items-center gap-2 text-xs text-gray-700">
+                          <span className="w-3 h-3 rounded-full border border-gray-200" style={{ backgroundColor: position.color || '#64748B' }} />
+                          {position.color || '#64748B'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <span className={`text-xs font-semibold px-2 py-1 rounded-full ${position.status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-600'}`}>
+                          {position.status === 'active' ? 'Activo' : 'Inactivo'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center justify-end gap-2">
+                          <button onClick={() => setPositionModal(position)} className="text-xs px-2 py-1 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200">Editar</button>
+                          <button onClick={() => togglePositionStatus(position)} className="text-xs px-2 py-1 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200">
+                            {position.status === 'active' ? 'Desactivar' : 'Activar'}
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 
@@ -680,10 +727,10 @@ export default function Personal() {
           }}
         />
       )}
-      {positionModalOpen && (
-        <PositionManagerModal
-          positions={positions}
-          onClose={() => setPositionModalOpen(false)}
+      {positionModal && (
+        <PositionFormModal
+          position={positionModal._id ? positionModal : null}
+          onClose={() => setPositionModal(null)}
           onSaved={loadCore}
         />
       )}

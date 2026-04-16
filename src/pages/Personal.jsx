@@ -513,6 +513,7 @@ function ShiftEditorModal({ day, shift, assignments, activeEmployees, positions,
       subtitle={`${day.fullLabel} · ${shift.startTime}-${shift.endTime}`}
       onClose={onClose}
       size="xl"
+      bodyClassName="overflow-visible"
     >
       <div className="space-y-4">
         {error && <div className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</div>}
@@ -615,7 +616,7 @@ function ShiftEditorModal({ day, shift, assignments, activeEmployees, positions,
                 )}
                 {employeePickerOpen && selectedPositionId && (
                   <div className="absolute z-30 -left-1 -right-1 mt-2 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden">
-                    <div className="max-h-56 overflow-auto p-1.5 space-y-1">
+                    <div className="p-1.5 space-y-1">
                       {filteredEligibleEmployees.length === 0 ? (
                         <p className="text-xs text-gray-400 px-2 py-2">Sin resultados para la búsqueda</p>
                       ) : (
@@ -961,6 +962,7 @@ export default function Personal() {
       setError(err?.response?.data?.message || 'No se pudo registrar el pago');
     }
   };
+  
 
   useEffect(() => { loadCore(); }, []);
   useEffect(() => { loadWeekData(); }, [weekStart]);

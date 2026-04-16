@@ -1,4 +1,4 @@
-export default function Modal({ title, subtitle, children, onClose, size = 'sm' }) {
+export default function Modal({ title, subtitle, children, onClose, size = 'sm', bodyClassName = '' }) {
   const widths = {
     sm: 'w-full sm:max-w-sm',
     md: 'w-full sm:max-w-md',
@@ -26,7 +26,7 @@ export default function Modal({ title, subtitle, children, onClose, size = 'sm' 
             </svg>
           </button>
         </div>
-        <div className="px-5 py-5 overflow-y-auto overflow-x-hidden">{children}</div>
+        <div className={`px-5 py-5 overflow-y-auto overflow-x-hidden ${bodyClassName}`.trim()}>{children}</div>
       </div>
     </div>
   );

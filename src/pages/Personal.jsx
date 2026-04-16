@@ -484,20 +484,50 @@ function ShiftEditorModal({ day, shift, assignments, activeEmployees, positions,
     const updateMenuPosition = () => {
       if (!employeePickerRef.current) return;
       const rect = employeePickerRef.current.getBoundingClientRect();
+      const vv = window.visualViewport;
+      const viewportLeft = vv ? vv.offsetLeft : 0;
+      const viewportTop = vv ? vv.offsetTop : 0;
+      const viewportWidth = vv ? vv.width : window.innerWidth;
+      const viewportHeight = vv ? vv.height : window.innerHeight;
+      const viewportRight = viewportLeft + viewportWidth;
+      const viewportBottom = viewportTop + viewportHeight;
+      const safeMargin = 8;
+      const menuGap = 8;
+
+      const desiredWidth = Math.min(Math.max(rect.width + 8, 220), Math.max(220, viewportWidth - safeMargin * 2));
+      const left = Math.min(
+        Math.max(rect.left - 4, viewportLeft + safeMargin),
+        viewportRight - desiredWidth - safeMargin,
+      );
+
+      const estimatedHeight = Math.min(320, Math.max(120, filteredEligibleEmployees.length * 42 + 12));
+      const spaceBelow = viewportBottom - (rect.bottom + menuGap) - safeMargin;
+      const spaceAbove = (rect.top - menuGap) - (viewportTop + safeMargin);
+      const openUp = spaceBelow < Math.min(estimatedHeight, 180) && spaceAbove > spaceBelow;
+      const maxHeight = Math.max(120, Math.min(320, openUp ? spaceAbove : spaceBelow));
+      const top = openUp
+        ? Math.max(viewportTop + safeMargin, rect.top - Math.min(estimatedHeight, maxHeight) - menuGap)
+        : Math.min(rect.bottom + menuGap, viewportBottom - maxHeight - safeMargin);
+
       setEmployeePickerMenuStyle({
-        top: rect.bottom + 8,
-        left: rect.left - 4,
-        width: rect.width + 8,
+        top,
+        left,
+        width: desiredWidth,
+        maxHeight,
       });
     };
     updateMenuPosition();
     window.addEventListener('resize', updateMenuPosition);
     window.addEventListener('scroll', updateMenuPosition, true);
+    window.visualViewport?.addEventListener('resize', updateMenuPosition);
+    window.visualViewport?.addEventListener('scroll', updateMenuPosition);
     return () => {
       window.removeEventListener('resize', updateMenuPosition);
       window.removeEventListener('scroll', updateMenuPosition, true);
+      window.visualViewport?.removeEventListener('resize', updateMenuPosition);
+      window.visualViewport?.removeEventListener('scroll', updateMenuPosition);
     };
-  }, [employeePickerOpen, selectedPositionId]);
+  }, [employeePickerOpen, selectedPositionId, filteredEligibleEmployees.length]);
 
   const saveChanges = async () => {
     if (!hasChanges) {
@@ -659,9 +689,10 @@ function ShiftEditorModal({ day, shift, assignments, activeEmployees, positions,
               top: employeePickerMenuStyle.top,
               left: employeePickerMenuStyle.left,
               width: employeePickerMenuStyle.width,
+              maxHeight: employeePickerMenuStyle.maxHeight,
             }}
           >
-            <div className="p-1.5 space-y-1">
+            <div className="p-1.5 space-y-1 overflow-auto h-full">
               {filteredEligibleEmployees.length === 0 ? (
                 <p className="text-xs text-gray-400 px-2 py-2">Sin resultados para la búsqueda</p>
               ) : (

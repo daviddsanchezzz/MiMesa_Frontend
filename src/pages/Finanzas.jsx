@@ -785,12 +785,6 @@ function GastosTab({ dateRange, suppliers, expenseCategories }) {
   const [deleting, setDeleting] = useState(null);
   const [filters, setFilters] = useState({ from: dateRange.from, to: dateRange.to, category: '', supplierId: '' });
 
-  const [templates, setTemplates] = useState([]);
-  const [templatesLoading, setTemplatesLoading] = useState(false);
-  const [showTemplates, setShowTemplates] = useState(false);
-  const [togglingTpl, setTogglingTpl] = useState(null);
-  const [deletingTpl, setDeletingTpl] = useState(null);
-
   // Sync date range from parent period selector
   useEffect(() => {
     setFilters((f) => ({ ...f, from: dateRange.from, to: dateRange.to }));
@@ -810,24 +804,7 @@ function GastosTab({ dateRange, suppliers, expenseCategories }) {
     finally { setLoading(false); }
   }, [filters]);
 
-  const loadTemplates = useCallback(async () => {
-    setTemplatesLoading(true);
-    try {
-      const { data } = await api.get('/expenses/templates');
-      setTemplates(data);
-    } catch { /* ignore */ }
-    finally { setTemplatesLoading(false); }
-  }, []);
-
   useEffect(() => { load(); }, [load]);
-
-  // Load templates only when panel is first opened
-  const handleShowTemplates = () => {
-    setShowTemplates((v) => {
-      if (!v) loadTemplates();
-      return !v;
-    });
-  };
 
   // Delete with scope support
   const handleDelete = async (id, scope = 'single') => {
@@ -837,15 +814,12 @@ function GastosTab({ dateRange, suppliers, expenseCategories }) {
       if (scope === 'single') {
         setExpenses((prev) => prev.filter((e) => e._id !== id));
       } else {
-        // Other scopes may delete many rows + template — reload both
         load();
-        if (showTemplates) loadTemplates();
       }
     } catch { /* ignore */ }
     finally { setDeleting(null); }
   };
 
-  // Entry point for edit button click
   const handleEditClick = (exp) => {
     if (exp.isRecurring) {
       setScopeDialog({ mode: 'edit', expense: exp });
@@ -854,7 +828,6 @@ function GastosTab({ dateRange, suppliers, expenseCategories }) {
     }
   };
 
-  // Entry point for delete button click
   const handleDeleteClick = (exp) => {
     if (exp.isRecurring) {
       setScopeDialog({ mode: 'delete', expense: exp });
@@ -871,25 +844,6 @@ function GastosTab({ dateRange, suppliers, expenseCategories }) {
     } else {
       handleDelete(expense._id, scope);
     }
-  };
-
-  const handleToggleTemplate = async (tpl) => {
-    setTogglingTpl(tpl._id);
-    try {
-      await api.patch(`/expenses/templates/${tpl._id}`, { isActive: !tpl.isActive });
-      loadTemplates();
-    } catch { /* ignore */ }
-    finally { setTogglingTpl(null); }
-  };
-
-  const handleDeleteTemplate = async (id) => {
-    if (!window.confirm('¿Eliminar esta plantilla? Los gastos ya generados se conservan.')) return;
-    setDeletingTpl(id);
-    try {
-      await api.delete(`/expenses/templates/${id}`);
-      setTemplates((prev) => prev.filter((t) => t._id !== id));
-    } catch { /* ignore */ }
-    finally { setDeletingTpl(null); }
   };
 
   const setFilter = (k, v) => setFilters((f) => ({ ...f, [k]: v }));
@@ -916,27 +870,12 @@ function GastosTab({ dateRange, suppliers, expenseCategories }) {
           <option value="">Todos los proveedores</option>
           {suppliers.map((s) => <option key={s._id} value={s._id}>{s.name}</option>)}
         </select>
-        <div className="ml-auto flex items-center gap-2">
-          <button
-            onClick={handleShowTemplates}
-            className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-xl border transition-colors ${
-              showTemplates
-                ? 'bg-violet-50 border-violet-200 text-violet-700'
-                : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
-            }`}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
-              <path fillRule="evenodd" d="M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14Zm.75-10.25a.75.75 0 0 0-1.5 0v3.5c0 .414.336.75.75.75h3.25a.75.75 0 0 0 0-1.5H8.75v-2.75Z" clipRule="evenodd" />
-            </svg>
-            Recurrentes
-          </button>
-          <button onClick={() => setModal({})} className={btnPrimary + ' flex items-center gap-1.5'}>
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
-              <path d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z" />
-            </svg>
-            Registrar gasto
-          </button>
-        </div>
+        <button onClick={() => setModal({})} className={btnPrimary + ' ml-auto flex items-center gap-1.5'}>
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
+            <path d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z" />
+          </svg>
+          Registrar gasto
+        </button>
       </div>
 
       {loading ? <Spinner /> : expenses.length === 0 ? (
@@ -1017,72 +956,6 @@ function GastosTab({ dateRange, suppliers, expenseCategories }) {
         </>
       )}
 
-      {/* Collapsible recurring templates panel */}
-      {showTemplates && (
-        <div className="bg-white rounded-2xl border border-violet-100 shadow-sm">
-          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-50">
-            <div className="flex items-center gap-2">
-              <h3 className="text-sm font-semibold text-gray-700">Plantillas recurrentes</h3>
-              {!templatesLoading && templates.length > 0 && (
-                <span className="text-xs bg-violet-100 text-violet-600 font-semibold px-1.5 py-0.5 rounded-full">
-                  {templates.filter((t) => t.isActive).length} activas
-                </span>
-              )}
-            </div>
-            <p className="text-xs text-gray-400">El cron genera el gasto mensualmente en el día indicado</p>
-          </div>
-
-          {templatesLoading ? (
-            <div className="px-5 py-6"><Spinner /></div>
-          ) : templates.length === 0 ? (
-            <div className="px-5 py-8 text-center">
-              <p className="text-sm text-gray-400">Sin plantillas. Marca un gasto como recurrente al crearlo.</p>
-            </div>
-          ) : (
-            <div className="divide-y divide-gray-50">
-              {templates.map((tpl) => (
-                <div key={tpl._id} className={`flex items-center gap-4 px-5 py-3.5 ${tpl.isActive ? '' : 'opacity-50'}`}>
-                  <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-violet-50 flex flex-col items-center justify-center">
-                    <span className="text-sm font-bold text-violet-600 leading-none">{tpl.dayOfMonth}</span>
-                    <span className="text-[9px] text-violet-400 leading-none mt-0.5">cada mes</span>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className={`w-2 h-2 rounded-full flex-shrink-0 ${catDot(expenseCategories, tpl.category)}`} />
-                      <span className="text-sm font-medium text-gray-800">{catLabel(expenseCategories, tpl.category)}</span>
-                      {tpl.supplierId?.name && <span className="text-xs text-gray-400 truncate">· {tpl.supplierId.name}</span>}
-                    </div>
-                    {tpl.notes && <p className="text-xs text-gray-400 mt-0.5 truncate">{tpl.notes}</p>}
-                  </div>
-                  <span className="text-sm font-semibold text-gray-800 whitespace-nowrap">{fmtEur(tpl.amount)}</span>
-                  <button
-                    onClick={() => handleToggleTemplate(tpl)}
-                    disabled={togglingTpl === tpl._id}
-                    className={`text-xs font-semibold px-2.5 py-1 rounded-full transition-colors flex-shrink-0 ${
-                      tpl.isActive
-                        ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
-                        : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-                    }`}
-                  >
-                    {tpl.isActive ? 'Activa' : 'Pausada'}
-                  </button>
-                  <button
-                    onClick={() => handleDeleteTemplate(tpl._id)}
-                    disabled={deletingTpl === tpl._id}
-                    className="p-1.5 text-gray-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors flex-shrink-0"
-                    title="Eliminar plantilla"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
-                      <path fillRule="evenodd" d="M5 3.25V4H2.75a.75.75 0 0 0 0 1.5h.3l.815 8.15A1.5 1.5 0 0 0 5.357 15h5.285a1.5 1.5 0 0 0 1.493-1.35l.815-8.15h.3a.75.75 0 0 0 0-1.5H11v-.75A2.25 2.25 0 0 0 8.75 1h-1.5A2.25 2.25 0 0 0 5 3.25Zm2.25-.75a.75.75 0 0 0-.75.75V4h3v-.75a.75.75 0 0 0-.75-.75h-1.5ZM6.05 6a.75.75 0 0 1 .787.713l.275 5.5a.75.75 0 0 1-1.498.075l-.275-5.5A.75.75 0 0 1 6.05 6Zm3.9 0a.75.75 0 0 1 .712.787l-.275 5.5a.75.75 0 0 1-1.498-.075l.275-5.5a.75.75 0 0 1 .786-.711Z" clipRule="evenodd" />
-                    </svg>
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
       {/* Scope picker — shown before edit/delete on recurring expenses */}
       {scopeDialog && (
         <RecurringScopeDialog
@@ -1098,9 +971,149 @@ function GastosTab({ dateRange, suppliers, expenseCategories }) {
           scope={modal.scope}
           suppliers={suppliers}
           expenseCategories={expenseCategories}
-          onSave={() => { setModal(null); load(); if (showTemplates) loadTemplates(); }}
+          onSave={() => { setModal(null); load(); }}
           onClose={() => setModal(null)}
         />
+      )}
+    </div>
+  );
+}
+
+// ── Recurrentes tab ───────────────────────────────────────────────────────────
+
+function RecurrentesTab({ expenseCategories, suppliers }) {
+  const [gastos, setGastos] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [toggling, setToggling] = useState(null);
+  const [deleting, setDeleting] = useState(null);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { data } = await api.get('/expenses/templates');
+      setGastos(data);
+    } catch { /* ignore */ }
+    finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const handleToggle = async (g) => {
+    setToggling(g._id);
+    try {
+      await api.patch(`/expenses/templates/${g._id}`, { isActive: !g.isActive });
+      setGastos((prev) => prev.map((x) => x._id === g._id ? { ...x, isActive: !x.isActive } : x));
+    } catch { /* ignore */ }
+    finally { setToggling(null); }
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm('¿Eliminar este gasto recurrente? Los gastos ya generados se conservan.')) return;
+    setDeleting(id);
+    try {
+      await api.delete(`/expenses/templates/${id}`);
+      setGastos((prev) => prev.filter((g) => g._id !== id));
+    } catch { /* ignore */ }
+    finally { setDeleting(null); }
+  };
+
+  const active = gastos.filter((g) => g.isActive);
+  const totalMensual = active.reduce((s, g) => s + (g.amount || 0), 0);
+
+  if (loading) return <Spinner />;
+
+  return (
+    <div className="space-y-6">
+      {/* Summary strip */}
+      {gastos.length > 0 && (
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Gastos activos</p>
+            <p className="text-2xl font-bold text-violet-600">{active.length}</p>
+            <p className="text-xs text-gray-400 mt-0.5">de {gastos.length} configurados</p>
+          </div>
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Total mensual</p>
+            <p className="text-2xl font-bold text-rose-500">{fmtEur(totalMensual)}</p>
+            <p className="text-xs text-gray-400 mt-0.5">gastos activos</p>
+          </div>
+        </div>
+      )}
+
+      {gastos.length === 0 ? (
+        <EmptyState message="Sin gastos recurrentes configurados. Marca un gasto como recurrente al crearlo en la pestaña Gastos." />
+      ) : (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+          <div className="divide-y divide-gray-50">
+            {gastos.map((g) => {
+              const supplierName = g.supplierId?.name;
+              return (
+                <div key={g._id} className={`flex items-center gap-4 px-5 py-4 transition-colors hover:bg-gray-50/60 ${!g.isActive ? 'opacity-50' : ''}`}>
+
+                  {/* Day badge */}
+                  <div className="flex-shrink-0 w-11 h-11 rounded-2xl bg-violet-50 border border-violet-100 flex flex-col items-center justify-center">
+                    <span className="text-base font-bold text-violet-600 leading-none">{g.dayOfMonth}</span>
+                    <span className="text-[9px] font-medium text-violet-400 leading-none mt-0.5 uppercase tracking-wide">cada mes</span>
+                  </div>
+
+                  {/* Category + supplier */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${catDot(expenseCategories, g.category)}`} />
+                      <span className="text-sm font-semibold text-gray-900">{catLabel(expenseCategories, g.category)}</span>
+                    </div>
+                    <p className="text-xs text-gray-400 mt-0.5 truncate">
+                      {supplierName || (g.notes ? g.notes : <span className="text-gray-300">Sin proveedor</span>)}
+                      {supplierName && g.notes && <span className="ml-1 text-gray-300">· {g.notes}</span>}
+                    </p>
+                  </div>
+
+                  {/* Amount + frequency */}
+                  <div className="text-right flex-shrink-0">
+                    <p className="text-base font-bold text-gray-900">{fmtEur(g.amount)}</p>
+                    <p className="text-xs text-gray-400">/ mes</p>
+                  </div>
+
+                  {/* Status + actions */}
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <button
+                      onClick={() => handleToggle(g)}
+                      disabled={toggling === g._id}
+                      title={g.isActive ? 'Pausar' : 'Reactivar'}
+                      className={`p-1.5 rounded-lg transition-colors ${
+                        g.isActive
+                          ? 'text-emerald-500 hover:bg-emerald-50 hover:text-emerald-600'
+                          : 'text-gray-400 hover:bg-gray-100 hover:text-gray-600'
+                      }`}
+                    >
+                      {g.isActive ? (
+                        /* Pause icon */
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
+                          <path d="M4.5 2a.5.5 0 0 0-.5.5v11a.5.5 0 0 0 .5.5h2a.5.5 0 0 0 .5-.5v-11a.5.5 0 0 0-.5-.5h-2ZM9.5 2a.5.5 0 0 0-.5.5v11a.5.5 0 0 0 .5.5h2a.5.5 0 0 0 .5-.5v-11a.5.5 0 0 0-.5-.5h-2Z" />
+                        </svg>
+                      ) : (
+                        /* Play icon */
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
+                          <path d="M3 3.732a1.5 1.5 0 0 1 2.305-1.265l6.706 4.267a1.5 1.5 0 0 1 0 2.531l-6.706 4.268A1.5 1.5 0 0 1 3 12.267V3.732Z" />
+                        </svg>
+                      )}
+                    </button>
+                    <button
+                      onClick={() => handleDelete(g._id)}
+                      disabled={deleting === g._id}
+                      title="Eliminar"
+                      className="p-1.5 text-gray-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
+                        <path fillRule="evenodd" d="M5 3.25V4H2.75a.75.75 0 0 0 0 1.5h.3l.815 8.15A1.5 1.5 0 0 0 5.357 15h5.285a1.5 1.5 0 0 0 1.493-1.35l.815-8.15h.3a.75.75 0 0 0 0-1.5H11v-.75A2.25 2.25 0 0 0 8.75 1h-1.5A2.25 2.25 0 0 0 5 3.25Zm2.25-.75a.75.75 0 0 0-.75.75V4h3v-.75a.75.75 0 0 0-.75-.75h-1.5ZM6.05 6a.75.75 0 0 1 .787.713l.275 5.5a.75.75 0 0 1-1.498.075l-.275-5.5A.75.75 0 0 1 6.05 6Zm3.9 0a.75.75 0 0 1 .712.787l-.275 5.5a.75.75 0 0 1-1.498-.075l.275-5.5a.75.75 0 0 1 .786-.711Z" clipRule="evenodd" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       )}
     </div>
   );
@@ -1369,9 +1382,10 @@ export default function Finanzas() {
   };
 
   const TABS = [
-    { id: 'dashboard',  label: 'Dashboard'    },
-    { id: 'expenses',   label: 'Gastos'       },
-    { id: 'suppliers',  label: 'Proveedores'  },
+    { id: 'dashboard',   label: 'Dashboard'    },
+    { id: 'expenses',    label: 'Gastos'       },
+    { id: 'recurrentes', label: 'Recurrentes'  },
+    { id: 'suppliers',   label: 'Proveedores'  },
   ];
 
   return (
@@ -1394,7 +1408,7 @@ export default function Finanzas() {
       </div>
 
       {/* Period selector — visible in dashboard and synced to other tabs */}
-      {tab !== 'suppliers' && (
+      {tab !== 'suppliers' && tab !== 'recurrentes' && (
         <PeriodSelector
           period={period}
           dateRange={dateRange}
@@ -1423,9 +1437,10 @@ export default function Finanzas() {
       </div>
 
       {/* Tab content */}
-      {tab === 'dashboard' && <DashboardTab dateRange={dateRange} expenseCategories={expenseCategories} />}
-      {tab === 'expenses'  && <GastosTab dateRange={dateRange} suppliers={suppliers} expenseCategories={expenseCategories} />}
-      {tab === 'suppliers' && <ProveedoresTab suppliers={suppliers} loadSuppliers={loadSuppliers} supplierCategories={supplierCategories} expenseCategories={expenseCategories} />}
+      {tab === 'dashboard'   && <DashboardTab dateRange={dateRange} expenseCategories={expenseCategories} />}
+      {tab === 'expenses'    && <GastosTab dateRange={dateRange} suppliers={suppliers} expenseCategories={expenseCategories} />}
+      {tab === 'recurrentes' && <RecurrentesTab expenseCategories={expenseCategories} suppliers={suppliers} />}
+      {tab === 'suppliers'   && <ProveedoresTab suppliers={suppliers} loadSuppliers={loadSuppliers} supplierCategories={supplierCategories} expenseCategories={expenseCategories} />}
 
       {categoryModal && (
         <CategoryManagerModal

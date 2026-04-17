@@ -77,7 +77,7 @@ const compLabel = (comp) => {
 
 const compTypeLabel = (type) => {
   if (type === 'hourly') return 'Por hora';
-  if (type === 'per_shift') return 'Por asignación';
+  if (type === 'per_shift') return 'Por turno';
   if (type === 'monthly_fixed') return 'Precio mensual';
   return type || '-';
 };
@@ -319,7 +319,7 @@ function CompensationModal({ employee, onClose, onSaved }) {
           <label className={labelCls}>Tipo de pago</label>
           <select className={inputCls} value={form.paymentType} onChange={(e) => setForm((f) => ({ ...f, paymentType: e.target.value }))}>
             <option value="hourly">Por hora</option>
-            <option value="per_shift">Por asignación</option>
+            <option value="per_shift">Por turno</option>
             <option value="monthly_fixed">Precio mensual</option>
           </select>
         </div>
@@ -1998,28 +1998,28 @@ export default function Personal() {
           {isExporting && createPortal(
             <div
               ref={plannerGridRef}
-              style={{ position: 'fixed', left: '-9999px', top: 0, width: '1500px', backgroundColor: '#ffffff', padding: '32px', boxSizing: 'border-box', fontFamily: 'system-ui, -apple-system, sans-serif' }}
+              style={{ position: 'fixed', left: '-9999px', top: 0, width: '2200px', backgroundColor: '#ffffff', padding: '48px 52px', boxSizing: 'border-box', fontFamily: 'system-ui, -apple-system, sans-serif' }}
             >
               {/* Header */}
-              <div style={{ marginBottom: '20px', paddingBottom: '16px', borderBottom: '1px solid #e5e7eb', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
+              <div style={{ marginBottom: '28px', paddingBottom: '22px', borderBottom: '2px solid #e5e7eb', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
                 <div>
-                  <p style={{ fontSize: '11px', fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.1em', marginBottom: '4px' }}>{business?.name || 'Planificación'}</p>
-                  <p style={{ fontSize: '22px', fontWeight: 700, color: '#111827', margin: 0 }}>Planificación semanal</p>
+                  <p style={{ fontSize: '15px', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.12em', marginBottom: '6px', margin: '0 0 6px' }}>{business?.name || 'Planificación'}</p>
+                  <p style={{ fontSize: '32px', fontWeight: 800, color: '#111827', margin: 0, letterSpacing: '-0.02em' }}>Planificación semanal</p>
                 </div>
-                <p style={{ fontSize: '14px', fontWeight: 600, color: '#6b7280', margin: 0 }}>{weekLabel}</p>
+                <p style={{ fontSize: '20px', fontWeight: 600, color: '#6b7280', margin: 0 }}>{weekLabel}</p>
               </div>
               {/* Grid */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '10px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '14px' }}>
                 {days.map((day) => {
                   const dayShifts = shiftRowsByDay[day.date] || [];
                   return (
-                    <div key={day.date} style={{ borderRadius: '12px', border: '1px solid #e5e7eb', padding: '10px', backgroundColor: '#f9fafb' }}>
-                      <div style={{ paddingBottom: '8px', borderBottom: '1px solid #e5e7eb', marginBottom: '8px' }}>
-                        <p style={{ fontSize: '10px', fontWeight: 700, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.05em', margin: '0 0 2px' }}>{day.short}</p>
-                        <p style={{ fontSize: '15px', fontWeight: 700, color: '#111827', margin: 0 }}>{day.day}</p>
+                    <div key={day.date} style={{ borderRadius: '16px', border: '1px solid #e5e7eb', padding: '14px', backgroundColor: '#f9fafb' }}>
+                      <div style={{ paddingBottom: '12px', borderBottom: '1px solid #e5e7eb', marginBottom: '12px' }}>
+                        <p style={{ fontSize: '13px', fontWeight: 800, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 3px' }}>{day.short}</p>
+                        <p style={{ fontSize: '22px', fontWeight: 800, color: '#111827', margin: 0, letterSpacing: '-0.01em' }}>{day.day}</p>
                       </div>
                       {dayShifts.length === 0 ? (
-                        <p style={{ fontSize: '11px', color: '#d1d5db', textAlign: 'center', paddingTop: '8px', margin: 0 }}>Sin turnos</p>
+                        <p style={{ fontSize: '14px', color: '#d1d5db', textAlign: 'center', paddingTop: '10px', margin: 0 }}>Sin turnos</p>
                       ) : (
                         dayShifts.map((shift) => {
                           const key = `${day.date}__${shift._id}`;
@@ -2034,15 +2034,15 @@ export default function Personal() {
                             return acc;
                           }, {});
                           return (
-                            <div key={shift._id} style={{ backgroundColor: '#fff', borderRadius: '8px', border: '1px solid #e5e7eb', padding: '8px 10px', marginBottom: '6px' }}>
-                              <p style={{ fontSize: '12px', fontWeight: 600, color: '#111827', margin: '0 0 6px' }}>{shift.name}</p>
+                            <div key={shift._id} style={{ backgroundColor: '#fff', borderRadius: '10px', border: '1px solid #e5e7eb', padding: '10px 12px', marginBottom: '8px' }}>
+                              <p style={{ fontSize: '15px', fontWeight: 700, color: '#111827', margin: '0 0 8px', letterSpacing: '-0.01em' }}>{shift.name}</p>
                               {rawList.length === 0 ? (
-                                <p style={{ fontSize: '11px', color: '#d1d5db', fontStyle: 'italic', margin: 0 }}>Sin empleados asignados</p>
+                                <p style={{ fontSize: '13px', color: '#d1d5db', fontStyle: 'italic', margin: 0 }}>Sin empleados asignados</p>
                               ) : (
                                 Object.values(grouped).map((g, i) => (
-                                  <div key={i} style={{ marginBottom: '4px' }}>
-                                    <p style={{ fontSize: '10px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: g.color, margin: '0 0 2px' }}>{g.role}</p>
-                                    <p style={{ fontSize: '11px', color: '#374151', margin: 0 }}>{g.names.join(', ')}</p>
+                                  <div key={i} style={{ marginBottom: '6px' }}>
+                                    <p style={{ fontSize: '12px', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.07em', color: g.color, margin: '0 0 3px' }}>{g.role}</p>
+                                    <p style={{ fontSize: '14px', fontWeight: 500, color: '#374151', margin: 0, lineHeight: '1.4' }}>{g.names.join(', ')}</p>
                                   </div>
                                 ))
                               )}

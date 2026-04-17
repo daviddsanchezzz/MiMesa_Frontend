@@ -1,39 +1,38 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import api from '../services/api';
 
-// ── Constants ─────────────────────────────────────────────────────────────────
+// ── Color palette (static — color key stored in DB → Tailwind bg class) ───────
 
-const EXPENSE_CATEGORIES = [
-  { value: 'food',         label: 'Comida' },
-  { value: 'beverage',     label: 'Bebida' },
-  { value: 'cleaning',     label: 'Limpieza' },
-  { value: 'supplies',     label: 'Suministros' },
-  { value: 'maintenance',  label: 'Mantenimiento' },
-  { value: 'marketing',    label: 'Marketing' },
-  { value: 'rent',         label: 'Alquiler' },
-  { value: 'utilities',    label: 'Servicios' },
-  { value: 'staff',        label: 'Personal' },
-  { value: 'other',        label: 'Otros' },
-];
-
-const SUPPLIER_CATEGORIES = [
-  { value: 'food',         label: 'Alimentación' },
-  { value: 'beverage',     label: 'Bebidas' },
-  { value: 'cleaning',     label: 'Limpieza' },
-  { value: 'maintenance',  label: 'Mantenimiento' },
-  { value: 'utilities',    label: 'Suministros' },
-  { value: 'staff',        label: 'Personal' },
-  { value: 'other',        label: 'Otros' },
-];
-
-const EXPENSE_CAT_LABEL = Object.fromEntries(EXPENSE_CATEGORIES.map((c) => [c.value, c.label]));
-const SUPPLIER_CAT_LABEL = Object.fromEntries(SUPPLIER_CATEGORIES.map((c) => [c.value, c.label]));
-
-const CAT_COLORS = {
-  food: 'bg-orange-400', beverage: 'bg-blue-400', cleaning: 'bg-cyan-400',
-  supplies: 'bg-purple-400', maintenance: 'bg-yellow-400', marketing: 'bg-pink-400',
-  rent: 'bg-red-400', utilities: 'bg-indigo-400', staff: 'bg-violet-500', other: 'bg-slate-400',
+const COLOR_DOT = {
+  orange: 'bg-orange-400', blue: 'bg-blue-400',   cyan: 'bg-cyan-400',
+  purple: 'bg-purple-400', yellow: 'bg-yellow-400', pink: 'bg-pink-400',
+  red:    'bg-red-400',    indigo: 'bg-indigo-400', violet: 'bg-violet-500',
+  slate:  'bg-slate-400',  emerald: 'bg-emerald-400', teal: 'bg-teal-400',
 };
+
+const COLOR_PALETTE = [
+  { value: 'orange',  label: 'Naranja',    cls: 'bg-orange-400'  },
+  { value: 'blue',    label: 'Azul',       cls: 'bg-blue-400'    },
+  { value: 'cyan',    label: 'Cian',       cls: 'bg-cyan-400'    },
+  { value: 'purple',  label: 'Púrpura',    cls: 'bg-purple-400'  },
+  { value: 'yellow',  label: 'Amarillo',   cls: 'bg-yellow-400'  },
+  { value: 'pink',    label: 'Rosa',       cls: 'bg-pink-400'    },
+  { value: 'red',     label: 'Rojo',       cls: 'bg-red-400'     },
+  { value: 'indigo',  label: 'Índigo',     cls: 'bg-indigo-400'  },
+  { value: 'violet',  label: 'Violeta',    cls: 'bg-violet-500'  },
+  { value: 'slate',   label: 'Gris',       cls: 'bg-slate-400'   },
+  { value: 'emerald', label: 'Verde',      cls: 'bg-emerald-400' },
+  { value: 'teal',    label: 'Teal',       cls: 'bg-teal-400'    },
+];
+
+// Lookup helpers — always receive the dynamic categories array
+function catDot(cats, value) {
+  const c = cats?.find((x) => x.value === value);
+  return COLOR_DOT[c?.color] || 'bg-slate-400';
+}
+function catLabel(cats, value) {
+  return cats?.find((x) => x.value === value)?.label || value;
+}
 
 // ── Date helpers ──────────────────────────────────────────────────────────────
 
@@ -276,7 +275,7 @@ function TicketAverageEdit({ value, onSave }) {
 
 const PAGE_SIZE = 10;
 
-function DashboardTab({ dateRange }) {
+function DashboardTab({ dateRange, expenseCategories }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
@@ -369,14 +368,14 @@ function DashboardTab({ dateRange }) {
                 <div key={cat.category}>
                   <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center gap-2">
-                      <span className={`w-2.5 h-2.5 rounded-full ${CAT_COLORS[cat.category] || 'bg-gray-400'}`} />
-                      <span className="text-sm text-gray-600">{EXPENSE_CAT_LABEL[cat.category] || cat.category}</span>
+                      <span className={`w-2.5 h-2.5 rounded-full ${catDot(expenseCategories, cat.category)}`} />
+                      <span className="text-sm text-gray-600">{catLabel(expenseCategories, cat.category)}</span>
                     </div>
                     <span className="text-sm font-semibold text-gray-700">{fmtEur(cat.amount)}</span>
                   </div>
                   <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
                     <div
-                      className={`h-full rounded-full ${CAT_COLORS[cat.category] || 'bg-gray-400'}`}
+                      className={`h-full rounded-full ${catDot(expenseCategories, cat.category)}`}
                       style={{ width: `${Math.round((cat.amount / maxExpense) * 100)}%` }}
                     />
                   </div>
@@ -525,11 +524,174 @@ function RecurringScopeDialog({ mode, onConfirm, onClose }) {
   );
 }
 
+// ── Category manager modal ────────────────────────────────────────────────────
+
+function ColorPicker({ value, onChange }) {
+  return (
+    <div className="flex flex-wrap gap-1.5">
+      {COLOR_PALETTE.map((c) => (
+        <button
+          key={c.value}
+          type="button"
+          title={c.label}
+          onClick={() => onChange(c.value)}
+          className={`w-6 h-6 rounded-full ${c.cls} transition-transform hover:scale-110 ${
+            value === c.value ? 'ring-2 ring-offset-1 ring-gray-600 scale-110' : ''
+          }`}
+        />
+      ))}
+    </div>
+  );
+}
+
+function CategoryManagerModal({ onClose, onRefresh }) {
+  const [type, setType] = useState('expense');
+  const [cats, setCats] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [editingId, setEditingId] = useState(null);
+  const [editForm, setEditForm] = useState({ label: '', color: 'slate' });
+  const [newForm, setNewForm] = useState({ label: '', color: 'slate' });
+  const [saving, setSaving] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const { data } = await api.get(`/categories?type=${type}`);
+      setCats(data);
+    } catch { /* ignore */ }
+    finally { setLoading(false); }
+  }, [type]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const startEdit = (cat) => {
+    setEditingId(cat._id);
+    setEditForm({ label: cat.label, color: cat.color || 'slate' });
+  };
+
+  const saveEdit = async (id) => {
+    setSaving(true);
+    try {
+      await api.put(`/categories/${id}`, editForm);
+      setEditingId(null);
+      load();
+      onRefresh();
+    } catch { /* ignore */ }
+    finally { setSaving(false); }
+  };
+
+  const deleteCat = async (id) => {
+    if (!window.confirm('¿Eliminar esta categoría? Los gastos ya registrados conservarán el valor.')) return;
+    try {
+      await api.delete(`/categories/${id}`);
+      load();
+      onRefresh();
+    } catch { /* ignore */ }
+  };
+
+  const addNew = async (e) => {
+    e.preventDefault();
+    if (!newForm.label.trim()) return;
+    setSaving(true);
+    try {
+      await api.post('/categories', { ...newForm, type });
+      setNewForm({ label: '', color: 'slate' });
+      load();
+      onRefresh();
+    } catch { /* ignore */ }
+    finally { setSaving(false); }
+  };
+
+  const typeLabel = type === 'expense' ? 'gastos' : 'proveedores';
+
+  return (
+    <ModalOverlay title="Gestionar categorías" onClose={onClose}>
+      {/* Type tabs */}
+      <div className="flex gap-1 p-1 bg-gray-100 rounded-xl mb-5">
+        {[{ id: 'expense', label: 'Gastos' }, { id: 'supplier', label: 'Proveedores' }].map((t) => (
+          <button
+            key={t.id}
+            onClick={() => { setType(t.id); setEditingId(null); }}
+            className={`flex-1 py-1.5 text-sm font-medium rounded-lg transition-colors ${
+              type === t.id ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {loading ? <Spinner /> : (
+        <div className="space-y-1 mb-4">
+          {cats.map((cat) => (
+            <div key={cat._id} className="rounded-xl border border-gray-100 overflow-hidden">
+              {editingId === cat._id ? (
+                /* Edit row */
+                <div className="p-3 space-y-3 bg-violet-50/60">
+                  <input
+                    autoFocus
+                    type="text"
+                    value={editForm.label}
+                    onChange={(e) => setEditForm((f) => ({ ...f, label: e.target.value }))}
+                    className={inputCls}
+                    placeholder="Nombre de la categoría"
+                  />
+                  <ColorPicker value={editForm.color} onChange={(c) => setEditForm((f) => ({ ...f, color: c }))} />
+                  <div className="flex gap-2">
+                    <button onClick={() => saveEdit(cat._id)} disabled={saving} className={btnPrimary + ' text-xs px-3 py-1.5'}>
+                      Guardar
+                    </button>
+                    <button onClick={() => setEditingId(null)} className={btnGhost + ' text-xs px-3 py-1.5'}>
+                      Cancelar
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                /* Display row */
+                <div className="flex items-center gap-3 px-3 py-2.5 hover:bg-gray-50">
+                  <span className={`w-3 h-3 rounded-full flex-shrink-0 ${COLOR_DOT[cat.color] || 'bg-slate-400'}`} />
+                  <span className="flex-1 text-sm text-gray-800">{cat.label}</span>
+                  {cat.isDefault && <span className="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full">predeterminada</span>}
+                  <button onClick={() => startEdit(cat)} className="p-1 text-gray-400 hover:text-violet-600 rounded-lg transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
+                      <path d="M13.488 2.513a1.75 1.75 0 0 0-2.475 0L6.75 6.774a2.75 2.75 0 0 0-.596.892l-.848 2.047a.75.75 0 0 0 .98.98l2.047-.848a2.75 2.75 0 0 0 .892-.596l4.261-4.262a1.75 1.75 0 0 0 0-2.474ZM4.75 14.25h6.5a.75.75 0 0 0 0-1.5h-6.5a.75.75 0 0 0 0 1.5Z" />
+                    </svg>
+                  </button>
+                  <button onClick={() => deleteCat(cat._id)} className="p-1 text-gray-400 hover:text-rose-500 rounded-lg transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
+                      <path fillRule="evenodd" d="M5 3.25V4H2.75a.75.75 0 0 0 0 1.5h.3l.815 8.15A1.5 1.5 0 0 0 5.357 15h5.285a1.5 1.5 0 0 0 1.493-1.35l.815-8.15h.3a.75.75 0 0 0 0-1.5H11v-.75A2.25 2.25 0 0 0 8.75 1h-1.5A2.25 2.25 0 0 0 5 3.25Zm2.25-.75a.75.75 0 0 0-.75.75V4h3v-.75a.75.75 0 0 0-.75-.75h-1.5ZM6.05 6a.75.75 0 0 1 .787.713l.275 5.5a.75.75 0 0 1-1.498.075l-.275-5.5A.75.75 0 0 1 6.05 6Zm3.9 0a.75.75 0 0 1 .712.787l-.275 5.5a.75.75 0 0 1-1.498-.075l.275-5.5a.75.75 0 0 1 .786-.711Z" clipRule="evenodd" />
+                    </svg>
+                  </button>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Add new */}
+      <form onSubmit={addNew} className="border-t border-gray-100 pt-4 space-y-3">
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Nueva categoría de {typeLabel}</p>
+        <input
+          type="text"
+          value={newForm.label}
+          onChange={(e) => setNewForm((f) => ({ ...f, label: e.target.value }))}
+          className={inputCls}
+          placeholder="Nombre..."
+        />
+        <ColorPicker value={newForm.color} onChange={(c) => setNewForm((f) => ({ ...f, color: c }))} />
+        <button type="submit" disabled={saving || !newForm.label.trim()} className={btnPrimary + ' w-full'}>
+          Añadir categoría
+        </button>
+      </form>
+    </ModalOverlay>
+  );
+}
+
 // ── Expense modal ─────────────────────────────────────────────────────────────
 
-function ExpenseModal({ expense, suppliers, onSave, onClose, scope = 'single' }) {
+function ExpenseModal({ expense, suppliers, expenseCategories, onSave, onClose, scope = 'single' }) {
   const editing = !!expense?._id;
-  const todayDay = new Date().getDate();
   const [form, setForm] = useState({
     category:    expense?.category || '',
     amount:      expense?.amount != null ? String(expense.amount) : '',
@@ -537,18 +699,11 @@ function ExpenseModal({ expense, suppliers, onSave, onClose, scope = 'single' })
     supplierId:  expense?.supplierId?._id || expense?.supplierId || '',
     notes:       expense?.notes || '',
     isRecurring: expense?.isRecurring || false,
-    dayOfMonth:  String(todayDay),
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
-
-  // When the expense date changes, keep dayOfMonth in sync (if not manually overridden)
-  const handleDateChange = (val) => {
-    const day = val ? parseInt(val.slice(8, 10), 10) : todayDay;
-    setForm((f) => ({ ...f, expenseDate: val, dayOfMonth: String(day) }));
-  };
 
   const submit = async (e) => {
     e.preventDefault();
@@ -578,13 +733,13 @@ function ExpenseModal({ expense, suppliers, onSave, onClose, scope = 'single' })
               onChange={(e) => set('amount', e.target.value)} className={inputCls} placeholder="0.00" />
           </FormField>
           <FormField label="Fecha" required>
-            <input type="date" value={form.expenseDate} onChange={(e) => handleDateChange(e.target.value)} className={inputCls} />
+            <input type="date" value={form.expenseDate} onChange={(e) => set('expenseDate', e.target.value)} className={inputCls} />
           </FormField>
         </div>
         <FormField label="Categoría" required>
           <select value={form.category} onChange={(e) => set('category', e.target.value)} className={selectCls}>
             <option value="">Seleccionar...</option>
-            {EXPENSE_CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+            {expenseCategories.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
           </select>
         </FormField>
         <FormField label="Proveedor">
@@ -605,17 +760,6 @@ function ExpenseModal({ expense, suppliers, onSave, onClose, scope = 'single' })
                 className="w-4 h-4 text-violet-600 rounded border-gray-300 focus:ring-violet-500" />
               <span className="text-sm text-gray-600">Gasto recurrente mensual</span>
             </label>
-            {form.isRecurring && (
-              <div className="ml-6 flex items-center gap-2 p-3 bg-violet-50 rounded-xl border border-violet-100">
-                <span className="text-sm text-violet-700">Se generará automáticamente el día</span>
-                <input
-                  type="number" min="1" max="31" value={form.dayOfMonth}
-                  onChange={(e) => set('dayOfMonth', e.target.value)}
-                  className="w-16 px-2 py-1 text-sm text-center border border-violet-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white"
-                />
-                <span className="text-sm text-violet-700">de cada mes</span>
-              </div>
-            )}
           </div>
         )}
 
@@ -633,7 +777,7 @@ function ExpenseModal({ expense, suppliers, onSave, onClose, scope = 'single' })
 
 // ── Gastos tab ────────────────────────────────────────────────────────────────
 
-function GastosTab({ dateRange, suppliers }) {
+function GastosTab({ dateRange, suppliers, expenseCategories }) {
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(null);       // null | { expense?, scope? }
@@ -765,7 +909,7 @@ function GastosTab({ dateRange, suppliers }) {
         <select value={filters.category} onChange={(e) => setFilter('category', e.target.value)}
           className="px-2 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white">
           <option value="">Todas las categorías</option>
-          {EXPENSE_CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+          {expenseCategories.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
         </select>
         <select value={filters.supplierId} onChange={(e) => setFilter('supplierId', e.target.value)}
           className="px-2 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white">
@@ -822,8 +966,8 @@ function GastosTab({ dateRange, suppliers }) {
                     <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{fmtDate(exp.expenseDate)}</td>
                     <td className="px-4 py-3">
                       <span className="inline-flex items-center gap-1.5">
-                        <span className={`w-2 h-2 rounded-full ${CAT_COLORS[exp.category] || 'bg-gray-400'}`} />
-                        <span className="text-gray-700">{EXPENSE_CAT_LABEL[exp.category] || exp.category}</span>
+                        <span className={`w-2 h-2 rounded-full ${catDot(expenseCategories, exp.category)}`} />
+                        <span className="text-gray-700">{catLabel(expenseCategories, exp.category)}</span>
                       </span>
                     </td>
                     <td className="px-4 py-3 text-gray-500 hidden md:table-cell">
@@ -904,8 +1048,8 @@ function GastosTab({ dateRange, suppliers }) {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className={`w-2 h-2 rounded-full flex-shrink-0 ${CAT_COLORS[tpl.category] || 'bg-gray-400'}`} />
-                      <span className="text-sm font-medium text-gray-800">{EXPENSE_CAT_LABEL[tpl.category] || tpl.category}</span>
+                      <span className={`w-2 h-2 rounded-full flex-shrink-0 ${catDot(expenseCategories, tpl.category)}`} />
+                      <span className="text-sm font-medium text-gray-800">{catLabel(expenseCategories, tpl.category)}</span>
                       {tpl.supplierId?.name && <span className="text-xs text-gray-400 truncate">· {tpl.supplierId.name}</span>}
                     </div>
                     {tpl.notes && <p className="text-xs text-gray-400 mt-0.5 truncate">{tpl.notes}</p>}
@@ -953,6 +1097,7 @@ function GastosTab({ dateRange, suppliers }) {
           expense={modal.expense}
           scope={modal.scope}
           suppliers={suppliers}
+          expenseCategories={expenseCategories}
           onSave={() => { setModal(null); load(); if (showTemplates) loadTemplates(); }}
           onClose={() => setModal(null)}
         />
@@ -963,7 +1108,7 @@ function GastosTab({ dateRange, suppliers }) {
 
 // ── Supplier modal ────────────────────────────────────────────────────────────
 
-function SupplierModal({ supplier, onSave, onClose }) {
+function SupplierModal({ supplier, supplierCategories, onSave, onClose }) {
   const editing = !!supplier?._id;
   const [form, setForm] = useState({
     name: supplier?.name || '',
@@ -1005,7 +1150,7 @@ function SupplierModal({ supplier, onSave, onClose }) {
         </FormField>
         <FormField label="Categoría">
           <select value={form.category} onChange={(e) => set('category', e.target.value)} className={selectCls}>
-            {SUPPLIER_CATEGORIES.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+            {supplierCategories.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
           </select>
         </FormField>
         <FormField label="Persona de contacto">
@@ -1040,7 +1185,7 @@ function SupplierModal({ supplier, onSave, onClose }) {
 
 // ── Proveedores tab ───────────────────────────────────────────────────────────
 
-function ProveedoresTab({ suppliers, loadSuppliers }) {
+function ProveedoresTab({ suppliers, loadSuppliers, supplierCategories, expenseCategories }) {
   const [modal, setModal] = useState(null);
   const [expanded, setExpanded] = useState(null);
   const [supplierDetail, setSupplierDetail] = useState(null);
@@ -1108,7 +1253,7 @@ function ProveedoresTab({ suppliers, loadSuppliers }) {
                       </button>
                     </td>
                     <td className="px-4 py-3 text-gray-500 hidden sm:table-cell">
-                      {SUPPLIER_CAT_LABEL[s.category] || s.category}
+                      {catLabel(supplierCategories, s.category)}
                     </td>
                     <td className="px-4 py-3 hidden md:table-cell">
                       <span className="text-gray-600">{s.contactName || <span className="text-gray-300">—</span>}</span>
@@ -1153,7 +1298,7 @@ function ProveedoresTab({ suppliers, loadSuppliers }) {
                                 {supplierDetail.expenses.slice(0, 5).map((e) => (
                                   <div key={e._id} className="flex items-center justify-between text-sm">
                                     <span className="text-gray-500">{fmtDate(e.expenseDate)}</span>
-                                    <span className="text-gray-600 flex-1 mx-4 truncate">{EXPENSE_CAT_LABEL[e.category]} {e.notes && `— ${e.notes}`}</span>
+                                    <span className="text-gray-600 flex-1 mx-4 truncate">{catLabel(expenseCategories, e.category)} {e.notes && `— ${e.notes}`}</span>
                                     <span className="font-medium text-gray-700">{fmtEur(e.amount)}</span>
                                   </div>
                                 ))}
@@ -1177,6 +1322,7 @@ function ProveedoresTab({ suppliers, loadSuppliers }) {
       {modal !== null && (
         <SupplierModal
           supplier={modal.supplier}
+          supplierCategories={supplierCategories}
           onSave={() => { setModal(null); loadSuppliers(); setExpanded(null); }}
           onClose={() => setModal(null)}
         />
@@ -1192,6 +1338,9 @@ export default function Finanzas() {
   const [period, setPeriod] = useState('month');
   const [dateRange, setDateRange] = useState(getMonthRange());
   const [suppliers, setSuppliers] = useState([]);
+  const [expenseCategories, setExpenseCategories] = useState([]);
+  const [supplierCategories, setSupplierCategories] = useState([]);
+  const [categoryModal, setCategoryModal] = useState(false);
 
   const loadSuppliers = useCallback(async () => {
     try {
@@ -1200,7 +1349,18 @@ export default function Finanzas() {
     } catch { /* ignore */ }
   }, []);
 
-  useEffect(() => { loadSuppliers(); }, [loadSuppliers]);
+  const loadCategories = useCallback(async () => {
+    try {
+      const [ec, sc] = await Promise.all([
+        api.get('/categories?type=expense'),
+        api.get('/categories?type=supplier'),
+      ]);
+      setExpenseCategories(ec.data);
+      setSupplierCategories(sc.data);
+    } catch { /* ignore */ }
+  }, []);
+
+  useEffect(() => { loadSuppliers(); loadCategories(); }, [loadSuppliers, loadCategories]);
 
   const handlePeriodChange = (p) => {
     setPeriod(p);
@@ -1222,6 +1382,15 @@ export default function Finanzas() {
           <h1 className="text-xl font-bold text-gray-900">Finanzas</h1>
           <p className="text-sm text-gray-400 mt-0.5">Control de ingresos, gastos y rentabilidad</p>
         </div>
+        <button
+          onClick={() => setCategoryModal(true)}
+          className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
+            <path d="M2 3.5A1.5 1.5 0 0 1 3.5 2h9A1.5 1.5 0 0 1 14 3.5v2A1.5 1.5 0 0 1 12.5 7h-9A1.5 1.5 0 0 1 2 5.5v-2ZM2 10.5A1.5 1.5 0 0 1 3.5 9h9a1.5 1.5 0 0 1 1.5 1.5v2a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 12.5v-2Z" />
+          </svg>
+          Categorías
+        </button>
       </div>
 
       {/* Period selector — visible in dashboard and synced to other tabs */}
@@ -1254,9 +1423,16 @@ export default function Finanzas() {
       </div>
 
       {/* Tab content */}
-      {tab === 'dashboard' && <DashboardTab dateRange={dateRange} />}
-      {tab === 'expenses'  && <GastosTab dateRange={dateRange} suppliers={suppliers} />}
-      {tab === 'suppliers' && <ProveedoresTab suppliers={suppliers} loadSuppliers={loadSuppliers} />}
+      {tab === 'dashboard' && <DashboardTab dateRange={dateRange} expenseCategories={expenseCategories} />}
+      {tab === 'expenses'  && <GastosTab dateRange={dateRange} suppliers={suppliers} expenseCategories={expenseCategories} />}
+      {tab === 'suppliers' && <ProveedoresTab suppliers={suppliers} loadSuppliers={loadSuppliers} supplierCategories={supplierCategories} expenseCategories={expenseCategories} />}
+
+      {categoryModal && (
+        <CategoryManagerModal
+          onClose={() => setCategoryModal(false)}
+          onRefresh={loadCategories}
+        />
+      )}
     </div>
   );
 }

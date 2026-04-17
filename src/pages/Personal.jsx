@@ -928,14 +928,16 @@ function EmployeeAssignmentsModal({ employee, onClose, onDeleted }) {
                               />
                               <span className="text-xs text-gray-500">{currencySign}</span>
                             </div>
-                            <button
-                              type="button"
-                              onClick={() => setEditingPriceValue('')}
-                              disabled={isSavingPrice}
-                              className="text-[11px] text-violet-600 hover:underline disabled:opacity-50"
-                            >
-                              Usar automático
-                            </button>
+                            {autoPrice !== null && (
+                              <button
+                                type="button"
+                                onClick={() => saveAssignmentPrice(a._id, null)}
+                                disabled={isSavingPrice}
+                                className="text-[11px] text-violet-600 hover:underline disabled:opacity-50"
+                              >
+                                Usar automático
+                              </button>
+                            )}
                           </div>
                         )}
                       </td>

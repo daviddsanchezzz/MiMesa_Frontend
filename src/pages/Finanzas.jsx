@@ -460,9 +460,74 @@ function DashboardTab({ dateRange }) {
   );
 }
 
+// ── Recurring scope dialog ────────────────────────────────────────────────────
+
+const SCOPE_OPTIONS = {
+  edit: [
+    { value: 'single', label: 'Solo este',            desc: 'Modifica únicamente este registro' },
+    { value: 'future', label: 'Este y los siguientes', desc: 'Actualiza este y todos los futuros de la misma plantilla' },
+    { value: 'all',    label: 'Todos',                desc: 'Actualiza todos los registros vinculados a esta plantilla' },
+  ],
+  delete: [
+    { value: 'single', label: 'Solo este',            desc: 'Elimina únicamente este registro' },
+    { value: 'future', label: 'Este y los siguientes', desc: 'Elimina este y los futuros; la plantilla se borrará' },
+    { value: 'all',    label: 'Todos',                desc: 'Elimina todos los registros de la plantilla y la propia plantilla' },
+  ],
+};
+
+function RecurringScopeDialog({ mode, onConfirm, onClose }) {
+  const [scope, setScope] = useState('single');
+  const isDelete = mode === 'delete';
+  const options = SCOPE_OPTIONS[mode];
+
+  return (
+    <ModalOverlay
+      title={isDelete ? 'Eliminar gasto recurrente' : 'Editar gasto recurrente'}
+      onClose={onClose}
+    >
+      <div className="space-y-4">
+        <p className="text-sm text-gray-500">¿A qué registros quieres aplicar este cambio?</p>
+        <div className="space-y-2">
+          {options.map((opt) => (
+            <label
+              key={opt.value}
+              className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
+                scope === opt.value
+                  ? 'border-violet-400 bg-violet-50'
+                  : 'border-gray-200 hover:border-violet-200 hover:bg-gray-50'
+              }`}
+            >
+              <input
+                type="radio" name="scope" value={opt.value} checked={scope === opt.value}
+                onChange={() => setScope(opt.value)}
+                className="mt-0.5 text-violet-600 accent-violet-600"
+              />
+              <div>
+                <p className="text-sm font-medium text-gray-800">{opt.label}</p>
+                <p className="text-xs text-gray-400 mt-0.5">{opt.desc}</p>
+              </div>
+            </label>
+          ))}
+        </div>
+        <div className="flex justify-end gap-2 pt-1">
+          <button onClick={onClose} className={btnGhost}>Cancelar</button>
+          <button
+            onClick={() => onConfirm(scope)}
+            className={isDelete
+              ? 'px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-sm font-semibold rounded-xl transition-colors'
+              : btnPrimary}
+          >
+            {isDelete ? 'Eliminar' : 'Continuar'}
+          </button>
+        </div>
+      </div>
+    </ModalOverlay>
+  );
+}
+
 // ── Expense modal ─────────────────────────────────────────────────────────────
 
-function ExpenseModal({ expense, suppliers, onSave, onClose }) {
+function ExpenseModal({ expense, suppliers, onSave, onClose, scope = 'single' }) {
   const editing = !!expense?._id;
   const todayDay = new Date().getDate();
   const [form, setForm] = useState({
@@ -492,7 +557,7 @@ function ExpenseModal({ expense, suppliers, onSave, onClose }) {
     setSaving(true); setError('');
     try {
       if (editing) {
-        await api.put(`/expenses/${expense._id}`, form);
+        await api.put(`/expenses/${expense._id}`, { ...form, scope });
       } else {
         await api.post('/expenses', form);
       }
@@ -571,12 +636,14 @@ function ExpenseModal({ expense, suppliers, onSave, onClose }) {
 function GastosTab({ dateRange, suppliers }) {
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [modal, setModal] = useState(null); // null | { expense? }
+  const [modal, setModal] = useState(null);       // null | { expense?, scope? }
+  const [scopeDialog, setScopeDialog] = useState(null); // null | { mode: 'edit'|'delete', expense }
   const [deleting, setDeleting] = useState(null);
   const [filters, setFilters] = useState({ from: dateRange.from, to: dateRange.to, category: '', supplierId: '' });
 
   const [templates, setTemplates] = useState([]);
-  const [templatesLoading, setTemplatesLoading] = useState(true);
+  const [templatesLoading, setTemplatesLoading] = useState(false);
+  const [showTemplates, setShowTemplates] = useState(false);
   const [togglingTpl, setTogglingTpl] = useState(null);
   const [deletingTpl, setDeletingTpl] = useState(null);
 
@@ -609,16 +676,57 @@ function GastosTab({ dateRange, suppliers }) {
   }, []);
 
   useEffect(() => { load(); }, [load]);
-  useEffect(() => { loadTemplates(); }, [loadTemplates]);
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('¿Eliminar este gasto?')) return;
+  // Load templates only when panel is first opened
+  const handleShowTemplates = () => {
+    setShowTemplates((v) => {
+      if (!v) loadTemplates();
+      return !v;
+    });
+  };
+
+  // Delete with scope support
+  const handleDelete = async (id, scope = 'single') => {
     setDeleting(id);
     try {
-      await api.delete(`/expenses/${id}`);
-      setExpenses((prev) => prev.filter((e) => e._id !== id));
+      await api.delete(`/expenses/${id}?scope=${scope}`);
+      if (scope === 'single') {
+        setExpenses((prev) => prev.filter((e) => e._id !== id));
+      } else {
+        // Other scopes may delete many rows + template — reload both
+        load();
+        if (showTemplates) loadTemplates();
+      }
     } catch { /* ignore */ }
     finally { setDeleting(null); }
+  };
+
+  // Entry point for edit button click
+  const handleEditClick = (exp) => {
+    if (exp.isRecurring) {
+      setScopeDialog({ mode: 'edit', expense: exp });
+    } else {
+      setModal({ expense: exp });
+    }
+  };
+
+  // Entry point for delete button click
+  const handleDeleteClick = (exp) => {
+    if (exp.isRecurring) {
+      setScopeDialog({ mode: 'delete', expense: exp });
+    } else {
+      if (window.confirm('¿Eliminar este gasto?')) handleDelete(exp._id);
+    }
+  };
+
+  const handleScopeConfirm = (scope) => {
+    const { mode, expense } = scopeDialog;
+    setScopeDialog(null);
+    if (mode === 'edit') {
+      setModal({ expense, scope });
+    } else {
+      handleDelete(expense._id, scope);
+    }
   };
 
   const handleToggleTemplate = async (tpl) => {
@@ -664,12 +772,27 @@ function GastosTab({ dateRange, suppliers }) {
           <option value="">Todos los proveedores</option>
           {suppliers.map((s) => <option key={s._id} value={s._id}>{s.name}</option>)}
         </select>
-        <button onClick={() => setModal({})} className={btnPrimary + ' ml-auto flex items-center gap-1.5'}>
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
-            <path d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z" />
-          </svg>
-          Registrar gasto
-        </button>
+        <div className="ml-auto flex items-center gap-2">
+          <button
+            onClick={handleShowTemplates}
+            className={`flex items-center gap-1.5 px-3 py-2 text-sm font-medium rounded-xl border transition-colors ${
+              showTemplates
+                ? 'bg-violet-50 border-violet-200 text-violet-700'
+                : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+            }`}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
+              <path fillRule="evenodd" d="M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14Zm.75-10.25a.75.75 0 0 0-1.5 0v3.5c0 .414.336.75.75.75h3.25a.75.75 0 0 0 0-1.5H8.75v-2.75Z" clipRule="evenodd" />
+            </svg>
+            Recurrentes
+          </button>
+          <button onClick={() => setModal({})} className={btnPrimary + ' flex items-center gap-1.5'}>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
+              <path d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z" />
+            </svg>
+            Registrar gasto
+          </button>
+        </div>
       </div>
 
       {loading ? <Spinner /> : expenses.length === 0 ? (
@@ -721,14 +844,14 @@ function GastosTab({ dateRange, suppliers }) {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center justify-end gap-1">
-                        <button onClick={() => setModal({ expense: exp })}
+                        <button onClick={() => handleEditClick(exp)}
                           className="p-1.5 text-gray-400 hover:text-violet-600 hover:bg-violet-50 rounded-lg transition-colors"
                           title="Editar">
                           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
                             <path d="M13.488 2.513a1.75 1.75 0 0 0-2.475 0L6.75 6.774a2.75 2.75 0 0 0-.596.892l-.848 2.047a.75.75 0 0 0 .98.98l2.047-.848a2.75 2.75 0 0 0 .892-.596l4.261-4.262a1.75 1.75 0 0 0 0-2.474ZM4.75 14.25h6.5a.75.75 0 0 0 0-1.5h-6.5a.75.75 0 0 0 0 1.5Z" />
                           </svg>
                         </button>
-                        <button onClick={() => handleDelete(exp._id)} disabled={deleting === exp._id}
+                        <button onClick={() => handleDeleteClick(exp)} disabled={deleting === exp._id}
                           className="p-1.5 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
                           title="Eliminar">
                           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
@@ -750,91 +873,87 @@ function GastosTab({ dateRange, suppliers }) {
         </>
       )}
 
-      {/* Recurring templates section */}
-      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-50">
-          <div className="flex items-center gap-2">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 text-violet-500">
-              <path fillRule="evenodd" d="M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14Zm.75-10.25a.75.75 0 0 0-1.5 0v3.5c0 .414.336.75.75.75h3.25a.75.75 0 0 0 0-1.5H8.75v-2.75Z" clipRule="evenodd" />
-            </svg>
-            <h3 className="text-sm font-semibold text-gray-700">Plantillas recurrentes</h3>
-            {!templatesLoading && templates.length > 0 && (
-              <span className="text-xs bg-violet-100 text-violet-600 font-semibold px-1.5 py-0.5 rounded-full">
-                {templates.filter((t) => t.isActive).length} activas
-              </span>
-            )}
+      {/* Collapsible recurring templates panel */}
+      {showTemplates && (
+        <div className="bg-white rounded-2xl border border-violet-100 shadow-sm">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-50">
+            <div className="flex items-center gap-2">
+              <h3 className="text-sm font-semibold text-gray-700">Plantillas recurrentes</h3>
+              {!templatesLoading && templates.length > 0 && (
+                <span className="text-xs bg-violet-100 text-violet-600 font-semibold px-1.5 py-0.5 rounded-full">
+                  {templates.filter((t) => t.isActive).length} activas
+                </span>
+              )}
+            </div>
+            <p className="text-xs text-gray-400">El cron genera el gasto mensualmente en el día indicado</p>
           </div>
-          <p className="text-xs text-gray-400">El cron genera el gasto mensualmente en el día indicado</p>
-        </div>
 
-        {templatesLoading ? (
-          <div className="px-5 py-6"><Spinner /></div>
-        ) : templates.length === 0 ? (
-          <div className="px-5 py-8 text-center">
-            <p className="text-sm text-gray-400">Sin plantillas recurrentes. Marca un gasto como "recurrente" al crearlo.</p>
-          </div>
-        ) : (
-          <div className="divide-y divide-gray-50">
-            {templates.map((tpl) => (
-              <div key={tpl._id} className={`flex items-center gap-4 px-5 py-3.5 transition-colors ${tpl.isActive ? '' : 'opacity-50'}`}>
-                {/* Day badge */}
-                <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-violet-50 flex flex-col items-center justify-center">
-                  <span className="text-sm font-bold text-violet-600 leading-none">{tpl.dayOfMonth}</span>
-                  <span className="text-[9px] text-violet-400 leading-none mt-0.5">cada mes</span>
-                </div>
-
-                {/* Category + supplier */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <span className={`w-2 h-2 rounded-full flex-shrink-0 ${CAT_COLORS[tpl.category] || 'bg-gray-400'}`} />
-                    <span className="text-sm font-medium text-gray-800">{EXPENSE_CAT_LABEL[tpl.category] || tpl.category}</span>
-                    {tpl.supplierId?.name && (
-                      <span className="text-xs text-gray-400 truncate">· {tpl.supplierId.name}</span>
-                    )}
+          {templatesLoading ? (
+            <div className="px-5 py-6"><Spinner /></div>
+          ) : templates.length === 0 ? (
+            <div className="px-5 py-8 text-center">
+              <p className="text-sm text-gray-400">Sin plantillas. Marca un gasto como recurrente al crearlo.</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-50">
+              {templates.map((tpl) => (
+                <div key={tpl._id} className={`flex items-center gap-4 px-5 py-3.5 ${tpl.isActive ? '' : 'opacity-50'}`}>
+                  <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-violet-50 flex flex-col items-center justify-center">
+                    <span className="text-sm font-bold text-violet-600 leading-none">{tpl.dayOfMonth}</span>
+                    <span className="text-[9px] text-violet-400 leading-none mt-0.5">cada mes</span>
                   </div>
-                  {tpl.notes && (
-                    <p className="text-xs text-gray-400 mt-0.5 truncate">{tpl.notes}</p>
-                  )}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <span className={`w-2 h-2 rounded-full flex-shrink-0 ${CAT_COLORS[tpl.category] || 'bg-gray-400'}`} />
+                      <span className="text-sm font-medium text-gray-800">{EXPENSE_CAT_LABEL[tpl.category] || tpl.category}</span>
+                      {tpl.supplierId?.name && <span className="text-xs text-gray-400 truncate">· {tpl.supplierId.name}</span>}
+                    </div>
+                    {tpl.notes && <p className="text-xs text-gray-400 mt-0.5 truncate">{tpl.notes}</p>}
+                  </div>
+                  <span className="text-sm font-semibold text-gray-800 whitespace-nowrap">{fmtEur(tpl.amount)}</span>
+                  <button
+                    onClick={() => handleToggleTemplate(tpl)}
+                    disabled={togglingTpl === tpl._id}
+                    className={`text-xs font-semibold px-2.5 py-1 rounded-full transition-colors flex-shrink-0 ${
+                      tpl.isActive
+                        ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
+                        : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                    }`}
+                  >
+                    {tpl.isActive ? 'Activa' : 'Pausada'}
+                  </button>
+                  <button
+                    onClick={() => handleDeleteTemplate(tpl._id)}
+                    disabled={deletingTpl === tpl._id}
+                    className="p-1.5 text-gray-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors flex-shrink-0"
+                    title="Eliminar plantilla"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
+                      <path fillRule="evenodd" d="M5 3.25V4H2.75a.75.75 0 0 0 0 1.5h.3l.815 8.15A1.5 1.5 0 0 0 5.357 15h5.285a1.5 1.5 0 0 0 1.493-1.35l.815-8.15h.3a.75.75 0 0 0 0-1.5H11v-.75A2.25 2.25 0 0 0 8.75 1h-1.5A2.25 2.25 0 0 0 5 3.25Zm2.25-.75a.75.75 0 0 0-.75.75V4h3v-.75a.75.75 0 0 0-.75-.75h-1.5ZM6.05 6a.75.75 0 0 1 .787.713l.275 5.5a.75.75 0 0 1-1.498.075l-.275-5.5A.75.75 0 0 1 6.05 6Zm3.9 0a.75.75 0 0 1 .712.787l-.275 5.5a.75.75 0 0 1-1.498-.075l.275-5.5a.75.75 0 0 1 .786-.711Z" clipRule="evenodd" />
+                    </svg>
+                  </button>
                 </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
-                {/* Amount */}
-                <span className="text-sm font-semibold text-gray-800 whitespace-nowrap">{fmtEur(tpl.amount)}</span>
-
-                {/* Active toggle */}
-                <button
-                  onClick={() => handleToggleTemplate(tpl)}
-                  disabled={togglingTpl === tpl._id}
-                  className={`text-xs font-semibold px-2.5 py-1 rounded-full transition-colors flex-shrink-0 ${
-                    tpl.isActive
-                      ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
-                      : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-                  }`}
-                >
-                  {tpl.isActive ? 'Activa' : 'Pausada'}
-                </button>
-
-                {/* Delete */}
-                <button
-                  onClick={() => handleDeleteTemplate(tpl._id)}
-                  disabled={deletingTpl === tpl._id}
-                  className="p-1.5 text-gray-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors flex-shrink-0"
-                  title="Eliminar plantilla"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
-                    <path fillRule="evenodd" d="M5 3.25V4H2.75a.75.75 0 0 0 0 1.5h.3l.815 8.15A1.5 1.5 0 0 0 5.357 15h5.285a1.5 1.5 0 0 0 1.493-1.35l.815-8.15h.3a.75.75 0 0 0 0-1.5H11v-.75A2.25 2.25 0 0 0 8.75 1h-1.5A2.25 2.25 0 0 0 5 3.25Zm2.25-.75a.75.75 0 0 0-.75.75V4h3v-.75a.75.75 0 0 0-.75-.75h-1.5ZM6.05 6a.75.75 0 0 1 .787.713l.275 5.5a.75.75 0 0 1-1.498.075l-.275-5.5A.75.75 0 0 1 6.05 6Zm3.9 0a.75.75 0 0 1 .712.787l-.275 5.5a.75.75 0 0 1-1.498-.075l.275-5.5a.75.75 0 0 1 .786-.711Z" clipRule="evenodd" />
-                  </svg>
-                </button>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+      {/* Scope picker — shown before edit/delete on recurring expenses */}
+      {scopeDialog && (
+        <RecurringScopeDialog
+          mode={scopeDialog.mode}
+          onConfirm={handleScopeConfirm}
+          onClose={() => setScopeDialog(null)}
+        />
+      )}
 
       {modal !== null && (
         <ExpenseModal
           expense={modal.expense}
+          scope={modal.scope}
           suppliers={suppliers}
-          onSave={() => { setModal(null); load(); loadTemplates(); }}
+          onSave={() => { setModal(null); load(); if (showTemplates) loadTemplates(); }}
           onClose={() => setModal(null)}
         />
       )}

@@ -274,13 +274,17 @@ function TicketAverageEdit({ value, onSave }) {
   );
 }
 
+const PAGE_SIZE = 10;
+
 function DashboardTab({ dateRange }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(0);
 
   const load = useCallback(async () => {
     if (!dateRange.from || !dateRange.to) return;
     setLoading(true);
+    setPage(0);
     try {
       const { data: d } = await api.get(`/revenue/dashboard?from=${dateRange.from}&to=${dateRange.to}`);
       setData(d);
@@ -385,40 +389,71 @@ function DashboardTab({ dateRange }) {
         {/* Daily breakdown */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
           <h3 className="text-sm font-semibold text-gray-700 mb-1">Ingresos por día</h3>
-          <p className="text-xs text-gray-400 mb-4">Haz clic en "—" para introducir el ingreso real del día</p>
+          <p className="text-xs text-gray-400 mb-4">Haz clic en "+ añadir" para introducir el ingreso real del día</p>
           {data.days.length === 0 ? (
-            <p className="text-sm text-gray-400">Sin reservas confirmadas en este período</p>
-          ) : (
-            <>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="text-left text-xs text-gray-400 border-b border-gray-100">
-                      <th className="pb-2 font-medium">Fecha</th>
-                      <th className="pb-2 font-medium text-right">Comens.</th>
-                      <th className="pb-2 font-medium text-right">Estimado</th>
-                      <th className="pb-2 font-medium text-right">Real</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-50">
-                    {data.days.map((day) => (
-                      <tr key={day.date} className="hover:bg-gray-50/50">
-                        <td className="py-2 text-gray-600">{fmtDate(day.date)}</td>
-                        <td className="py-2 text-right text-gray-500">{day.covers || '—'}</td>
-                        <td className="py-2 text-right text-gray-500">{day.estimatedRevenue > 0 ? fmtEur(day.estimatedRevenue) : '—'}</td>
-                        <td className="py-2 text-right">
-                          <InlineRevenueEdit
-                            value={day.actualRevenue}
-                            onSave={(v) => saveActual(day.date, v)}
-                          />
-                        </td>
+            <p className="text-sm text-gray-400">Sin días en este período</p>
+          ) : (() => {
+            const pageCount = Math.ceil(data.days.length / PAGE_SIZE);
+            const slice = data.days.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+            return (
+              <>
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="text-left text-xs text-gray-400 border-b border-gray-100">
+                        <th className="pb-2 font-medium">Fecha</th>
+                        <th className="pb-2 font-medium text-right">Comens.</th>
+                        <th className="pb-2 font-medium text-right">Estimado</th>
+                        <th className="pb-2 font-medium text-right">Real</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </>
-          )}
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {slice.map((day) => (
+                        <tr key={day.date} className="hover:bg-gray-50/50">
+                          <td className="py-2 text-gray-600">{fmtDate(day.date)}</td>
+                          <td className="py-2 text-right text-gray-500">{day.covers || '—'}</td>
+                          <td className="py-2 text-right text-gray-500">{day.estimatedRevenue > 0 ? fmtEur(day.estimatedRevenue) : '—'}</td>
+                          <td className="py-2 text-right">
+                            <InlineRevenueEdit
+                              value={day.actualRevenue}
+                              onSave={(v) => saveActual(day.date, v)}
+                            />
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {pageCount > 1 && (
+                  <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
+                    <button
+                      onClick={() => setPage((p) => Math.max(0, p - 1))}
+                      disabled={page === 0}
+                      className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
+                        <path fillRule="evenodd" d="M9.78 4.22a.75.75 0 0 1 0 1.06L7.06 8l2.72 2.72a.75.75 0 1 1-1.06 1.06L5.47 8.53a.75.75 0 0 1 0-1.06l3.25-3.25a.75.75 0 0 1 1.06 0Z" clipRule="evenodd" />
+                      </svg>
+                      Anterior
+                    </button>
+                    <span className="text-xs text-gray-400">
+                      Página {page + 1} de {pageCount}
+                    </span>
+                    <button
+                      onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
+                      disabled={page >= pageCount - 1}
+                      className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    >
+                      Siguiente
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
+                        <path fillRule="evenodd" d="M6.22 4.22a.75.75 0 0 1 1.06 0l3.25 3.25a.75.75 0 0 1 0 1.06l-3.25 3.25a.75.75 0 0 1-1.06-1.06L8.94 8 6.22 5.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
+                      </svg>
+                    </button>
+                  </div>
+                )}
+              </>
+            );
+          })()}
         </div>
       </div>
     </div>
@@ -429,18 +464,26 @@ function DashboardTab({ dateRange }) {
 
 function ExpenseModal({ expense, suppliers, onSave, onClose }) {
   const editing = !!expense?._id;
+  const todayDay = new Date().getDate();
   const [form, setForm] = useState({
-    category: expense?.category || '',
-    amount: expense?.amount != null ? String(expense.amount) : '',
+    category:    expense?.category || '',
+    amount:      expense?.amount != null ? String(expense.amount) : '',
     expenseDate: expense?.expenseDate || toIso(),
-    supplierId: expense?.supplierId?._id || expense?.supplierId || '',
-    notes: expense?.notes || '',
+    supplierId:  expense?.supplierId?._id || expense?.supplierId || '',
+    notes:       expense?.notes || '',
     isRecurring: expense?.isRecurring || false,
+    dayOfMonth:  String(todayDay),
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+
+  // When the expense date changes, keep dayOfMonth in sync (if not manually overridden)
+  const handleDateChange = (val) => {
+    const day = val ? parseInt(val.slice(8, 10), 10) : todayDay;
+    setForm((f) => ({ ...f, expenseDate: val, dayOfMonth: String(day) }));
+  };
 
   const submit = async (e) => {
     e.preventDefault();
@@ -470,7 +513,7 @@ function ExpenseModal({ expense, suppliers, onSave, onClose }) {
               onChange={(e) => set('amount', e.target.value)} className={inputCls} placeholder="0.00" />
           </FormField>
           <FormField label="Fecha" required>
-            <input type="date" value={form.expenseDate} onChange={(e) => set('expenseDate', e.target.value)} className={inputCls} />
+            <input type="date" value={form.expenseDate} onChange={(e) => handleDateChange(e.target.value)} className={inputCls} />
           </FormField>
         </div>
         <FormField label="Categoría" required>
@@ -488,11 +531,29 @@ function ExpenseModal({ expense, suppliers, onSave, onClose }) {
         <FormField label="Notas">
           <input type="text" value={form.notes} onChange={(e) => set('notes', e.target.value)} className={inputCls} placeholder="Descripción opcional" />
         </FormField>
-        <label className="flex items-center gap-2 cursor-pointer select-none">
-          <input type="checkbox" checked={form.isRecurring} onChange={(e) => set('isRecurring', e.target.checked)}
-            className="w-4 h-4 text-violet-600 rounded border-gray-300 focus:ring-violet-500" />
-          <span className="text-sm text-gray-600">Gasto recurrente mensual</span>
-        </label>
+
+        {/* Recurring section */}
+        {!editing && (
+          <div className="space-y-2">
+            <label className="flex items-center gap-2 cursor-pointer select-none">
+              <input type="checkbox" checked={form.isRecurring} onChange={(e) => set('isRecurring', e.target.checked)}
+                className="w-4 h-4 text-violet-600 rounded border-gray-300 focus:ring-violet-500" />
+              <span className="text-sm text-gray-600">Gasto recurrente mensual</span>
+            </label>
+            {form.isRecurring && (
+              <div className="ml-6 flex items-center gap-2 p-3 bg-violet-50 rounded-xl border border-violet-100">
+                <span className="text-sm text-violet-700">Se generará automáticamente el día</span>
+                <input
+                  type="number" min="1" max="31" value={form.dayOfMonth}
+                  onChange={(e) => set('dayOfMonth', e.target.value)}
+                  className="w-16 px-2 py-1 text-sm text-center border border-violet-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white"
+                />
+                <span className="text-sm text-violet-700">de cada mes</span>
+              </div>
+            )}
+          </div>
+        )}
+
         {error && <p className="text-sm text-rose-600 bg-rose-50 px-3 py-2 rounded-lg">{error}</p>}
         <div className="flex justify-end gap-2 pt-1">
           <button type="button" onClick={onClose} className={btnGhost}>Cancelar</button>
@@ -514,6 +575,11 @@ function GastosTab({ dateRange, suppliers }) {
   const [deleting, setDeleting] = useState(null);
   const [filters, setFilters] = useState({ from: dateRange.from, to: dateRange.to, category: '', supplierId: '' });
 
+  const [templates, setTemplates] = useState([]);
+  const [templatesLoading, setTemplatesLoading] = useState(true);
+  const [togglingTpl, setTogglingTpl] = useState(null);
+  const [deletingTpl, setDeletingTpl] = useState(null);
+
   // Sync date range from parent period selector
   useEffect(() => {
     setFilters((f) => ({ ...f, from: dateRange.from, to: dateRange.to }));
@@ -533,7 +599,17 @@ function GastosTab({ dateRange, suppliers }) {
     finally { setLoading(false); }
   }, [filters]);
 
+  const loadTemplates = useCallback(async () => {
+    setTemplatesLoading(true);
+    try {
+      const { data } = await api.get('/expenses/templates');
+      setTemplates(data);
+    } catch { /* ignore */ }
+    finally { setTemplatesLoading(false); }
+  }, []);
+
   useEffect(() => { load(); }, [load]);
+  useEffect(() => { loadTemplates(); }, [loadTemplates]);
 
   const handleDelete = async (id) => {
     if (!window.confirm('¿Eliminar este gasto?')) return;
@@ -543,6 +619,25 @@ function GastosTab({ dateRange, suppliers }) {
       setExpenses((prev) => prev.filter((e) => e._id !== id));
     } catch { /* ignore */ }
     finally { setDeleting(null); }
+  };
+
+  const handleToggleTemplate = async (tpl) => {
+    setTogglingTpl(tpl._id);
+    try {
+      await api.patch(`/expenses/templates/${tpl._id}`, { isActive: !tpl.isActive });
+      loadTemplates();
+    } catch { /* ignore */ }
+    finally { setTogglingTpl(null); }
+  };
+
+  const handleDeleteTemplate = async (id) => {
+    if (!window.confirm('¿Eliminar esta plantilla? Los gastos ya generados se conservan.')) return;
+    setDeletingTpl(id);
+    try {
+      await api.delete(`/expenses/templates/${id}`);
+      setTemplates((prev) => prev.filter((t) => t._id !== id));
+    } catch { /* ignore */ }
+    finally { setDeletingTpl(null); }
   };
 
   const setFilter = (k, v) => setFilters((f) => ({ ...f, [k]: v }));
@@ -655,11 +750,91 @@ function GastosTab({ dateRange, suppliers }) {
         </>
       )}
 
+      {/* Recurring templates section */}
+      <div className="bg-white rounded-2xl border border-gray-100 shadow-sm">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-50">
+          <div className="flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 text-violet-500">
+              <path fillRule="evenodd" d="M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14Zm.75-10.25a.75.75 0 0 0-1.5 0v3.5c0 .414.336.75.75.75h3.25a.75.75 0 0 0 0-1.5H8.75v-2.75Z" clipRule="evenodd" />
+            </svg>
+            <h3 className="text-sm font-semibold text-gray-700">Plantillas recurrentes</h3>
+            {!templatesLoading && templates.length > 0 && (
+              <span className="text-xs bg-violet-100 text-violet-600 font-semibold px-1.5 py-0.5 rounded-full">
+                {templates.filter((t) => t.isActive).length} activas
+              </span>
+            )}
+          </div>
+          <p className="text-xs text-gray-400">El cron genera el gasto mensualmente en el día indicado</p>
+        </div>
+
+        {templatesLoading ? (
+          <div className="px-5 py-6"><Spinner /></div>
+        ) : templates.length === 0 ? (
+          <div className="px-5 py-8 text-center">
+            <p className="text-sm text-gray-400">Sin plantillas recurrentes. Marca un gasto como "recurrente" al crearlo.</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-gray-50">
+            {templates.map((tpl) => (
+              <div key={tpl._id} className={`flex items-center gap-4 px-5 py-3.5 transition-colors ${tpl.isActive ? '' : 'opacity-50'}`}>
+                {/* Day badge */}
+                <div className="flex-shrink-0 w-10 h-10 rounded-xl bg-violet-50 flex flex-col items-center justify-center">
+                  <span className="text-sm font-bold text-violet-600 leading-none">{tpl.dayOfMonth}</span>
+                  <span className="text-[9px] text-violet-400 leading-none mt-0.5">cada mes</span>
+                </div>
+
+                {/* Category + supplier */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className={`w-2 h-2 rounded-full flex-shrink-0 ${CAT_COLORS[tpl.category] || 'bg-gray-400'}`} />
+                    <span className="text-sm font-medium text-gray-800">{EXPENSE_CAT_LABEL[tpl.category] || tpl.category}</span>
+                    {tpl.supplierId?.name && (
+                      <span className="text-xs text-gray-400 truncate">· {tpl.supplierId.name}</span>
+                    )}
+                  </div>
+                  {tpl.notes && (
+                    <p className="text-xs text-gray-400 mt-0.5 truncate">{tpl.notes}</p>
+                  )}
+                </div>
+
+                {/* Amount */}
+                <span className="text-sm font-semibold text-gray-800 whitespace-nowrap">{fmtEur(tpl.amount)}</span>
+
+                {/* Active toggle */}
+                <button
+                  onClick={() => handleToggleTemplate(tpl)}
+                  disabled={togglingTpl === tpl._id}
+                  className={`text-xs font-semibold px-2.5 py-1 rounded-full transition-colors flex-shrink-0 ${
+                    tpl.isActive
+                      ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
+                      : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                  }`}
+                >
+                  {tpl.isActive ? 'Activa' : 'Pausada'}
+                </button>
+
+                {/* Delete */}
+                <button
+                  onClick={() => handleDeleteTemplate(tpl._id)}
+                  disabled={deletingTpl === tpl._id}
+                  className="p-1.5 text-gray-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors flex-shrink-0"
+                  title="Eliminar plantilla"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
+                    <path fillRule="evenodd" d="M5 3.25V4H2.75a.75.75 0 0 0 0 1.5h.3l.815 8.15A1.5 1.5 0 0 0 5.357 15h5.285a1.5 1.5 0 0 0 1.493-1.35l.815-8.15h.3a.75.75 0 0 0 0-1.5H11v-.75A2.25 2.25 0 0 0 8.75 1h-1.5A2.25 2.25 0 0 0 5 3.25Zm2.25-.75a.75.75 0 0 0-.75.75V4h3v-.75a.75.75 0 0 0-.75-.75h-1.5ZM6.05 6a.75.75 0 0 1 .787.713l.275 5.5a.75.75 0 0 1-1.498.075l-.275-5.5A.75.75 0 0 1 6.05 6Zm3.9 0a.75.75 0 0 1 .712.787l-.275 5.5a.75.75 0 0 1-1.498-.075l.275-5.5a.75.75 0 0 1 .786-.711Z" clipRule="evenodd" />
+                  </svg>
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       {modal !== null && (
         <ExpenseModal
           expense={modal.expense}
           suppliers={suppliers}
-          onSave={() => { setModal(null); load(); }}
+          onSave={() => { setModal(null); load(); loadTemplates(); }}
           onClose={() => setModal(null)}
         />
       )}

@@ -37,7 +37,10 @@ const CAT_COLORS = {
 
 // ── Date helpers ──────────────────────────────────────────────────────────────
 
-function toIso(d = new Date()) { return d.toISOString().slice(0, 10); }
+// Uses local date parts to avoid UTC offset shifting the date (e.g. Spain CEST = UTC+2)
+function toIso(d = new Date()) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
 
 function getWeekRange() {
   const today = new Date();
@@ -274,7 +277,6 @@ function TicketAverageEdit({ value, onSave }) {
 function DashboardTab({ dateRange }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [showAllDays, setShowAllDays] = useState(false);
 
   const load = useCallback(async () => {
     if (!dateRange.from || !dateRange.to) return;
@@ -306,7 +308,6 @@ function DashboardTab({ dateRange }) {
   if (!data) return <EmptyState message="No se pudieron cargar los datos" />;
 
   const maxExpense = data.expensesByCategory[0]?.amount || 1;
-  const visibleDays = showAllDays ? data.days : data.days.slice(-7);
 
   return (
     <div className="space-y-6">
@@ -400,7 +401,7 @@ function DashboardTab({ dateRange }) {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-50">
-                    {visibleDays.map((day) => (
+                    {data.days.map((day) => (
                       <tr key={day.date} className="hover:bg-gray-50/50">
                         <td className="py-2 text-gray-600">{fmtDate(day.date)}</td>
                         <td className="py-2 text-right text-gray-500">{day.covers || '—'}</td>
@@ -416,14 +417,6 @@ function DashboardTab({ dateRange }) {
                   </tbody>
                 </table>
               </div>
-              {data.days.length > 7 && (
-                <button
-                  onClick={() => setShowAllDays(!showAllDays)}
-                  className="mt-3 text-xs text-violet-600 hover:underline"
-                >
-                  {showAllDays ? 'Ver menos' : `Ver todos (${data.days.length} días)`}
-                </button>
-              )}
             </>
           )}
         </div>

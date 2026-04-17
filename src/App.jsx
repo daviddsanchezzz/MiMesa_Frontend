@@ -21,6 +21,7 @@ import Publicidad from './pages/Publicidad';
 import Analytics from './pages/Analytics';
 import Calendar from './pages/Calendar';
 import Personal from './pages/Personal';
+import Finanzas from './pages/Finanzas';
 import PublicReservation from './pages/PublicReservation';
 import PublicCancel from './pages/PublicCancel';
 import PublicUnsubscribe from './pages/PublicUnsubscribe';
@@ -191,6 +192,7 @@ export default function App() {
           <Route path="/calendario"   element={<RoleRoute minRole="staff"><FullBleedLayout><Calendar /></FullBleedLayout></RoleRoute>} />
           <Route path="/publicidad"   element={<RoleRoute minRole="manager"><PrivateLayout><Publicidad /></PrivateLayout></RoleRoute>} />
           <Route path="/personal"     element={<ModuleRoute moduleKey="staff"><RoleRoute minRole="manager"><PrivateLayout><Personal /></PrivateLayout></RoleRoute></ModuleRoute>} />
+          <Route path="/finanzas"     element={<ModuleRoute moduleKey="expenses"><RoleRoute minRole="manager"><PrivateLayout><Finanzas /></PrivateLayout></RoleRoute></ModuleRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>

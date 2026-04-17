@@ -58,6 +58,12 @@ const IconCalendarGrid = () => (
   </svg>
 );
 
+const IconCurrencyEuro = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 shrink-0">
+    <path fillRule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm.75-11.25a2.25 2.25 0 0 0-2.122 1.5H10.5a.75.75 0 0 1 0 1.5H8.628a2.251 2.251 0 0 0 0 .5H10.5a.75.75 0 0 1 0 1.5H8.628a2.25 2.25 0 0 0 4.122.75.75.75 0 1 1 1.298.75 3.75 3.75 0 0 1-6.963-1.5H6.75a.75.75 0 0 1 0-1.5h.335a3.75 3.75 0 0 1 0-.5H6.75a.75.75 0 0 1 0-1.5h.335a3.75 3.75 0 0 1 6.963-1.5.75.75 0 0 1-1.298.75 2.25 2.25 0 0 0-2.0-1.25Z" clipRule="evenodd" />
+  </svg>
+);
+
 const IconMegaphone = () => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 shrink-0">
     <path d="M13.92 3.845a19.361 19.361 0 0 1-6.3 1.98C6.765 5.942 5.89 6 5 6a4 4 0 0 0 0 8c.184 0 .368-.006.55-.016A19.065 19.065 0 0 1 13.92 16.155 1 1 0 0 0 15 15.27V4.73a1 1 0 0 0-1.08-.885ZM16 9.5a.75.75 0 0 1 .75-.75h1.5a.75.75 0 0 1 0 1.5h-1.5A.75.75 0 0 1 16 9.5ZM7 14.803V17a1 1 0 0 0 1 1h.5a1 1 0 0 0 .979-.8l.34-1.7A19.52 19.52 0 0 1 7 14.803Z" />
@@ -103,6 +109,9 @@ export default function Sidebar({ isOpen, onClose }) {
   const personalLink = (isModuleEnabled('staff') && hasRole('manager'))
     ? [{ to: '/personal', label: 'Personal', icon: <IconBriefcase /> }]
     : [];
+  const finanzasLink = (isModuleEnabled('expenses') && hasRole('manager'))
+    ? [{ to: '/finanzas', label: 'Finanzas', icon: <IconCurrencyEuro /> }]
+    : [];
   const navLinks = [
     mainLinks[0],
     mainLinks[1],
@@ -110,6 +119,7 @@ export default function Sidebar({ isOpen, onClose }) {
     ...mainLinks.slice(2),
     ...lowerLinks,
     ...personalLink,
+    ...finanzasLink,
   ].filter(Boolean).filter((link) => !(isSmallScreen && link.to === '/tables'));
 
   const userName = session?.user?.name || business?.userName || business?.name || 'Usuario';

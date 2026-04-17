@@ -71,7 +71,7 @@ const currencySymbol = (currency = 'EUR') => {
 
 const compLabel = (comp) => {
   if (!comp) return null;
-  const suffix = comp.paymentType === 'hourly' ? '/h' : comp.paymentType === 'per_shift' ? '/asignación' : '/mes';
+  const suffix = comp.paymentType === 'hourly' ? '/h' : comp.paymentType === 'per_shift' ? '/turno' : '/mes';
   return `${formatMoney(comp.baseAmount, comp.currency)}${suffix}`;
 };
 

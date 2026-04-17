@@ -440,6 +440,20 @@ function ShiftEditorModal({ day, shift, assignments, activeEmployees, positions,
     [filteredEligibleEmployees, eligibleEmployeesForSelectedPosition, selectedEmployeeId],
   );
 
+  const addEmployeeDirectly = (position, employee) => {
+    if (assignedEmployeeIds.has(String(employee._id))) return;
+    const tempId = `tmp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    setDraftAssignments((prev) => [...prev, {
+      _id: tempId,
+      __temp: true,
+      date: day.date,
+      shiftId: shift,
+      roleLabel: position.name,
+      employeeId: employee,
+    }]);
+    setEmployeeQuery('');
+  };
+
   const totalAssigned = draftAssignments.length;
   const hasChanges = useMemo(() => {
     if ((assignments || []).length !== draftAssignments.length) return true;
@@ -571,185 +585,162 @@ function ShiftEditorModal({ day, shift, assignments, activeEmployees, positions,
 
   return (
     <Modal
-      title={`Detalle del turno · ${shift.name}`}
-      subtitle={`${day.fullLabel} · ${shift.startTime}-${shift.endTime}`}
+      title={shift.name}
+      subtitle={`${day.fullLabel} · ${shift.startTime}–${shift.endTime}`}
       onClose={onClose}
-      size="xl"
+      size="lg"
       bodyClassName="overflow-visible"
     >
-      <div className="space-y-4">
-        {error && <div className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</div>}
-
-        <div className="rounded-xl border border-gray-200 bg-gray-50/70 px-3 py-2 flex items-center justify-between">
-          <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Resumen</p>
-          <span className="inline-flex items-center rounded-full bg-white border border-gray-200 px-2.5 py-1 text-xs font-semibold text-gray-700">
-            {totalAssigned} asignados
-          </span>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_290px] gap-4">
-          <div className="space-y-3">
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-              {assignmentsByPosition.map((column) => (
-                <section key={column.key} className="rounded-xl border border-gray-200 bg-white p-3 space-y-2">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: column.color }} />
-                    <p className="text-sm font-semibold text-gray-900">{column.label}</p>
-                    <span className="ml-auto text-xs font-semibold px-1.5 py-0.5 rounded-md bg-gray-100 text-gray-600">{column.assignments.length}</span>
-                  </div>
-
-                  <div className="space-y-1.5 min-h-[120px]">
-                    {column.assignments.length === 0 && (
-                      <p className="text-xs italic text-gray-400">Sin asignados</p>
-                    )}
-                    {column.assignments.map((assignment) => {
-                      const employee = assignment.employeeId || {};
-                      const employeeName = employee?.firstName ? `${employee.firstName} ${employee.lastName || ''}`.trim() : 'Empleado';
-                      return (
-                        <div key={assignment._id} className="flex items-center justify-between gap-2 px-2 py-1.5 rounded-lg hover:bg-gray-50">
-                          <span className="text-sm text-gray-800 truncate">{employeeName}</span>
-                          <button
-                            onClick={() => removeFromDraft(assignment._id)}
-                            disabled={saving}
-                            className="text-[11px] text-rose-600 hover:underline disabled:opacity-60 shrink-0"
-                          >
-                            Quitar
-                          </button>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </section>
-              ))}
-            </div>
+      <div className="divide-y divide-gray-100">
+        {error && (
+          <div className="px-5 pb-4">
+            <div className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-4 py-3">{error}</div>
           </div>
-
-          <aside className="rounded-xl border border-gray-200 bg-white p-3 space-y-3 h-fit">
-            <p className="text-sm font-semibold text-gray-900">Añadir personal</p>
-            <div>
-              <label className={labelCls}>Puesto</label>
-              <select
-                className={inputCls}
-                value={selectedPositionId}
-                onChange={(e) => {
-                  setSelectedPositionId(e.target.value);
-                  setSelectedEmployeeId('');
-                  setEmployeeQuery('');
-                  setEmployeePickerOpen(false);
-                }}
-                disabled={saving}
-              >
-                <option value="">Selecciona puesto...</option>
-                {activePositions.map((position) => (
-                  <option key={position._id} value={position._id}>{position.name}</option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label className={labelCls}>Empleado</label>
-              <div className="relative" ref={employeePickerRef}>
-                <input
-                  className={inputCls}
-                  value={employeeQuery}
-                  onFocus={() => {
-                    if (!selectedPositionId) return;
-                    setEmployeePickerOpen(true);
-                  }}
-                  onChange={(e) => {
-                    setEmployeeQuery(e.target.value);
-                    setSelectedEmployeeId('');
-                    if (selectedPositionId) setEmployeePickerOpen(true);
-                  }}
-                  disabled={saving || !selectedPositionId}
-                  placeholder={selectedPositionId ? 'Busca por nombre...' : 'Primero elige puesto'}
-                />
-                {selectedEmployee && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setSelectedEmployeeId('');
-                      setEmployeeQuery('');
-                      setEmployeePickerOpen(true);
-                    }}
-                    className="absolute right-2 top-2 text-[11px] px-2 py-1 rounded-md bg-violet-50 text-violet-700 hover:bg-violet-100"
-                  >
-                    Cambiar
-                  </button>
-                )}
-              </div>
-            </div>
-            <button
-              onClick={addToDraft}
-              disabled={saving || !selectedPositionId || !selectedEmployeeId}
-              className="w-full text-sm font-semibold px-3 py-2 rounded-lg bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-60"
-            >
-              Añadir
-            </button>
-            {selectedPositionId && filteredEligibleEmployees.length === 0 && (
-              <p className="text-xs text-amber-600">No hay empleados disponibles para este puesto.</p>
-            )}
-          </aside>
-        </div>
-
-        {employeePickerOpen && selectedPositionId && employeePickerMenuStyle && createPortal(
-          <div
-            ref={employeePickerMenuRef}
-            className="fixed z-[90] bg-white border border-gray-200 rounded-xl shadow-2xl overflow-hidden"
-            style={{
-              top: employeePickerMenuStyle.top,
-              left: employeePickerMenuStyle.left,
-              width: employeePickerMenuStyle.width,
-              maxHeight: employeePickerMenuStyle.maxHeight,
-            }}
-          >
-            <div className="p-1.5 space-y-1 overflow-auto h-full">
-              {filteredEligibleEmployees.length === 0 ? (
-                <p className="text-xs text-gray-400 px-2 py-2">Sin resultados para la búsqueda</p>
-              ) : (
-                filteredEligibleEmployees.map((employee) => {
-                  const employeeName = `${employee.firstName || ''} ${employee.lastName || ''}`.trim();
-                  return (
-                    <button
-                      key={employee._id}
-                      type="button"
-                      onClick={() => {
-                        setSelectedEmployeeId(String(employee._id));
-                        setEmployeeQuery(employeeName);
-                        setEmployeePickerOpen(false);
-                      }}
-                      className={`w-full text-left px-2.5 py-2 rounded-lg transition-colors ${
-                        String(selectedEmployeeId) === String(employee._id)
-                          ? 'bg-violet-50 text-violet-700'
-                          : 'hover:bg-gray-50 text-gray-700'
-                      }`}
-                    >
-                      <p className="text-sm font-medium truncate">{employeeName}</p>
-                    </button>
-                  );
-                })
-              )}
-            </div>
-          </div>,
-          document.body
         )}
 
-        <div className="pt-2 border-t border-gray-100 flex items-center justify-end gap-2">
-          <button
-            type="button"
-            onClick={onClose}
-            disabled={saving}
-            className="px-3 py-2 rounded-lg text-sm bg-gray-100 text-gray-700 hover:bg-gray-200 disabled:opacity-60"
-          >
-            Cerrar
-          </button>
-          <button
-            type="button"
-            onClick={saveChanges}
-            disabled={saving || !hasChanges}
-            className="px-3 py-2 rounded-lg text-sm bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-60"
-          >
-            {saving ? 'Guardando...' : 'Guardar cambios'}
-          </button>
+        {/* ── Assigned list ── */}
+        <div className="px-5 py-4 space-y-5">
+          {totalAssigned === 0 && (
+            <p className="text-sm text-gray-300 text-center py-2">Sin personal asignado</p>
+          )}
+          {assignmentsByPosition.filter((col) => col.assignments.length > 0).map((column) => (
+            <div key={column.key}>
+              <div className="flex items-center gap-2 mb-2">
+                <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: column.color }} />
+                <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400">{column.label}</p>
+              </div>
+              <div className="space-y-0.5">
+                {column.assignments.map((assignment) => {
+                  const emp = assignment.employeeId || {};
+                  const name = emp?.firstName ? `${emp.firstName} ${emp.lastName || ''}`.trim() : 'Empleado';
+                  const initials = name.split(' ').filter(Boolean).map((n) => n[0]).slice(0, 2).join('').toUpperCase();
+                  return (
+                    <div key={assignment._id} className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-gray-50 group transition-colors">
+                      <div
+                        className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
+                        style={{ backgroundColor: column.color }}
+                      >
+                        {initials}
+                      </div>
+                      <span className="text-sm font-medium text-gray-800 flex-1">{name}</span>
+                      <button
+                        onClick={() => removeFromDraft(assignment._id)}
+                        disabled={saving}
+                        className="w-7 h-7 rounded-full hover:bg-rose-50 flex items-center justify-center text-gray-300 hover:text-rose-500 sm:opacity-0 sm:group-hover:opacity-100 opacity-100 transition-all shrink-0 disabled:cursor-not-allowed"
+                        aria-label="Quitar"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
+                          <path d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z" />
+                        </svg>
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* ── Add section ── */}
+        <div className="px-5 py-4 space-y-3 bg-gray-50/50">
+          <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Añadir personal</p>
+
+          {/* Position pills */}
+          <div className="flex flex-wrap gap-1.5">
+            {activePositions.map((position) => {
+              const isSelected = String(selectedPositionId) === String(position._id);
+              return (
+                <button
+                  key={position._id}
+                  onClick={() => {
+                    setSelectedPositionId(isSelected ? '' : String(position._id));
+                    setSelectedEmployeeId('');
+                    setEmployeeQuery('');
+                  }}
+                  disabled={saving}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
+                    isSelected ? 'border-transparent text-white shadow-sm' : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
+                  }`}
+                  style={isSelected ? { backgroundColor: position.color || '#7c3aed' } : {}}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: isSelected ? 'rgba(255,255,255,0.7)' : (position.color || '#64748B') }} />
+                  {position.name}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Employee search + grid */}
+          {selectedPositionId && (
+            <div className="space-y-2">
+              <div className="relative">
+                <input
+                  className="w-full border border-gray-200 rounded-xl pl-9 pr-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-violet-400 transition-colors"
+                  value={employeeQuery}
+                  onChange={(e) => setEmployeeQuery(e.target.value)}
+                  placeholder="Buscar..."
+                  // eslint-disable-next-line jsx-a11y/no-autofocus
+                  autoFocus
+                />
+                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M9 3.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11ZM2 9a7 7 0 1 1 12.452 4.391l3.328 3.329a.75.75 0 1 1-1.06 1.06l-3.329-3.328A7 7 0 0 1 2 9Z" clipRule="evenodd" />
+                </svg>
+              </div>
+
+              {filteredEligibleEmployees.length === 0 ? (
+                <p className="text-xs text-gray-400 text-center py-3">
+                  {employeeQuery ? 'Sin resultados' : 'Sin empleados disponibles para este puesto'}
+                </p>
+              ) : (
+                <div className="grid grid-cols-2 gap-1.5">
+                  {filteredEligibleEmployees.map((emp) => {
+                    const name = `${emp.firstName || ''} ${emp.lastName || ''}`.trim();
+                    const initials = name.split(' ').filter(Boolean).map((n) => n[0]).slice(0, 2).join('').toUpperCase();
+                    const pos = activePositions.find((p) => String(p._id) === String(selectedPositionId));
+                    return (
+                      <button
+                        key={emp._id}
+                        onClick={() => addEmployeeDirectly(pos, emp)}
+                        disabled={saving}
+                        className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-white border border-gray-100 hover:border-violet-200 hover:bg-violet-50/40 text-left transition-all"
+                      >
+                        <div
+                          className="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold text-white shrink-0"
+                          style={{ backgroundColor: pos?.color || '#64748B' }}
+                        >
+                          {initials}
+                        </div>
+                        <span className="text-sm font-medium text-gray-700 truncate">{emp.firstName}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* ── Footer ── */}
+        <div className="px-5 py-3.5 flex items-center justify-between gap-3">
+          <p className="text-xs text-gray-400">{totalAssigned} {totalAssigned === 1 ? 'persona asignada' : 'personas asignadas'}</p>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={saving}
+              className="px-4 py-2 rounded-xl text-sm text-gray-600 hover:bg-gray-100 disabled:opacity-50 transition-colors"
+            >
+              Cerrar
+            </button>
+            <button
+              type="button"
+              onClick={saveChanges}
+              disabled={saving || !hasChanges}
+              className="px-4 py-2 rounded-xl text-sm font-semibold bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-40 transition-colors"
+            >
+              {saving ? 'Guardando...' : 'Guardar'}
+            </button>
+          </div>
         </div>
       </div>
     </Modal>

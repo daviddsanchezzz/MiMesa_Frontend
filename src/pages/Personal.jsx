@@ -1100,7 +1100,7 @@ export default function Personal() {
   const [isExporting, setIsExporting] = useState(false);
   const [isCopyingWeek, setIsCopyingWeek] = useState(false);
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
-  const [weekReservations, setWeekReservations] = useState({}); // date -> count
+  const [weekReservations, setWeekReservations] = useState({}); // date -> [{time, status}]
   const plannerGridRef = useRef(null);
   const exportMenuRef = useRef(null);
   const mobileDayButtonRefs = useRef({});
@@ -1133,15 +1133,15 @@ export default function Personal() {
         api.get(`/staff/costs?weekStart=${weekStart}`),
         api.get(`/reservations?from=${weekStart}&to=${weekEnd}`),
       ]);
-      const reservationsCountByDate = {};
-      (reservationsRes.data || []).forEach((reservation) => {
-        if (!reservation?.date) return;
-        if (!['confirmed', 'seated'].includes(reservation.status)) return;
-        reservationsCountByDate[reservation.date] = (reservationsCountByDate[reservation.date] || 0) + 1;
+      const reservationsByDate = {};
+      (reservationsRes.data || []).forEach((r) => {
+        if (!r?.date || !['confirmed', 'seated'].includes(r.status)) return;
+        if (!reservationsByDate[r.date]) reservationsByDate[r.date] = [];
+        reservationsByDate[r.date].push({ time: r.time || '' });
       });
       setAssignments(aRes.data?.assignments || []);
       setCosts(cRes.data || { employeeCosts: [], totalsByCurrency: {}, monthlyEstimateByCurrency: {} });
-      setWeekReservations(reservationsCountByDate);
+      setWeekReservations(reservationsByDate);
     } catch (err) {
       setError(err?.response?.data?.message || 'No se pudieron cargar asignaciones o costes');
     }
@@ -1464,6 +1464,11 @@ export default function Personal() {
     const key = `${day.date}__${shift._id}`;
     const rawList = assignmentsByDayShift[key] || [];
 
+    const shiftReservationCount = (weekReservations[day.date] || []).filter((r) => {
+      if (!r.time || !shift.startTime || !shift.endTime) return false;
+      return r.time >= shift.startTime && r.time < shift.endTime;
+    }).length;
+
     const grouped = rawList.reduce((acc, assignment) => {
       const employee = assignment.employeeId || {};
       const roleName = assignment.roleLabel || employee.position || 'Sin puesto';
@@ -1478,11 +1483,14 @@ export default function Personal() {
     return (
       <div key={shift._id} className="bg-white rounded-lg border border-gray-200 p-2.5 space-y-2">
         <div className="flex items-start justify-between gap-2">
-          <div>
+          <div className="min-w-0">
             <p className="text-xs font-semibold text-gray-900">{shift.name}</p>
             <p className="text-[11px] text-gray-500">{shift.startTime} - {shift.endTime}</p>
+            {shiftReservationCount > 0 && (
+              <p className="text-[11px] font-semibold text-violet-600 mt-0.5">{shiftReservationCount} reservas</p>
+            )}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={() => setSlotEditor({ day, shift })}
               className="text-[11px] font-semibold px-2 py-1 rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200"
@@ -1932,7 +1940,6 @@ export default function Personal() {
             <div className="grid grid-cols-7 gap-2.5 min-w-[1280px]">
               {days.map((day) => {
                 const isToday = day.date === today;
-                const confirmedReservationsForDay = weekReservations[day.date] || 0;
                 const dayShifts = shiftRowsByDay[day.date] || [];
                 return (
                   <div
@@ -1946,11 +1953,6 @@ export default function Personal() {
                         <p className={`text-xs uppercase font-semibold ${isToday ? 'text-violet-600' : 'text-gray-400'}`}>{day.short}</p>
                         <p className={`text-sm font-bold ${isToday ? 'text-violet-700' : 'text-gray-900'}`}>{day.day}</p>
                       </div>
-                    </div>
-                    <div className={`rounded-lg border px-2.5 py-2 text-xs ${
-                      isToday ? 'border-violet-200 bg-white/80 text-violet-700' : 'border-gray-200 bg-white text-gray-600'
-                    }`}>
-                      <span className="font-semibold">{confirmedReservationsForDay}</span> reservas confirmadas
                     </div>
                     {dayShifts.length === 0 ? (
                       <p className="text-[11px] text-gray-300 text-center pt-2">Sin turnos</p>
@@ -1992,9 +1994,6 @@ export default function Personal() {
             </div>
             {currentMobileDay && (
               <div className="space-y-2">
-                <div className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs text-gray-600">
-                  <span className="font-semibold">{weekReservations[currentMobileDay.date] || 0}</span> reservas confirmadas
-                </div>
                 {(shiftRowsByDay[currentMobileDay.date] || []).length === 0 ? (
                   <p className="text-sm text-gray-400 text-center py-8">Sin turnos para este día</p>
                 ) : (

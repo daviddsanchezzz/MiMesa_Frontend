@@ -865,7 +865,7 @@ function EmployeeAssignmentsModal({ employee, onClose, onDeleted }) {
   const fullName = `${employee.firstName} ${employee.lastName || ''}`.trim();
 
   return (
-    <Modal title={`Turnos — ${fullName}`} subtitle={`${assignments.length} asignaciones en total`} onClose={onClose} size="lg">
+    <Modal title={`Turnos — ${fullName}`} subtitle={`${assignments.length} turnos en total`} onClose={onClose} size="lg">
       <div className="space-y-2">
         {errorMsg && <div className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{errorMsg}</div>}
         {loadingList && <div className="h-16 rounded-xl bg-gray-100 animate-pulse" />}
@@ -1472,19 +1472,19 @@ export default function Personal() {
     }, {});
 
     return (
-      <div key={shift._id} className="bg-white rounded-lg border border-gray-200 p-2.5 space-y-2">
+      <div key={shift._id} className="bg-white rounded-xl border border-gray-200 p-3 space-y-2.5">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <p className="text-xs font-semibold text-gray-900">{shift.name}</p>
-            <p className="text-[11px] text-gray-500">{shift.startTime} - {shift.endTime}</p>
+            <p className="text-sm font-bold text-gray-900">{shift.name}</p>
+            <p className="text-xs text-gray-500 font-medium">{shift.startTime} – {shift.endTime}</p>
             {shiftReservationCount > 0 && (
-              <p className="text-[11px] font-semibold text-violet-600 mt-0.5">{shiftReservationCount} reservas</p>
+              <p className="text-xs font-bold text-violet-600 mt-1">{shiftReservationCount} reservas</p>
             )}
           </div>
           <div className="flex items-center gap-2 shrink-0">
             <button
               onClick={() => setSlotEditor({ day, shift })}
-              className="text-[11px] font-semibold px-2 py-1 rounded-md bg-gray-100 text-gray-700 hover:bg-gray-200"
+              className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
             >
               Detalle
             </button>
@@ -1492,15 +1492,15 @@ export default function Personal() {
         </div>
 
         {rawList.length === 0 ? (
-          <p className="text-[11px] text-gray-300 italic">Sin empleados asignados</p>
+          <p className="text-xs text-gray-300 italic">Sin empleados asignados</p>
         ) : (
-          <div className="space-y-1.5">
+          <div className="space-y-2">
             {Object.values(grouped).map((group, index) => (
               <div key={`${group.roleColor}-${index}`}>
-                <p className="text-[10px] font-semibold uppercase tracking-wide mb-0.5" style={{ color: group.roleColor }}>
+                <p className="text-[11px] font-bold uppercase tracking-wider mb-0.5" style={{ color: group.roleColor }}>
                   {group.roleName}
                 </p>
-                <p className="text-[12px] text-gray-700 leading-5">{group.names.join(', ')}</p>
+                <p className="text-[13px] font-medium text-gray-700 leading-5">{group.names.join(', ')}</p>
               </div>
             ))}
           </div>
@@ -1935,18 +1935,18 @@ export default function Personal() {
                 return (
                   <div
                     key={day.date}
-                    className={`rounded-xl border p-2.5 space-y-2 max-h-[74vh] overflow-auto ${
+                    className={`rounded-xl border p-3 space-y-2 max-h-[74vh] overflow-auto ${
                       isToday ? 'border-violet-300 bg-violet-50/40' : 'border-gray-200 bg-gray-50'
                     }`}
                   >
-                    <div className={`px-1 pb-1.5 border-b sticky top-0 z-10 ${isToday ? 'border-violet-200 bg-violet-50/40' : 'border-gray-200 bg-gray-50'}`}>
+                    <div className={`px-1 pb-2 border-b sticky top-0 z-10 ${isToday ? 'border-violet-200 bg-violet-50/40' : 'border-gray-200 bg-gray-50'}`}>
                       <div>
-                        <p className={`text-xs uppercase font-semibold ${isToday ? 'text-violet-600' : 'text-gray-400'}`}>{day.short}</p>
-                        <p className={`text-sm font-bold ${isToday ? 'text-violet-700' : 'text-gray-900'}`}>{day.day}</p>
+                        <p className={`text-[11px] uppercase font-bold tracking-wider ${isToday ? 'text-violet-500' : 'text-gray-400'}`}>{day.short}</p>
+                        <p className={`text-base font-extrabold leading-tight ${isToday ? 'text-violet-700' : 'text-gray-900'}`}>{day.day}</p>
                       </div>
                     </div>
                     {dayShifts.length === 0 ? (
-                      <p className="text-[11px] text-gray-300 text-center pt-2">Sin turnos</p>
+                      <p className="text-xs text-gray-300 text-center pt-2">Sin turnos</p>
                     ) : (
                       dayShifts.map((shift) => renderShiftCard(day, shift))
                     )}
@@ -2122,7 +2122,7 @@ export default function Personal() {
           {!costsLoading && costsSubTab === 'monthly' && (
             <div className="overflow-x-auto">
               {(monthlyCosts.employeeCosts || []).length === 0 ? (
-                <div className="py-16 text-center text-sm text-gray-400">Sin asignaciones en {monthLabel}</div>
+                <div className="py-16 text-center text-sm text-gray-400">Sin turnos en {monthLabel}</div>
               ) : (
                 <>
                   <div className="sm:hidden divide-y divide-gray-100">
@@ -2133,7 +2133,7 @@ export default function Personal() {
                           <p className="font-semibold text-gray-900 shrink-0">{formatMoney(row.monthlyCost, row.currency)}</p>
                         </div>
                         <p className="text-xs text-gray-400">
-                          {row.assignments} asignaciones · {row.totalHours}h · {compTypeLabel(row.compensation?.paymentType)}
+                          {row.assignments} turnos · {row.totalHours}h · {compTypeLabel(row.compensation?.paymentType)}
                         </p>
                       </div>
                     ))}
@@ -2149,7 +2149,7 @@ export default function Personal() {
                     <thead>
                       <tr className="border-b border-gray-100">
                         <th className="text-left px-5 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Empleado</th>
-                        <th className="hidden sm:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Asignaciones</th>
+                        <th className="hidden sm:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Turnos</th>
                         <th className="hidden sm:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Horas</th>
                         <th className="hidden sm:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Tipo pago</th>
                         <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Coste mes</th>

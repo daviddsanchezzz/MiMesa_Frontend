@@ -1203,7 +1203,7 @@ function SupplierModal({ supplier, categories, onSave, onClose }) {
 
 // ── Proveedores tab ───────────────────────────────────────────────────────────
 
-function ProveedoresTab({ suppliers, loadSuppliers, categories, categories }) {
+function ProveedoresTab({ suppliers, loadSuppliers, categories }) {
   const [modal, setModal] = useState(null);
   const [expanded, setExpanded] = useState(null);
   const [supplierDetail, setSupplierDetail] = useState(null);

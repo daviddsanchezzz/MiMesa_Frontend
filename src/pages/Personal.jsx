@@ -1478,29 +1478,34 @@ export default function Personal() {
     }, {});
 
     return (
-      <div key={shift._id} className="bg-white rounded-xl border border-gray-200 p-3 space-y-2.5">
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <p className="text-sm font-bold text-gray-900">{shift.name}</p>
-            <p className="text-xs text-gray-500 font-medium">{shift.startTime} – {shift.endTime}</p>
+      <div key={shift._id} className="bg-white rounded-xl border border-gray-200 p-3 space-y-2">
+        {/* Shift header */}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <p className="text-sm font-bold text-gray-900 truncate">{shift.name}</p>
+            <p className="text-xs text-gray-400 shrink-0">{shift.startTime}–{shift.endTime}</p>
             {shiftReservationCount > 0 && (
-              <p className="text-xs font-bold text-violet-600 mt-1">{shiftReservationCount} reservas</p>
+              <span className="text-[10px] font-bold text-violet-600 bg-violet-50 px-1.5 py-0.5 rounded-full shrink-0">
+                {shiftReservationCount} res.
+              </span>
             )}
           </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <button
-              onClick={() => setSlotEditor({ day, shift })}
-              className="text-xs font-semibold px-2.5 py-1 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
-            >
-              Detalle
-            </button>
-          </div>
+          <button
+            onClick={() => setSlotEditor({ day, shift })}
+            className="shrink-0 text-gray-300 hover:text-gray-500 transition-colors"
+            title="Detalle"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
+              <path d="M8 9.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM1.5 9.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM14.5 9.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z" />
+            </svg>
+          </button>
         </div>
 
+        {/* Staff by position */}
         {rawList.length === 0 ? (
           <p className="text-xs text-gray-300 italic">Sin empleados asignados</p>
         ) : (
-          <div className="divide-y divide-gray-100">
+          <div className="space-y-1">
             {Object.values(grouped)
               .sort((a, b) => {
                 const oa = positionOrderByName.get(a.roleName) ?? 999;
@@ -1508,11 +1513,12 @@ export default function Personal() {
                 return oa !== ob ? oa - ob : a.roleName.localeCompare(b.roleName);
               })
               .map((group, index) => (
-                <div key={`${group.roleColor}-${index}`} className="pt-2 first:pt-0 pb-2 last:pb-0">
-                  <p className="text-[11px] font-bold uppercase tracking-wider mb-0.5" style={{ color: group.roleColor }}>
+                <div key={`${group.roleColor}-${index}`} className="flex items-baseline gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full shrink-0 mt-1" style={{ backgroundColor: group.roleColor }} />
+                  <span className="text-[10px] font-bold uppercase tracking-wide shrink-0" style={{ color: group.roleColor }}>
                     {group.roleName}
-                  </p>
-                  <p className="text-[13px] font-medium text-gray-700 leading-5">{group.names.join(', ')}</p>
+                  </span>
+                  <span className="text-xs text-gray-600 leading-4">{group.names.join(', ')}</span>
                 </div>
               ))}
           </div>

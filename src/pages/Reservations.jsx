@@ -189,6 +189,7 @@ export default function Reservations() {
   const [pendingEnabled, setPendingEnabled] = useState(canModeratePending);
   const [pendingLoading, setPendingLoading] = useState(false);
   const [pendingProposal, setPendingProposal] = useState(null);
+  const [pendingProposalSlots, setPendingProposalSlots] = useState([]);
   const [pendingProposalSaving, setPendingProposalSaving] = useState(false);
   const [filterMode,   setFilterMode]   = useState('today'); // today | week | upcoming | day | range | pending
   const [dateFilter,   setDateFilter]   = useState(new Date().toISOString().slice(0, 10));
@@ -413,22 +414,22 @@ export default function Reservations() {
     setPendingProposal({
       reservationId: reservation._id,
       guestName: reservation.guestName,
-      date: reservation.proposedAlternative?.date || '',
-      time: reservation.proposedAlternative?.time || '',
+      date: reservation.date,
+      selectedTime: null,
       message: reservation.proposedAlternative?.message || '',
     });
+    setPendingProposalSlots([]);
+    api.get(`/shifts/slots?date=${reservation.date}`)
+      .then((r) => setPendingProposalSlots(r.data || []))
+      .catch(() => setPendingProposalSlots([]));
   };
 
   const submitPendingProposal = async (e) => {
     e.preventDefault();
-    if (!pendingProposal?.reservationId) return;
+    if (!pendingProposal?.reservationId || !pendingProposal.selectedTime) return;
 
-    const payload = {};
+    const payload = { date: pendingProposal.date, time: pendingProposal.selectedTime };
     if (pendingProposal.message?.trim()) payload.message = pendingProposal.message.trim();
-    if (pendingProposal.date && pendingProposal.time) {
-      payload.date = pendingProposal.date;
-      payload.time = pendingProposal.time;
-    }
 
     setPendingProposalSaving(true);
     try {
@@ -1067,28 +1068,42 @@ export default function Reservations() {
           size="md"
         >
           <form onSubmit={submitPendingProposal} className="space-y-4">
-            <p className="text-xs text-gray-500">
-              Si dejas fecha y hora vacÃ­as, Tableo buscarÃ¡ una alternativa automÃ¡tica.
-            </p>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1">Fecha propuesta</label>
-                <input
-                  type="date"
-                  value={pendingProposal.date}
-                  onChange={(e) => setPendingProposal((p) => ({ ...p, date: e.target.value }))}
-                  className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white"
-                />
-              </div>
-              <div>
-                <label className="block text-xs font-semibold text-gray-600 mb-1">Hora propuesta</label>
-                <input
-                  type="time"
-                  value={pendingProposal.time}
-                  onChange={(e) => setPendingProposal((p) => ({ ...p, time: e.target.value }))}
-                  className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white"
-                />
-              </div>
+            <div>
+              <p className="text-xs font-semibold text-gray-600 mb-2">Selecciona un horario para el {pendingProposal.date}</p>
+              {pendingProposalSlots.length === 0 ? (
+                <p className="text-xs text-gray-400 italic">Cargando horarios...</p>
+              ) : (() => {
+                const grouped = {};
+                pendingProposalSlots.forEach((s) => {
+                  if (!grouped[s.shiftName]) grouped[s.shiftName] = [];
+                  grouped[s.shiftName].push(s.time);
+                });
+                return (
+                  <div className="space-y-3">
+                    {Object.entries(grouped).map(([shiftName, times]) => (
+                      <div key={shiftName}>
+                        <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">{shiftName}</p>
+                        <div className="flex flex-wrap gap-1.5">
+                          {times.map((t) => (
+                            <button
+                              key={t}
+                              type="button"
+                              onClick={() => setPendingProposal((p) => ({ ...p, selectedTime: t }))}
+                              className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                                pendingProposal.selectedTime === t
+                                  ? 'bg-violet-600 text-white border-violet-600'
+                                  : 'bg-white text-gray-700 border-gray-200 hover:border-violet-300 hover:text-violet-700'
+                              }`}
+                            >
+                              {t}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
             </div>
             <div>
               <label className="block text-xs font-semibold text-gray-600 mb-1">Mensaje para el cliente (opcional)</label>
@@ -1111,7 +1126,7 @@ export default function Reservations() {
               </button>
               <button
                 type="submit"
-                disabled={pendingProposalSaving}
+                disabled={pendingProposalSaving || !pendingProposal.selectedTime}
                 className="px-3 py-2 text-xs font-semibold rounded-lg bg-violet-600 text-white hover:bg-violet-700 transition-colors disabled:opacity-60"
               >
                 {pendingProposalSaving ? 'Enviando...' : 'Enviar propuesta'}

@@ -1567,17 +1567,19 @@ export default function Personal() {
           <h2 className="text-xl font-bold text-gray-900">Personal</h2>
           <p className="hidden sm:block text-sm text-gray-500">Gestion de empleados, planificacion semanal y costes estimados.</p>
         </div>
-        <div className="flex items-center gap-1.5 overflow-x-auto">
-          {tabs.filter((item) => allowedTabs.includes(item.key)).map((item) => (
-            <button
-              key={item.key}
-              onClick={() => setTab(item.key)}
-              className={`shrink-0 px-3 py-2 rounded-xl text-sm font-semibold transition-colors ${tab === item.key ? 'bg-violet-600 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}`}
-            >
-              {item.label}
-            </button>
-          ))}
-        </div>
+        {allowedTabs.length > 1 && (
+          <div className="flex items-center gap-1.5 overflow-x-auto">
+            {tabs.filter((item) => allowedTabs.includes(item.key)).map((item) => (
+              <button
+                key={item.key}
+                onClick={() => setTab(item.key)}
+                className={`shrink-0 px-3 py-2 rounded-xl text-sm font-semibold transition-colors ${tab === item.key ? 'bg-violet-600 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {error && <div className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-4 py-3">{error}</div>}

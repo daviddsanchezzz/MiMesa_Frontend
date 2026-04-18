@@ -60,6 +60,12 @@ const IconCurrencyEuro = () => (
   </svg>
 );
 
+const IconCreditCard = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 shrink-0">
+    <path d="M2.5 4A1.5 1.5 0 0 0 1 5.5v2h18v-2A1.5 1.5 0 0 0 17.5 4h-15ZM19 9.5H1v5A1.5 1.5 0 0 0 2.5 16h15a1.5 1.5 0 0 0 1.5-1.5v-5ZM3 13.25a.75.75 0 0 1 .75-.75h1.5a.75.75 0 0 1 0 1.5h-1.5a.75.75 0 0 1-.75-.75Zm4.75-.75a.75.75 0 0 0 0 1.5h3.5a.75.75 0 0 0 0-1.5h-3.5Z" />
+  </svg>
+);
+
 const IconMegaphone = () => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 shrink-0">
     <path d="M13.92 3.845a19.361 19.361 0 0 1-6.3 1.98C6.765 5.942 5.89 6 5 6a4 4 0 0 0 0 8c.184 0 .368-.006.55-.016A19.065 19.065 0 0 1 13.92 16.155 1 1 0 0 0 15 15.27V4.73a1 1 0 0 0-1.08-.885ZM16 9.5a.75.75 0 0 1 .75-.75h1.5a.75.75 0 0 1 0 1.5h-1.5A.75.75 0 0 1 16 9.5ZM7 14.803V17a1 1 0 0 0 1 1h.5a1 1 0 0 0 .979-.8l.34-1.7A19.52 19.52 0 0 1 7 14.803Z" />
@@ -74,6 +80,7 @@ const links = [
 
 const configLinks = [
   { to: '/configuracion', label: 'Configuracion', icon: <IconSettings /> },
+  { to: '/configuracion?tab=suscripcion', label: 'Suscripción y pagos', icon: <IconCreditCard /> },
 ];
 
 export default function Sidebar({ isOpen, onClose }) {
@@ -94,14 +101,14 @@ export default function Sidebar({ isOpen, onClose }) {
   const lowerLinks = isStaff || isFree
     ? []
     : hasRole('manager') ? [{ to: '/team', label: 'Equipo', icon: <IconTeam /> }] : [];
-  const visibleConfigLinks = isStaff ? [] : configLinks;
+  const visibleConfigLinks = hasRole('owner') ? configLinks : [];
   const calendarLink = (!isFree && hasRole('staff'))
     ? [{ to: '/calendario', label: 'Calendario', icon: <IconCalendarGrid /> }]
     : [];
   const personalLink = (isModuleEnabled('staff') && hasRole('manager'))
     ? [{ to: '/personal', label: 'Personal', icon: <IconBriefcase /> }]
     : [];
-  const finanzasLink = (isModuleEnabled('expenses') && hasRole('manager'))
+  const finanzasLink = (isModuleEnabled('expenses') && hasRole('owner'))
     ? [{ to: '/finanzas', label: 'Finanzas', icon: <IconCurrencyEuro /> }]
     : [];
   const navLinks = [

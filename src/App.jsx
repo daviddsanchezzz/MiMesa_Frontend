@@ -184,7 +184,7 @@ export default function App() {
           <Route path="/tables"       element={<RoleRoute minRole="manager"><FullBleedLayout><Tables /></FullBleedLayout></RoleRoute>} />
           <Route path="/reservations" element={<PrivateLayout><Reservations /></PrivateLayout>} />
           <Route path="/customers"    element={<RoleRoute minRole="manager"><PrivateLayout><Customers /></PrivateLayout></RoleRoute>} />
-          <Route path="/configuracion" element={<RoleRoute minRole="manager"><PrivateLayout><Settings /></PrivateLayout></RoleRoute>} />
+          <Route path="/configuracion" element={<RoleRoute minRole="owner"><PrivateLayout><Settings /></PrivateLayout></RoleRoute>} />
           <Route path="/settings"      element={<Navigate to="/configuracion" replace />} />
           <Route path="/profile"       element={<PrivateLayout><Profile /></PrivateLayout>} />
           <Route path="/team"         element={<RoleRoute minRole="manager"><PrivateLayout><Team /></PrivateLayout></RoleRoute>} />
@@ -192,7 +192,7 @@ export default function App() {
           <Route path="/calendario"   element={<RoleRoute minRole="staff"><FullBleedLayout><Calendar /></FullBleedLayout></RoleRoute>} />
           <Route path="/publicidad"   element={<RoleRoute minRole="manager"><PrivateLayout><Publicidad /></PrivateLayout></RoleRoute>} />
           <Route path="/personal"     element={<ModuleRoute moduleKey="staff"><RoleRoute minRole="manager"><PrivateLayout><Personal /></PrivateLayout></RoleRoute></ModuleRoute>} />
-          <Route path="/finanzas"     element={<ModuleRoute moduleKey="expenses"><RoleRoute minRole="manager"><PrivateLayout><Finanzas /></PrivateLayout></RoleRoute></ModuleRoute>} />
+          <Route path="/finanzas"     element={<ModuleRoute moduleKey="expenses"><RoleRoute minRole="owner"><PrivateLayout><Finanzas /></PrivateLayout></RoleRoute></ModuleRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>

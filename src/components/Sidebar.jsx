@@ -185,7 +185,7 @@ export default function Sidebar({ isOpen, onClose }) {
         </button>
       </div>
 
-      <nav className="flex-1 px-3 py-4 overflow-y-auto">
+      <nav className="flex-1 px-3 py-4 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <div className="space-y-0.5">
           <p className="text-slate-500 text-[10px] font-semibold uppercase tracking-widest px-2 pb-2">Menu</p>
           {navLinks.map((link) => (

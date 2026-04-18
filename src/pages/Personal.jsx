@@ -353,6 +353,23 @@ function CompensationModal({ employee, onClose, onSaved }) {
 function ShiftEditorModal({ day, shift, assignments, activeEmployees, positions, onClose, onRefresh }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [reservationStats, setReservationStats] = useState(null); // { count, covers }
+
+  useEffect(() => {
+    api.get(`/reservations?from=${day.date}&to=${day.date}`)
+      .then(({ data }) => {
+        const inShift = (data || []).filter((r) => {
+          if (!['confirmed', 'seated'].includes(r.status)) return false;
+          if (!r.time || !shift.startTime || !shift.endTime) return false;
+          return r.time >= shift.startTime && r.time < shift.endTime;
+        });
+        setReservationStats({
+          count: inShift.length,
+          covers: inShift.reduce((s, r) => s + (r.people || 0), 0),
+        });
+      })
+      .catch(() => {});
+  }, [day.date, shift.startTime, shift.endTime]);
   const [selectedPositionId, setSelectedPositionId] = useState('');
   const [selectedEmployeeId, setSelectedEmployeeId] = useState('');
   const [employeeQuery, setEmployeeQuery] = useState('');
@@ -586,7 +603,16 @@ function ShiftEditorModal({ day, shift, assignments, activeEmployees, positions,
   return (
     <Modal
       title={shift.name}
-      subtitle={`${day.fullLabel} · ${shift.startTime}–${shift.endTime}`}
+      subtitle={
+        <span>
+          {day.fullLabel} · {shift.startTime}–{shift.endTime}
+          {reservationStats && reservationStats.count > 0 && (
+            <span className="ml-2 text-violet-600 font-semibold">
+              · {reservationStats.count} {reservationStats.count === 1 ? 'reserva' : 'reservas'}, {reservationStats.covers} {reservationStats.covers === 1 ? 'comensal' : 'comensales'}
+            </span>
+          )}
+        </span>
+      }
       onClose={onClose}
       size="lg"
       bodyClassName="overflow-visible"

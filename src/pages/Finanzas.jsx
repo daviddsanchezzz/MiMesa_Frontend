@@ -549,7 +549,6 @@ function ColorPicker({ value, onChange }) {
 }
 
 function CategoryManagerModal({ onClose, onRefresh }) {
-  const [type, setType] = useState('expense');
   const [cats, setCats] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState(null);
@@ -560,11 +559,11 @@ function CategoryManagerModal({ onClose, onRefresh }) {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const { data } = await api.get(`/categories?type=${type}`);
+      const { data } = await api.get('/categories');
       setCats(data);
     } catch { /* ignore */ }
     finally { setLoading(false); }
-  }, [type]);
+  }, []);
 
   useEffect(() => { load(); }, [load]);
 
@@ -598,7 +597,7 @@ function CategoryManagerModal({ onClose, onRefresh }) {
     if (!newForm.label.trim()) return;
     setSaving(true);
     try {
-      await api.post('/categories', { ...newForm, type });
+      await api.post('/categories', newForm);
       setNewForm({ label: '', color: 'slate' });
       load();
       onRefresh();
@@ -606,76 +605,67 @@ function CategoryManagerModal({ onClose, onRefresh }) {
     finally { setSaving(false); }
   };
 
-  const typeLabel = type === 'expense' ? 'gastos' : 'proveedores';
-
   return (
     <ModalOverlay title="Gestionar categorías" onClose={onClose}>
-      {/* Type tabs */}
-      <div className="flex gap-1 p-1 bg-gray-100 rounded-xl mb-5">
-        {[{ id: 'expense', label: 'Gastos' }, { id: 'supplier', label: 'Proveedores' }].map((t) => (
-          <button
-            key={t.id}
-            onClick={() => { setType(t.id); setEditingId(null); }}
-            className={`flex-1 py-1.5 text-sm font-medium rounded-lg transition-colors ${
-              type === t.id ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
-
       {loading ? <Spinner /> : (
         <div className="space-y-1 mb-4">
-          {cats.map((cat) => (
-            <div key={cat._id} className="rounded-xl border border-gray-100 overflow-hidden">
-              {editingId === cat._id ? (
-                /* Edit row */
-                <div className="p-3 space-y-3 bg-violet-50/60">
-                  <input
-                    autoFocus
-                    type="text"
-                    value={editForm.label}
-                    onChange={(e) => setEditForm((f) => ({ ...f, label: e.target.value }))}
-                    className={inputCls}
-                    placeholder="Nombre de la categoría"
-                  />
-                  <ColorPicker value={editForm.color} onChange={(c) => setEditForm((f) => ({ ...f, color: c }))} />
-                  <div className="flex gap-2">
-                    <button onClick={() => saveEdit(cat._id)} disabled={saving} className={btnPrimary + ' text-xs px-3 py-1.5'}>
-                      Guardar
-                    </button>
-                    <button onClick={() => setEditingId(null)} className={btnGhost + ' text-xs px-3 py-1.5'}>
-                      Cancelar
-                    </button>
+          {cats.map((cat) => {
+            const isStaff = cat.value === 'staff';
+            return (
+              <div key={cat._id} className="rounded-xl border border-gray-100 overflow-hidden">
+                {editingId === cat._id ? (
+                  <div className="p-3 space-y-3 bg-violet-50/60">
+                    <input
+                      autoFocus
+                      type="text"
+                      value={editForm.label}
+                      onChange={(e) => setEditForm((f) => ({ ...f, label: e.target.value }))}
+                      className={inputCls}
+                      placeholder="Nombre de la categoría"
+                    />
+                    <ColorPicker value={editForm.color} onChange={(c) => setEditForm((f) => ({ ...f, color: c }))} />
+                    <div className="flex gap-2">
+                      <button onClick={() => saveEdit(cat._id)} disabled={saving} className={btnPrimary + ' text-xs px-3 py-1.5'}>
+                        Guardar
+                      </button>
+                      <button onClick={() => setEditingId(null)} className={btnGhost + ' text-xs px-3 py-1.5'}>
+                        Cancelar
+                      </button>
+                    </div>
                   </div>
-                </div>
-              ) : (
-                /* Display row */
-                <div className="flex items-center gap-3 px-3 py-2.5 hover:bg-gray-50">
-                  <span className={`w-3 h-3 rounded-full flex-shrink-0 ${COLOR_DOT[cat.color] || 'bg-slate-400'}`} />
-                  <span className="flex-1 text-sm text-gray-800">{cat.label}</span>
-                  {cat.isDefault && <span className="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full">predeterminada</span>}
-                  <button onClick={() => startEdit(cat)} className="p-1 text-gray-400 hover:text-violet-600 rounded-lg transition-colors">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
-                      <path d="M13.488 2.513a1.75 1.75 0 0 0-2.475 0L6.75 6.774a2.75 2.75 0 0 0-.596.892l-.848 2.047a.75.75 0 0 0 .98.98l2.047-.848a2.75 2.75 0 0 0 .892-.596l4.261-4.262a1.75 1.75 0 0 0 0-2.474ZM4.75 14.25h6.5a.75.75 0 0 0 0-1.5h-6.5a.75.75 0 0 0 0 1.5Z" />
-                    </svg>
-                  </button>
-                  <button onClick={() => deleteCat(cat._id)} className="p-1 text-gray-400 hover:text-rose-500 rounded-lg transition-colors">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
-                      <path fillRule="evenodd" d="M5 3.25V4H2.75a.75.75 0 0 0 0 1.5h.3l.815 8.15A1.5 1.5 0 0 0 5.357 15h5.285a1.5 1.5 0 0 0 1.493-1.35l.815-8.15h.3a.75.75 0 0 0 0-1.5H11v-.75A2.25 2.25 0 0 0 8.75 1h-1.5A2.25 2.25 0 0 0 5 3.25Zm2.25-.75a.75.75 0 0 0-.75.75V4h3v-.75a.75.75 0 0 0-.75-.75h-1.5ZM6.05 6a.75.75 0 0 1 .787.713l.275 5.5a.75.75 0 0 1-1.498.075l-.275-5.5A.75.75 0 0 1 6.05 6Zm3.9 0a.75.75 0 0 1 .712.787l-.275 5.5a.75.75 0 0 1-1.498-.075l.275-5.5a.75.75 0 0 1 .786-.711Z" clipRule="evenodd" />
-                    </svg>
-                  </button>
-                </div>
-              )}
-            </div>
-          ))}
+                ) : (
+                  <div className="flex items-center gap-3 px-3 py-2.5 hover:bg-gray-50">
+                    <span className={`w-3 h-3 rounded-full flex-shrink-0 ${COLOR_DOT[cat.color] || 'bg-slate-400'}`} />
+                    <span className="flex-1 text-sm text-gray-800">{cat.label}</span>
+                    {isStaff
+                      ? <span className="text-[10px] text-violet-500 bg-violet-50 px-1.5 py-0.5 rounded-full">vinculada a Personal</span>
+                      : cat.isDefault && <span className="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full">predeterminada</span>
+                    }
+                    {!isStaff && (
+                      <>
+                        <button onClick={() => startEdit(cat)} className="p-1 text-gray-400 hover:text-violet-600 rounded-lg transition-colors">
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
+                            <path d="M13.488 2.513a1.75 1.75 0 0 0-2.475 0L6.75 6.774a2.75 2.75 0 0 0-.596.892l-.848 2.047a.75.75 0 0 0 .98.98l2.047-.848a2.75 2.75 0 0 0 .892-.596l4.261-4.262a1.75 1.75 0 0 0 0-2.474ZM4.75 14.25h6.5a.75.75 0 0 0 0-1.5h-6.5a.75.75 0 0 0 0 1.5Z" />
+                          </svg>
+                        </button>
+                        <button onClick={() => deleteCat(cat._id)} className="p-1 text-gray-400 hover:text-rose-500 rounded-lg transition-colors">
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
+                            <path fillRule="evenodd" d="M5 3.25V4H2.75a.75.75 0 0 0 0 1.5h.3l.815 8.15A1.5 1.5 0 0 0 5.357 15h5.285a1.5 1.5 0 0 0 1.493-1.35l.815-8.15h.3a.75.75 0 0 0 0-1.5H11v-.75A2.25 2.25 0 0 0 8.75 1h-1.5A2.25 2.25 0 0 0 5 3.25Zm2.25-.75a.75.75 0 0 0-.75.75V4h3v-.75a.75.75 0 0 0-.75-.75h-1.5ZM6.05 6a.75.75 0 0 1 .787.713l.275 5.5a.75.75 0 0 1-1.498.075l-.275-5.5A.75.75 0 0 1 6.05 6Zm3.9 0a.75.75 0 0 1 .712.787l-.275 5.5a.75.75 0 0 1-1.498-.075l.275-5.5a.75.75 0 0 1 .786-.711Z" clipRule="evenodd" />
+                          </svg>
+                        </button>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
 
       {/* Add new */}
       <form onSubmit={addNew} className="border-t border-gray-100 pt-4 space-y-3">
-        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Nueva categoría de {typeLabel}</p>
+        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Nueva categoría</p>
         <input
           type="text"
           value={newForm.label}

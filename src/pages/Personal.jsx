@@ -1982,11 +1982,11 @@ export default function Personal() {
                 return (
                   <div
                     key={day.date}
-                    className={`rounded-xl border p-3 space-y-2 max-h-[74vh] overflow-auto ${
+                    className={`rounded-xl border p-3 space-y-2 ${
                       isToday ? 'border-violet-300 bg-violet-50/40' : 'border-gray-200 bg-gray-50'
                     }`}
                   >
-                    <div className={`px-1 pb-2 border-b sticky top-0 z-10 ${isToday ? 'border-violet-200 bg-violet-50/40' : 'border-gray-200 bg-gray-50'}`}>
+                    <div className={`px-1 pb-2 border-b ${isToday ? 'border-violet-200' : 'border-gray-200'}`}>
                       <div>
                         <p className={`text-[11px] uppercase font-bold tracking-wider ${isToday ? 'text-violet-500' : 'text-gray-400'}`}>{day.short}</p>
                         <p className={`text-base font-extrabold leading-tight ${isToday ? 'text-violet-700' : 'text-gray-900'}`}>{day.day}</p>

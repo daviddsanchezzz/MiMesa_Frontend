@@ -1516,7 +1516,7 @@ export default function Personal() {
               })
               .map((group, index) => (
                 <div key={`${group.roleColor}-${index}`} className="pt-1.5 first:pt-0 pb-1.5 last:pb-0">
-                  <p className="text-[10px] font-bold uppercase tracking-wider leading-none mb-0.5" style={{ color: group.roleColor }}>
+                  <p className="text-[10px] font-bold uppercase tracking-wider leading-none mb-1 pb-0.5 border-b" style={{ color: group.roleColor, borderColor: group.roleColor }}>
                     {group.roleName}
                   </p>
                   <p className="text-xs text-gray-600 leading-4">{group.names.join(', ')}</p>

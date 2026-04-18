@@ -1091,7 +1091,6 @@ export default function Personal() {
   const [isExporting, setIsExporting] = useState(false);
   const [isCopyingWeek, setIsCopyingWeek] = useState(false);
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
-  const [weekReservations, setWeekReservations] = useState({}); // date -> [{time, status}]
   const plannerGridRef = useRef(null);
   const exportMenuRef = useRef(null);
   const mobileDayButtonRefs = useRef({});
@@ -1118,21 +1117,12 @@ export default function Personal() {
 
   const loadWeekData = async () => {
     try {
-      const weekEnd = addDays(weekStart, 6);
-      const [aRes, cRes, reservationsRes] = await Promise.all([
+      const [aRes, cRes] = await Promise.all([
         api.get(`/staff/assignments?weekStart=${weekStart}`),
         api.get(`/staff/costs?weekStart=${weekStart}`),
-        api.get(`/reservations?from=${weekStart}&to=${weekEnd}`),
       ]);
-      const reservationsByDate = {};
-      (reservationsRes.data || []).forEach((r) => {
-        if (!r?.date || !['confirmed', 'seated'].includes(r.status)) return;
-        if (!reservationsByDate[r.date]) reservationsByDate[r.date] = [];
-        reservationsByDate[r.date].push({ time: r.time || '' });
-      });
       setAssignments(aRes.data?.assignments || []);
       setCosts(cRes.data || { employeeCosts: [], totalsByCurrency: {}, monthlyEstimateByCurrency: {} });
-      setWeekReservations(reservationsByDate);
     } catch (err) {
       setError(err?.response?.data?.message || 'No se pudieron cargar asignaciones o costes');
     }
@@ -1461,10 +1451,7 @@ export default function Personal() {
     const key = `${day.date}__${shift._id}`;
     const rawList = assignmentsByDayShift[key] || [];
 
-    const shiftReservationCount = (weekReservations[day.date] || []).filter((r) => {
-      if (!r.time || !shift.startTime || !shift.endTime) return false;
-      return r.time >= shift.startTime && r.time < shift.endTime;
-    }).length;
+
 
     const grouped = rawList.reduce((acc, assignment) => {
       const employee = assignment.employeeId || {};
@@ -1482,14 +1469,7 @@ export default function Personal() {
         {/* Shift header */}
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <p className="text-sm font-bold text-gray-900">{shift.name}</p>
-              {shiftReservationCount > 0 && (
-                <span className="text-[10px] font-bold text-violet-600 bg-violet-50 px-1.5 py-0.5 rounded-full shrink-0">
-                  {shiftReservationCount} res.
-                </span>
-              )}
-            </div>
+            <p className="text-sm font-bold text-gray-900">{shift.name}</p>
             <p className="text-xs text-gray-400">{shift.startTime}–{shift.endTime}</p>
           </div>
           <button

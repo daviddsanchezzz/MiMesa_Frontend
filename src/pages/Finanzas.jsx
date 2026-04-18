@@ -1348,6 +1348,65 @@ function ProveedoresTab({ suppliers, loadSuppliers, categories }) {
   );
 }
 
+// ── Quick revenue modal (mobile shortcut) ────────────────────────────────────
+
+function QuickRevenueModal({ onClose, onSave }) {
+  const today = toIso();
+  const [amount, setAmount] = useState('');
+  const [notes, setNotes] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const submit = async (e) => {
+    e.preventDefault();
+    const num = parseFloat(amount);
+    if (isNaN(num) || num <= 0) return setError('Introduce un importe válido');
+    setSaving(true); setError('');
+    try {
+      await api.put('/revenue/actual', { date: today, actualRevenue: num, notes });
+      onSave();
+    } catch {
+      setError('Error al guardar');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <ModalOverlay title="Ingreso de hoy" onClose={onClose}>
+      <form onSubmit={submit} className="space-y-4">
+        <p className="text-xs text-gray-400">{fmtDate(today)}</p>
+        <FormField label="Importe (€)" required>
+          <input
+            autoFocus
+            type="number" min="0.01" step="0.01"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            className={inputCls}
+            placeholder="0.00"
+          />
+        </FormField>
+        <FormField label="Notas">
+          <input
+            type="text"
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            className={inputCls}
+            placeholder="Opcional"
+          />
+        </FormField>
+        {error && <p className="text-sm text-rose-600 bg-rose-50 px-3 py-2 rounded-lg">{error}</p>}
+        <div className="flex justify-end gap-2 pt-1">
+          <button type="button" onClick={onClose} className={btnGhost}>Cancelar</button>
+          <button type="submit" disabled={saving} className={btnPrimary}>
+            {saving ? 'Guardando...' : 'Guardar'}
+          </button>
+        </div>
+      </form>
+    </ModalOverlay>
+  );
+}
+
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function Finanzas() {
@@ -1357,6 +1416,7 @@ export default function Finanzas() {
   const [suppliers, setSuppliers] = useState([]);
   const [categories, setCategories] = useState([]);
   const [categoryModal, setCategoryModal] = useState(false);
+  const [quickAction, setQuickAction] = useState(null); // null | 'revenue' | 'expense'
 
   const loadSuppliers = useCallback(async () => {
     try {
@@ -1443,6 +1503,48 @@ export default function Finanzas() {
         <CategoryManagerModal
           onClose={() => setCategoryModal(false)}
           onRefresh={loadCategories}
+        />
+      )}
+
+      {/* Mobile quick-action bar */}
+      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 flex border-t border-gray-200 bg-white shadow-[0_-2px_12px_rgba(0,0,0,0.08)]">
+        <button
+          onClick={() => setQuickAction('revenue')}
+          className="flex-1 flex flex-col items-center justify-center gap-1 py-3 text-emerald-600 active:bg-emerald-50 transition-colors"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
+            <path d="M10.75 10.818v2.614A3.13 3.13 0 0 0 11.888 13c.482-.315.612-.648.612-.875 0-.227-.13-.56-.612-.875a3.13 3.13 0 0 0-1.138-.432ZM8.33 8.62c.053.055.115.11.184.164.208.16.46.284.736.363V6.603a2.45 2.45 0 0 0-.35.13c-.14.065-.27.143-.386.233-.377.292-.514.627-.514.909 0 .184.058.39.33.615Z" />
+            <path fillRule="evenodd" d="M9.99 2a8 8 0 1 0 0 16 8 8 0 0 0 0-16Zm.75 4.5v.996a3.975 3.975 0 0 1 1.483.645 3.315 3.315 0 0 1 .87 1.015.75.75 0 0 1-1.246.832 1.82 1.82 0 0 0-.464-.535 2.48 2.48 0 0 0-.643-.34v2.455l.516.17c.497.164.962.382 1.338.693.396.327.695.787.695 1.364 0 .577-.299 1.037-.695 1.364-.376.311-.841.53-1.338.692V15a.75.75 0 0 1-1.5 0v-.99a4.23 4.23 0 0 1-1.913-.98.75.75 0 1 1 1.023-1.1c.162.151.35.278.555.38.206.102.432.177.668.224v-2.54l-.443-.148c-.497-.164-.96-.382-1.338-.693C7.022 9.497 6.75 9.056 6.75 8.5c0-.557.272-.998.612-1.315.326-.305.75-.508 1.138-.662V6.5a.75.75 0 0 1 1.5 0Z" clipRule="evenodd" />
+          </svg>
+          <span className="text-xs font-semibold">Ingreso de hoy</span>
+        </button>
+        <div className="w-px bg-gray-200 my-2" />
+        <button
+          onClick={() => setQuickAction('expense')}
+          className="flex-1 flex flex-col items-center justify-center gap-1 py-3 text-violet-600 active:bg-violet-50 transition-colors"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
+            <path fillRule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm.75-11.25a.75.75 0 0 0-1.5 0v2.5h-2.5a.75.75 0 0 0 0 1.5h2.5v2.5a.75.75 0 0 0 1.5 0v-2.5h2.5a.75.75 0 0 0 0-1.5h-2.5v-2.5Z" clipRule="evenodd" />
+          </svg>
+          <span className="text-xs font-semibold">Nuevo gasto</span>
+        </button>
+      </div>
+
+      {/* Extra bottom padding on mobile so content isn't hidden behind the bar */}
+      <div className="md:hidden h-16" />
+
+      {quickAction === 'revenue' && (
+        <QuickRevenueModal
+          onClose={() => setQuickAction(null)}
+          onSave={() => setQuickAction(null)}
+        />
+      )}
+      {quickAction === 'expense' && (
+        <ExpenseModal
+          suppliers={suppliers}
+          categories={categories}
+          onSave={() => setQuickAction(null)}
+          onClose={() => setQuickAction(null)}
         />
       )}
     </div>

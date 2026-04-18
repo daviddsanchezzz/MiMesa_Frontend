@@ -1507,7 +1507,7 @@ export default function Personal() {
         {rawList.length === 0 ? (
           <p className="text-xs text-gray-300 italic">Sin empleados asignados</p>
         ) : (
-          <div className="divide-y divide-gray-100">
+          <div className="space-y-2">
             {Object.values(grouped)
               .sort((a, b) => {
                 const oa = positionOrderByName.get(a.roleName) ?? 999;
@@ -1515,10 +1515,10 @@ export default function Personal() {
                 return oa !== ob ? oa - ob : a.roleName.localeCompare(b.roleName);
               })
               .map((group, index) => (
-                <div key={`${group.roleColor}-${index}`} className="pt-1.5 first:pt-0 pb-1.5 last:pb-0">
-                  <p className="text-[10px] font-bold uppercase tracking-wider leading-none mb-1 pb-0.5 border-b" style={{ color: group.roleColor, borderColor: group.roleColor }}>
+                <div key={`${group.roleColor}-${index}`}>
+                  <span className="text-[10px] font-bold uppercase tracking-wider leading-none mb-1 pb-0.5 border-b inline-block" style={{ color: group.roleColor, borderColor: group.roleColor }}>
                     {group.roleName}
-                  </p>
+                  </span>
                   <p className="text-xs text-gray-600 leading-4">{group.names.join(', ')}</p>
                 </div>
               ))}

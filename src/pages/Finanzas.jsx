@@ -837,13 +837,15 @@ function ExpenseModal({ expense, suppliers, categories, onSave, onClose, scope =
   const submit = async (e) => {
     e.preventDefault();
     if (!form.category) return setError('Selecciona una categoría');
-    if (!form.amount || Number(form.amount) <= 0) return setError('El importe debe ser mayor que 0');
+    const parsedAmount = parseFloat(String(form.amount).replace(',', '.'));
+    if (!form.amount || isNaN(parsedAmount) || parsedAmount <= 0) return setError('El importe debe ser mayor que 0');
     setSaving(true); setError('');
     try {
+      const payload = { ...form, amount: parsedAmount };
       if (editing) {
-        await api.put(`/expenses/${expense._id}`, { ...form, scope });
+        await api.put(`/expenses/${expense._id}`, { ...payload, scope });
       } else {
-        await api.post('/expenses', form);
+        await api.post('/expenses', payload);
       }
       onSave();
     } catch (err) {
@@ -864,7 +866,7 @@ function ExpenseModal({ expense, suppliers, categories, onSave, onClose, scope =
           <input autoFocus type="number" min="0.01" step="0.01" value={form.amount}
             onChange={(e) => set('amount', e.target.value)}
             className="w-full px-4 py-4 text-3xl font-bold text-gray-900 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
-            placeholder="0,00" />
+            inputMode="decimal" placeholder="0,00" />
         </div>
         <FormField label="Fecha" required>
           <input type="date" value={form.expenseDate} onChange={(e) => set('expenseDate', e.target.value)}
@@ -1116,10 +1118,69 @@ function GastosTab({ dateRange, suppliers, categories }) {
 
 // ── Recurrentes tab ───────────────────────────────────────────────────────────
 
+function RecurringEditModal({ gasto, categories, suppliers, onSave, onClose }) {
+  const [form, setForm] = useState({
+    category:   gasto.category   || '',
+    amount:     gasto.amount != null ? String(gasto.amount) : '',
+    supplierId: gasto.supplierId?._id || gasto.supplierId || '',
+    notes:      gasto.notes      || '',
+  });
+  const [saving, setSaving] = useState(false);
+  const [error, setError]   = useState('');
+  const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+
+  const submit = async (e) => {
+    e.preventDefault();
+    const parsedAmount = parseFloat(String(form.amount).replace(',', '.'));
+    if (isNaN(parsedAmount) || parsedAmount <= 0) return setError('Importe inválido');
+    setSaving(true); setError('');
+    try {
+      await api.patch(`/expenses/templates/${gasto._id}`, { ...form, amount: parsedAmount });
+      onSave();
+    } catch { setError('Error al guardar'); }
+    finally { setSaving(false); }
+  };
+
+  return (
+    <ModalOverlay title="Editar gasto recurrente" onClose={onClose}>
+      <form onSubmit={submit} className="space-y-4">
+        <FormField label="Importe (€)" required>
+          <input type="text" inputMode="decimal" value={form.amount}
+            onChange={(e) => set('amount', e.target.value)}
+            className={inputCls} placeholder="0,00" autoFocus />
+        </FormField>
+        <FormField label="Categoría" required>
+          <select value={form.category} onChange={(e) => set('category', e.target.value)} className={selectCls}>
+            <option value="">Seleccionar...</option>
+            {categories.filter((c) => c.value !== 'staff').map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+          </select>
+        </FormField>
+        <FormField label="Proveedor">
+          <select value={form.supplierId} onChange={(e) => set('supplierId', e.target.value)} className={selectCls}>
+            <option value="">Sin proveedor</option>
+            {suppliers.filter((s) => s.isActive).map((s) => <option key={s._id} value={s._id}>{s.name}</option>)}
+          </select>
+        </FormField>
+        <FormField label="Notas">
+          <input type="text" value={form.notes} onChange={(e) => set('notes', e.target.value)}
+            className={inputCls} placeholder="Descripción opcional" />
+        </FormField>
+        {error && <p className="text-sm text-rose-600 bg-rose-50 px-3 py-2 rounded-lg">{error}</p>}
+        <div className="flex justify-end gap-2 pt-1">
+          <button type="button" onClick={onClose} className={btnGhost}>Cancelar</button>
+          <button type="submit" disabled={saving} className={btnPrimary}>
+            {saving ? 'Guardando...' : 'Guardar cambios'}
+          </button>
+        </div>
+      </form>
+    </ModalOverlay>
+  );
+}
+
 function RecurrentesTab({ categories, suppliers }) {
-  const [gastos, setGastos] = useState([]);
+  const [gastos, setGastos]   = useState([]);
   const [loading, setLoading] = useState(true);
-  const [toggling, setToggling] = useState(null);
+  const [editing, setEditing] = useState(null); // gasto object
   const [deleting, setDeleting] = useState(null);
 
   const load = useCallback(async () => {
@@ -1133,15 +1194,6 @@ function RecurrentesTab({ categories, suppliers }) {
 
   useEffect(() => { load(); }, [load]);
 
-  const handleToggle = async (g) => {
-    setToggling(g._id);
-    try {
-      await api.patch(`/expenses/templates/${g._id}`, { isActive: !g.isActive });
-      setGastos((prev) => prev.map((x) => x._id === g._id ? { ...x, isActive: !x.isActive } : x));
-    } catch { /* ignore */ }
-    finally { setToggling(null); }
-  };
-
   const handleDelete = async (id) => {
     if (!window.confirm('¿Eliminar este gasto recurrente? Los gastos ya generados se conservan.')) return;
     setDeleting(id);
@@ -1152,25 +1204,21 @@ function RecurrentesTab({ categories, suppliers }) {
     finally { setDeleting(null); }
   };
 
-  const active = gastos.filter((g) => g.isActive);
-  const totalMensual = active.reduce((s, g) => s + (g.amount || 0), 0);
+  const totalMensual = gastos.reduce((s, g) => s + (g.amount || 0), 0);
 
   if (loading) return <Spinner />;
 
   return (
     <div className="space-y-6">
-      {/* Summary strip */}
       {gastos.length > 0 && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 gap-4">
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Gastos activos</p>
-            <p className="text-2xl font-bold text-violet-600">{active.length}</p>
-            <p className="text-xs text-gray-400 mt-0.5">de {gastos.length} configurados</p>
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Gastos configurados</p>
+            <p className="text-2xl font-bold text-violet-600">{gastos.length}</p>
           </div>
           <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Total mensual</p>
             <p className="text-2xl font-bold text-rose-500">{fmtEur(totalMensual)}</p>
-            <p className="text-xs text-gray-400 mt-0.5">gastos activos</p>
           </div>
         </div>
       )}
@@ -1183,62 +1231,34 @@ function RecurrentesTab({ categories, suppliers }) {
             {gastos.map((g) => {
               const supplierName = g.supplierId?.name;
               return (
-                <div key={g._id} className={`flex items-center gap-4 px-5 py-4 transition-colors hover:bg-gray-50/60 ${!g.isActive ? 'opacity-50' : ''}`}>
-
-                  {/* Day badge */}
+                <div key={g._id} className="flex items-center gap-4 px-5 py-4 hover:bg-gray-50/60 transition-colors">
                   <div className="flex-shrink-0 w-11 h-11 rounded-2xl bg-violet-50 border border-violet-100 flex flex-col items-center justify-center">
                     <span className="text-base font-bold text-violet-600 leading-none">{g.dayOfMonth}</span>
-                    <span className="text-[9px] font-medium text-violet-400 leading-none mt-0.5 uppercase tracking-wide">cada mes</span>
+                    <span className="text-[9px] font-medium text-violet-400 leading-none mt-0.5 uppercase tracking-wide">día</span>
                   </div>
-
-                  {/* Category + supplier */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${catDot(categories, g.category)}`} />
                       <span className="text-sm font-semibold text-gray-900">{catLabel(categories, g.category)}</span>
                     </div>
                     <p className="text-xs text-gray-400 mt-0.5 truncate">
-                      {supplierName || (g.notes ? g.notes : <span className="text-gray-300">Sin proveedor</span>)}
+                      {supplierName || (g.notes || <span className="text-gray-300">Sin proveedor</span>)}
                       {supplierName && g.notes && <span className="ml-1 text-gray-300">· {g.notes}</span>}
                     </p>
                   </div>
-
-                  {/* Amount + frequency */}
                   <div className="text-right flex-shrink-0">
                     <p className="text-base font-bold text-gray-900">{fmtEur(g.amount)}</p>
                     <p className="text-xs text-gray-400">/ mes</p>
                   </div>
-
-                  {/* Status + actions */}
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <button
-                      onClick={() => handleToggle(g)}
-                      disabled={toggling === g._id}
-                      title={g.isActive ? 'Pausar' : 'Reactivar'}
-                      className={`p-1.5 rounded-lg transition-colors ${
-                        g.isActive
-                          ? 'text-emerald-500 hover:bg-emerald-50 hover:text-emerald-600'
-                          : 'text-gray-400 hover:bg-gray-100 hover:text-gray-600'
-                      }`}
-                    >
-                      {g.isActive ? (
-                        /* Pause icon */
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
-                          <path d="M4.5 2a.5.5 0 0 0-.5.5v11a.5.5 0 0 0 .5.5h2a.5.5 0 0 0 .5-.5v-11a.5.5 0 0 0-.5-.5h-2ZM9.5 2a.5.5 0 0 0-.5.5v11a.5.5 0 0 0 .5.5h2a.5.5 0 0 0 .5-.5v-11a.5.5 0 0 0-.5-.5h-2Z" />
-                        </svg>
-                      ) : (
-                        /* Play icon */
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
-                          <path d="M3 3.732a1.5 1.5 0 0 1 2.305-1.265l6.706 4.267a1.5 1.5 0 0 1 0 2.531l-6.706 4.268A1.5 1.5 0 0 1 3 12.267V3.732Z" />
-                        </svg>
-                      )}
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    <button onClick={() => setEditing(g)} title="Editar"
+                      className="p-1.5 text-gray-400 hover:text-violet-600 hover:bg-violet-50 rounded-lg transition-colors">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
+                        <path d="M13.488 2.513a1.75 1.75 0 0 0-2.475 0L6.75 6.774a2.75 2.75 0 0 0-.596.892l-.848 2.047a.75.75 0 0 0 .98.98l2.047-.848a2.75 2.75 0 0 0 .892-.596l4.261-4.262a1.75 1.75 0 0 0 0-2.474ZM4.75 14.25h6.5a.75.75 0 0 0 0-1.5h-6.5a.75.75 0 0 0 0 1.5Z" />
+                      </svg>
                     </button>
-                    <button
-                      onClick={() => handleDelete(g._id)}
-                      disabled={deleting === g._id}
-                      title="Eliminar"
-                      className="p-1.5 text-gray-300 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
-                    >
+                    <button onClick={() => handleDelete(g._id)} disabled={deleting === g._id} title="Eliminar"
+                      className="p-1.5 text-gray-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors">
                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
                         <path fillRule="evenodd" d="M5 3.25V4H2.75a.75.75 0 0 0 0 1.5h.3l.815 8.15A1.5 1.5 0 0 0 5.357 15h5.285a1.5 1.5 0 0 0 1.493-1.35l.815-8.15h.3a.75.75 0 0 0 0-1.5H11v-.75A2.25 2.25 0 0 0 8.75 1h-1.5A2.25 2.25 0 0 0 5 3.25Zm2.25-.75a.75.75 0 0 0-.75.75V4h3v-.75a.75.75 0 0 0-.75-.75h-1.5ZM6.05 6a.75.75 0 0 1 .787.713l.275 5.5a.75.75 0 0 1-1.498.075l-.275-5.5A.75.75 0 0 1 6.05 6Zm3.9 0a.75.75 0 0 1 .712.787l-.275 5.5a.75.75 0 0 1-1.498-.075l.275-5.5a.75.75 0 0 1 .786-.711Z" clipRule="evenodd" />
                       </svg>
@@ -1249,6 +1269,16 @@ function RecurrentesTab({ categories, suppliers }) {
             })}
           </div>
         </div>
+      )}
+
+      {editing && (
+        <RecurringEditModal
+          gasto={editing}
+          categories={categories}
+          suppliers={suppliers}
+          onSave={() => { setEditing(null); load(); }}
+          onClose={() => setEditing(null)}
+        />
       )}
     </div>
   );
@@ -1503,10 +1533,11 @@ function MobileExpenseScreen({ suppliers, categories, onSave, onClose }) {
   const submit = async (e) => {
     e.preventDefault();
     if (!form.category) return setError('Selecciona una categoría');
-    if (!form.amount || Number(form.amount) <= 0) return setError('El importe debe ser mayor que 0');
+    const parsedAmount = parseFloat(String(form.amount).replace(',', '.'));
+    if (!form.amount || isNaN(parsedAmount) || parsedAmount <= 0) return setError('El importe debe ser mayor que 0');
     setSaving(true); setError('');
     try {
-      await api.post('/expenses', form);
+      await api.post('/expenses', { ...form, amount: parsedAmount });
       onSave();
     } catch (err) {
       setError(err.response?.data?.message || 'Error al guardar');
@@ -1536,7 +1567,7 @@ function MobileExpenseScreen({ suppliers, categories, onSave, onClose }) {
           <input autoFocus type="number" min="0.01" step="0.01" value={form.amount}
             onChange={(e) => set('amount', e.target.value)}
             className="w-full px-4 py-4 text-3xl font-bold text-gray-900 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
-            placeholder="0,00" />
+            inputMode="decimal" placeholder="0,00" />
         </div>
         <FormField label="Fecha" required>
           <input type="date" value={form.expenseDate} onChange={(e) => set('expenseDate', e.target.value)}
@@ -1596,7 +1627,7 @@ function RevenueModal({ date = toIso(), initialValue = null, onClose, onSave }) 
 
   const submit = async (e) => {
     e.preventDefault();
-    const num = parseFloat(amount);
+    const num = parseFloat(String(amount).replace(',', '.'));
     if (isNaN(num) || num <= 0) return setError('Introduce un importe válido');
     save(num);
   };
@@ -1608,17 +1639,17 @@ function RevenueModal({ date = toIso(), initialValue = null, onClose, onSave }) 
     <ModalOverlay title={title} onClose={onClose}>
       <form onSubmit={submit} className="space-y-4">
         <FormField label="Importe (€)" required>
-          <input autoFocus type="number" min="0.01" step="0.01"
+          <input autoFocus type="text" inputMode="decimal"
             value={amount} onChange={(e) => setAmount(e.target.value)}
-            className={inputCls} placeholder="0.00" />
+            className={inputCls} placeholder="0,00" />
         </FormField>
         {error && <p className="text-sm text-rose-600 bg-rose-50 px-3 py-2 rounded-lg">{error}</p>}
         <div className="flex items-center justify-between pt-1">
-          {initialValue !== null ? (
+          {initialValue !== null && initialValue !== undefined ? (
             <button type="button" disabled={saving}
               onClick={() => save(null)}
               className="px-4 py-2 text-sm font-medium text-rose-600 hover:bg-rose-50 rounded-xl transition-colors">
-              Borrar ingreso
+              Borrar
             </button>
           ) : <span />}
           <div className="flex gap-2">
@@ -1674,7 +1705,7 @@ export default function Finanzas() {
   ];
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6 [overflow-x:clip]">
+    <div className="max-w-5xl mx-auto space-y-6" style={{ overflowX: 'clip' }}>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

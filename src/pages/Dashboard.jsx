@@ -259,12 +259,7 @@ export default function Dashboard() {
     }
   };
 
-  // ── Stats ──
-  const total     = reservations.length;
-  const pending   = reservations.filter(r => r.status === 'pending').length;
-  const confirmed = reservations.filter(r => r.status === 'confirmed').length;
-  const seated    = reservations.filter(r => r.status === 'seated').length;
-  const cancelled = reservations.filter(r => r.status === 'cancelled').length;
+  // ── Stats (calculated after shift filter — see below) ──
   const todayCount    = reservations.filter(r => r.date === today).length;
   const tomorrowCount = reservations.filter(r => r.date === tomorrow).length;
 
@@ -310,6 +305,16 @@ export default function Dashboard() {
   const filteredReservations = activeShiftInfo
     ? visibleReservations.filter(r => timeToShift[r.time] === activeShiftInfo.name)
     : visibleReservations;
+
+  // ── Stats: scoped to active shift when one is shown, otherwise full day ──
+  const statBase = view === 'today' && activeShiftInfo
+    ? reservations.filter(r => timeToShift[r.time] === activeShiftInfo.name)
+    : reservations;
+  const total     = statBase.length;
+  const pending   = statBase.filter(r => r.status === 'pending').length;
+  const confirmed = statBase.filter(r => r.status === 'confirmed').length;
+  const seated    = statBase.filter(r => r.status === 'seated').length;
+  const cancelled = statBase.filter(r => r.status === 'cancelled').length;
 
   const cardProps = (r) => ({
     r,

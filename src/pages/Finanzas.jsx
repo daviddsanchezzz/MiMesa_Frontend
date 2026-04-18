@@ -799,7 +799,7 @@ function GastosTab({ dateRange, suppliers, categories }) {
       setExpenses(data);
     } catch { /* ignore */ }
     finally { setLoading(false); }
-  }, [filters]);
+  }, [dateRange.from, dateRange.to]);
 
   useEffect(() => { load(); }, [load]);
 

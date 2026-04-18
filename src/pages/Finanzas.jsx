@@ -311,6 +311,7 @@ function DashboardTab({ dateRange, expenseCategories }) {
   if (!data) return <EmptyState message="No se pudieron cargar los datos" />;
 
   const maxExpense = data.expensesByCategory[0]?.amount || 1;
+  const totalExpensesSum = data.expensesByCategory.reduce((s, c) => s + c.amount, 0) || 1;
 
   return (
     <div className="space-y-6">
@@ -371,7 +372,10 @@ function DashboardTab({ dateRange, expenseCategories }) {
                       <span className={`w-2.5 h-2.5 rounded-full ${catDot(expenseCategories, cat.category)}`} />
                       <span className="text-sm text-gray-600">{catLabel(expenseCategories, cat.category)}</span>
                     </div>
-                    <span className="text-sm font-semibold text-gray-700">{fmtEur(cat.amount)}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-gray-400">{Math.round((cat.amount / totalExpensesSum) * 100)}%</span>
+                      <span className="text-sm font-semibold text-gray-700">{fmtEur(cat.amount)}</span>
+                    </div>
                   </div>
                   <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
                     <div

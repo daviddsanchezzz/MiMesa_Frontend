@@ -60,11 +60,6 @@ const IconCurrencyEuro = () => (
   </svg>
 );
 
-const IconCreditCard = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 shrink-0">
-    <path d="M2.5 4A1.5 1.5 0 0 0 1 5.5v2h18v-2A1.5 1.5 0 0 0 17.5 4h-15ZM19 9.5H1v5A1.5 1.5 0 0 0 2.5 16h15a1.5 1.5 0 0 0 1.5-1.5v-5ZM3 13.25a.75.75 0 0 1 .75-.75h1.5a.75.75 0 0 1 0 1.5h-1.5a.75.75 0 0 1-.75-.75Zm4.75-.75a.75.75 0 0 0 0 1.5h3.5a.75.75 0 0 0 0-1.5h-3.5Z" />
-  </svg>
-);
 
 const IconMegaphone = () => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 shrink-0">
@@ -80,7 +75,6 @@ const links = [
 
 const configLinks = [
   { to: '/configuracion', label: 'Configuracion', icon: <IconSettings /> },
-  { to: '/configuracion?tab=suscripcion', label: 'Suscripción y pagos', icon: <IconCreditCard /> },
 ];
 
 export default function Sidebar({ isOpen, onClose }) {
@@ -101,7 +95,7 @@ export default function Sidebar({ isOpen, onClose }) {
   const lowerLinks = isStaff || isFree
     ? []
     : hasRole('manager') ? [{ to: '/team', label: 'Equipo', icon: <IconTeam /> }] : [];
-  const visibleConfigLinks = hasRole('owner') ? configLinks : [];
+  const visibleConfigLinks = hasRole('manager') ? configLinks : [];
   const calendarLink = (!isFree && hasRole('staff'))
     ? [{ to: '/calendario', label: 'Calendario', icon: <IconCalendarGrid /> }]
     : [];

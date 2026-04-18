@@ -1961,16 +1961,16 @@ export default function Personal() {
               >
                 {isCopyingWeek ? 'Copiando...' : 'Copiar semana anterior'}
               </button>
-              <button
+              {role === 'owner' && <button
                 onClick={clearWeekAssignments}
                 disabled={isCopyingWeek || !assignments?.length}
-                className="ml-1 w-7 h-7 flex items-center justify-center rounded-lg border border-gray-200 hover:bg-rose-50 hover:border-rose-200 text-gray-400 hover:text-rose-500 transition-colors disabled:opacity-30 disabled:cursor-default"
+                className="hidden sm:flex ml-1 w-7 h-7 items-center justify-center rounded-lg border border-gray-200 hover:bg-rose-50 hover:border-rose-200 text-gray-400 hover:text-rose-500 transition-colors disabled:opacity-30 disabled:cursor-default"
                 title="Borrar asignaciones de esta semana"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
                   <path fillRule="evenodd" d="M5 3.25V4H2.75a.75.75 0 0 0 0 1.5h.3l.815 8.15A1.5 1.5 0 0 0 5.357 15h5.285a1.5 1.5 0 0 0 1.493-1.35l.815-8.15h.3a.75.75 0 0 0 0-1.5H11v-.75A2.25 2.25 0 0 0 8.75 1h-1.5A2.25 2.25 0 0 0 5 3.25Zm2.25-.75a.75.75 0 0 0-.75.75V4h3v-.75a.75.75 0 0 0-.75-.75h-1.5ZM6.05 6a.75.75 0 0 1 .787.713l.275 5.5a.75.75 0 0 1-1.498.075l-.275-5.5A.75.75 0 0 1 6.05 6Zm3.9 0a.75.75 0 0 1 .712.787l-.275 5.5a.75.75 0 0 1-1.498-.075l.275-5.5a.75.75 0 0 1 .786-.711Z" clipRule="evenodd" />
                 </svg>
-              </button>
+              </button>}
               {/* Export button */}
               <div className="relative ml-1" ref={exportMenuRef}>
                 <button

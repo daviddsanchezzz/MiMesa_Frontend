@@ -275,7 +275,7 @@ function TicketAverageEdit({ value, onSave }) {
 
 const PAGE_SIZE = 10;
 
-function DashboardTab({ dateRange, expenseCategories }) {
+function DashboardTab({ dateRange, categories }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
@@ -369,8 +369,8 @@ function DashboardTab({ dateRange, expenseCategories }) {
                 <div key={cat.category}>
                   <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center gap-2">
-                      <span className={`w-2.5 h-2.5 rounded-full ${catDot(expenseCategories, cat.category)}`} />
-                      <span className="text-sm text-gray-600">{catLabel(expenseCategories, cat.category)}</span>
+                      <span className={`w-2.5 h-2.5 rounded-full ${catDot(categories, cat.category)}`} />
+                      <span className="text-sm text-gray-600">{catLabel(categories, cat.category)}</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <span className="text-xs text-gray-400">{Math.round((cat.amount / totalExpensesSum) * 100)}%</span>
@@ -379,7 +379,7 @@ function DashboardTab({ dateRange, expenseCategories }) {
                   </div>
                   <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
                     <div
-                      className={`h-full rounded-full ${catDot(expenseCategories, cat.category)}`}
+                      className={`h-full rounded-full ${catDot(categories, cat.category)}`}
                       style={{ width: `${Math.round((cat.amount / maxExpense) * 100)}%` }}
                     />
                   </div>
@@ -694,7 +694,7 @@ function CategoryManagerModal({ onClose, onRefresh }) {
 
 // ── Expense modal ─────────────────────────────────────────────────────────────
 
-function ExpenseModal({ expense, suppliers, expenseCategories, onSave, onClose, scope = 'single' }) {
+function ExpenseModal({ expense, suppliers, categories, onSave, onClose, scope = 'single' }) {
   const editing = !!expense?._id;
   const [form, setForm] = useState({
     category:    expense?.category || '',
@@ -743,7 +743,7 @@ function ExpenseModal({ expense, suppliers, expenseCategories, onSave, onClose, 
         <FormField label="Categoría" required>
           <select value={form.category} onChange={(e) => set('category', e.target.value)} className={selectCls}>
             <option value="">Seleccionar...</option>
-            {expenseCategories.filter((c) => c.value !== 'staff').map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+            {categories.filter((c) => c.value !== 'staff').map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
           </select>
         </FormField>
         <FormField label="Proveedor">
@@ -781,7 +781,7 @@ function ExpenseModal({ expense, suppliers, expenseCategories, onSave, onClose, 
 
 // ── Gastos tab ────────────────────────────────────────────────────────────────
 
-function GastosTab({ dateRange, suppliers, expenseCategories }) {
+function GastosTab({ dateRange, suppliers, categories }) {
   const [subView, setSubView] = useState('list'); // 'list' | 'recurrentes'
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -857,7 +857,7 @@ function GastosTab({ dateRange, suppliers, expenseCategories }) {
           </svg>
           Volver a gastos
         </button>
-        <RecurrentesTab expenseCategories={expenseCategories} suppliers={suppliers} />
+        <RecurrentesTab categories={categories} suppliers={suppliers} />
       </div>
     );
   }
@@ -910,8 +910,8 @@ function GastosTab({ dateRange, suppliers, expenseCategories }) {
                     <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{fmtDate(exp.expenseDate)}</td>
                     <td className="px-4 py-3">
                       <span className="inline-flex items-center gap-1.5">
-                        <span className={`w-2 h-2 rounded-full ${catDot(expenseCategories, exp.category)}`} />
-                        <span className="text-gray-700">{catLabel(expenseCategories, exp.category)}</span>
+                        <span className={`w-2 h-2 rounded-full ${catDot(categories, exp.category)}`} />
+                        <span className="text-gray-700">{catLabel(categories, exp.category)}</span>
                       </span>
                     </td>
                     <td className="px-4 py-3 text-gray-500 hidden md:table-cell">
@@ -975,7 +975,7 @@ function GastosTab({ dateRange, suppliers, expenseCategories }) {
           expense={modal.expense}
           scope={modal.scope}
           suppliers={suppliers}
-          expenseCategories={expenseCategories}
+          categories={categories}
           onSave={() => { setModal(null); load(); }}
           onClose={() => setModal(null)}
         />
@@ -986,7 +986,7 @@ function GastosTab({ dateRange, suppliers, expenseCategories }) {
 
 // ── Recurrentes tab ───────────────────────────────────────────────────────────
 
-function RecurrentesTab({ expenseCategories, suppliers }) {
+function RecurrentesTab({ categories, suppliers }) {
   const [gastos, setGastos] = useState([]);
   const [loading, setLoading] = useState(true);
   const [toggling, setToggling] = useState(null);
@@ -1064,8 +1064,8 @@ function RecurrentesTab({ expenseCategories, suppliers }) {
                   {/* Category + supplier */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${catDot(expenseCategories, g.category)}`} />
-                      <span className="text-sm font-semibold text-gray-900">{catLabel(expenseCategories, g.category)}</span>
+                      <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${catDot(categories, g.category)}`} />
+                      <span className="text-sm font-semibold text-gray-900">{catLabel(categories, g.category)}</span>
                     </div>
                     <p className="text-xs text-gray-400 mt-0.5 truncate">
                       {supplierName || (g.notes ? g.notes : <span className="text-gray-300">Sin proveedor</span>)}
@@ -1126,7 +1126,7 @@ function RecurrentesTab({ expenseCategories, suppliers }) {
 
 // ── Supplier modal ────────────────────────────────────────────────────────────
 
-function SupplierModal({ supplier, supplierCategories, onSave, onClose }) {
+function SupplierModal({ supplier, categories, onSave, onClose }) {
   const editing = !!supplier?._id;
   const [form, setForm] = useState({
     name: supplier?.name || '',
@@ -1168,7 +1168,7 @@ function SupplierModal({ supplier, supplierCategories, onSave, onClose }) {
         </FormField>
         <FormField label="Categoría">
           <select value={form.category} onChange={(e) => set('category', e.target.value)} className={selectCls}>
-            {supplierCategories.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+            {categories.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
           </select>
         </FormField>
         <FormField label="Persona de contacto">
@@ -1203,7 +1203,7 @@ function SupplierModal({ supplier, supplierCategories, onSave, onClose }) {
 
 // ── Proveedores tab ───────────────────────────────────────────────────────────
 
-function ProveedoresTab({ suppliers, loadSuppliers, supplierCategories, expenseCategories }) {
+function ProveedoresTab({ suppliers, loadSuppliers, categories, categories }) {
   const [modal, setModal] = useState(null);
   const [expanded, setExpanded] = useState(null);
   const [supplierDetail, setSupplierDetail] = useState(null);
@@ -1271,7 +1271,7 @@ function ProveedoresTab({ suppliers, loadSuppliers, supplierCategories, expenseC
                       </button>
                     </td>
                     <td className="px-4 py-3 text-gray-500 hidden sm:table-cell">
-                      {catLabel(supplierCategories, s.category)}
+                      {catLabel(categories, s.category)}
                     </td>
                     <td className="px-4 py-3 hidden md:table-cell">
                       <span className="text-gray-600">{s.contactName || <span className="text-gray-300">—</span>}</span>
@@ -1316,7 +1316,7 @@ function ProveedoresTab({ suppliers, loadSuppliers, supplierCategories, expenseC
                                 {supplierDetail.expenses.slice(0, 5).map((e) => (
                                   <div key={e._id} className="flex items-center justify-between text-sm">
                                     <span className="text-gray-500">{fmtDate(e.expenseDate)}</span>
-                                    <span className="text-gray-600 flex-1 mx-4 truncate">{catLabel(expenseCategories, e.category)} {e.notes && `— ${e.notes}`}</span>
+                                    <span className="text-gray-600 flex-1 mx-4 truncate">{catLabel(categories, e.category)} {e.notes && `— ${e.notes}`}</span>
                                     <span className="font-medium text-gray-700">{fmtEur(e.amount)}</span>
                                   </div>
                                 ))}
@@ -1340,7 +1340,7 @@ function ProveedoresTab({ suppliers, loadSuppliers, supplierCategories, expenseC
       {modal !== null && (
         <SupplierModal
           supplier={modal.supplier}
-          supplierCategories={supplierCategories}
+          categories={categories}
           onSave={() => { setModal(null); loadSuppliers(); setExpanded(null); }}
           onClose={() => setModal(null)}
         />
@@ -1356,8 +1356,7 @@ export default function Finanzas() {
   const [period, setPeriod] = useState('month');
   const [dateRange, setDateRange] = useState(getMonthRange());
   const [suppliers, setSuppliers] = useState([]);
-  const [expenseCategories, setExpenseCategories] = useState([]);
-  const [supplierCategories, setSupplierCategories] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [categoryModal, setCategoryModal] = useState(false);
 
   const loadSuppliers = useCallback(async () => {
@@ -1369,12 +1368,8 @@ export default function Finanzas() {
 
   const loadCategories = useCallback(async () => {
     try {
-      const [ec, sc] = await Promise.all([
-        api.get('/categories?type=expense'),
-        api.get('/categories?type=supplier'),
-      ]);
-      setExpenseCategories(ec.data);
-      setSupplierCategories(sc.data);
+      const { data } = await api.get('/categories');
+      setCategories(data);
     } catch { /* ignore */ }
   }, []);
 
@@ -1441,9 +1436,9 @@ export default function Finanzas() {
       </div>
 
       {/* Tab content */}
-      {tab === 'dashboard' && <DashboardTab dateRange={dateRange} expenseCategories={expenseCategories} />}
-      {tab === 'expenses'  && <GastosTab dateRange={dateRange} suppliers={suppliers} expenseCategories={expenseCategories} />}
-      {tab === 'suppliers' && <ProveedoresTab suppliers={suppliers} loadSuppliers={loadSuppliers} supplierCategories={supplierCategories} expenseCategories={expenseCategories} />}
+      {tab === 'dashboard' && <DashboardTab dateRange={dateRange} categories={categories} />}
+      {tab === 'expenses'  && <GastosTab dateRange={dateRange} suppliers={suppliers} categories={categories} />}
+      {tab === 'suppliers' && <ProveedoresTab suppliers={suppliers} loadSuppliers={loadSuppliers} categories={categories} />}
 
       {categoryModal && (
         <CategoryManagerModal

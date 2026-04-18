@@ -1665,8 +1665,8 @@ export default function Finanzas() {
       )}
 
       {/* Tabs */}
-      <div className="border-b border-gray-200">
-        <nav className="flex gap-0">
+      <div className="border-b border-gray-200 overflow-x-auto scrollbar-none">
+        <nav className="flex gap-0 min-w-max">
           {TABS.map((t) => (
             <button
               key={t.id}

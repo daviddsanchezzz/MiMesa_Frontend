@@ -666,13 +666,13 @@ export default function Reservations() {
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold text-gray-900 truncate">{r.guestName}</p>
                     <p className="text-xs text-gray-500 mt-0.5">
-                      {r.date} Â· {r.time} Â· {r.people} pax
-                      {r.pendingReason === 'large_group' ? ' Â· Grupo grande' : ''}
-                      {r.pendingReason === 'slot_capacity' ? ' Â· Capacidad del slot' : ''}
+                      {r.date} · {r.time} · {r.people} pax
+                      {r.pendingReason === 'large_group' ? ' · Grupo grande' : ''}
+                      {r.pendingReason === 'slot_capacity' ? ' · Capacidad del slot' : ''}
                     </p>
                     {r.proposedAlternative?.date && r.proposedAlternative?.time && (
                       <p className="text-xs text-violet-600 mt-0.5">
-                        Propuesta: {r.proposedAlternative.date} Â· {r.proposedAlternative.time}
+                        Propuesta: {r.proposedAlternative.date} · {r.proposedAlternative.time}
                       </p>
                     )}
                   </div>

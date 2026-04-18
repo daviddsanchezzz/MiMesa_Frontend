@@ -119,10 +119,36 @@ export default function Dashboard() {
   const [loading, setLoading]         = useState(true);
   const [modal, setModal]             = useState(null); // null | { reservation }
   const [expandedDesktopId, setExpandedDesktopId] = useState(null);
+  const [pendingReservations, setPendingReservations] = useState([]);
+  const [pendingEnabled, setPendingEnabled] = useState(canModeratePending);
+  const [pendingLoading, setPendingLoading] = useState(false);
+  const [pendingProposal, setPendingProposal] = useState(null);
+  const [pendingProposalSaving, setPendingProposalSaving] = useState(false);
 
   const today      = getToday();
   const todayLabel = new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
   const tomorrow   = (() => { const d = new Date(); d.setDate(d.getDate() + 1); return d.toISOString().slice(0, 10); })();
+
+  const loadPendingReservations = useCallback(() => {
+    if (!canModeratePending) {
+      setPendingEnabled(false);
+      setPendingReservations([]);
+      return Promise.resolve();
+    }
+    setPendingLoading(true);
+    return api.get('/reservations/pending')
+      .then((r) => {
+        setPendingEnabled(true);
+        setPendingReservations(Array.isArray(r.data) ? r.data : []);
+      })
+      .catch((err) => {
+        if (err?.response?.status === 403) {
+          setPendingEnabled(false);
+          setPendingReservations([]);
+        }
+      })
+      .finally(() => setPendingLoading(false));
+  }, [canModeratePending]);
 
   const loadReservations = useCallback(async () => {
     setLoading(true);
@@ -141,16 +167,17 @@ export default function Dashboard() {
   }, [view, today]);
 
   useEffect(() => { loadReservations(); }, [loadReservations]);
+  useEffect(() => { loadPendingReservations(); }, [loadPendingReservations]);
   useEffect(() => { api.get('/tables').then(r => setTables(r.data)); }, []);
   useEffect(() => {
     if (view !== 'today') { setSlots([]); return; }
     api.get(`/shifts/slots?date=${today}`).then(r => setSlots(r.data)).catch(() => setSlots([]));
   }, [view, today]);
   useEffect(() => {
-    const handler = () => loadReservations();
+    const handler = () => { loadReservations(); loadPendingReservations(); };
     window.addEventListener('reservation:created', handler);
     return () => window.removeEventListener('reservation:created', handler);
-  }, [loadReservations]);
+  }, [loadReservations, loadPendingReservations]);
 
   // ── Callbacks ──
   const handleQuickStatus = async (id, status) => {
@@ -182,6 +209,45 @@ export default function Dashboard() {
     if (!window.confirm('¿Reembolsar el depósito al cliente?')) return;
     await api.post(`/reservations/${id}/refund`);
     loadReservations();
+  };
+
+  // ── Pending handlers ──
+  const handlePendingAccept = async (id) => {
+    try {
+      await api.put(`/reservations/${id}/accept`);
+      await Promise.all([loadReservations(), loadPendingReservations()]);
+    } catch (err) {
+      console.error('Error accepting reservation:', err);
+    }
+  };
+  const handlePendingReject = async (id) => {
+    if (!window.confirm('Esta reserva pasará a cancelada.')) return;
+    try {
+      await api.put(`/reservations/${id}/reject`);
+      await Promise.all([loadReservations(), loadPendingReservations()]);
+    } catch (err) {
+      console.error('Error rejecting reservation:', err);
+    }
+  };
+  const openPendingProposalModal = (r) => {
+    setPendingProposal({ reservationId: r._id, guestName: r.guestName, date: r.date, time: r.time || '', message: '' });
+  };
+  const submitPendingProposal = async (e) => {
+    e.preventDefault();
+    if (!pendingProposal?.reservationId) return;
+    const payload = {};
+    if (pendingProposal.message?.trim()) payload.message = pendingProposal.message.trim();
+    if (pendingProposal.date && pendingProposal.time) { payload.date = pendingProposal.date; payload.time = pendingProposal.time; }
+    setPendingProposalSaving(true);
+    try {
+      await api.put(`/reservations/${pendingProposal.reservationId}/propose-alternative`, payload);
+      await loadPendingReservations();
+      setPendingProposal(null);
+    } catch (err) {
+      console.error('Error sending proposal:', err);
+    } finally {
+      setPendingProposalSaving(false);
+    }
   };
 
   // ── Stats ──
@@ -429,6 +495,64 @@ export default function Dashboard() {
         ))}
       </div>
 
+      {/* Pending reservations banner */}
+      {pendingEnabled && canModeratePending && pendingReservations.length > 0 && (
+        <div className="bg-white rounded-2xl border border-amber-200 shadow-sm overflow-hidden">
+          <div className="px-4 sm:px-5 py-3 border-b border-amber-100 bg-amber-50/70 flex items-center justify-between">
+            <div>
+              <h3 className="text-sm font-semibold text-amber-900">Reservas pendientes</h3>
+              <p className="text-xs text-amber-700 mt-0.5">Acepta, rechaza o propone otro horario</p>
+            </div>
+            <span className="text-xs font-semibold bg-white border border-amber-200 text-amber-700 px-2 py-0.5 rounded-full">
+              {pendingReservations.length}
+            </span>
+          </div>
+          {pendingLoading ? (
+            <div className="px-4 sm:px-5 py-4 text-sm text-gray-500">Cargando pendientes...</div>
+          ) : (
+            <div className="divide-y divide-gray-100">
+              {pendingReservations.slice(0, 8).map((r) => (
+                <div key={r._id} className="px-4 sm:px-5 py-3 flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-gray-900 truncate">{r.guestName}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                      {r.date} · {r.time} · {r.people} pax
+                      {r.pendingReason === 'large_group' ? ' · Grupo grande' : ''}
+                      {r.pendingReason === 'slot_capacity' ? ' · Capacidad del slot' : ''}
+                    </p>
+                    {r.proposedAlternative?.date && r.proposedAlternative?.time && (
+                      <p className="text-xs text-violet-600 mt-0.5">
+                        Propuesta: {r.proposedAlternative.date} · {r.proposedAlternative.time}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <button
+                      onClick={() => handlePendingAccept(r._id)}
+                      className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
+                    >
+                      Aceptar
+                    </button>
+                    <button
+                      onClick={() => openPendingProposalModal(r)}
+                      className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-violet-100 text-violet-700 hover:bg-violet-200 transition-colors"
+                    >
+                      Proponer hora
+                    </button>
+                    <button
+                      onClick={() => handlePendingReject(r._id)}
+                      className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-rose-100 text-rose-700 hover:bg-rose-200 transition-colors"
+                    >
+                      Rechazar
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Stats pills */}
       {!loading && total > 0 && (
         <div className="flex items-center gap-2 flex-wrap">
@@ -641,6 +765,65 @@ export default function Dashboard() {
             onSave={() => { setModal(null); loadReservations(); }}
             onCancel={() => setModal(null)}
           />
+        </Modal>
+      )}
+
+      {pendingProposal && (
+        <Modal
+          title="Proponer horario"
+          subtitle={`Reserva de ${pendingProposal.guestName}`}
+          onClose={() => !pendingProposalSaving && setPendingProposal(null)}
+          size="md"
+        >
+          <form onSubmit={submitPendingProposal} className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Fecha propuesta</label>
+                <input
+                  type="date"
+                  value={pendingProposal.date}
+                  onChange={(e) => setPendingProposal((p) => ({ ...p, date: e.target.value }))}
+                  className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold text-gray-600 mb-1">Hora propuesta</label>
+                <input
+                  type="time"
+                  value={pendingProposal.time}
+                  onChange={(e) => setPendingProposal((p) => ({ ...p, time: e.target.value }))}
+                  className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-gray-600 mb-1">Mensaje para el cliente (opcional)</label>
+              <textarea
+                rows={3}
+                value={pendingProposal.message}
+                onChange={(e) => setPendingProposal((p) => ({ ...p, message: e.target.value }))}
+                className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white resize-none"
+                placeholder="Ej: Estamos completos a esa hora, te ofrecemos esta alternativa."
+              />
+            </div>
+            <div className="flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setPendingProposal(null)}
+                disabled={pendingProposalSaving}
+                className="px-3 py-2 text-xs font-semibold rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors disabled:opacity-60"
+              >
+                Cerrar
+              </button>
+              <button
+                type="submit"
+                disabled={pendingProposalSaving}
+                className="px-3 py-2 text-xs font-semibold rounded-lg bg-violet-600 text-white hover:bg-violet-700 transition-colors disabled:opacity-60"
+              >
+                {pendingProposalSaving ? 'Enviando...' : 'Enviar propuesta'}
+              </button>
+            </div>
+          </form>
         </Modal>
       )}
     </div>

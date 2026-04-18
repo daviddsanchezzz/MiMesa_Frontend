@@ -1428,6 +1428,12 @@ export default function Personal() {
     return map;
   }, [positions]);
 
+  const positionOrderByName = useMemo(() => {
+    const map = new Map();
+    (positions || []).forEach((position, i) => map.set(position.name, i));
+    return map;
+  }, [positions]);
+
   const toggleEmployeeStatus = async (employee) => {
     try {
       const status = employee.status === 'active' ? 'inactive' : 'active';
@@ -1494,15 +1500,21 @@ export default function Personal() {
         {rawList.length === 0 ? (
           <p className="text-xs text-gray-300 italic">Sin empleados asignados</p>
         ) : (
-          <div className="space-y-2">
-            {Object.values(grouped).map((group, index) => (
-              <div key={`${group.roleColor}-${index}`}>
-                <p className="text-[11px] font-bold uppercase tracking-wider mb-0.5" style={{ color: group.roleColor }}>
-                  {group.roleName}
-                </p>
-                <p className="text-[13px] font-medium text-gray-700 leading-5">{group.names.join(', ')}</p>
-              </div>
-            ))}
+          <div className="divide-y divide-gray-100">
+            {Object.values(grouped)
+              .sort((a, b) => {
+                const oa = positionOrderByName.get(a.roleName) ?? 999;
+                const ob = positionOrderByName.get(b.roleName) ?? 999;
+                return oa !== ob ? oa - ob : a.roleName.localeCompare(b.roleName);
+              })
+              .map((group, index) => (
+                <div key={`${group.roleColor}-${index}`} className="pt-2 first:pt-0 pb-2 last:pb-0">
+                  <p className="text-[11px] font-bold uppercase tracking-wider mb-0.5" style={{ color: group.roleColor }}>
+                    {group.roleName}
+                  </p>
+                  <p className="text-[13px] font-medium text-gray-700 leading-5">{group.names.join(', ')}</p>
+                </div>
+              ))}
           </div>
         )}
       </div>
@@ -1778,6 +1790,19 @@ export default function Personal() {
                     <tbody>
                       {positions.map((position, i) => {
                         const count = employeeCountByPosition.get(String(position._id)) || 0;
+                        const movePosition = async (fromIdx, toIdx) => {
+                          if (toIdx < 0 || toIdx >= positions.length) return;
+                          const reordered = [...positions];
+                          const [moved] = reordered.splice(fromIdx, 1);
+                          reordered.splice(toIdx, 0, moved);
+                          // Optimistic update
+                          setPositions(reordered);
+                          try {
+                            await api.patch('/staff/positions/reorder', { ids: reordered.map((p) => p._id) });
+                          } catch {
+                            await loadCore({ silent: true });
+                          }
+                        };
                         return (
                           <tr
                             key={position._id}
@@ -1811,6 +1836,28 @@ export default function Personal() {
                             </td>
                             <td className="px-4 py-3.5">
                               <div className="flex items-center justify-end gap-1.5">
+                                <div className="flex flex-col gap-0.5 mr-1">
+                                  <button
+                                    onClick={() => movePosition(i, i - 1)}
+                                    disabled={i === 0}
+                                    className="p-0.5 rounded text-gray-300 hover:text-gray-600 hover:bg-gray-100 disabled:opacity-20 disabled:cursor-default transition-colors"
+                                    title="Subir"
+                                  >
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
+                                      <path fillRule="evenodd" d="M8 14a.75.75 0 0 1-.75-.75V4.56L4.03 7.78a.75.75 0 0 1-1.06-1.06l4.5-4.5a.75.75 0 0 1 1.06 0l4.5 4.5a.75.75 0 0 1-1.06 1.06L8.75 4.56v8.69A.75.75 0 0 1 8 14Z" clipRule="evenodd" />
+                                    </svg>
+                                  </button>
+                                  <button
+                                    onClick={() => movePosition(i, i + 1)}
+                                    disabled={i === positions.length - 1}
+                                    className="p-0.5 rounded text-gray-300 hover:text-gray-600 hover:bg-gray-100 disabled:opacity-20 disabled:cursor-default transition-colors"
+                                    title="Bajar"
+                                  >
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
+                                      <path fillRule="evenodd" d="M8 2a.75.75 0 0 1 .75.75v8.69l3.22-3.22a.75.75 0 1 1 1.06 1.06l-4.5 4.5a.75.75 0 0 1-1.06 0l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.22 3.22V2.75A.75.75 0 0 1 8 2Z" clipRule="evenodd" />
+                                    </svg>
+                                  </button>
+                                </div>
                                 <button
                                   onClick={() => setPositionModal(position)}
                                   className="text-xs px-2.5 py-1.5 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 font-medium transition-colors"
@@ -2039,8 +2086,14 @@ export default function Personal() {
                               {rawList.length === 0 ? (
                                 <p style={{ fontSize: '20px', color: '#d1d5db', fontStyle: 'italic', margin: 0 }}>Sin empleados asignados</p>
                               ) : (
-                                Object.values(grouped).map((g, i) => (
-                                  <div key={i} style={{ marginBottom: '10px' }}>
+                                Object.values(grouped)
+                                  .sort((a, b) => {
+                                    const oa = positionOrderByName.get(a.role) ?? 999;
+                                    const ob = positionOrderByName.get(b.role) ?? 999;
+                                    return oa !== ob ? oa - ob : a.role.localeCompare(b.role);
+                                  })
+                                  .map((g, i, arr) => (
+                                  <div key={i} style={{ marginBottom: i < arr.length - 1 ? '10px' : 0, paddingBottom: i < arr.length - 1 ? '10px' : 0, borderBottom: i < arr.length - 1 ? '1.5px solid #f3f4f6' : 'none' }}>
                                     <p style={{ fontSize: '18px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', color: g.color, margin: '0 0 5px' }}>{g.role}</p>
                                     <p style={{ fontSize: '22px', fontWeight: 600, color: '#374151', margin: 0, lineHeight: '1.4' }}>{g.names.join(', ')}</p>
                                   </div>

@@ -594,19 +594,137 @@ function CategoryManagerModal({ onClose, onRefresh, inline = false }) {
   };
 
   const addNew = async (e) => {
-    e.preventDefault();
+    e?.preventDefault();
     if (!newForm.label.trim()) return;
     setSaving(true);
     try {
       await api.post('/categories', newForm);
       setNewForm({ label: '', color: 'slate' });
+      setEditingId(null);
       load();
       onRefresh();
     } catch { /* ignore */ }
     finally { setSaving(false); }
   };
 
-  const content = (
+  // ── Inline table view (used as a tab) ────────────────────────────────────────
+  if (inline) {
+    return (
+      <div className="space-y-4">
+        <div className="flex justify-end">
+          <button onClick={() => { setEditingId('__new__'); setNewForm({ label: '', color: 'slate' }); }}
+            className={btnPrimary + ' flex items-center gap-1.5'}>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
+              <path d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z" />
+            </svg>
+            Añadir categoría
+          </button>
+        </div>
+
+        {loading ? <Spinner /> : (
+          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-gray-50 border-b border-gray-100">
+                <tr className="text-left text-xs text-gray-500 font-semibold uppercase tracking-wide">
+                  <th className="px-4 py-3">Nombre</th>
+                  <th className="px-4 py-3 hidden sm:table-cell">Color</th>
+                  <th className="px-4 py-3">Estado</th>
+                  <th className="px-4 py-3" />
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {/* New row */}
+                {editingId === '__new__' && (
+                  <tr className="bg-violet-50/40">
+                    <td className="px-4 py-3" colSpan={4}>
+                      <div className="flex flex-wrap items-center gap-3">
+                        <input autoFocus type="text" value={newForm.label}
+                          onChange={(e) => setNewForm((f) => ({ ...f, label: e.target.value }))}
+                          className={inputCls + ' max-w-xs'} placeholder="Nombre de la categoría" />
+                        <ColorPicker value={newForm.color} onChange={(c) => setNewForm((f) => ({ ...f, color: c }))} />
+                        <div className="flex gap-2">
+                          <button onClick={addNew} disabled={saving || !newForm.label.trim()} className={btnPrimary + ' text-xs px-3 py-1.5'}>
+                            Guardar
+                          </button>
+                          <button onClick={() => setEditingId(null)} className={btnGhost + ' text-xs px-3 py-1.5'}>
+                            Cancelar
+                          </button>
+                        </div>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+                {cats.map((cat) => {
+                  const isStaff = cat.value === 'staff';
+                  return editingId === cat._id ? (
+                    <tr key={cat._id} className="bg-violet-50/40">
+                      <td className="px-4 py-3" colSpan={4}>
+                        <div className="flex flex-wrap items-center gap-3">
+                          <input autoFocus type="text" value={editForm.label}
+                            onChange={(e) => setEditForm((f) => ({ ...f, label: e.target.value }))}
+                            className={inputCls + ' max-w-xs'} placeholder="Nombre de la categoría" />
+                          <ColorPicker value={editForm.color} onChange={(c) => setEditForm((f) => ({ ...f, color: c }))} />
+                          <div className="flex gap-2">
+                            <button onClick={() => saveEdit(cat._id)} disabled={saving} className={btnPrimary + ' text-xs px-3 py-1.5'}>
+                              Guardar
+                            </button>
+                            <button onClick={() => setEditingId(null)} className={btnGhost + ' text-xs px-3 py-1.5'}>
+                              Cancelar
+                            </button>
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    <tr key={cat._id} className="hover:bg-gray-50/50 transition-colors">
+                      <td className="px-4 py-3">
+                        <span className="inline-flex items-center gap-2">
+                          <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${COLOR_DOT[cat.color] || 'bg-slate-400'}`} />
+                          <span className="font-medium text-gray-800">{cat.label}</span>
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 hidden sm:table-cell">
+                        <span className="text-xs text-gray-400">{cat.color}</span>
+                      </td>
+                      <td className="px-4 py-3">
+                        {isStaff
+                          ? <span className="text-[10px] text-violet-500 bg-violet-50 px-2 py-0.5 rounded-full">vinculada a Personal</span>
+                          : cat.isDefault
+                            ? <span className="text-[10px] text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">predeterminada</span>
+                            : <span className="text-[10px] text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">personalizada</span>
+                        }
+                      </td>
+                      <td className="px-4 py-3">
+                        {!isStaff && (
+                          <div className="flex items-center justify-end gap-1">
+                            <button onClick={() => startEdit(cat)}
+                              className="p-1.5 text-gray-400 hover:text-violet-600 hover:bg-violet-50 rounded-lg transition-colors">
+                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
+                                <path d="M13.488 2.513a1.75 1.75 0 0 0-2.475 0L6.75 6.774a2.75 2.75 0 0 0-.596.892l-.848 2.047a.75.75 0 0 0 .98.98l2.047-.848a2.75 2.75 0 0 0 .892-.596l4.261-4.262a1.75 1.75 0 0 0 0-2.474ZM4.75 14.25h6.5a.75.75 0 0 0 0-1.5h-6.5a.75.75 0 0 0 0 1.5Z" />
+                              </svg>
+                            </button>
+                            <button onClick={() => deleteCat(cat._id)}
+                              className="p-1.5 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors">
+                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
+                                <path fillRule="evenodd" d="M5 3.25V4H2.75a.75.75 0 0 0 0 1.5h.3l.815 8.15A1.5 1.5 0 0 0 5.357 15h5.285a1.5 1.5 0 0 0 1.493-1.35l.815-8.15h.3a.75.75 0 0 0 0-1.5H11v-.75A2.25 2.25 0 0 0 8.75 1h-1.5A2.25 2.25 0 0 0 5 3.25Zm2.25-.75a.75.75 0 0 0-.75.75V4h3v-.75a.75.75 0 0 0-.75-.75h-1.5ZM6.05 6a.75.75 0 0 1 .787.713l.275 5.5a.75.75 0 0 1-1.498.075l-.275-5.5A.75.75 0 0 1 6.05 6Zm3.9 0a.75.75 0 0 1 .712.787l-.275 5.5a.75.75 0 0 1-1.498-.075l.275-5.5a.75.75 0 0 1 .786-.711Z" clipRule="evenodd" />
+                              </svg>
+                            </button>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // ── Modal view ────────────────────────────────────────────────────────────────
+  const modalContent = (
     <>
       {loading ? <Spinner /> : (
         <div className="space-y-1 mb-4">
@@ -616,22 +734,13 @@ function CategoryManagerModal({ onClose, onRefresh, inline = false }) {
               <div key={cat._id} className="rounded-xl border border-gray-100 overflow-hidden">
                 {editingId === cat._id ? (
                   <div className="p-3 space-y-3 bg-violet-50/60">
-                    <input
-                      autoFocus
-                      type="text"
-                      value={editForm.label}
+                    <input autoFocus type="text" value={editForm.label}
                       onChange={(e) => setEditForm((f) => ({ ...f, label: e.target.value }))}
-                      className={inputCls}
-                      placeholder="Nombre de la categoría"
-                    />
+                      className={inputCls} placeholder="Nombre de la categoría" />
                     <ColorPicker value={editForm.color} onChange={(c) => setEditForm((f) => ({ ...f, color: c }))} />
                     <div className="flex gap-2">
-                      <button onClick={() => saveEdit(cat._id)} disabled={saving} className={btnPrimary + ' text-xs px-3 py-1.5'}>
-                        Guardar
-                      </button>
-                      <button onClick={() => setEditingId(null)} className={btnGhost + ' text-xs px-3 py-1.5'}>
-                        Cancelar
-                      </button>
+                      <button onClick={() => saveEdit(cat._id)} disabled={saving} className={btnPrimary + ' text-xs px-3 py-1.5'}>Guardar</button>
+                      <button onClick={() => setEditingId(null)} className={btnGhost + ' text-xs px-3 py-1.5'}>Cancelar</button>
                     </div>
                   </div>
                 ) : (
@@ -663,17 +772,11 @@ function CategoryManagerModal({ onClose, onRefresh, inline = false }) {
           })}
         </div>
       )}
-
-      {/* Add new */}
       <form onSubmit={addNew} className="border-t border-gray-100 pt-4 space-y-3">
         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Nueva categoría</p>
-        <input
-          type="text"
-          value={newForm.label}
+        <input type="text" value={newForm.label}
           onChange={(e) => setNewForm((f) => ({ ...f, label: e.target.value }))}
-          className={inputCls}
-          placeholder="Nombre..."
-        />
+          className={inputCls} placeholder="Nombre..." />
         <ColorPicker value={newForm.color} onChange={(c) => setNewForm((f) => ({ ...f, color: c }))} />
         <button type="submit" disabled={saving || !newForm.label.trim()} className={btnPrimary + ' w-full'}>
           Añadir categoría
@@ -681,9 +784,7 @@ function CategoryManagerModal({ onClose, onRefresh, inline = false }) {
       </form>
     </>
   );
-
-  if (inline) return <div className="max-w-md">{content}</div>;
-  return <ModalOverlay title="Gestionar categorías" onClose={onClose}>{content}</ModalOverlay>;
+  return <ModalOverlay title="Gestionar categorías" onClose={onClose}>{modalContent}</ModalOverlay>;
 }
 
 // ── Expense modal ─────────────────────────────────────────────────────────────

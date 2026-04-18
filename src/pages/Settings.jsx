@@ -2254,11 +2254,17 @@ const TABS = [
   { key: 'pagos',       label: 'Pagos',        desc: 'Depósitos y garantías en reservas',     icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 shrink-0"><path d="M2.5 3A1.5 1.5 0 0 0 1 4.5v1A1.5 1.5 0 0 0 2.5 7h11A1.5 1.5 0 0 0 15 5.5v-1A1.5 1.5 0 0 0 13.5 3h-11ZM1 9.5A1.5 1.5 0 0 1 2.5 8h11A1.5 1.5 0 0 1 15 9.5v1a1.5 1.5 0 0 1-1.5 1.5h-11A1.5 1.5 0 0 1 1 10.5v-1ZM4.5 10a.5.5 0 0 0 0 1h1a.5.5 0 0 0 0-1h-1ZM3 10.5a.5.5 0 0 1 .5-.5h1a.5.5 0 0 1 0 1h-1a.5.5 0 0 1-.5-.5Z"/></svg> },
 ];
 
+const OWNER_ONLY_TABS = new Set(['suscripcion', 'pagos']);
+
 export default function Settings() {
+  const { hasRole } = useAuth();
+  const isOwner = hasRole('owner');
+  const visibleTabs = TABS.filter(t => !OWNER_ONLY_TABS.has(t.key) || isOwner);
+
   const searchParams = new URLSearchParams(window.location.search);
-  const initialTab   = TABS.find(t => t.key === searchParams.get('tab'))?.key ?? 'negocio';
+  const initialTab   = visibleTabs.find(t => t.key === searchParams.get('tab'))?.key ?? 'negocio';
   const [tab, setTab] = useState(initialTab);
-  const current = TABS.find(t => t.key === tab);
+  const current = visibleTabs.find(t => t.key === tab);
 
   return (
     <div className="space-y-5">
@@ -2275,7 +2281,7 @@ export default function Settings() {
             onChange={e => setTab(e.target.value)}
             className="w-full appearance-none bg-white border border-gray-200 rounded-2xl px-4 py-3 pr-10 text-sm font-semibold text-gray-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
           >
-            {TABS.map(t => (
+            {visibleTabs.map(t => (
               <option key={t.key} value={t.key}>{t.label}</option>
             ))}
           </select>
@@ -2291,7 +2297,7 @@ export default function Settings() {
       {/* ── Desktop: sidebar + content ── */}
       <div className="grid grid-cols-1 lg:grid-cols-[200px_1fr] gap-6 items-start">
         <nav className="hidden lg:flex flex-col lg:sticky lg:top-6">
-          {TABS.map((t) => (
+          {visibleTabs.map((t) => (
             <button
               key={t.key}
               onClick={() => setTab(t.key)}

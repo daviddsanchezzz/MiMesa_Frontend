@@ -231,16 +231,21 @@ export default function Dashboard() {
     }
   };
   const openPendingProposalModal = (r) => {
-    setPendingProposal({ reservationId: r._id, guestName: r.guestName, date: r.date, selectedTime: null, message: '' });
+    setPendingProposal({ reservationId: r._id, guestName: r.guestName, date: r.date, selectedTime: null, customTime: '', message: '' });
     setPendingProposalSlots([]);
     api.get(`/shifts/slots?date=${r.date}`)
-      .then((res) => setPendingProposalSlots(res.data || []))
+      .then((res) => {
+        const all = res.data || [];
+        const shift = all.find((s) => s.time === r.time)?.shiftName;
+        setPendingProposalSlots(shift ? all.filter((s) => s.shiftName === shift) : all);
+      })
       .catch(() => setPendingProposalSlots([]));
   };
   const submitPendingProposal = async (e) => {
     e.preventDefault();
-    if (!pendingProposal?.reservationId || !pendingProposal.selectedTime) return;
-    const payload = { date: pendingProposal.date, time: pendingProposal.selectedTime };
+    const resolvedTime = pendingProposal.selectedTime === '__other__' ? pendingProposal.customTime : pendingProposal.selectedTime;
+    if (!pendingProposal?.reservationId || !resolvedTime) return;
+    const payload = { date: pendingProposal.date, time: resolvedTime };
     if (pendingProposal.message?.trim()) payload.message = pendingProposal.message.trim();
     setPendingProposalSaving(true);
     try {
@@ -794,7 +799,7 @@ export default function Dashboard() {
                   <div className="space-y-3">
                     {Object.entries(grouped).map(([shiftName, times]) => (
                       <div key={shiftName}>
-                        <p className="text-[11px] font-bold text-gray-400 uppercase tracking-wider mb-1.5">{shiftName}</p>
+
                         <div className="flex flex-wrap gap-1.5">
                           {times.map((t) => (
                             <button
@@ -810,7 +815,27 @@ export default function Dashboard() {
                               {t}
                             </button>
                           ))}
+                          <button
+                            type="button"
+                            onClick={() => setPendingProposal((p) => ({ ...p, selectedTime: '__other__' }))}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                              pendingProposal.selectedTime === '__other__'
+                                ? 'bg-violet-600 text-white border-violet-600'
+                                : 'bg-white text-gray-700 border-gray-200 hover:border-violet-300 hover:text-violet-700'
+                            }`}
+                          >
+                            Otra
+                          </button>
                         </div>
+                        {pendingProposal.selectedTime === '__other__' && (
+                          <input
+                            type="time"
+                            value={pendingProposal.customTime}
+                            onChange={(e) => setPendingProposal((p) => ({ ...p, customTime: e.target.value }))}
+                            className="mt-2 border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white"
+                            autoFocus
+                          />
+                        )}
                       </div>
                     ))}
                   </div>
@@ -838,7 +863,7 @@ export default function Dashboard() {
               </button>
               <button
                 type="submit"
-                disabled={pendingProposalSaving || !pendingProposal.selectedTime}
+                disabled={pendingProposalSaving || !pendingProposal.selectedTime || (pendingProposal.selectedTime === '__other__' && !pendingProposal.customTime)}
                 className="px-3 py-2 text-xs font-semibold rounded-lg bg-violet-600 text-white hover:bg-violet-700 transition-colors disabled:opacity-60"
               >
                 {pendingProposalSaving ? 'Enviando...' : 'Enviar propuesta'}

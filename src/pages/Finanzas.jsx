@@ -699,6 +699,15 @@ function ExpenseModal({ expense, suppliers, categories, onSave, onClose, scope =
 
   const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
 
+  const handleSupplierChange = (supplierId) => {
+    const supplier = suppliers.find((s) => s._id === supplierId);
+    setForm((f) => ({
+      ...f,
+      supplierId,
+      ...(supplier && !f.category ? { category: supplier.category } : {}),
+    }));
+  };
+
   const submit = async (e) => {
     e.preventDefault();
     if (!form.category) return setError('Selecciona una categoría');
@@ -737,7 +746,7 @@ function ExpenseModal({ expense, suppliers, categories, onSave, onClose, scope =
           </select>
         </FormField>
         <FormField label="Proveedor">
-          <select value={form.supplierId} onChange={(e) => set('supplierId', e.target.value)} className={selectCls}>
+          <select value={form.supplierId} onChange={(e) => handleSupplierChange(e.target.value)} className={selectCls}>
             <option value="">Sin proveedor</option>
             {suppliers.filter((s) => s.isActive).map((s) => <option key={s._id} value={s._id}>{s.name}</option>)}
           </select>

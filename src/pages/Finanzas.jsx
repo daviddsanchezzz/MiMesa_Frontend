@@ -275,7 +275,7 @@ function TicketAverageEdit({ value, onSave }) {
 
 const PAGE_SIZE = 10;
 
-function DashboardTab({ dateRange, categories }) {
+function DashboardTab({ dateRange, categories, refreshTrigger }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
@@ -292,6 +292,7 @@ function DashboardTab({ dateRange, categories }) {
   }, [dateRange.from, dateRange.to]);
 
   useEffect(() => { load(); }, [load]);
+  useEffect(() => { if (refreshTrigger > 0) load(); }, [refreshTrigger]); // eslint-disable-line
 
   const saveActual = async (date, actualRevenue) => {
     try {
@@ -548,7 +549,7 @@ function ColorPicker({ value, onChange }) {
   );
 }
 
-function CategoryManagerModal({ onClose, onRefresh }) {
+function CategoryManagerModal({ onClose, onRefresh, inline = false }) {
   const [cats, setCats] = useState([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState(null);
@@ -605,8 +606,8 @@ function CategoryManagerModal({ onClose, onRefresh }) {
     finally { setSaving(false); }
   };
 
-  return (
-    <ModalOverlay title="Gestionar categorías" onClose={onClose}>
+  const content = (
+    <>
       {loading ? <Spinner /> : (
         <div className="space-y-1 mb-4">
           {cats.map((cat) => {
@@ -678,8 +679,11 @@ function CategoryManagerModal({ onClose, onRefresh }) {
           Añadir categoría
         </button>
       </form>
-    </ModalOverlay>
+    </>
   );
+
+  if (inline) return <div className="max-w-md">{content}</div>;
+  return <ModalOverlay title="Gestionar categorías" onClose={onClose}>{content}</ModalOverlay>;
 }
 
 // ── Expense modal ─────────────────────────────────────────────────────────────
@@ -1348,6 +1352,98 @@ function ProveedoresTab({ suppliers, loadSuppliers, categories }) {
   );
 }
 
+// ── Mobile full-screen expense form ──────────────────────────────────────────
+
+function MobileExpenseScreen({ suppliers, categories, onSave, onClose }) {
+  const [form, setForm] = useState({
+    category: '', amount: '', expenseDate: toIso(),
+    supplierId: '', notes: '', isRecurring: false,
+  });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
+
+  const handleSupplierChange = (supplierId) => {
+    const supplier = suppliers.find((s) => s._id === supplierId);
+    setForm((f) => ({
+      ...f,
+      supplierId,
+      ...(supplier && !f.category ? { category: supplier.category } : {}),
+    }));
+  };
+
+  const submit = async (e) => {
+    e.preventDefault();
+    if (!form.category) return setError('Selecciona una categoría');
+    if (!form.amount || Number(form.amount) <= 0) return setError('El importe debe ser mayor que 0');
+    setSaving(true); setError('');
+    try {
+      await api.post('/expenses', form);
+      onSave();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Error al guardar');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 bg-white flex flex-col">
+      {/* Header */}
+      <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100">
+        <button onClick={onClose} className="p-2 -ml-2 text-gray-500 hover:text-gray-800 rounded-xl">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
+            <path fillRule="evenodd" d="M11.78 5.22a.75.75 0 0 1 0 1.06L8.06 10l3.72 3.72a.75.75 0 1 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0Z" clipRule="evenodd" />
+          </svg>
+        </button>
+        <h2 className="text-base font-semibold text-gray-900">Registrar gasto</h2>
+      </div>
+
+      {/* Form */}
+      <form onSubmit={submit} className="flex-1 overflow-y-auto px-4 py-5 space-y-4">
+        <div className="grid grid-cols-2 gap-3">
+          <FormField label="Importe (€)" required>
+            <input autoFocus type="number" min="0.01" step="0.01" value={form.amount}
+              onChange={(e) => set('amount', e.target.value)} className={inputCls} placeholder="0.00" />
+          </FormField>
+          <FormField label="Fecha" required>
+            <input type="date" value={form.expenseDate} onChange={(e) => set('expenseDate', e.target.value)} className={inputCls} />
+          </FormField>
+        </div>
+        <FormField label="Proveedor">
+          <select value={form.supplierId} onChange={(e) => handleSupplierChange(e.target.value)} className={selectCls}>
+            <option value="">Sin proveedor</option>
+            {suppliers.filter((s) => s.isActive).map((s) => <option key={s._id} value={s._id}>{s.name}</option>)}
+          </select>
+        </FormField>
+        <FormField label="Categoría" required>
+          <select value={form.category} onChange={(e) => set('category', e.target.value)} className={selectCls}>
+            <option value="">Seleccionar...</option>
+            {categories.filter((c) => c.value !== 'staff').map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+          </select>
+        </FormField>
+        <FormField label="Notas">
+          <input type="text" value={form.notes} onChange={(e) => set('notes', e.target.value)} className={inputCls} placeholder="Descripción opcional" />
+        </FormField>
+        <label className="flex items-center gap-2 cursor-pointer select-none">
+          <input type="checkbox" checked={form.isRecurring} onChange={(e) => set('isRecurring', e.target.checked)}
+            className="w-4 h-4 text-violet-600 rounded border-gray-300 focus:ring-violet-500" />
+          <span className="text-sm text-gray-600">Gasto recurrente mensual</span>
+        </label>
+        {error && <p className="text-sm text-rose-600 bg-rose-50 px-3 py-2 rounded-lg">{error}</p>}
+      </form>
+
+      {/* Footer */}
+      <div className="px-4 py-4 border-t border-gray-100">
+        <button onClick={submit} disabled={saving} className={btnPrimary + ' w-full py-3 text-base'}>
+          {saving ? 'Guardando...' : 'Registrar gasto'}
+        </button>
+      </div>
+    </div>
+  );
+}
+
 // ── Quick revenue modal (mobile shortcut) ────────────────────────────────────
 
 function QuickRevenueModal({ onClose, onSave }) {
@@ -1415,8 +1511,8 @@ export default function Finanzas() {
   const [dateRange, setDateRange] = useState(getMonthRange());
   const [suppliers, setSuppliers] = useState([]);
   const [categories, setCategories] = useState([]);
-  const [categoryModal, setCategoryModal] = useState(false);
   const [quickAction, setQuickAction] = useState(null); // null | 'revenue' | 'expense'
+  const [dashboardRefresh, setDashboardRefresh] = useState(0);
 
   const loadSuppliers = useCallback(async () => {
     try {
@@ -1441,9 +1537,10 @@ export default function Finanzas() {
   };
 
   const TABS = [
-    { id: 'dashboard',  label: 'Dashboard'    },
-    { id: 'expenses',   label: 'Gastos'       },
-    { id: 'suppliers',  label: 'Proveedores'  },
+    { id: 'dashboard',   label: 'Dashboard'    },
+    { id: 'expenses',    label: 'Gastos'       },
+    { id: 'suppliers',   label: 'Proveedores'  },
+    { id: 'categories',  label: 'Categorías'   },
   ];
 
   return (
@@ -1454,15 +1551,6 @@ export default function Finanzas() {
           <h1 className="text-xl font-bold text-gray-900">Finanzas</h1>
           <p className="text-sm text-gray-400 mt-0.5">Control de ingresos, gastos y rentabilidad</p>
         </div>
-        <button
-          onClick={() => setCategoryModal(true)}
-          className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
-            <path d="M2 3.5A1.5 1.5 0 0 1 3.5 2h9A1.5 1.5 0 0 1 14 3.5v2A1.5 1.5 0 0 1 12.5 7h-9A1.5 1.5 0 0 1 2 5.5v-2ZM2 10.5A1.5 1.5 0 0 1 3.5 9h9a1.5 1.5 0 0 1 1.5 1.5v2a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 2 12.5v-2Z" />
-          </svg>
-          Categorías
-        </button>
       </div>
 
       {/* Period selector — visible in dashboard and synced to other tabs */}
@@ -1495,16 +1583,10 @@ export default function Finanzas() {
       </div>
 
       {/* Tab content */}
-      {tab === 'dashboard' && <DashboardTab dateRange={dateRange} categories={categories} />}
-      {tab === 'expenses'  && <GastosTab dateRange={dateRange} suppliers={suppliers} categories={categories} />}
-      {tab === 'suppliers' && <ProveedoresTab suppliers={suppliers} loadSuppliers={loadSuppliers} categories={categories} />}
-
-      {categoryModal && (
-        <CategoryManagerModal
-          onClose={() => setCategoryModal(false)}
-          onRefresh={loadCategories}
-        />
-      )}
+      {tab === 'dashboard'  && <DashboardTab dateRange={dateRange} categories={categories} refreshTrigger={dashboardRefresh} />}
+      {tab === 'expenses'   && <GastosTab dateRange={dateRange} suppliers={suppliers} categories={categories} />}
+      {tab === 'suppliers'  && <ProveedoresTab suppliers={suppliers} loadSuppliers={loadSuppliers} categories={categories} />}
+      {tab === 'categories' && <CategoryManagerModal inline onRefresh={loadCategories} />}
 
       {/* Mobile quick-action bar */}
       <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 flex border-t border-gray-200 bg-white shadow-[0_-2px_12px_rgba(0,0,0,0.08)]">
@@ -1536,11 +1618,11 @@ export default function Finanzas() {
       {quickAction === 'revenue' && (
         <QuickRevenueModal
           onClose={() => setQuickAction(null)}
-          onSave={() => setQuickAction(null)}
+          onSave={() => { setQuickAction(null); setDashboardRefresh((n) => n + 1); }}
         />
       )}
       {quickAction === 'expense' && (
-        <ExpenseModal
+        <MobileExpenseScreen
           suppliers={suppliers}
           categories={categories}
           onSave={() => setQuickAction(null)}

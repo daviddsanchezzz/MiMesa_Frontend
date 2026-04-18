@@ -788,21 +788,13 @@ function GastosTab({ dateRange, suppliers, expenseCategories }) {
   const [modal, setModal] = useState(null);       // null | { expense?, scope? }
   const [scopeDialog, setScopeDialog] = useState(null); // null | { mode: 'edit'|'delete', expense }
   const [deleting, setDeleting] = useState(null);
-  const [filters, setFilters] = useState({ from: dateRange.from, to: dateRange.to, category: '', supplierId: '' });
-
-  // Sync date range from parent period selector
-  useEffect(() => {
-    setFilters((f) => ({ ...f, from: dateRange.from, to: dateRange.to }));
-  }, [dateRange.from, dateRange.to]);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams();
-      if (filters.from) params.set('from', filters.from);
-      if (filters.to) params.set('to', filters.to);
-      if (filters.category) params.set('category', filters.category);
-      if (filters.supplierId) params.set('supplierId', filters.supplierId);
+      if (dateRange.from) params.set('from', dateRange.from);
+      if (dateRange.to) params.set('to', dateRange.to);
       const { data } = await api.get(`/expenses?${params}`);
       setExpenses(data);
     } catch { /* ignore */ }
@@ -851,7 +843,6 @@ function GastosTab({ dateRange, suppliers, expenseCategories }) {
     }
   };
 
-  const setFilter = (k, v) => setFilters((f) => ({ ...f, [k]: v }));
   const totalFiltered = expenses.reduce((s, e) => s + (e.amount || 0), 0);
 
   if (subView === 'recurrentes') {
@@ -873,25 +864,8 @@ function GastosTab({ dateRange, suppliers, expenseCategories }) {
 
   return (
     <div className="space-y-4">
-      {/* Filter bar */}
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="flex items-center gap-2">
-          <input type="date" value={filters.from} onChange={(e) => setFilter('from', e.target.value)}
-            className="px-2 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500" />
-          <span className="text-gray-400 text-sm">—</span>
-          <input type="date" value={filters.to} onChange={(e) => setFilter('to', e.target.value)}
-            className="px-2 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500" />
-        </div>
-        <select value={filters.category} onChange={(e) => setFilter('category', e.target.value)}
-          className="px-2 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white">
-          <option value="">Todas las categorías</option>
-          {expenseCategories.filter((c) => c.value !== 'staff').map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
-        </select>
-        <select value={filters.supplierId} onChange={(e) => setFilter('supplierId', e.target.value)}
-          className="px-2 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white">
-          <option value="">Todos los proveedores</option>
-          {suppliers.map((s) => <option key={s._id} value={s._id}>{s.name}</option>)}
-        </select>
+      {/* Action bar */}
+      <div className="flex items-center gap-3">
         <button
           onClick={() => setSubView('recurrentes')}
           className="ml-auto flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"

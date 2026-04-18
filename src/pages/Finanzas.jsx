@@ -739,7 +739,7 @@ function ExpenseModal({ expense, suppliers, expenseCategories, onSave, onClose, 
         <FormField label="Categoría" required>
           <select value={form.category} onChange={(e) => set('category', e.target.value)} className={selectCls}>
             <option value="">Seleccionar...</option>
-            {expenseCategories.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+            {expenseCategories.filter((c) => c.value !== 'staff').map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
           </select>
         </FormField>
         <FormField label="Proveedor">
@@ -778,6 +778,7 @@ function ExpenseModal({ expense, suppliers, expenseCategories, onSave, onClose, 
 // ── Gastos tab ────────────────────────────────────────────────────────────────
 
 function GastosTab({ dateRange, suppliers, expenseCategories }) {
+  const [subView, setSubView] = useState('list'); // 'list' | 'recurrentes'
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(null);       // null | { expense?, scope? }
@@ -849,6 +850,23 @@ function GastosTab({ dateRange, suppliers, expenseCategories }) {
   const setFilter = (k, v) => setFilters((f) => ({ ...f, [k]: v }));
   const totalFiltered = expenses.reduce((s, e) => s + (e.amount || 0), 0);
 
+  if (subView === 'recurrentes') {
+    return (
+      <div className="space-y-5">
+        <button
+          onClick={() => setSubView('list')}
+          className="flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-gray-800 transition-colors"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
+            <path fillRule="evenodd" d="M9.78 4.22a.75.75 0 0 1 0 1.06L7.06 8l2.72 2.72a.75.75 0 1 1-1.06 1.06L5.47 8.53a.75.75 0 0 1 0-1.06l3.25-3.25a.75.75 0 0 1 1.06 0Z" clipRule="evenodd" />
+          </svg>
+          Volver a gastos
+        </button>
+        <RecurrentesTab expenseCategories={expenseCategories} suppliers={suppliers} />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
       {/* Filter bar */}
@@ -863,14 +881,23 @@ function GastosTab({ dateRange, suppliers, expenseCategories }) {
         <select value={filters.category} onChange={(e) => setFilter('category', e.target.value)}
           className="px-2 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white">
           <option value="">Todas las categorías</option>
-          {expenseCategories.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+          {expenseCategories.filter((c) => c.value !== 'staff').map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
         </select>
         <select value={filters.supplierId} onChange={(e) => setFilter('supplierId', e.target.value)}
           className="px-2 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white">
           <option value="">Todos los proveedores</option>
           {suppliers.map((s) => <option key={s._id} value={s._id}>{s.name}</option>)}
         </select>
-        <button onClick={() => setModal({})} className={btnPrimary + ' ml-auto flex items-center gap-1.5'}>
+        <button
+          onClick={() => setSubView('recurrentes')}
+          className="ml-auto flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 text-violet-500">
+            <path fillRule="evenodd" d="M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14Zm.75-10.25a.75.75 0 0 0-1.5 0v3.5c0 .414.336.75.75.75h3.25a.75.75 0 0 0 0-1.5H8.75v-2.75Z" clipRule="evenodd" />
+          </svg>
+          Gastos recurrentes
+        </button>
+        <button onClick={() => setModal({})} className={btnPrimary + ' flex items-center gap-1.5'}>
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
             <path d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z" />
           </svg>
@@ -1041,7 +1068,7 @@ function RecurrentesTab({ expenseCategories, suppliers }) {
       )}
 
       {gastos.length === 0 ? (
-        <EmptyState message="Sin gastos recurrentes configurados. Marca un gasto como recurrente al crearlo en la pestaña Gastos." />
+        <EmptyState message="Sin gastos recurrentes configurados. Marca un gasto como recurrente al crearlo." />
       ) : (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
           <div className="divide-y divide-gray-50">
@@ -1382,10 +1409,9 @@ export default function Finanzas() {
   };
 
   const TABS = [
-    { id: 'dashboard',   label: 'Dashboard'    },
-    { id: 'expenses',    label: 'Gastos'       },
-    { id: 'recurrentes', label: 'Recurrentes'  },
-    { id: 'suppliers',   label: 'Proveedores'  },
+    { id: 'dashboard',  label: 'Dashboard'    },
+    { id: 'expenses',   label: 'Gastos'       },
+    { id: 'suppliers',  label: 'Proveedores'  },
   ];
 
   return (
@@ -1408,7 +1434,7 @@ export default function Finanzas() {
       </div>
 
       {/* Period selector — visible in dashboard and synced to other tabs */}
-      {tab !== 'suppliers' && tab !== 'recurrentes' && (
+      {tab !== 'suppliers' && (
         <PeriodSelector
           period={period}
           dateRange={dateRange}
@@ -1437,10 +1463,9 @@ export default function Finanzas() {
       </div>
 
       {/* Tab content */}
-      {tab === 'dashboard'   && <DashboardTab dateRange={dateRange} expenseCategories={expenseCategories} />}
-      {tab === 'expenses'    && <GastosTab dateRange={dateRange} suppliers={suppliers} expenseCategories={expenseCategories} />}
-      {tab === 'recurrentes' && <RecurrentesTab expenseCategories={expenseCategories} suppliers={suppliers} />}
-      {tab === 'suppliers'   && <ProveedoresTab suppliers={suppliers} loadSuppliers={loadSuppliers} supplierCategories={supplierCategories} expenseCategories={expenseCategories} />}
+      {tab === 'dashboard' && <DashboardTab dateRange={dateRange} expenseCategories={expenseCategories} />}
+      {tab === 'expenses'  && <GastosTab dateRange={dateRange} suppliers={suppliers} expenseCategories={expenseCategories} />}
+      {tab === 'suppliers' && <ProveedoresTab suppliers={suppliers} loadSuppliers={loadSuppliers} supplierCategories={supplierCategories} expenseCategories={expenseCategories} />}
 
       {categoryModal && (
         <CategoryManagerModal

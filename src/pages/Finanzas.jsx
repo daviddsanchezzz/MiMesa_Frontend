@@ -1118,70 +1118,9 @@ function GastosTab({ dateRange, suppliers, categories }) {
 
 // ── Recurrentes tab ───────────────────────────────────────────────────────────
 
-function RecurringEditModal({ gasto, categories, suppliers, onSave, onClose }) {
-  const [form, setForm] = useState({
-    category:   gasto.category   || '',
-    amount:     gasto.amount != null ? String(gasto.amount) : '',
-    supplierId: gasto.supplierId?._id || gasto.supplierId || '',
-    notes:      gasto.notes      || '',
-  });
-  const [saving, setSaving] = useState(false);
-  const [error, setError]   = useState('');
-  const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
-
-  const submit = async (e) => {
-    e.preventDefault();
-    const parsedAmount = parseFloat(String(form.amount).replace(',', '.'));
-    if (isNaN(parsedAmount) || parsedAmount <= 0) return setError('Importe inválido');
-    setSaving(true); setError('');
-    try {
-      await api.patch(`/expenses/templates/${gasto._id}`, { ...form, amount: parsedAmount });
-      onSave();
-    } catch { setError('Error al guardar'); }
-    finally { setSaving(false); }
-  };
-
-  return (
-    <ModalOverlay title="Editar gasto recurrente" onClose={onClose}>
-      <form onSubmit={submit} className="space-y-4">
-        <FormField label="Importe (€)" required>
-          <input type="text" inputMode="decimal" value={form.amount}
-            onChange={(e) => set('amount', e.target.value)}
-            className={inputCls} placeholder="0,00" autoFocus />
-        </FormField>
-        <FormField label="Categoría" required>
-          <select value={form.category} onChange={(e) => set('category', e.target.value)} className={selectCls}>
-            <option value="">Seleccionar...</option>
-            {categories.filter((c) => c.value !== 'staff').map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
-          </select>
-        </FormField>
-        <FormField label="Proveedor">
-          <select value={form.supplierId} onChange={(e) => set('supplierId', e.target.value)} className={selectCls}>
-            <option value="">Sin proveedor</option>
-            {suppliers.filter((s) => s.isActive).map((s) => <option key={s._id} value={s._id}>{s.name}</option>)}
-          </select>
-        </FormField>
-        <FormField label="Notas">
-          <input type="text" value={form.notes} onChange={(e) => set('notes', e.target.value)}
-            className={inputCls} placeholder="Descripción opcional" />
-        </FormField>
-        {error && <p className="text-sm text-rose-600 bg-rose-50 px-3 py-2 rounded-lg">{error}</p>}
-        <div className="flex justify-end gap-2 pt-1">
-          <button type="button" onClick={onClose} className={btnGhost}>Cancelar</button>
-          <button type="submit" disabled={saving} className={btnPrimary}>
-            {saving ? 'Guardando...' : 'Guardar cambios'}
-          </button>
-        </div>
-      </form>
-    </ModalOverlay>
-  );
-}
-
 function RecurrentesTab({ categories, suppliers }) {
   const [gastos, setGastos]   = useState([]);
   const [loading, setLoading] = useState(true);
-  const [editing, setEditing] = useState(null); // gasto object
-  const [deleting, setDeleting] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -1193,16 +1132,6 @@ function RecurrentesTab({ categories, suppliers }) {
   }, []);
 
   useEffect(() => { load(); }, [load]);
-
-  const handleDelete = async (id) => {
-    if (!window.confirm('¿Eliminar este gasto recurrente? Los gastos ya generados se conservan.')) return;
-    setDeleting(id);
-    try {
-      await api.delete(`/expenses/templates/${id}`);
-      setGastos((prev) => prev.filter((g) => g._id !== id));
-    } catch { /* ignore */ }
-    finally { setDeleting(null); }
-  };
 
   const totalMensual = gastos.reduce((s, g) => s + (g.amount || 0), 0);
 
@@ -1250,20 +1179,6 @@ function RecurrentesTab({ categories, suppliers }) {
                     <p className="text-base font-bold text-gray-900">{fmtEur(g.amount)}</p>
                     <p className="text-xs text-gray-400">/ mes</p>
                   </div>
-                  <div className="flex items-center gap-1 flex-shrink-0">
-                    <button onClick={() => setEditing(g)} title="Editar"
-                      className="p-1.5 text-gray-400 hover:text-violet-600 hover:bg-violet-50 rounded-lg transition-colors">
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
-                        <path d="M13.488 2.513a1.75 1.75 0 0 0-2.475 0L6.75 6.774a2.75 2.75 0 0 0-.596.892l-.848 2.047a.75.75 0 0 0 .98.98l2.047-.848a2.75 2.75 0 0 0 .892-.596l4.261-4.262a1.75 1.75 0 0 0 0-2.474ZM4.75 14.25h6.5a.75.75 0 0 0 0-1.5h-6.5a.75.75 0 0 0 0 1.5Z" />
-                      </svg>
-                    </button>
-                    <button onClick={() => handleDelete(g._id)} disabled={deleting === g._id} title="Eliminar"
-                      className="p-1.5 text-gray-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors">
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
-                        <path fillRule="evenodd" d="M5 3.25V4H2.75a.75.75 0 0 0 0 1.5h.3l.815 8.15A1.5 1.5 0 0 0 5.357 15h5.285a1.5 1.5 0 0 0 1.493-1.35l.815-8.15h.3a.75.75 0 0 0 0-1.5H11v-.75A2.25 2.25 0 0 0 8.75 1h-1.5A2.25 2.25 0 0 0 5 3.25Zm2.25-.75a.75.75 0 0 0-.75.75V4h3v-.75a.75.75 0 0 0-.75-.75h-1.5ZM6.05 6a.75.75 0 0 1 .787.713l.275 5.5a.75.75 0 0 1-1.498.075l-.275-5.5A.75.75 0 0 1 6.05 6Zm3.9 0a.75.75 0 0 1 .712.787l-.275 5.5a.75.75 0 0 1-1.498-.075l.275-5.5a.75.75 0 0 1 .786-.711Z" clipRule="evenodd" />
-                      </svg>
-                    </button>
-                  </div>
                 </div>
               );
             })}
@@ -1271,15 +1186,6 @@ function RecurrentesTab({ categories, suppliers }) {
         </div>
       )}
 
-      {editing && (
-        <RecurringEditModal
-          gasto={editing}
-          categories={categories}
-          suppliers={suppliers}
-          onSave={() => { setEditing(null); load(); }}
-          onClose={() => setEditing(null)}
-        />
-      )}
     </div>
   );
 }

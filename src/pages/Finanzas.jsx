@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import api from '../services/api';
 
 // ── Color palette (static — color key stored in DB → Tailwind bg class) ───────
@@ -157,84 +157,104 @@ const btnGhost = 'px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 
 
 // ── Period selector ───────────────────────────────────────────────────────────
 
+const PERIOD_LABELS = { week: 'Esta semana', month: 'Este mes', custom: 'Personalizado' };
+
 function PeriodSelector({ period, dateRange, onChange, onRangeChange }) {
+  const [open, setOpen] = useState(false);
+  const PERIODS = [
+    { id: 'week',   label: 'Esta semana'  },
+    { id: 'month',  label: 'Este mes'     },
+    { id: 'custom', label: 'Personalizado' },
+  ];
+
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      {[
-        { id: 'week',   label: 'Esta semana' },
-        { id: 'month',  label: 'Este mes'    },
-        { id: 'custom', label: 'Personalizado' },
-      ].map((p) => (
+    <div>
+      {/* Mobile: compact pill + expand */}
+      <div className="md:hidden flex items-center gap-2">
         <button
-          key={p.id}
-          onClick={() => onChange(p.id)}
-          className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-            period === p.id
-              ? 'bg-violet-600 text-white'
-              : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
-          }`}
+          onClick={() => setOpen((v) => !v)}
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-white border border-gray-200 text-gray-600"
         >
-          {p.label}
+          {PERIOD_LABELS[period]}
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor"
+            className={`w-3.5 h-3.5 text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`}>
+            <path fillRule="evenodd" d="M4.22 6.22a.75.75 0 0 1 1.06 0L8 8.94l2.72-2.72a.75.75 0 1 1 1.06 1.06l-3.25 3.25a.75.75 0 0 1-1.06 0L4.22 7.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
+          </svg>
         </button>
-      ))}
-      {period === 'custom' && (
-        <div className="flex items-center gap-2">
-          <input type="date" value={dateRange.from} onChange={(e) => onRangeChange({ ...dateRange, from: e.target.value })}
-            className="px-2 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500" />
-          <span className="text-gray-400 text-sm">—</span>
-          <input type="date" value={dateRange.to} onChange={(e) => onRangeChange({ ...dateRange, to: e.target.value })}
-            className="px-2 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500" />
+        <span className="text-xs text-gray-400">{fmtDate(dateRange.from)} — {fmtDate(dateRange.to)}</span>
+      </div>
+
+      {/* Mobile expanded options */}
+      {open && (
+        <div className="md:hidden flex flex-wrap items-center gap-2 mt-2">
+          {PERIODS.map((p) => (
+            <button key={p.id} onClick={() => { onChange(p.id); setOpen(false); }}
+              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+                period === p.id ? 'bg-violet-600 text-white' : 'bg-white border border-gray-200 text-gray-600'
+              }`}>
+              {p.label}
+            </button>
+          ))}
+          {period === 'custom' && (
+            <div className="flex items-center gap-2 w-full mt-1">
+              <input type="date" value={dateRange.from} onChange={(e) => onRangeChange({ ...dateRange, from: e.target.value })}
+                className="px-2 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500 appearance-none" />
+              <span className="text-gray-400 text-sm">—</span>
+              <input type="date" value={dateRange.to} onChange={(e) => onRangeChange({ ...dateRange, to: e.target.value })}
+                className="px-2 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500 appearance-none" />
+            </div>
+          )}
         </div>
       )}
-      <span className="text-xs text-gray-400 ml-1">
-        {fmtDate(dateRange.from)} — {fmtDate(dateRange.to)}
-      </span>
+
+      {/* Desktop: full row always visible */}
+      <div className="hidden md:flex flex-wrap items-center gap-2">
+        {PERIODS.map((p) => (
+          <button key={p.id} onClick={() => onChange(p.id)}
+            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
+              period === p.id ? 'bg-violet-600 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
+            }`}>
+            {p.label}
+          </button>
+        ))}
+        {period === 'custom' && (
+          <div className="flex items-center gap-2">
+            <input type="date" value={dateRange.from} onChange={(e) => onRangeChange({ ...dateRange, from: e.target.value })}
+              className="px-2 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500" />
+            <span className="text-gray-400 text-sm">—</span>
+            <input type="date" value={dateRange.to} onChange={(e) => onRangeChange({ ...dateRange, to: e.target.value })}
+              className="px-2 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500" />
+          </div>
+        )}
+        <span className="text-xs text-gray-400 ml-1">{fmtDate(dateRange.from)} — {fmtDate(dateRange.to)}</span>
+      </div>
     </div>
   );
 }
 
 // ── Dashboard tab ─────────────────────────────────────────────────────────────
 
-function InlineRevenueEdit({ value, onSave }) {
-  const [editing, setEditing] = useState(false);
-  const [val, setVal] = useState(value !== null ? String(value) : '');
-  const inputRef = useRef(null);
-
-  useEffect(() => { if (editing) inputRef.current?.focus(); }, [editing]);
-
-  const save = () => {
-    setEditing(false);
-    const num = parseFloat(val);
-    onSave(isNaN(num) || val === '' ? null : num);
-  };
-
-  if (editing) {
-    return (
-      <input
-        ref={inputRef}
-        type="number"
-        min="0"
-        step="0.01"
-        value={val}
-        onChange={(e) => setVal(e.target.value)}
-        onBlur={save}
-        onKeyDown={(e) => { if (e.key === 'Enter') save(); if (e.key === 'Escape') setEditing(false); }}
-        className="w-24 px-2 py-0.5 text-sm border border-violet-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500 text-right"
-      />
-    );
-  }
+function InlineRevenueEdit({ date, value, onSave }) {
+  const [modal, setModal] = useState(false);
   return (
-    <button
-      onClick={() => setEditing(true)}
-      className={`text-sm font-medium px-2 py-0.5 rounded-lg transition-colors text-right ${
-        value !== null
-          ? 'text-emerald-700 hover:bg-emerald-50'
-          : 'text-gray-300 hover:bg-gray-100 hover:text-gray-500'
-      }`}
-      title="Haz clic para introducir ingreso real"
-    >
-      {value !== null ? fmtEur(value) : '+ añadir'}
-    </button>
+    <>
+      <button
+        onClick={() => setModal(true)}
+        className={`text-sm font-medium px-2 py-0.5 rounded-lg transition-colors text-right ${
+          value !== null ? 'text-emerald-700 hover:bg-emerald-50' : 'text-gray-300 hover:bg-gray-100 hover:text-gray-500'
+        }`}
+      >
+        {value !== null ? fmtEur(value) : '+ añadir'}
+      </button>
+      {modal && (
+        <RevenueModal
+          date={date}
+          initialValue={value}
+          onClose={() => setModal(false)}
+          onSave={(v) => { onSave(v); setModal(false); }}
+        />
+      )}
+    </>
   );
 }
 
@@ -419,6 +439,7 @@ function DashboardTab({ dateRange, categories, refreshTrigger }) {
                           <td className="py-2 text-right text-gray-500">{day.estimatedRevenue > 0 ? fmtEur(day.estimatedRevenue) : '—'}</td>
                           <td className="py-2 text-right">
                             <InlineRevenueEdit
+                              date={day.date}
                               value={day.actualRevenue}
                               onSave={(v) => saveActual(day.date, v)}
                             />
@@ -809,7 +830,7 @@ function ExpenseModal({ expense, suppliers, categories, onSave, onClose, scope =
     setForm((f) => ({
       ...f,
       supplierId,
-      ...(supplier && !f.category ? { category: supplier.category } : {}),
+      category: supplier ? supplier.category : '',
     }));
   };
 
@@ -835,25 +856,30 @@ function ExpenseModal({ expense, suppliers, categories, onSave, onClose, scope =
   return (
     <ModalOverlay title={editing ? 'Editar gasto' : 'Registrar gasto'} onClose={onClose}>
       <form onSubmit={submit} className="space-y-4">
-        <div className="grid grid-cols-2 gap-3">
-          <FormField label="Importe (€)" required>
-            <input autoFocus type="number" min="0.01" step="0.01" value={form.amount}
-              onChange={(e) => set('amount', e.target.value)} className={inputCls} placeholder="0.00" />
-          </FormField>
-          <FormField label="Fecha" required>
-            <input type="date" value={form.expenseDate} onChange={(e) => set('expenseDate', e.target.value)} className={inputCls} />
-          </FormField>
+        {/* Amount — prominent */}
+        <div>
+          <label className="block text-xs font-semibold text-gray-600 mb-1.5">
+            Importe (€)<span className="text-rose-500 ml-0.5">*</span>
+          </label>
+          <input autoFocus type="number" min="0.01" step="0.01" value={form.amount}
+            onChange={(e) => set('amount', e.target.value)}
+            className="w-full px-4 py-4 text-3xl font-bold text-gray-900 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+            placeholder="0,00" />
         </div>
-        <FormField label="Categoría" required>
-          <select value={form.category} onChange={(e) => set('category', e.target.value)} className={selectCls}>
-            <option value="">Seleccionar...</option>
-            {categories.filter((c) => c.value !== 'staff').map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
-          </select>
+        <FormField label="Fecha" required>
+          <input type="date" value={form.expenseDate} onChange={(e) => set('expenseDate', e.target.value)}
+            className={inputCls + ' appearance-none'} />
         </FormField>
         <FormField label="Proveedor">
           <select value={form.supplierId} onChange={(e) => handleSupplierChange(e.target.value)} className={selectCls}>
             <option value="">Sin proveedor</option>
             {suppliers.filter((s) => s.isActive).map((s) => <option key={s._id} value={s._id}>{s.name}</option>)}
+          </select>
+        </FormField>
+        <FormField label="Categoría" required>
+          <select value={form.category} onChange={(e) => set('category', e.target.value)} className={selectCls}>
+            <option value="">Seleccionar...</option>
+            {categories.filter((c) => c.value !== 'staff').map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
           </select>
         </FormField>
         <FormField label="Notas">
@@ -1470,7 +1496,7 @@ function MobileExpenseScreen({ suppliers, categories, onSave, onClose }) {
     setForm((f) => ({
       ...f,
       supplierId,
-      ...(supplier && !f.category ? { category: supplier.category } : {}),
+      category: supplier ? supplier.category : '',
     }));
   };
 
@@ -1503,15 +1529,19 @@ function MobileExpenseScreen({ suppliers, categories, onSave, onClose }) {
 
       {/* Form */}
       <form onSubmit={submit} className="flex-1 overflow-y-auto px-4 py-5 space-y-4">
-        <div className="grid grid-cols-2 gap-3">
-          <FormField label="Importe (€)" required>
-            <input autoFocus type="number" min="0.01" step="0.01" value={form.amount}
-              onChange={(e) => set('amount', e.target.value)} className={inputCls} placeholder="0.00" />
-          </FormField>
-          <FormField label="Fecha" required>
-            <input type="date" value={form.expenseDate} onChange={(e) => set('expenseDate', e.target.value)} className={inputCls} />
-          </FormField>
+        <div>
+          <label className="block text-xs font-semibold text-gray-600 mb-1.5">
+            Importe (€)<span className="text-rose-500 ml-0.5">*</span>
+          </label>
+          <input autoFocus type="number" min="0.01" step="0.01" value={form.amount}
+            onChange={(e) => set('amount', e.target.value)}
+            className="w-full px-4 py-4 text-3xl font-bold text-gray-900 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+            placeholder="0,00" />
         </div>
+        <FormField label="Fecha" required>
+          <input type="date" value={form.expenseDate} onChange={(e) => set('expenseDate', e.target.value)}
+            className={inputCls + ' appearance-none'} />
+        </FormField>
         <FormField label="Proveedor">
           <select value={form.supplierId} onChange={(e) => handleSupplierChange(e.target.value)} className={selectCls}>
             <option value="">Sin proveedor</option>
@@ -1545,23 +1575,18 @@ function MobileExpenseScreen({ suppliers, categories, onSave, onClose }) {
   );
 }
 
-// ── Quick revenue modal (mobile shortcut) ────────────────────────────────────
+// ── Revenue modal (Ingreso de hoy + inline table clicks) ─────────────────────
 
-function QuickRevenueModal({ onClose, onSave }) {
-  const today = toIso();
-  const [amount, setAmount] = useState('');
-  const [notes, setNotes] = useState('');
+function RevenueModal({ date = toIso(), initialValue = null, onClose, onSave }) {
+  const [amount, setAmount] = useState(initialValue !== null ? String(initialValue) : '');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
-  const submit = async (e) => {
-    e.preventDefault();
-    const num = parseFloat(amount);
-    if (isNaN(num) || num <= 0) return setError('Introduce un importe válido');
+  const save = async (valueToSave) => {
     setSaving(true); setError('');
     try {
-      await api.put('/revenue/actual', { date: today, actualRevenue: num, notes });
-      onSave();
+      await api.put('/revenue/actual', { date, actualRevenue: valueToSave });
+      onSave(valueToSave);
     } catch {
       setError('Error al guardar');
     } finally {
@@ -1569,35 +1594,39 @@ function QuickRevenueModal({ onClose, onSave }) {
     }
   };
 
+  const submit = async (e) => {
+    e.preventDefault();
+    const num = parseFloat(amount);
+    if (isNaN(num) || num <= 0) return setError('Introduce un importe válido');
+    save(num);
+  };
+
+  const isToday = date === toIso();
+  const title = isToday ? 'Ingreso de hoy' : `Ingreso — ${fmtDate(date)}`;
+
   return (
-    <ModalOverlay title="Ingreso de hoy" onClose={onClose}>
+    <ModalOverlay title={title} onClose={onClose}>
       <form onSubmit={submit} className="space-y-4">
-        <p className="text-xs text-gray-400">{fmtDate(today)}</p>
         <FormField label="Importe (€)" required>
-          <input
-            autoFocus
-            type="number" min="0.01" step="0.01"
-            value={amount}
-            onChange={(e) => setAmount(e.target.value)}
-            className={inputCls}
-            placeholder="0.00"
-          />
-        </FormField>
-        <FormField label="Notas">
-          <input
-            type="text"
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            className={inputCls}
-            placeholder="Opcional"
-          />
+          <input autoFocus type="number" min="0.01" step="0.01"
+            value={amount} onChange={(e) => setAmount(e.target.value)}
+            className={inputCls} placeholder="0.00" />
         </FormField>
         {error && <p className="text-sm text-rose-600 bg-rose-50 px-3 py-2 rounded-lg">{error}</p>}
-        <div className="flex justify-end gap-2 pt-1">
-          <button type="button" onClick={onClose} className={btnGhost}>Cancelar</button>
-          <button type="submit" disabled={saving} className={btnPrimary}>
-            {saving ? 'Guardando...' : 'Guardar'}
-          </button>
+        <div className="flex items-center justify-between pt-1">
+          {initialValue !== null ? (
+            <button type="button" disabled={saving}
+              onClick={() => save(null)}
+              className="px-4 py-2 text-sm font-medium text-rose-600 hover:bg-rose-50 rounded-xl transition-colors">
+              Borrar ingreso
+            </button>
+          ) : <span />}
+          <div className="flex gap-2">
+            <button type="button" onClick={onClose} className={btnGhost}>Cancelar</button>
+            <button type="submit" disabled={saving} className={btnPrimary}>
+              {saving ? 'Guardando...' : 'Guardar'}
+            </button>
+          </div>
         </div>
       </form>
     </ModalOverlay>
@@ -1665,7 +1694,7 @@ export default function Finanzas() {
       )}
 
       {/* Tabs */}
-      <div className="border-b border-gray-200 overflow-x-auto scrollbar-none">
+      <div className="border-b border-gray-200 overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <nav className="flex gap-0 min-w-max">
           {TABS.map((t) => (
             <button
@@ -1717,7 +1746,7 @@ export default function Finanzas() {
       <div className="md:hidden h-16" />
 
       {quickAction === 'revenue' && (
-        <QuickRevenueModal
+        <RevenueModal
           onClose={() => setQuickAction(null)}
           onSave={() => { setQuickAction(null); setDashboardRefresh((n) => n + 1); }}
         />

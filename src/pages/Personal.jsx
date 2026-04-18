@@ -1214,6 +1214,17 @@ export default function Personal() {
     setMobileDayIndex(diff >= 0 && diff <= 6 ? diff : 0);
   }, [weekStart]);
 
+  // After initial load, scroll mobile day strip to today
+  useEffect(() => {
+    if (loading) return;
+    setTimeout(() => {
+      const selectedDay = days[mobileDayIndex];
+      if (!selectedDay) return;
+      const buttonNode = mobileDayButtonRefs.current[selectedDay.date];
+      if (buttonNode) centerMobileDayButton(buttonNode);
+    }, 150);
+  }, [loading]); // eslint-disable-line
+
   const days = useMemo(() => weekDays(weekStart), [weekStart]);
   const centerMobileDayButton = useCallback((buttonNode) => {
     const scroller = mobileDayScrollerRef.current;
@@ -1509,8 +1520,8 @@ export default function Personal() {
         {/* Shift header */}
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <p className="text-sm font-bold text-gray-900">{shift.name}</p>
-            <p className="text-xs text-gray-400">{shift.startTime}–{shift.endTime}</p>
+            <p className="text-base md:text-sm font-bold text-gray-900">{shift.name}</p>
+            <p className="text-sm md:text-xs text-gray-400">{shift.startTime}–{shift.endTime}</p>
           </div>
           <button
             onClick={() => setSlotEditor({ day, shift })}
@@ -1536,10 +1547,10 @@ export default function Personal() {
               })
               .map((group, index) => (
                 <div key={`${group.roleColor}-${index}`}>
-                  <span className="text-[10px] font-bold uppercase tracking-wider leading-none mb-1 pb-0.5 border-b inline-block" style={{ color: group.roleColor, borderColor: group.roleColor }}>
+                  <span className="text-[11px] md:text-[10px] font-bold uppercase tracking-wider leading-none mb-1 pb-0.5 border-b inline-block" style={{ color: group.roleColor, borderColor: group.roleColor }}>
                     {group.roleName}
                   </span>
-                  <p className="text-xs text-gray-600 leading-4">{group.names.join(', ')}</p>
+                  <p className="text-sm md:text-xs text-gray-700 md:text-gray-600 leading-5 md:leading-4">{group.names.join(', ')}</p>
                 </div>
               ))}
           </div>
@@ -1954,13 +1965,13 @@ export default function Personal() {
               >
                 Hoy
               </button>
-              <button
+              {role === 'owner' && <button
                 onClick={copyPreviousWeekAssignments}
                 disabled={isCopyingWeek}
                 className="hidden sm:inline-flex ml-1 px-2.5 py-1 rounded-lg border border-gray-200 hover:bg-gray-50 text-xs font-semibold text-gray-600 transition-colors disabled:opacity-50"
               >
                 {isCopyingWeek ? 'Copiando...' : 'Copiar semana anterior'}
-              </button>
+              </button>}
               {role === 'owner' && <button
                 onClick={clearWeekAssignments}
                 disabled={isCopyingWeek || !assignments?.length}

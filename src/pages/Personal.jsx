@@ -1127,13 +1127,28 @@ function PositionFormModal({ position, onClose, onSaved }) {
   );
 }
 
-const CHIP_LIMIT = 4;
+const CHIP_LIMIT = 8;
+
+const PERSON_COLORS = [
+  '#6366f1','#8b5cf6','#ec4899','#ef4444','#f97316',
+  '#eab308','#16a34a','#10b981','#06b6d4','#3b82f6',
+  '#a855f7','#0ea5e9','#14b8a6','#84cc16','#f43f5e',
+];
+function nameToColor(name) {
+  let h = 0;
+  for (let i = 0; i < name.length; i++) { h = name.charCodeAt(i) + ((h << 5) - h); h |= 0; }
+  return PERSON_COLORS[Math.abs(h) % PERSON_COLORS.length];
+}
 
 function ShiftStaffChips({ groups }) {
   const [expanded, setExpanded] = useState(false);
 
   const allPeople = groups.flatMap((g) =>
-    g.names.map((name) => ({ name, roleColor: g.roleColor, roleName: g.roleName }))
+    g.names.map((name) => ({
+      name,
+      roleColor: g.roleName === 'Sin puesto' ? nameToColor(name) : g.roleColor,
+      roleName: g.roleName,
+    }))
   );
 
   if (allPeople.length === 0) return null;
@@ -1146,7 +1161,10 @@ function ShiftStaffChips({ groups }) {
     return (
       <div className="flex flex-wrap gap-1">
         {visible.map((p, i) => (
-          <span key={i} className="inline-flex items-center px-2 py-0.5 rounded-md bg-gray-100 text-gray-700 text-[11px] font-medium leading-5">
+          <span key={i}
+            className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium leading-5"
+            style={{ backgroundColor: p.roleColor + '20', color: p.roleColor }}
+          >
             {p.name.split(' ')[0]}
           </span>
         ))}
@@ -1174,14 +1192,17 @@ function ShiftStaffChips({ groups }) {
               </p>
             )}
             <div className="flex flex-wrap gap-1">
-              {group.names.map((name, ni) => (
+              {group.names.map((name, ni) => {
+                const c = noPos ? nameToColor(name) : group.roleColor;
+                return (
                 <span key={ni}
                   className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium leading-5"
-                  style={{ backgroundColor: group.roleColor + '22', color: group.roleColor }}
+                  style={{ backgroundColor: c + '22', color: c }}
                 >
                   {name.split(' ')[0]}
                 </span>
-              ))}
+                );
+              })}
             </div>
           </div>
         );

@@ -1248,10 +1248,10 @@ function ShiftStaffChips({ groups, personColorByName }) {
 
   if (!expanded) {
     return (
-      <div className="flex flex-wrap gap-1">
+      <div className="flex flex-wrap gap-2">
         {visible.map((p, i) => (
           <span key={i}
-            className="inline-flex items-center px-2.5 py-1 md:px-2 md:py-0.5 rounded-md text-xs md:text-[11px] font-medium leading-5"
+            className="inline-flex items-center px-3.5 py-1.5 rounded-lg text-sm md:text-base font-semibold leading-6"
             style={{ backgroundColor: p.roleColor + '20', color: p.roleColor }}
           >
             {p.name.split(' ')[0]}
@@ -1260,7 +1260,7 @@ function ShiftStaffChips({ groups, personColorByName }) {
         {showOverflow && (
           <button
             onClick={(e) => { e.stopPropagation(); setExpanded(true); }}
-            className="inline-flex items-center px-2.5 py-1 md:px-2 md:py-0.5 rounded-md bg-violet-100 text-violet-700 text-xs md:text-[11px] font-semibold leading-5 hover:bg-violet-200 transition-colors"
+            className="inline-flex items-center px-3.5 py-1.5 rounded-lg bg-violet-100 text-violet-700 text-sm md:text-base font-semibold leading-6 hover:bg-violet-200 transition-colors"
           >
             +{overflow}
           </button>
@@ -1270,22 +1270,22 @@ function ShiftStaffChips({ groups, personColorByName }) {
   }
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-3">
       {groups.map((group, gi) => {
         const groupNoPos = group.roleName === 'Sin puesto';
         return (
           <div key={gi}>
             {!groupNoPos && (
-              <p className="text-[10px] font-bold uppercase tracking-wider mb-1 pb-0.5 border-b inline-block" style={{ color: group.roleColor, borderColor: group.roleColor }}>
+              <p className="text-xs md:text-sm font-bold uppercase tracking-wider mb-2 pb-1 border-b inline-block" style={{ color: group.roleColor, borderColor: group.roleColor }}>
                 {group.roleName}
               </p>
             )}
-            <div className="flex flex-wrap gap-1">
+            <div className="flex flex-wrap gap-2">
               {group.names.map((name, ni) => {
                 const c = groupNoPos ? (personColors?.get(name) || '#64748B') : group.roleColor;
                 return (
                 <span key={ni}
-                  className="inline-flex items-center px-2.5 py-1 md:px-2 md:py-0.5 rounded-md text-xs md:text-[11px] font-medium leading-5"
+                  className="inline-flex items-center px-3.5 py-1.5 rounded-lg text-sm md:text-base font-semibold leading-6"
                   style={{ backgroundColor: c + '22', color: c }}
                 >
                   {name.split(' ')[0]}
@@ -1298,7 +1298,7 @@ function ShiftStaffChips({ groups, personColorByName }) {
       })}
       <button
         onClick={(e) => { e.stopPropagation(); setExpanded(false); }}
-        className="text-[10px] text-gray-400 hover:text-gray-500 transition-colors"
+        className="text-xs md:text-sm text-gray-400 hover:text-gray-500 transition-colors"
       >
         Ver menos
       </button>

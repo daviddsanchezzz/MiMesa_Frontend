@@ -2252,7 +2252,7 @@ export default function Personal() {
                 return (
                   <div
                     key={day.date}
-                    className={`shrink-0 w-[175px] md:flex-1 rounded-xl border p-3 space-y-2 ${
+                    className={`shrink-0 min-w-max md:flex-1 rounded-xl border p-3 space-y-2 ${
                       isToday ? 'border-violet-300 bg-violet-50/40' : 'border-gray-200 bg-gray-50'
                     }`}
                   >

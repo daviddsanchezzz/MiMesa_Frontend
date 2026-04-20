@@ -1345,6 +1345,7 @@ export default function Personal() {
   const exportMenuRef = useRef(null);
   const mobileDayButtonRefs = useRef({});
   const mobileDayScrollerRef = useRef(null);
+  const weekDataRequestSeqRef = useRef(0);
 
   const loadCore = async ({ silent = false } = {}) => {
     if (!silent) setLoading(true);
@@ -1365,15 +1366,18 @@ export default function Personal() {
     }
   };
 
-  const loadWeekData = async () => {
+  const loadWeekData = async (targetWeekStart = weekStart) => {
+    const requestSeq = ++weekDataRequestSeqRef.current;
     try {
       const [aRes, cRes] = await Promise.all([
-        api.get(`/staff/assignments?weekStart=${weekStart}`),
-        api.get(`/staff/costs?weekStart=${weekStart}`),
+        api.get(`/staff/assignments?weekStart=${targetWeekStart}`),
+        api.get(`/staff/costs?weekStart=${targetWeekStart}`),
       ]);
+      if (requestSeq !== weekDataRequestSeqRef.current) return;
       setAssignments(aRes.data?.assignments || []);
       setCosts(cRes.data || { employeeCosts: [], totalsByCurrency: {}, monthlyEstimateByCurrency: {} });
     } catch (err) {
+      if (requestSeq !== weekDataRequestSeqRef.current) return;
       setError(err?.response?.data?.message || 'No se pudieron cargar asignaciones o costes');
     }
   };

@@ -1601,14 +1601,20 @@ export default function Personal() {
                 const ob = positionOrderByName.get(b.roleName) ?? 999;
                 return oa !== ob ? oa - ob : a.roleName.localeCompare(b.roleName);
               })
-              .map((group, index) => (
-                <div key={`${group.roleColor}-${index}`}>
-                  <span className="text-[11px] md:text-[10px] font-bold uppercase tracking-wider leading-none mb-1 pb-0.5 border-b inline-block" style={{ color: group.roleColor, borderColor: group.roleColor }}>
-                    {group.roleName}
-                  </span>
-                  <p className="text-sm md:text-xs text-gray-700 md:text-gray-600 leading-5 md:leading-4">{group.names.join(', ')}</p>
-                </div>
-              ))}
+              .map((group, index) => {
+                const sortedNames = [...group.names].sort((a, b) => a.localeCompare(b));
+                const noPosition = group.roleName === 'Sin puesto';
+                return (
+                  <div key={`${group.roleColor}-${index}`}>
+                    {!noPosition && (
+                      <span className="text-[11px] md:text-[10px] font-bold uppercase tracking-wider leading-none mb-1 pb-0.5 border-b inline-block" style={{ color: group.roleColor, borderColor: group.roleColor }}>
+                        {group.roleName}
+                      </span>
+                    )}
+                    <p className="text-sm md:text-xs text-gray-700 md:text-gray-600 leading-5 md:leading-4">{sortedNames.join(', ')}</p>
+                  </div>
+                );
+              })}
           </div>
         )}
       </div>
@@ -2199,12 +2205,16 @@ export default function Personal() {
                                     const ob = positionOrderByName.get(b.role) ?? 999;
                                     return oa !== ob ? oa - ob : a.role.localeCompare(b.role);
                                   })
-                                  .map((g, i, arr) => (
+                                  .map((g, i, arr) => {
+                                    const sortedNames = [...g.names].sort((a, b) => a.localeCompare(b));
+                                    const noPos = g.role === 'Sin puesto';
+                                    return (
                                   <div key={i} style={{ marginBottom: i < arr.length - 1 ? '10px' : 0, paddingBottom: i < arr.length - 1 ? '10px' : 0, borderBottom: i < arr.length - 1 ? '1.5px solid #f3f4f6' : 'none' }}>
-                                    <p style={{ fontSize: '18px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', color: g.color, margin: '0 0 5px' }}>{g.role}</p>
-                                    <p style={{ fontSize: '22px', fontWeight: 600, color: '#374151', margin: 0, lineHeight: '1.4' }}>{g.names.join(', ')}</p>
+                                    {!noPos && <p style={{ fontSize: '18px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', color: g.color, margin: '0 0 5px' }}>{g.role}</p>}
+                                    <p style={{ fontSize: '22px', fontWeight: 600, color: '#374151', margin: 0, lineHeight: '1.4' }}>{sortedNames.join(', ')}</p>
                                   </div>
-                                ))
+                                    );
+                                  })
                               )}
                             </div>
                           );

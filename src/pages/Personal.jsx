@@ -20,7 +20,7 @@ const tabs = [
   },
   {
     key: 'costs', label: 'Costes',
-    icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4"><path d="M8.75 1.75a.75.75 0 0 0-1.5 0V4H6a2 2 0 0 0 0 4h1.25v3H6.5A3.5 3.5 0 0 1 3 7.5V5.25a.75.75 0 0 0-1.5 0V7.5A5 5 0 0 0 6.5 12.5H7.25v2a.75.75 0 0 0 1.5 0v-2H10a2 2 0 0 0 0-4H8.75V5H10a.75.75 0 0 0 0-1.5H8.75V1.75ZM6 6.5h1.25V8H6a.5.5 0 0 1 0-1ZM8.75 9.5H10a.5.5 0 0 1 0 1H8.75V9.5Z" /></svg>,
+    icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4"><path d="M2.5 4A1.5 1.5 0 0 0 1 5.5v1h14v-1A1.5 1.5 0 0 0 13.5 4h-11ZM15 9H1v1.5A1.5 1.5 0 0 0 2.5 12h11a1.5 1.5 0 0 0 1.5-1.5V9Z" /></svg>,
   },
 ];
 
@@ -2195,7 +2195,7 @@ export default function Personal() {
                             className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2.5 disabled:opacity-50"
                           >
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 shrink-0 text-gray-400">
-                              <path d="M2 3.5A1.5 1.5 0 0 1 3.5 2h6.879a1.5 1.5 0 0 1 1.06.44l2.122 2.12a1.5 1.5 0 0 1 .439 1.061V9.5A1.5 1.5 0 0 1 12.5 11h-1v1.5A1.5 1.5 0 0 1 10 14H3.5A1.5 1.5 0 0 1 2 12.5v-9ZM11 9.5V5.56l-1.5-1.5H3.5v8.44H10V11H4.5a.75.75 0 0 1 0-1.5H11Z" />
+                              <path fillRule="evenodd" d="M13.836 2.477a.75.75 0 0 1 .75.75v3.182a.75.75 0 0 1-.75.75h-3.182a.75.75 0 0 1 0-1.5h1.37l-.84-.841a4.5 4.5 0 0 0-7.08.932.75.75 0 0 1-1.3-.75 6 6 0 0 1 9.44-1.242l.842.84V3.227a.75.75 0 0 1 .75-.75Zm-.911 7.5A.75.75 0 0 1 13.199 11a6 6 0 0 1-9.44 1.241l-.84-.84v1.371a.75.75 0 0 1-1.5 0V9.591a.75.75 0 0 1 .75-.75H5.35a.75.75 0 0 1 0 1.5H3.98l.841.841a4.5 4.5 0 0 0 7.08-.932.75.75 0 0 1 1.025-.273Z" clipRule="evenodd" />
                             </svg>
                             {isCopyingWeek ? 'Copiando...' : 'Copiar semana anterior'}
                           </button>

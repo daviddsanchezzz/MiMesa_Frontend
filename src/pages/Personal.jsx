@@ -439,7 +439,7 @@ function ShiftEditorModal({ day, shift, assignments, activeEmployees, positions,
         : employee?.positionId
           ? [String(employee.positionId)]
           : [];
-      return ids.includes(String(selectedPositionId));
+      return ids.length === 0 || ids.includes(String(selectedPositionId));
     });
   }, [availableEmployees, selectedPositionId]);
   const filteredEligibleEmployees = useMemo(() => {
@@ -629,48 +629,102 @@ function ShiftEditorModal({ day, shift, assignments, activeEmployees, positions,
           {totalAssigned === 0 && (
             <p className="text-sm text-gray-300 text-center py-2">Sin personal asignado</p>
           )}
-          {assignmentsByPosition.filter((col) => col.assignments.length > 0).map((column) => (
-            <div key={column.key}>
-              <div className="flex items-center gap-2 mb-2">
-                <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: column.color }} />
-                <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400">{column.label}</p>
-              </div>
-              <div className="space-y-0.5">
-                {column.assignments.map((assignment) => {
-                  const emp = assignment.employeeId || {};
-                  const name = emp?.firstName ? `${emp.firstName} ${emp.lastName || ''}`.trim() : 'Empleado';
-                  const initials = name.split(' ').filter(Boolean).map((n) => n[0]).slice(0, 2).join('').toUpperCase();
-                  return (
-                    <div key={assignment._id} className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-gray-50 group transition-colors">
-                      <div
-                        className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
-                        style={{ backgroundColor: column.color }}
-                      >
-                        {initials}
-                      </div>
-                      <span className="text-sm font-medium text-gray-800 flex-1">{name}</span>
-                      <button
-                        onClick={() => removeFromDraft(assignment._id)}
-                        disabled={saving}
-                        className="w-7 h-7 rounded-full hover:bg-rose-50 flex items-center justify-center text-gray-300 hover:text-rose-500 sm:opacity-0 sm:group-hover:opacity-100 opacity-100 transition-all shrink-0 disabled:cursor-not-allowed"
-                        aria-label="Quitar"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
-                          <path d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z" />
-                        </svg>
-                      </button>
+          {activePositions.length === 0 ? (
+            <div className="space-y-0.5">
+              {draftAssignments.map((assignment) => {
+                const emp = assignment.employeeId || {};
+                const name = emp?.firstName ? `${emp.firstName} ${emp.lastName || ''}`.trim() : 'Empleado';
+                const initials = name.split(' ').filter(Boolean).map((n) => n[0]).slice(0, 2).join('').toUpperCase();
+                return (
+                  <div key={assignment._id} className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-gray-50 group transition-colors">
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0 bg-slate-400">
+                      {initials}
                     </div>
-                  );
-                })}
-              </div>
+                    <span className="text-sm font-medium text-gray-800 flex-1">{name}</span>
+                    <button onClick={() => removeFromDraft(assignment._id)} disabled={saving}
+                      className="w-7 h-7 rounded-full hover:bg-rose-50 flex items-center justify-center text-gray-300 hover:text-rose-500 sm:opacity-0 sm:group-hover:opacity-100 opacity-100 transition-all shrink-0 disabled:cursor-not-allowed">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
+                        <path d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z" />
+                      </svg>
+                    </button>
+                  </div>
+                );
+              })}
             </div>
-          ))}
+          ) : (
+            assignmentsByPosition.filter((col) => col.assignments.length > 0).map((column) => (
+              <div key={column.key}>
+                <div className="flex items-center gap-2 mb-2">
+                  <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: column.color }} />
+                  <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400">{column.label}</p>
+                </div>
+                <div className="space-y-0.5">
+                  {column.assignments.map((assignment) => {
+                    const emp = assignment.employeeId || {};
+                    const name = emp?.firstName ? `${emp.firstName} ${emp.lastName || ''}`.trim() : 'Empleado';
+                    const initials = name.split(' ').filter(Boolean).map((n) => n[0]).slice(0, 2).join('').toUpperCase();
+                    return (
+                      <div key={assignment._id} className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-gray-50 group transition-colors">
+                        <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0" style={{ backgroundColor: column.color }}>
+                          {initials}
+                        </div>
+                        <span className="text-sm font-medium text-gray-800 flex-1">{name}</span>
+                        <button onClick={() => removeFromDraft(assignment._id)} disabled={saving}
+                          className="w-7 h-7 rounded-full hover:bg-rose-50 flex items-center justify-center text-gray-300 hover:text-rose-500 sm:opacity-0 sm:group-hover:opacity-100 opacity-100 transition-all shrink-0 disabled:cursor-not-allowed">
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
+                            <path d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z" />
+                          </svg>
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            ))
+          )}
         </div>
 
         {/* ── Add section ── */}
         <div className="px-5 py-4 space-y-3 bg-gray-50/50">
           <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Añadir personal</p>
 
+          {activePositions.length === 0 ? (
+            /* No positions configured — show all employees directly */
+            <div className="space-y-2">
+              <div className="relative">
+                <input
+                  className="w-full border border-gray-200 rounded-xl pl-9 pr-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-violet-400 transition-colors"
+                  value={employeeQuery}
+                  onChange={(e) => setEmployeeQuery(e.target.value)}
+                  placeholder="Buscar..."
+                />
+                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M9 3.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11ZM2 9a7 7 0 1 1 12.452 4.391l3.328 3.329a.75.75 0 1 1-1.06 1.06l-3.329-3.328A7 7 0 0 1 2 9Z" clipRule="evenodd" />
+                </svg>
+              </div>
+              {(() => {
+                const q = employeeQuery.trim().toLowerCase();
+                const list = availableEmployees.filter((e) => !q || `${e.firstName} ${e.lastName || ''}`.toLowerCase().includes(q));
+                if (list.length === 0) return <p className="text-xs text-gray-400 text-center py-3">{q ? 'Sin resultados' : 'Sin empleados disponibles'}</p>;
+                return (
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {list.map((emp) => {
+                      const name = `${emp.firstName || ''} ${emp.lastName || ''}`.trim();
+                      const initials = name.split(' ').filter(Boolean).map((n) => n[0]).slice(0, 2).join('').toUpperCase();
+                      return (
+                        <button key={emp._id} onClick={() => addEmployeeDirectly(null, emp)} disabled={saving}
+                          className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-white border border-gray-100 hover:border-violet-200 hover:bg-violet-50/40 text-left transition-all">
+                          <div className="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold text-white shrink-0 bg-slate-400">{initials}</div>
+                          <span className="text-sm font-medium text-gray-700 truncate">{emp.firstName}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+            </div>
+          ) : (
+            <>
           {/* Position pills */}
           <div className="flex flex-wrap gap-1.5">
             {activePositions.map((position) => {
@@ -743,6 +797,8 @@ function ShiftEditorModal({ day, shift, assignments, activeEmployees, positions,
                 </div>
               )}
             </div>
+          )}
+            </>
           )}
         </div>
 

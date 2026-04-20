@@ -2243,8 +2243,8 @@ export default function Personal() {
           </div>
 
           {/* Week grid — horizontal scroll on mobile, full grid on desktop */}
-          <div className="overflow-x-auto px-4 pb-4">
-            <div className="grid grid-cols-7 gap-2.5 min-w-[980px]">
+          <div className="overflow-x-auto pb-4">
+            <div className="grid grid-cols-7 gap-2 min-w-[1050px] px-3">
               {days.map((day) => {
                 const isToday = day.date === today;
                 const dayShifts = shiftRowsByDay[day.date] || [];

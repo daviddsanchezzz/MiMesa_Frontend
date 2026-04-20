@@ -1181,15 +1181,11 @@ const PERSON_COLORS = [
 
 function assignPersonColors(names) {
   const n = PERSON_COLORS.length;
-  const used = new Set();
   const result = new Map();
   for (const name of [...names].sort((a, b) => a.localeCompare(b))) {
     let h = 0;
     for (let i = 0; i < name.length; i++) { h = name.charCodeAt(i) + ((h << 5) - h); h |= 0; }
-    let idx = Math.abs(h) % n;
-    let tries = 0;
-    while (used.has(idx) && tries < n) { idx = (idx + 1) % n; tries++; }
-    used.add(idx);
+    const idx = Math.abs(h) % n;
     result.set(name, PERSON_COLORS[idx]);
   }
   return result;

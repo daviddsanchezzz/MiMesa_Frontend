@@ -2130,9 +2130,9 @@ export default function Personal() {
 
       {/* -- PLANNER TAB -- */}
       {!loading && tab === 'planner' && allowedTabs.includes('planner') && (
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 space-y-4">
+        <div className="bg-white rounded-none sm:rounded-2xl border-y sm:border border-gray-200 sm:shadow-sm -mx-4 sm:mx-0 space-y-4">
           {/* Nav row */}
-          <div className="space-y-2">
+          <div className="space-y-2 px-4 pt-4">
             {/* Row 1: week navigation */}
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1">
@@ -2242,7 +2242,7 @@ export default function Personal() {
           </div>
 
           {/* Week grid — horizontal scroll on mobile, full grid on desktop */}
-          <div className="overflow-x-auto -mx-4 px-4">
+          <div className="overflow-x-auto px-4 pb-4">
             <div className="grid grid-cols-7 gap-2.5 min-w-[980px]">
               {days.map((day) => {
                 const isToday = day.date === today;

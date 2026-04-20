@@ -1195,7 +1195,7 @@ function assignPersonColors(names) {
   for (const name of [...new Set(names)].sort((a, b) => a.localeCompare(b))) {
     let h = 0;
     for (let i = 0; i < name.length; i++) { h = name.charCodeAt(i) + ((h << 5) - h); h |= 0; }
-    let slot = Math.abs(h);
+    let slot = Math.abs(h) % 2048;
     while (usedSlots.has(slot)) slot += 1;
     usedSlots.add(slot);
     result.set(name, colorFromSlot(slot));

@@ -1127,6 +1127,75 @@ function PositionFormModal({ position, onClose, onSaved }) {
   );
 }
 
+const CHIP_LIMIT = 4;
+
+function ShiftStaffChips({ groups }) {
+  const [expanded, setExpanded] = useState(false);
+
+  const allPeople = groups.flatMap((g) =>
+    g.names.map((name) => ({ name, roleColor: g.roleColor, roleName: g.roleName }))
+  );
+
+  if (allPeople.length === 0) return null;
+
+  const overflow = allPeople.length - CHIP_LIMIT;
+  const showOverflow = !expanded && overflow > 0;
+  const visible = expanded ? allPeople : allPeople.slice(0, CHIP_LIMIT);
+
+  if (!expanded) {
+    return (
+      <div className="flex flex-wrap gap-1">
+        {visible.map((p, i) => (
+          <span key={i} className="inline-flex items-center px-2 py-0.5 rounded-md bg-gray-100 text-gray-700 text-[11px] font-medium leading-5">
+            {p.name.split(' ')[0]}
+          </span>
+        ))}
+        {showOverflow && (
+          <button
+            onClick={(e) => { e.stopPropagation(); setExpanded(true); }}
+            className="inline-flex items-center px-2 py-0.5 rounded-md bg-violet-100 text-violet-700 text-[11px] font-semibold leading-5 hover:bg-violet-200 transition-colors"
+          >
+            +{overflow}
+          </button>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-2">
+      {groups.map((group, gi) => {
+        const noPos = group.roleName === 'Sin puesto';
+        return (
+          <div key={gi}>
+            {!noPos && (
+              <p className="text-[10px] font-bold uppercase tracking-wider mb-1 pb-0.5 border-b inline-block" style={{ color: group.roleColor, borderColor: group.roleColor }}>
+                {group.roleName}
+              </p>
+            )}
+            <div className="flex flex-wrap gap-1">
+              {group.names.map((name, ni) => (
+                <span key={ni}
+                  className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium leading-5"
+                  style={{ backgroundColor: group.roleColor + '22', color: group.roleColor }}
+                >
+                  {name.split(' ')[0]}
+                </span>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+      <button
+        onClick={(e) => { e.stopPropagation(); setExpanded(false); }}
+        className="text-[10px] text-gray-400 hover:text-gray-500 transition-colors"
+      >
+        Ver menos
+      </button>
+    </div>
+  );
+}
+
 export default function Personal() {
   const { role, business } = useAuth();
   const navigate = useNavigate();
@@ -1590,32 +1659,19 @@ export default function Personal() {
           </button>
         </div>
 
-        {/* Staff by position */}
+        {/* Staff chips */}
         {rawList.length === 0 ? (
           <p className="text-xs text-gray-300 italic">Sin empleados asignados</p>
         ) : (
-          <div className="space-y-2">
-            {Object.values(grouped)
+          <ShiftStaffChips
+            groups={Object.values(grouped)
               .sort((a, b) => {
                 const oa = positionOrderByName.get(a.roleName) ?? 999;
                 const ob = positionOrderByName.get(b.roleName) ?? 999;
                 return oa !== ob ? oa - ob : a.roleName.localeCompare(b.roleName);
               })
-              .map((group, index) => {
-                const sortedNames = [...group.names].sort((a, b) => a.localeCompare(b));
-                const noPosition = group.roleName === 'Sin puesto';
-                return (
-                  <div key={`${group.roleColor}-${index}`}>
-                    {!noPosition && (
-                      <span className="text-[11px] md:text-[10px] font-bold uppercase tracking-wider leading-none mb-1 pb-0.5 border-b inline-block" style={{ color: group.roleColor, borderColor: group.roleColor }}>
-                        {group.roleName}
-                      </span>
-                    )}
-                    <p className="text-sm md:text-xs text-gray-700 md:text-gray-600 leading-5 md:leading-4">{sortedNames.join(', ')}</p>
-                  </div>
-                );
-              })}
-          </div>
+              .map((g) => ({ ...g, names: [...g.names].sort((a, b) => a.localeCompare(b)) }))}
+          />
         )}
       </div>
     );
@@ -2199,22 +2255,15 @@ export default function Personal() {
                               {rawList.length === 0 ? (
                                 <p style={{ fontSize: '20px', color: '#d1d5db', fontStyle: 'italic', margin: 0 }}>Sin empleados asignados</p>
                               ) : (
-                                Object.values(grouped)
-                                  .sort((a, b) => {
-                                    const oa = positionOrderByName.get(a.role) ?? 999;
-                                    const ob = positionOrderByName.get(b.role) ?? 999;
-                                    return oa !== ob ? oa - ob : a.role.localeCompare(b.role);
-                                  })
-                                  .map((g, i, arr) => {
-                                    const sortedNames = [...g.names].sort((a, b) => a.localeCompare(b));
-                                    const noPos = g.role === 'Sin puesto';
-                                    return (
-                                  <div key={i} style={{ marginBottom: i < arr.length - 1 ? '10px' : 0, paddingBottom: i < arr.length - 1 ? '10px' : 0, borderBottom: i < arr.length - 1 ? '1.5px solid #f3f4f6' : 'none' }}>
-                                    {!noPos && <p style={{ fontSize: '18px', fontWeight: 900, textTransform: 'uppercase', letterSpacing: '0.08em', color: g.color, margin: '0 0 5px' }}>{g.role}</p>}
-                                    <p style={{ fontSize: '22px', fontWeight: 600, color: '#374151', margin: 0, lineHeight: '1.4' }}>{sortedNames.join(', ')}</p>
-                                  </div>
-                                    );
-                                  })
+                                <ShiftStaffChips
+                                  groups={Object.values(grouped)
+                                    .sort((a, b) => {
+                                      const oa = positionOrderByName.get(a.role) ?? 999;
+                                      const ob = positionOrderByName.get(b.role) ?? 999;
+                                      return oa !== ob ? oa - ob : a.role.localeCompare(b.role);
+                                    })
+                                    .map((g) => ({ roleName: g.role, roleColor: g.color, names: [...g.names].sort((a, b) => a.localeCompare(b)) }))}
+                                />
                               )}
                             </div>
                           );

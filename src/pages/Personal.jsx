@@ -1768,22 +1768,22 @@ export default function Personal() {
   
   return (
     <div className="space-y-5">
-      <div className="hidden sm:flex items-center justify-between gap-3">
+      <div className="hidden lg:flex items-center justify-between gap-3">
         <div>
           <h2 className="text-xl font-bold text-gray-900">Personal</h2>
-          <p className="hidden sm:block text-sm text-gray-500">Gestion de empleados, planificacion semanal y costes estimados.</p>
+          <p className="text-sm text-gray-500">Gestion de empleados, planificacion semanal y costes estimados.</p>
         </div>
         {allowedTabs.length > 1 && (
-          <div className="hidden sm:flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5">
             {tabs.filter((item) => allowedTabs.includes(item.key)).map((item) => (
               <button
                 key={item.key}
                 onClick={() => setTab(item.key)}
-                className={`shrink-0 flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-xl text-sm font-semibold transition-colors ${tab === item.key ? 'bg-violet-600 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+                className={`shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold transition-colors ${tab === item.key ? 'bg-violet-600 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}`}
                 title={item.label}
               >
                 {item.icon}
-                <span className="hidden sm:inline">{item.label}</span>
+                {item.label}
               </button>
             ))}
           </div>
@@ -2248,7 +2248,7 @@ export default function Personal() {
 
           {/* Week grid — horizontal scroll on mobile, full grid on desktop */}
           <div className="overflow-x-auto pb-4">
-            <div className="grid gap-2 px-3 w-full" style={{ gridTemplateColumns: 'repeat(7, minmax(min-content, 1fr))' }}>
+            <div className="grid gap-2 px-3 min-w-full" style={{ gridTemplateColumns: 'repeat(7, minmax(min-content, 1fr))' }}>
               {days.map((day) => {
                 const isToday = day.date === today;
                 const dayShifts = shiftRowsByDay[day.date] || [];

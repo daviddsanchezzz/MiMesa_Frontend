@@ -20,7 +20,7 @@ const tabs = [
   },
   {
     key: 'costs', label: 'Costes',
-    icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4"><path d="M2.5 4A1.5 1.5 0 0 0 1 5.5v1h14v-1A1.5 1.5 0 0 0 13.5 4h-11ZM15 9H1v1.5A1.5 1.5 0 0 0 2.5 12h11a1.5 1.5 0 0 0 1.5-1.5V9Z" /></svg>,
+    icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" className="w-4 h-4" aria-hidden="true"><text x="1" y="13" fontSize="13" fontWeight="700" fill="currentColor" fontFamily="system-ui,-apple-system,sans-serif">€</text></svg>,
   },
 ];
 
@@ -2171,7 +2171,7 @@ export default function Personal() {
               <div className="flex items-center gap-1">
                 <button
                   onClick={() => setWeekStart(mondayOf(todayIso()))}
-                  className="px-2.5 py-1 rounded-lg border border-gray-200 hover:bg-gray-50 text-xs font-semibold text-gray-500 transition-colors"
+                  className="h-8 px-3 rounded-lg border border-gray-200 hover:bg-gray-50 text-xs font-semibold text-gray-500 transition-colors"
                 >
                   Hoy
                 </button>
@@ -2242,8 +2242,8 @@ export default function Personal() {
           </div>
 
           {/* Week grid — horizontal scroll on mobile, full grid on desktop */}
-          <div className="overflow-x-auto">
-            <div className="grid grid-cols-7 gap-2.5 min-w-[700px]">
+          <div className="overflow-x-auto -mx-4 px-4">
+            <div className="grid grid-cols-7 gap-2.5 min-w-[980px]">
               {days.map((day) => {
                 const isToday = day.date === today;
                 const dayShifts = shiftRowsByDay[day.date] || [];

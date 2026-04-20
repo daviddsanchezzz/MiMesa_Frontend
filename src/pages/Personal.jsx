@@ -1294,6 +1294,7 @@ export default function Personal() {
       </div>
     ) : null,
   });
+  
 
   const [weekStart, setWeekStart] = useState(mondayOf(todayIso()));
   const [mobileDayIndex, setMobileDayIndex] = useState(() => {

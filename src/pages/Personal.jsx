@@ -1727,7 +1727,7 @@ export default function Personal() {
     }, {});
 
     return (
-      <div key={shift._id} className="bg-white rounded-xl border border-gray-200 p-3 flex-1 flex flex-col gap-2">
+      <div key={shift._id} className="bg-white rounded-xl border border-gray-200 p-3 flex flex-col gap-2 h-full">
         {/* Shift header */}
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
@@ -2246,35 +2246,34 @@ export default function Personal() {
             </div>
           </div>
 
-          {/* Week grid — horizontal scroll on mobile, full grid on desktop */}
-          <div className="overflow-x-auto pb-4">
-            <div className="grid gap-2 px-3" style={{ gridTemplateColumns: 'repeat(7, minmax(160px, 1fr))', minWidth: 'calc(7 * 160px + 6 * 8px + 24px)' }}>
-              {days.map((day) => {
-                const isToday = day.date === today;
-                const dayShifts = shiftRowsByDay[day.date] || [];
-                return (
-                  <div
-                    key={day.date}
-                    className={`rounded-xl border p-3 flex flex-col gap-2 ${
-                      isToday ? 'border-violet-300 bg-violet-50/40' : 'border-gray-200 bg-gray-50'
-                    }`}
-                  >
-                    <div className={`px-1 pb-2 border-b ${isToday ? 'border-violet-200' : 'border-gray-200'}`}>
-                      <div>
+          {/* Week grid — flat grid so each shift row aligns across all columns */}
+          {(() => {
+            const maxShifts = Math.max(0, ...days.map(d => (shiftRowsByDay[d.date] || []).length));
+            return (
+              <div className="overflow-x-auto pb-4">
+                <div className="grid gap-2 px-3" style={{ gridTemplateColumns: 'repeat(7, minmax(160px, 1fr))', minWidth: 'calc(7 * 160px + 6 * 8px + 24px)' }}>
+                  {/* Row 0: day headers */}
+                  {days.map((day) => {
+                    const isToday = day.date === today;
+                    return (
+                      <div key={`h-${day.date}`} className={`rounded-xl border px-3 py-2 ${isToday ? 'border-violet-300 bg-violet-50/40' : 'border-gray-200 bg-gray-50'}`}>
                         <p className={`text-[11px] uppercase font-bold tracking-wider ${isToday ? 'text-violet-500' : 'text-gray-400'}`}>{day.short}</p>
                         <p className={`text-base font-extrabold leading-tight ${isToday ? 'text-violet-700' : 'text-gray-900'}`}>{day.day}</p>
                       </div>
-                    </div>
-                    {dayShifts.length === 0 ? (
-                      <p className="text-xs text-gray-300 text-center pt-2">Sin turnos</p>
-                    ) : (
-                      dayShifts.map((shift) => renderShiftCard(day, shift))
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+                    );
+                  })}
+                  {/* Rows 1..maxShifts: one row per shift slot */}
+                  {Array.from({ length: maxShifts }, (_, i) =>
+                    days.map((day) => {
+                      const shift = (shiftRowsByDay[day.date] || [])[i];
+                      if (!shift) return <div key={`${day.date}-${i}`} className="rounded-xl border border-dashed border-gray-100" />;
+                      return renderShiftCard(day, shift);
+                    })
+                  )}
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Export portal — rendered off-screen, always full 7-day grid */}
           {isExporting && createPortal(

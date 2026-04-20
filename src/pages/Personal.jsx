@@ -1727,7 +1727,11 @@ export default function Personal() {
     }, {});
 
     return (
-      <div key={shift._id} className="bg-white rounded-xl border border-gray-200 p-3 flex flex-col gap-2 h-full">
+      <div
+        key={shift._id}
+        onClick={() => setSlotEditor({ day, shift })}
+        className="bg-white rounded-xl border border-gray-200 p-3 flex flex-col gap-2 h-full lg:cursor-default cursor-pointer lg:hover:border-gray-200 hover:border-violet-300 transition-colors"
+      >
         {/* Shift header */}
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
@@ -1735,8 +1739,8 @@ export default function Personal() {
             <p className="text-xs text-gray-400 whitespace-nowrap">{shift.startTime}–{shift.endTime}</p>
           </div>
           <button
-            onClick={() => setSlotEditor({ day, shift })}
-            className="shrink-0 w-6 h-6 flex items-center justify-center rounded-full text-gray-300 hover:text-violet-600 hover:bg-violet-50 transition-colors"
+            onClick={(e) => { e.stopPropagation(); setSlotEditor({ day, shift }); }}
+            className="shrink-0 w-6 h-6 hidden lg:flex items-center justify-center rounded-full text-gray-300 hover:text-violet-600 hover:bg-violet-50 transition-colors"
             title="Asignar personal"
           >
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">

@@ -465,7 +465,7 @@ function ShiftEditorModal({ day, shift, assignments, activeEmployees, positions,
       __temp: true,
       date: day.date,
       shiftId: shift,
-      roleLabel: position.name,
+      roleLabel: position?.name || '',
       employeeId: employee,
     }]);
     setEmployeeQuery('');
@@ -498,7 +498,7 @@ function ShiftEditorModal({ day, shift, assignments, activeEmployees, positions,
         __temp: true,
         date: day.date,
         shiftId: shift,
-        roleLabel: position.name,
+        roleLabel: position?.name || '',
         employeeId: employee,
       },
     ]);
@@ -1581,11 +1581,11 @@ export default function Personal() {
           </div>
           <button
             onClick={() => setSlotEditor({ day, shift })}
-            className="shrink-0 mt-0.5 text-gray-300 hover:text-gray-500 transition-colors"
-            title="Detalle"
+            className="shrink-0 w-6 h-6 flex items-center justify-center rounded-full text-gray-300 hover:text-violet-600 hover:bg-violet-50 transition-colors"
+            title="Asignar personal"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
-              <path d="M8 9.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM1.5 9.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM14.5 9.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z" />
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
+              <path d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z" />
             </svg>
           </button>
         </div>

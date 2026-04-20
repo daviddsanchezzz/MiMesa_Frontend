@@ -9,9 +9,18 @@ const inputCls = 'w-full border border-gray-300 rounded-xl px-3 py-2 text-sm foc
 const labelCls = 'block text-xs font-semibold text-gray-600 mb-1';
 
 const tabs = [
-  { key: 'planner', label: 'Planificacion' },
-  { key: 'employees', label: 'Empleados' },
-  { key: 'costs', label: 'Costes' },
+  {
+    key: 'planner', label: 'Planificacion',
+    icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4"><path fillRule="evenodd" d="M4 1.75a.75.75 0 0 1 1.5 0V3h5V1.75a.75.75 0 0 1 1.5 0V3h.25A2.75 2.75 0 0 1 15 5.75v7.5A2.75 2.75 0 0 1 12.25 16H3.75A2.75 2.75 0 0 1 1 13.25v-7.5A2.75 2.75 0 0 1 3.75 3H4V1.75ZM3.75 4.5c-.69 0-1.25.56-1.25 1.25V7h11V5.75c0-.69-.56-1.25-1.25-1.25H3.75ZM2.5 8.5v4.75c0 .69.56 1.25 1.25 1.25h8.5c.69 0 1.25-.56 1.25-1.25V8.5h-11Z" clipRule="evenodd" /></svg>,
+  },
+  {
+    key: 'employees', label: 'Empleados',
+    icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4"><path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM12.735 14c.618 0 1.093-.561.872-1.139a6.002 6.002 0 0 0-11.215 0c-.22.578.254 1.139.872 1.139h9.47Z" /></svg>,
+  },
+  {
+    key: 'costs', label: 'Costes',
+    icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4"><path d="M8.75 1.75a.75.75 0 0 0-1.5 0V4H6a2 2 0 0 0 0 4h1.25v3H6.5A3.5 3.5 0 0 1 3 7.5V5.25a.75.75 0 0 0-1.5 0V7.5A5 5 0 0 0 6.5 12.5H7.25v2a.75.75 0 0 0 1.5 0v-2H10a2 2 0 0 0 0-4H8.75V5H10a.75.75 0 0 0 0-1.5H8.75V1.75ZM6 6.5h1.25V8H6a.5.5 0 0 1 0-1ZM8.75 9.5H10a.5.5 0 0 1 0 1H8.75V9.5Z" /></svg>,
+  },
 ];
 
 const todayIso = () => new Date().toISOString().slice(0, 10);
@@ -1130,23 +1139,44 @@ function PositionFormModal({ position, onClose, onSaved }) {
 const CHIP_LIMIT = 8;
 
 const PERSON_COLORS = [
-  '#6366f1','#8b5cf6','#ec4899','#ef4444','#f97316',
-  '#eab308','#16a34a','#10b981','#06b6d4','#3b82f6',
-  '#a855f7','#0ea5e9','#14b8a6','#84cc16','#f43f5e',
+  '#6366f1','#8b5cf6','#a855f7','#d946ef','#ec4899',
+  '#f43f5e','#ef4444','#f97316','#f59e0b','#eab308',
+  '#84cc16','#22c55e','#16a34a','#10b981','#14b8a6',
+  '#06b6d4','#0ea5e9','#3b82f6','#4f46e5','#7c3aed',
+  '#be185d','#b45309','#15803d','#0f766e','#0369a1',
+  '#1d4ed8','#7e22ce','#9f1239','#92400e','#166534',
+  '#134e4a','#1e3a8a','#581c87','#831843','#78350f',
+  '#064e3b','#083344','#1e40af','#6b21a8','#9d174d',
 ];
-function nameToColor(name) {
-  let h = 0;
-  for (let i = 0; i < name.length; i++) { h = name.charCodeAt(i) + ((h << 5) - h); h |= 0; }
-  return PERSON_COLORS[Math.abs(h) % PERSON_COLORS.length];
+
+function assignPersonColors(names) {
+  const n = PERSON_COLORS.length;
+  const used = new Set();
+  const result = new Map();
+  for (const name of [...names].sort((a, b) => a.localeCompare(b))) {
+    let h = 0;
+    for (let i = 0; i < name.length; i++) { h = name.charCodeAt(i) + ((h << 5) - h); h |= 0; }
+    let idx = Math.abs(h) % n;
+    let tries = 0;
+    while (used.has(idx) && tries < n) { idx = (idx + 1) % n; tries++; }
+    used.add(idx);
+    result.set(name, PERSON_COLORS[idx]);
+  }
+  return result;
 }
 
 function ShiftStaffChips({ groups }) {
   const [expanded, setExpanded] = useState(false);
 
+  const noPos = groups.length === 1 && groups[0].roleName === 'Sin puesto';
+  const personColors = noPos
+    ? assignPersonColors(groups[0].names)
+    : null;
+
   const allPeople = groups.flatMap((g) =>
     g.names.map((name) => ({
       name,
-      roleColor: g.roleName === 'Sin puesto' ? nameToColor(name) : g.roleColor,
+      roleColor: noPos ? personColors.get(name) : g.roleColor,
       roleName: g.roleName,
     }))
   );
@@ -1162,7 +1192,7 @@ function ShiftStaffChips({ groups }) {
       <div className="flex flex-wrap gap-1">
         {visible.map((p, i) => (
           <span key={i}
-            className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium leading-5"
+            className="inline-flex items-center px-2.5 py-1 md:px-2 md:py-0.5 rounded-md text-xs md:text-[11px] font-medium leading-5"
             style={{ backgroundColor: p.roleColor + '20', color: p.roleColor }}
           >
             {p.name.split(' ')[0]}
@@ -1171,7 +1201,7 @@ function ShiftStaffChips({ groups }) {
         {showOverflow && (
           <button
             onClick={(e) => { e.stopPropagation(); setExpanded(true); }}
-            className="inline-flex items-center px-2 py-0.5 rounded-md bg-violet-100 text-violet-700 text-[11px] font-semibold leading-5 hover:bg-violet-200 transition-colors"
+            className="inline-flex items-center px-2.5 py-1 md:px-2 md:py-0.5 rounded-md bg-violet-100 text-violet-700 text-xs md:text-[11px] font-semibold leading-5 hover:bg-violet-200 transition-colors"
           >
             +{overflow}
           </button>
@@ -1183,20 +1213,20 @@ function ShiftStaffChips({ groups }) {
   return (
     <div className="space-y-2">
       {groups.map((group, gi) => {
-        const noPos = group.roleName === 'Sin puesto';
+        const groupNoPos = group.roleName === 'Sin puesto';
         return (
           <div key={gi}>
-            {!noPos && (
+            {!groupNoPos && (
               <p className="text-[10px] font-bold uppercase tracking-wider mb-1 pb-0.5 border-b inline-block" style={{ color: group.roleColor, borderColor: group.roleColor }}>
                 {group.roleName}
               </p>
             )}
             <div className="flex flex-wrap gap-1">
               {group.names.map((name, ni) => {
-                const c = noPos ? nameToColor(name) : group.roleColor;
+                const c = groupNoPos ? (personColors?.get(name) || group.roleColor) : group.roleColor;
                 return (
                 <span key={ni}
-                  className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-medium leading-5"
+                  className="inline-flex items-center px-2.5 py-1 md:px-2 md:py-0.5 rounded-md text-xs md:text-[11px] font-medium leading-5"
                   style={{ backgroundColor: c + '22', color: c }}
                 >
                   {name.split(' ')[0]}
@@ -1707,14 +1737,16 @@ export default function Personal() {
           <p className="hidden sm:block text-sm text-gray-500">Gestion de empleados, planificacion semanal y costes estimados.</p>
         </div>
         {allowedTabs.length > 1 && (
-          <div className="flex items-center gap-1.5 overflow-x-auto">
+          <div className="flex items-center gap-1.5">
             {tabs.filter((item) => allowedTabs.includes(item.key)).map((item) => (
               <button
                 key={item.key}
                 onClick={() => setTab(item.key)}
-                className={`shrink-0 px-3 py-2 rounded-xl text-sm font-semibold transition-colors ${tab === item.key ? 'bg-violet-600 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+                className={`shrink-0 flex items-center gap-1.5 px-2.5 sm:px-3 py-2 rounded-xl text-sm font-semibold transition-colors ${tab === item.key ? 'bg-violet-600 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}`}
+                title={item.label}
               >
-                {item.label}
+                {item.icon}
+                <span className="hidden sm:inline">{item.label}</span>
               </button>
             ))}
           </div>
@@ -2068,63 +2100,67 @@ export default function Personal() {
       {!loading && tab === 'planner' && allowedTabs.includes('planner') && (
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 space-y-4">
           {/* Nav row */}
-          <div className="flex items-center justify-between gap-3 flex-wrap">
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => setWeekStart((v) => addDays(v, -7))}
-                className="w-8 h-8 rounded-lg hover:bg-gray-100 transition-colors flex items-center justify-center text-gray-400 hover:text-gray-700"
-                aria-label="Semana anterior"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
-                  <path fillRule="evenodd" d="M9.78 4.22a.75.75 0 0 1 0 1.06L7.06 8l2.72 2.72a.75.75 0 1 1-1.06 1.06L5.47 8.53a.75.75 0 0 1 0-1.06l3.25-3.25a.75.75 0 0 1 1.06 0Z" clipRule="evenodd" />
-                </svg>
-              </button>
-              <label className="relative cursor-pointer group">
-                <span className="px-3 py-1.5 rounded-lg text-sm font-semibold text-gray-800 group-hover:bg-gray-100 transition-colors block">
-                  {weekLabel}
-                </span>
-                <input
-                  type="date"
-                  value={weekStart}
-                  onChange={(e) => e.target.value && setWeekStart(mondayOf(e.target.value))}
-                  className="absolute inset-0 opacity-0 cursor-pointer w-full"
-                  tabIndex={-1}
-                />
-              </label>
-              <button
-                onClick={() => setWeekStart((v) => addDays(v, 7))}
-                className="w-8 h-8 rounded-lg hover:bg-gray-100 transition-colors flex items-center justify-center text-gray-400 hover:text-gray-700"
-                aria-label="Semana siguiente"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
-                  <path fillRule="evenodd" d="M6.22 4.22a.75.75 0 0 1 1.06 0l3.25 3.25a.75.75 0 0 1 0 1.06L7.28 11.78a.75.75 0 0 1-1.06-1.06L9.94 8 6.22 4.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
-                </svg>
-              </button>
-              <button
-                onClick={() => setWeekStart(mondayOf(todayIso()))}
-                className="ml-1 px-2.5 py-1 rounded-lg border border-gray-200 hover:bg-gray-50 text-xs font-semibold text-gray-500 transition-colors"
-              >
-                Hoy
-              </button>
-              {role === 'owner' && <button
-                onClick={copyPreviousWeekAssignments}
-                disabled={isCopyingWeek}
-                className="hidden sm:inline-flex ml-1 px-2.5 py-1 rounded-lg border border-gray-200 hover:bg-gray-50 text-xs font-semibold text-gray-600 transition-colors disabled:opacity-50"
-              >
-                {isCopyingWeek ? 'Copiando...' : 'Copiar semana anterior'}
-              </button>}
-              {role === 'owner' && <button
-                onClick={clearWeekAssignments}
-                disabled={isCopyingWeek || !assignments?.length}
-                className="hidden sm:flex ml-1 w-7 h-7 items-center justify-center rounded-lg border border-gray-200 hover:bg-rose-50 hover:border-rose-200 text-gray-400 hover:text-rose-500 transition-colors disabled:opacity-30 disabled:cursor-default"
-                title="Borrar asignaciones de esta semana"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
-                  <path fillRule="evenodd" d="M5 3.25V4H2.75a.75.75 0 0 0 0 1.5h.3l.815 8.15A1.5 1.5 0 0 0 5.357 15h5.285a1.5 1.5 0 0 0 1.493-1.35l.815-8.15h.3a.75.75 0 0 0 0-1.5H11v-.75A2.25 2.25 0 0 0 8.75 1h-1.5A2.25 2.25 0 0 0 5 3.25Zm2.25-.75a.75.75 0 0 0-.75.75V4h3v-.75a.75.75 0 0 0-.75-.75h-1.5ZM6.05 6a.75.75 0 0 1 .787.713l.275 5.5a.75.75 0 0 1-1.498.075l-.275-5.5A.75.75 0 0 1 6.05 6Zm3.9 0a.75.75 0 0 1 .712.787l-.275 5.5a.75.75 0 0 1-1.498-.075l.275-5.5a.75.75 0 0 1 .786-.711Z" clipRule="evenodd" />
-                </svg>
-              </button>}
-              {/* Export button */}
-              <div className="relative ml-1" ref={exportMenuRef}>
+          <div className="space-y-2">
+            {/* Row 1: week navigation */}
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setWeekStart((v) => addDays(v, -7))}
+                  className="w-8 h-8 rounded-lg hover:bg-gray-100 transition-colors flex items-center justify-center text-gray-400 hover:text-gray-700"
+                  aria-label="Semana anterior"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
+                    <path fillRule="evenodd" d="M9.78 4.22a.75.75 0 0 1 0 1.06L7.06 8l2.72 2.72a.75.75 0 1 1-1.06 1.06L5.47 8.53a.75.75 0 0 1 0-1.06l3.25-3.25a.75.75 0 0 1 1.06 0Z" clipRule="evenodd" />
+                  </svg>
+                </button>
+                <label className="relative cursor-pointer group">
+                  <span className="px-3 py-1.5 rounded-lg text-sm font-semibold text-gray-800 group-hover:bg-gray-100 transition-colors block">
+                    {weekLabel}
+                  </span>
+                  <input
+                    type="date"
+                    value={weekStart}
+                    onChange={(e) => e.target.value && setWeekStart(mondayOf(e.target.value))}
+                    className="absolute inset-0 opacity-0 cursor-pointer w-full"
+                    tabIndex={-1}
+                  />
+                </label>
+                <button
+                  onClick={() => setWeekStart((v) => addDays(v, 7))}
+                  className="w-8 h-8 rounded-lg hover:bg-gray-100 transition-colors flex items-center justify-center text-gray-400 hover:text-gray-700"
+                  aria-label="Semana siguiente"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
+                    <path fillRule="evenodd" d="M6.22 4.22a.75.75 0 0 1 1.06 0l3.25 3.25a.75.75 0 0 1 0 1.06L7.28 11.78a.75.75 0 0 1-1.06-1.06L9.94 8 6.22 4.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
+                  </svg>
+                </button>
+                <button
+                  onClick={() => setWeekStart(mondayOf(todayIso()))}
+                  className="ml-1 px-2.5 py-1 rounded-lg border border-gray-200 hover:bg-gray-50 text-xs font-semibold text-gray-500 transition-colors"
+                >
+                  Hoy
+                </button>
+                {/* Desktop-only: copiar + trash */}
+                {role === 'owner' && <button
+                  onClick={copyPreviousWeekAssignments}
+                  disabled={isCopyingWeek}
+                  className="hidden sm:inline-flex ml-1 px-2.5 py-1 rounded-lg border border-gray-200 hover:bg-gray-50 text-xs font-semibold text-gray-600 transition-colors disabled:opacity-50"
+                >
+                  {isCopyingWeek ? 'Copiando...' : 'Copiar semana anterior'}
+                </button>}
+                {role === 'owner' && <button
+                  onClick={clearWeekAssignments}
+                  disabled={isCopyingWeek || !assignments?.length}
+                  className="hidden sm:flex ml-1 w-7 h-7 items-center justify-center rounded-lg border border-gray-200 hover:bg-rose-50 hover:border-rose-200 text-gray-400 hover:text-rose-500 transition-colors disabled:opacity-30 disabled:cursor-default"
+                  title="Borrar asignaciones de esta semana"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
+                    <path fillRule="evenodd" d="M5 3.25V4H2.75a.75.75 0 0 0 0 1.5h.3l.815 8.15A1.5 1.5 0 0 0 5.357 15h5.285a1.5 1.5 0 0 0 1.493-1.35l.815-8.15h.3a.75.75 0 0 0 0-1.5H11v-.75A2.25 2.25 0 0 0 8.75 1h-1.5A2.25 2.25 0 0 0 5 3.25Zm2.25-.75a.75.75 0 0 0-.75.75V4h3v-.75a.75.75 0 0 0-.75-.75h-1.5ZM6.05 6a.75.75 0 0 1 .787.713l.275 5.5a.75.75 0 0 1-1.498.075l-.275-5.5A.75.75 0 0 1 6.05 6Zm3.9 0a.75.75 0 0 1 .712.787l-.275 5.5a.75.75 0 0 1-1.498-.075l.275-5.5a.75.75 0 0 1 .786-.711Z" clipRule="evenodd" />
+                  </svg>
+                </button>}
+              </div>
+              {/* Export button — desktop only in row 1 */}
+              <div className="hidden sm:block relative ml-1" ref={exportMenuRef}>
                 <button
                   onClick={() => setExportMenuOpen((v) => !v)}
                   disabled={isExporting}
@@ -2161,6 +2197,55 @@ export default function Personal() {
                 )}
               </div>
             </div>
+
+            {/* Row 2: mobile actions (owner only) */}
+            {role === 'owner' && (
+              <div className="sm:hidden flex items-center gap-2">
+                <button
+                  onClick={copyPreviousWeekAssignments}
+                  disabled={isCopyingWeek}
+                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 bg-white text-xs font-semibold text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-50"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
+                    <path d="M2 3.5A1.5 1.5 0 0 1 3.5 2h6.879a1.5 1.5 0 0 1 1.06.44l2.122 2.12a1.5 1.5 0 0 1 .439 1.061V9.5A1.5 1.5 0 0 1 12.5 11h-1v1.5A1.5 1.5 0 0 1 10 14H3.5A1.5 1.5 0 0 1 2 12.5v-9ZM11 9.5V5.56l-1.5-1.5H3.5v8.44H10V11H4.5a.75.75 0 0 1 0-1.5H11Z" />
+                  </svg>
+                  {isCopyingWeek ? 'Copiando...' : 'Copiar'}
+                </button>
+                <button
+                  onClick={clearWeekAssignments}
+                  disabled={isCopyingWeek || !assignments?.length}
+                  className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 bg-white text-xs font-semibold text-gray-600 hover:bg-rose-50 hover:border-rose-200 hover:text-rose-600 transition-colors disabled:opacity-30"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
+                    <path fillRule="evenodd" d="M5 3.25V4H2.75a.75.75 0 0 0 0 1.5h.3l.815 8.15A1.5 1.5 0 0 0 5.357 15h5.285a1.5 1.5 0 0 0 1.493-1.35l.815-8.15h.3a.75.75 0 0 0 0-1.5H11v-.75A2.25 2.25 0 0 0 8.75 1h-1.5A2.25 2.25 0 0 0 5 3.25Zm2.25-.75a.75.75 0 0 0-.75.75V4h3v-.75a.75.75 0 0 0-.75-.75h-1.5ZM6.05 6a.75.75 0 0 1 .787.713l.275 5.5a.75.75 0 0 1-1.498.075l-.275-5.5A.75.75 0 0 1 6.05 6Zm3.9 0a.75.75 0 0 1 .712.787l-.275 5.5a.75.75 0 0 1-1.498-.075l.275-5.5a.75.75 0 0 1 .786-.711Z" clipRule="evenodd" />
+                  </svg>
+                  Eliminar
+                </button>
+                <div className="flex-1 relative" ref={exportMenuRef}>
+                  <button
+                    onClick={() => setExportMenuOpen((v) => !v)}
+                    disabled={isExporting}
+                    className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl border border-gray-200 bg-white text-xs font-semibold text-gray-600 hover:bg-gray-50 transition-colors disabled:opacity-40"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
+                      <path d="M8.75 2.75a.75.75 0 0 0-1.5 0v5.69L5.03 6.22a.75.75 0 0 0-1.06 1.06l3.5 3.5a.75.75 0 0 0 1.06 0l3.5-3.5a.75.75 0 0 0-1.06-1.06L8.75 8.44V2.75Z" />
+                      <path d="M3.5 9.75a.75.75 0 0 0-1.5 0v1.5A2.75 2.75 0 0 0 4.75 14h6.5A2.75 2.75 0 0 0 14 11.25v-1.5a.75.75 0 0 0-1.5 0v1.5c0 .69-.56 1.25-1.25 1.25h-6.5c-.69 0-1.25-.56-1.25-1.25v-1.5Z" />
+                    </svg>
+                    Descargar
+                  </button>
+                  {exportMenuOpen && (
+                    <div className="absolute left-0 top-full mt-1.5 w-40 bg-white rounded-xl border border-gray-200 shadow-lg z-50 overflow-hidden">
+                      <button onClick={() => exportPlanner('png')} className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2.5">
+                        <span className="text-base"></span> Imagen PNG
+                      </button>
+                      <button onClick={() => exportPlanner('pdf')} className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors flex items-center gap-2.5">
+                        <span className="text-base"></span> PDF
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Desktop grid */}

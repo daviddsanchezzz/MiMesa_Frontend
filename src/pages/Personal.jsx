@@ -466,6 +466,13 @@ function ShiftEditorModal({ day, shift, assignments, activeEmployees, positions,
       || null,
     [filteredEligibleEmployees, eligibleEmployeesForSelectedPosition, selectedEmployeeId],
   );
+  const noPositionPersonColors = useMemo(() => {
+    if (activePositions.length > 0) return null;
+    const names = (activeEmployees || [])
+      .map((employee) => `${employee.firstName || ''} ${employee.lastName || ''}`.trim())
+      .filter(Boolean);
+    return assignPersonColors(names);
+  }, [activeEmployees, activePositions.length]);
 
   const addEmployeeDirectly = (position, employee) => {
     if (assignedEmployeeIds.has(String(employee._id))) return;
@@ -645,9 +652,13 @@ function ShiftEditorModal({ day, shift, assignments, activeEmployees, positions,
                 const emp = assignment.employeeId || {};
                 const name = emp?.firstName ? `${emp.firstName} ${emp.lastName || ''}`.trim() : 'Empleado';
                 const initials = name.split(' ').filter(Boolean).map((n) => n[0]).slice(0, 2).join('').toUpperCase();
+                const personColor = noPositionPersonColors?.get(name) || '#64748B';
                 return (
                   <div key={assignment._id} className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-gray-50 group transition-colors">
-                    <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0 bg-slate-400">
+                    <div
+                      className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
+                      style={{ backgroundColor: personColor }}
+                    >
                       {initials}
                     </div>
                     <span className="text-sm font-medium text-gray-800 flex-1">{name}</span>
@@ -721,10 +732,16 @@ function ShiftEditorModal({ day, shift, assignments, activeEmployees, positions,
                     {list.map((emp) => {
                       const name = `${emp.firstName || ''} ${emp.lastName || ''}`.trim();
                       const initials = name.split(' ').filter(Boolean).map((n) => n[0]).slice(0, 2).join('').toUpperCase();
+                      const personColor = noPositionPersonColors?.get(name) || '#64748B';
                       return (
                         <button key={emp._id} onClick={() => addEmployeeDirectly(null, emp)} disabled={saving}
                           className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-white border border-gray-100 hover:border-violet-200 hover:bg-violet-50/40 text-left transition-all">
-                          <div className="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold text-white shrink-0 bg-slate-400">{initials}</div>
+                          <div
+                            className="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold text-white shrink-0"
+                            style={{ backgroundColor: personColor }}
+                          >
+                            {initials}
+                          </div>
                           <span className="text-sm font-medium text-gray-700 truncate">{emp.firstName}</span>
                         </button>
                       );

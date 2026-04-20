@@ -2241,9 +2241,9 @@ export default function Personal() {
             </div>
           </div>
 
-          {/* Desktop grid */}
-          <div className="hidden md:block overflow-x-auto">
-            <div className="grid grid-cols-7 gap-2.5 min-w-[1280px]">
+          {/* Week grid — horizontal scroll on mobile, full grid on desktop */}
+          <div className="overflow-x-auto">
+            <div className="grid grid-cols-7 gap-2.5 min-w-[700px]">
               {days.map((day) => {
                 const isToday = day.date === today;
                 const dayShifts = shiftRowsByDay[day.date] || [];
@@ -2269,44 +2269,6 @@ export default function Personal() {
                 );
               })}
             </div>
-          </div>
-
-          {/* Mobile day selector */}
-          <div className="md:hidden space-y-3">
-            <div className="flex gap-2 overflow-x-auto pb-1" ref={mobileDayScrollerRef}>
-              {days.map((day, index) => {
-                const isToday = day.date === today;
-                return (
-                  <button
-                    key={day.date}
-                    ref={(node) => {
-                      if (node) mobileDayButtonRefs.current[day.date] = node;
-                      else delete mobileDayButtonRefs.current[day.date];
-                    }}
-                    onClick={(e) => {
-                      setMobileDayIndex(index);
-                      centerMobileDayButton(e.currentTarget);
-                    }}
-                    className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
-                      mobileDayIndex === index
-                        ? isToday ? 'bg-violet-600 text-white border-violet-600' : 'bg-violet-600 text-white border-violet-600'
-                        : isToday ? 'bg-violet-50 text-violet-700 border-violet-200' : 'bg-white text-gray-600 border-gray-200'
-                    }`}
-                  >
-                    {day.fullLabel}
-                  </button>
-                );
-              })}
-            </div>
-            {currentMobileDay && (
-              <div className="space-y-2">
-                {(shiftRowsByDay[currentMobileDay.date] || []).length === 0 ? (
-                  <p className="text-sm text-gray-400 text-center py-8">Sin turnos para este día</p>
-                ) : (
-                  (shiftRowsByDay[currentMobileDay.date] || []).map((shift) => renderShiftCard(currentMobileDay, shift))
-                )}
-              </div>
-            )}
           </div>
 
           {/* Export portal — rendered off-screen, always full 7-day grid */}

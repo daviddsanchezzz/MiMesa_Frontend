@@ -1643,8 +1643,16 @@ export default function Personal() {
   const exportPlanner = async (format) => {
     setExportMenuOpen(false);
     setIsExporting(true);
-    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
     try {
+      // Wait until the off-screen export portal is mounted and has a ref.
+      let attempts = 0;
+      while (!plannerGridRef.current && attempts < 20) {
+        // eslint-disable-next-line no-await-in-loop
+        await new Promise((r) => requestAnimationFrame(r));
+        attempts += 1;
+      }
+      if (!plannerGridRef.current) throw new Error('No se pudo preparar la vista para exportar');
+
       const { default: html2canvas } = await import('html2canvas');
       const canvas = await html2canvas(plannerGridRef.current, {
         scale: 2,
@@ -1654,10 +1662,16 @@ export default function Personal() {
       });
       const safeLabel = weekLabel.replace(/[^a-z0-9]/gi, '_').toLowerCase();
       if (format === 'png') {
+        const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+        if (!blob) throw new Error('No se pudo generar el archivo PNG');
+        const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.download = `planificacion_${safeLabel}.png`;
-        link.href = canvas.toDataURL('image/png');
+        link.href = url;
+        document.body.appendChild(link);
         link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
       } else {
         const { jsPDF } = await import('jspdf');
         const imgData = canvas.toDataURL('image/png');
@@ -1679,6 +1693,7 @@ export default function Personal() {
       }
     } catch (err) {
       console.error('Export error', err);
+      setError('No se pudo descargar la planificación. Inténtalo de nuevo.');
     } finally {
       setIsExporting(false);
     }

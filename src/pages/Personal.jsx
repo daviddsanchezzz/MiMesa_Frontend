@@ -2248,7 +2248,7 @@ export default function Personal() {
 
           {/* Week grid — horizontal scroll on mobile, full grid on desktop */}
           <div className="overflow-x-auto pb-4">
-            <div className="grid gap-2 px-3 min-w-full" style={{ gridTemplateColumns: 'repeat(7, minmax(min-content, 1fr))' }}>
+            <div className="grid gap-2 px-3 min-w-full" style={{ gridTemplateColumns: 'repeat(7, minmax(140px, 1fr))' }}>
               {days.map((day) => {
                 const isToday = day.date === today;
                 const dayShifts = shiftRowsByDay[day.date] || [];

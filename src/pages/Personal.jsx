@@ -1195,18 +1195,18 @@ function assignPersonColors(names) {
   return result;
 }
 
-function ShiftStaffChips({ groups }) {
+function ShiftStaffChips({ groups, personColorByName }) {
   const [expanded, setExpanded] = useState(false);
 
   const noPos = groups.length === 1 && groups[0].roleName === 'Sin puesto';
   const personColors = noPos
-    ? assignPersonColors(groups[0].names)
+    ? (personColorByName || assignPersonColors(groups[0].names))
     : null;
 
   const allPeople = groups.flatMap((g) =>
     g.names.map((name) => ({
       name,
-      roleColor: noPos ? personColors.get(name) : g.roleColor,
+      roleColor: noPos ? (personColors.get(name) || '#64748B') : g.roleColor,
       roleName: g.roleName,
     }))
   );
@@ -1253,7 +1253,7 @@ function ShiftStaffChips({ groups }) {
             )}
             <div className="flex flex-wrap gap-1">
               {group.names.map((name, ni) => {
-                const c = groupNoPos ? (personColors?.get(name) || group.roleColor) : group.roleColor;
+                const c = groupNoPos ? (personColors?.get(name) || '#64748B') : group.roleColor;
                 return (
                 <span key={ni}
                   className="inline-flex items-center px-2.5 py-1 md:px-2 md:py-0.5 rounded-md text-xs md:text-[11px] font-medium leading-5"
@@ -1506,6 +1506,12 @@ export default function Personal() {
   }, [tab, mobileDayIndex, days, centerMobileDayButton]);
   const today = todayIso();
   const activeEmployees = useMemo(() => employees.filter((e) => e.status === 'active'), [employees]);
+  const staffColorByName = useMemo(() => {
+    const names = activeEmployees
+      .map((employee) => `${employee.firstName || ''} ${employee.lastName || ''}`.trim())
+      .filter(Boolean);
+    return assignPersonColors(names);
+  }, [activeEmployees]);
 
   const employeeStats = useMemo(() => ({
     total: employees.length,
@@ -1800,6 +1806,7 @@ export default function Personal() {
         ) : (
           <div className="w-0 min-w-full">
             <ShiftStaffChips
+              personColorByName={staffColorByName}
               groups={Object.values(grouped)
                 .sort((a, b) => {
                   const oa = positionOrderByName.get(a.roleName) ?? 999;

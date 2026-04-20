@@ -2782,7 +2782,7 @@ export default function Personal() {
         <ShiftEditorModal
           day={slotEditor.day}
           shift={slotEditor.shift}
-          assignments={assignmentsByDayShift[`${slotEditor.day.date}__${slotEditor.shift._id}`] || []}
+          assignments={assignmentsByDayShift[`${slotEditor.day.date}__${slotEditor.shift._id}`]}
           activeEmployees={activeEmployees}
           positions={positions}
           onClose={() => setSlotEditor(null)}

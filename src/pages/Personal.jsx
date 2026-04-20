@@ -1552,6 +1552,10 @@ export default function Personal() {
     });
     return map;
   }, [assignments]);
+  const visibleWeekAssignments = useMemo(
+    () => Object.values(assignmentsByDayShift).flat(),
+    [assignmentsByDayShift],
+  );
 
   const shiftRowsByDay = useMemo(() => {
     const out = {};
@@ -1646,7 +1650,7 @@ export default function Personal() {
   };
 
   const clearWeekAssignments = async () => {
-    const current = assignments || [];
+    const current = visibleWeekAssignments || [];
     if (current.length === 0) return;
     if (!window.confirm('¿Borrar todas las asignaciones de esta semana?')) return;
     try {
@@ -1672,7 +1676,7 @@ export default function Personal() {
         return;
       }
 
-      if ((assignments || []).length > 0) {
+      if ((visibleWeekAssignments || []).length > 0) {
         const confirmed = window.confirm(
           'Esta semana ya tiene asignaciones. Si continúas se borrarán las actuales y se copiarán las de la semana anterior. ¿Quieres continuar?',
         );
@@ -1681,7 +1685,7 @@ export default function Personal() {
 
       setIsCopyingWeek(true);
 
-      const currentAssignments = assignments || [];
+      const currentAssignments = visibleWeekAssignments || [];
       if (currentAssignments.length > 0) {
         await Promise.all(
           currentAssignments
@@ -2239,7 +2243,7 @@ export default function Personal() {
                   </button>
                   <button
                     onClick={clearWeekAssignments}
-                    disabled={isCopyingWeek || !assignments?.length}
+                    disabled={isCopyingWeek || !visibleWeekAssignments.length}
                     className="hidden lg:flex h-8 items-center gap-1.5 px-3 rounded-lg border border-gray-200 hover:bg-rose-50 hover:border-rose-200 text-xs font-semibold text-gray-600 hover:text-rose-600 transition-colors disabled:opacity-30"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5 text-gray-400">
@@ -2295,7 +2299,7 @@ export default function Personal() {
                           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 shrink-0 text-gray-400"><path fillRule="evenodd" d="M13.836 2.477a.75.75 0 0 1 .75.75v3.182a.75.75 0 0 1-.75.75h-3.182a.75.75 0 0 1 0-1.5h1.37l-.84-.841a4.5 4.5 0 0 0-7.08.932.75.75 0 0 1-1.3-.75 6 6 0 0 1 9.44-1.242l.842.84V3.227a.75.75 0 0 1 .75-.75Zm-.911 7.5A.75.75 0 0 1 13.199 11a6 6 0 0 1-9.44 1.241l-.84-.84v1.371a.75.75 0 0 1-1.5 0V9.591a.75.75 0 0 1 .75-.75H5.35a.75.75 0 0 1 0 1.5H3.98l.841.841a4.5 4.5 0 0 0 7.08-.932.75.75 0 0 1 1.025-.273Z" clipRule="evenodd" /></svg>
                           {isCopyingWeek ? 'Copiando...' : 'Copiar semana anterior'}
                         </button>
-                        <button onClick={() => { setExportMenuOpen(false); clearWeekAssignments(); }} disabled={isCopyingWeek || !assignments?.length} className="w-full text-left px-4 py-2.5 text-sm text-rose-600 hover:bg-rose-50 flex items-center gap-2.5 disabled:opacity-30">
+                        <button onClick={() => { setExportMenuOpen(false); clearWeekAssignments(); }} disabled={isCopyingWeek || !visibleWeekAssignments.length} className="w-full text-left px-4 py-2.5 text-sm text-rose-600 hover:bg-rose-50 flex items-center gap-2.5 disabled:opacity-30">
                           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 shrink-0"><path fillRule="evenodd" d="M5 3.25V4H2.75a.75.75 0 0 0 0 1.5h.3l.815 8.15A1.5 1.5 0 0 0 5.357 15h5.285a1.5 1.5 0 0 0 1.493-1.35l.815-8.15h.3a.75.75 0 0 0 0-1.5H11v-.75A2.25 2.25 0 0 0 8.75 1h-1.5A2.25 2.25 0 0 0 5 3.25Zm2.25-.75a.75.75 0 0 0-.75.75V4h3v-.75a.75.75 0 0 0-.75-.75h-1.5ZM6.05 6a.75.75 0 0 1 .787.713l.275 5.5a.75.75 0 0 1-1.498.075l-.275-5.5A.75.75 0 0 1 6.05 6Zm3.9 0a.75.75 0 0 1 .712.787l-.275 5.5a.75.75 0 0 1-1.498-.075l.275-5.5a.75.75 0 0 1 .786-.711Z" clipRule="evenodd" /></svg>
                           Borrar semana
                         </button>

@@ -2152,7 +2152,7 @@ export default function Personal() {
 
       {/* -- PLANNER TAB -- */}
       {!loading && tab === 'planner' && allowedTabs.includes('planner') && (
-        <div className="bg-white rounded-none sm:rounded-2xl border-y sm:border border-gray-200 sm:shadow-sm -mx-4 sm:mx-0 space-y-4">
+        <div className="space-y-4 sm:bg-white sm:rounded-2xl sm:border sm:border-gray-200 sm:shadow-sm sm:mx-0">
           {/* Nav row */}
           <div className="space-y-2 px-4 pt-4">
             {/* Row 1: week navigation */}

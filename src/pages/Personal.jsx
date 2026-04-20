@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import Modal from '../components/Modal';
 import { useAuth } from '../context/AuthContext';
+import { useSetMobileHeader } from '../context/MobileHeaderContext';
 
 const inputCls = 'w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white';
 const labelCls = 'block text-xs font-semibold text-gray-600 mb-1';
@@ -1275,6 +1276,25 @@ export default function Personal() {
   }, [role]);
 
   const [tab, setTab] = useState('planner');
+
+  useSetMobileHeader({
+    title: 'Personal',
+    actions: allowedTabs.length > 1 ? (
+      <div className="flex items-center gap-1">
+        {tabs.filter((item) => allowedTabs.includes(item.key)).map((item) => (
+          <button
+            key={item.key}
+            onClick={() => setTab(item.key)}
+            className={`w-9 h-9 flex items-center justify-center rounded-xl transition-colors ${tab === item.key ? 'bg-violet-600 text-white' : 'text-gray-500 hover:bg-gray-100'}`}
+            title={item.label}
+          >
+            {item.icon}
+          </button>
+        ))}
+      </div>
+    ) : null,
+  });
+
   const [weekStart, setWeekStart] = useState(mondayOf(todayIso()));
   const [mobileDayIndex, setMobileDayIndex] = useState(() => {
     const ws = mondayOf(todayIso());
@@ -1749,7 +1769,7 @@ export default function Personal() {
           <p className="hidden sm:block text-sm text-gray-500">Gestion de empleados, planificacion semanal y costes estimados.</p>
         </div>
         {allowedTabs.length > 1 && (
-          <div className="flex items-center gap-1.5">
+          <div className="hidden sm:flex items-center gap-1.5">
             {tabs.filter((item) => allowedTabs.includes(item.key)).map((item) => (
               <button
                 key={item.key}
@@ -2146,12 +2166,6 @@ export default function Personal() {
                     <path fillRule="evenodd" d="M6.22 4.22a.75.75 0 0 1 1.06 0l3.25 3.25a.75.75 0 0 1 0 1.06L7.28 11.78a.75.75 0 0 1-1.06-1.06L9.94 8 6.22 4.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
                   </svg>
                 </button>
-                <button
-                  onClick={() => setWeekStart(mondayOf(todayIso()))}
-                  className="ml-1 px-2.5 py-1 rounded-lg border border-gray-200 hover:bg-gray-50 text-xs font-semibold text-gray-500 transition-colors"
-                >
-                  Hoy
-                </button>
                 {/* Desktop-only: copiar + trash */}
                 {role === 'owner' && <button
                   onClick={copyPreviousWeekAssignments}
@@ -2171,8 +2185,16 @@ export default function Personal() {
                   </svg>
                 </button>}
               </div>
+              {/* Right side: Hoy button (always) + Export (desktop only) */}
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setWeekStart(mondayOf(todayIso()))}
+                  className="px-2.5 py-1 rounded-lg border border-gray-200 hover:bg-gray-50 text-xs font-semibold text-gray-500 transition-colors"
+                >
+                  Hoy
+                </button>
               {/* Export button — desktop only in row 1 */}
-              <div className="hidden sm:block relative ml-1" ref={exportMenuRef}>
+              <div className="hidden sm:block relative" ref={exportMenuRef}>
                 <button
                   onClick={() => setExportMenuOpen((v) => !v)}
                   disabled={isExporting}
@@ -2208,6 +2230,7 @@ export default function Personal() {
                   </div>
                 )}
               </div>
+              </div>{/* end right group */}
             </div>
 
             {/* Row 2: mobile actions */}

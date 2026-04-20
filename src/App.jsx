@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { MobileHeaderProvider, useMobileHeader } from './context/MobileHeaderContext';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Login from './pages/Login';
@@ -41,6 +42,7 @@ function LoadingScreen() {
 }
 
 function MobileHeader({ onMenuOpen, onNewReservation }) {
+  const { title, actions } = useMobileHeader();
   return (
     <div className="lg:hidden flex items-center gap-3 px-4 py-3 bg-white border-b border-gray-200 shrink-0 z-30">
       <button
@@ -54,18 +56,20 @@ function MobileHeader({ onMenuOpen, onNewReservation }) {
       </button>
       <div className="flex items-center gap-2 flex-1 min-w-0">
         <img src="/logo.svg" alt="Tableo" className="w-6 h-6 shrink-0" />
-        <p className="text-sm font-semibold text-gray-900">Tableo</p>
+        <p className="text-sm font-semibold text-gray-900">{title || 'Tableo'}</p>
       </div>
-      <button
-        onClick={onNewReservation}
-        className="flex items-center gap-1.5 bg-violet-600 hover:bg-violet-700 text-white px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors"
-        aria-label="Nueva reserva"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
-          <path d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z" />
-        </svg>
-        Reserva
-      </button>
+      {actions ?? (
+        <button
+          onClick={onNewReservation}
+          className="flex items-center gap-1.5 bg-violet-600 hover:bg-violet-700 text-white px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors"
+          aria-label="Nueva reserva"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
+            <path d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z" />
+          </svg>
+          Reserva
+        </button>
+      )}
     </div>
   );
 }
@@ -80,6 +84,7 @@ function LayoutShell({ children, fullBleed = false }) {
   if (!business.id && !business.isDev) return <Navigate to="/onboarding" replace />;
 
   return (
+    <MobileHeaderProvider>
     <div className="flex h-[100dvh] bg-gray-50 overflow-hidden">
       {sidebarOpen && (
         <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={() => setSidebarOpen(false)} />
@@ -106,6 +111,7 @@ function LayoutShell({ children, fullBleed = false }) {
         </Modal>
       )}
     </div>
+    </MobileHeaderProvider>
   );
 }
 

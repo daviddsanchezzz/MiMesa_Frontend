@@ -1745,19 +1745,21 @@ export default function Personal() {
           </button>
         </div>
 
-        {/* Staff chips */}
+        {/* Staff chips — w-0 min-w-full prevents chips from inflating column's intrinsic width */}
         {rawList.length === 0 ? (
           <p className="text-xs text-gray-300 italic">Sin empleados asignados</p>
         ) : (
-          <ShiftStaffChips
-            groups={Object.values(grouped)
-              .sort((a, b) => {
-                const oa = positionOrderByName.get(a.roleName) ?? 999;
-                const ob = positionOrderByName.get(b.roleName) ?? 999;
-                return oa !== ob ? oa - ob : a.roleName.localeCompare(b.roleName);
-              })
-              .map((g) => ({ ...g, names: [...g.names].sort((a, b) => a.localeCompare(b)) }))}
-          />
+          <div className="w-0 min-w-full">
+            <ShiftStaffChips
+              groups={Object.values(grouped)
+                .sort((a, b) => {
+                  const oa = positionOrderByName.get(a.roleName) ?? 999;
+                  const ob = positionOrderByName.get(b.roleName) ?? 999;
+                  return oa !== ob ? oa - ob : a.roleName.localeCompare(b.roleName);
+                })
+                .map((g) => ({ ...g, names: [...g.names].sort((a, b) => a.localeCompare(b)) }))}
+            />
+          </div>
         )}
       </div>
     );

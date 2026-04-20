@@ -1731,8 +1731,8 @@ export default function Personal() {
         {/* Shift header */}
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
-            <p className="text-base md:text-sm font-bold text-gray-900">{shift.name}</p>
-            <p className="text-sm md:text-xs text-gray-400">{shift.startTime}–{shift.endTime}</p>
+            <p className="text-sm font-bold text-gray-900 truncate">{shift.name}</p>
+            <p className="text-xs text-gray-400 whitespace-nowrap">{shift.startTime}–{shift.endTime}</p>
           </div>
           <button
             onClick={() => setSlotEditor({ day, shift })}

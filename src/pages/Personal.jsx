@@ -1753,7 +1753,7 @@ export default function Personal() {
     }
   };
 
-  const renderShiftCard = (day, shift, key) => {
+  const renderShiftCard = (day, shift, cardKey) => {
     const key = `${day.date}__${shift._id}`;
     const rawList = assignmentsByDayShift[key] || [];
 
@@ -1772,7 +1772,7 @@ export default function Personal() {
 
     return (
       <div
-        key={key}
+        key={cardKey}
         onClick={() => setSlotEditor({ day, shift })}
         className="bg-white rounded-xl border border-gray-200 p-3 flex flex-col gap-2 h-full lg:cursor-default cursor-pointer lg:hover:border-gray-200 hover:border-violet-300 transition-colors"
       >

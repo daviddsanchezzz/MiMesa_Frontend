@@ -1224,8 +1224,24 @@ function assignPersonColors(names) {
   return result;
 }
 
-function ShiftStaffChips({ groups, personColorByName }) {
+function ShiftStaffChips({ groups, personColorByName, size = 'default' }) {
   const [expanded, setExpanded] = useState(false);
+  const isExport = size === 'export';
+
+  const wrapGapCls = isExport ? 'gap-2' : 'gap-1';
+  const chipCls = isExport
+    ? 'inline-flex items-center px-3.5 py-1.5 rounded-lg text-sm md:text-base font-semibold leading-6'
+    : 'inline-flex items-center px-2.5 py-1 md:px-2 md:py-0.5 rounded-md text-xs md:text-[11px] font-medium leading-5';
+  const overflowBtnCls = isExport
+    ? 'inline-flex items-center px-3.5 py-1.5 rounded-lg bg-violet-100 text-violet-700 text-sm md:text-base font-semibold leading-6 hover:bg-violet-200 transition-colors'
+    : 'inline-flex items-center px-2.5 py-1 md:px-2 md:py-0.5 rounded-md bg-violet-100 text-violet-700 text-xs md:text-[11px] font-semibold leading-5 hover:bg-violet-200 transition-colors';
+  const groupTitleCls = isExport
+    ? 'text-xs md:text-sm font-bold uppercase tracking-wider mb-2 pb-1 border-b inline-block'
+    : 'text-[10px] font-bold uppercase tracking-wider mb-1 pb-0.5 border-b inline-block';
+  const expandedWrapCls = isExport ? 'space-y-3' : 'space-y-2';
+  const collapseBtnCls = isExport
+    ? 'text-xs md:text-sm text-gray-400 hover:text-gray-500 transition-colors'
+    : 'text-[10px] text-gray-400 hover:text-gray-500 transition-colors';
 
   const noPos = groups.length === 1 && groups[0].roleName === 'Sin puesto';
   const personColors = noPos
@@ -1248,10 +1264,10 @@ function ShiftStaffChips({ groups, personColorByName }) {
 
   if (!expanded) {
     return (
-      <div className="flex flex-wrap gap-2">
+      <div className={`flex flex-wrap ${wrapGapCls}`}>
         {visible.map((p, i) => (
           <span key={i}
-            className="inline-flex items-center px-3.5 py-1.5 rounded-lg text-sm md:text-base font-semibold leading-6"
+            className={chipCls}
             style={{ backgroundColor: p.roleColor + '20', color: p.roleColor }}
           >
             {p.name.split(' ')[0]}
@@ -1260,7 +1276,7 @@ function ShiftStaffChips({ groups, personColorByName }) {
         {showOverflow && (
           <button
             onClick={(e) => { e.stopPropagation(); setExpanded(true); }}
-            className="inline-flex items-center px-3.5 py-1.5 rounded-lg bg-violet-100 text-violet-700 text-sm md:text-base font-semibold leading-6 hover:bg-violet-200 transition-colors"
+            className={overflowBtnCls}
           >
             +{overflow}
           </button>
@@ -1270,22 +1286,22 @@ function ShiftStaffChips({ groups, personColorByName }) {
   }
 
   return (
-    <div className="space-y-3">
+    <div className={expandedWrapCls}>
       {groups.map((group, gi) => {
         const groupNoPos = group.roleName === 'Sin puesto';
         return (
           <div key={gi}>
             {!groupNoPos && (
-              <p className="text-xs md:text-sm font-bold uppercase tracking-wider mb-2 pb-1 border-b inline-block" style={{ color: group.roleColor, borderColor: group.roleColor }}>
+              <p className={groupTitleCls} style={{ color: group.roleColor, borderColor: group.roleColor }}>
                 {group.roleName}
               </p>
             )}
-            <div className="flex flex-wrap gap-2">
+            <div className={`flex flex-wrap ${wrapGapCls}`}>
               {group.names.map((name, ni) => {
                 const c = groupNoPos ? (personColors?.get(name) || '#64748B') : group.roleColor;
                 return (
                 <span key={ni}
-                  className="inline-flex items-center px-3.5 py-1.5 rounded-lg text-sm md:text-base font-semibold leading-6"
+                  className={chipCls}
                   style={{ backgroundColor: c + '22', color: c }}
                 >
                   {name.split(' ')[0]}
@@ -1298,7 +1314,7 @@ function ShiftStaffChips({ groups, personColorByName }) {
       })}
       <button
         onClick={(e) => { e.stopPropagation(); setExpanded(false); }}
-        className="text-xs md:text-sm text-gray-400 hover:text-gray-500 transition-colors"
+        className={collapseBtnCls}
       >
         Ver menos
       </button>
@@ -2452,6 +2468,7 @@ export default function Personal() {
                                 <p style={{ fontSize: '20px', color: '#d1d5db', fontStyle: 'italic', margin: 0 }}>Sin empleados asignados</p>
                               ) : (
                                 <ShiftStaffChips
+                                  size="export"
                                   groups={Object.values(grouped)
                                     .sort((a, b) => {
                                       const oa = positionOrderByName.get(a.role) ?? 999;

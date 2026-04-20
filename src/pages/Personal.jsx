@@ -1295,6 +1295,7 @@ export default function Personal() {
     ) : null,
   });
   
+  
 
   const [weekStart, setWeekStart] = useState(mondayOf(todayIso()));
   const [mobileDayIndex, setMobileDayIndex] = useState(() => {
@@ -2244,14 +2245,14 @@ export default function Personal() {
 
           {/* Week grid — horizontal scroll on mobile, full grid on desktop */}
           <div className="overflow-x-auto pb-4">
-            <div className="grid grid-cols-7 gap-2 min-w-[1050px] px-3">
+            <div className="flex gap-2 px-3">
               {days.map((day) => {
                 const isToday = day.date === today;
                 const dayShifts = shiftRowsByDay[day.date] || [];
                 return (
                   <div
                     key={day.date}
-                    className={`rounded-xl border p-3 space-y-2 ${
+                    className={`shrink-0 w-[175px] md:flex-1 rounded-xl border p-3 space-y-2 ${
                       isToday ? 'border-violet-300 bg-violet-50/40' : 'border-gray-200 bg-gray-50'
                     }`}
                   >

@@ -37,6 +37,10 @@ const addDays = (dateStr, n) => {
   d.setDate(d.getDate() + n);
   return d.toISOString().slice(0, 10);
 };
+const normalizeDateOnly = (value) => {
+  const text = String(value || '');
+  return text.length >= 10 ? text.slice(0, 10) : '';
+};
 const toDayOfWeek = (isoDate) => new Date(`${isoDate}T12:00:00`).getDay();
 const weekDays = (weekStart) => [...Array(7)].map((_, i) => {
   const date = addDays(weekStart, i);
@@ -1346,6 +1350,7 @@ export default function Personal() {
   const mobileDayButtonRefs = useRef({});
   const mobileDayScrollerRef = useRef(null);
   const weekDataRequestSeqRef = useRef(0);
+  const EMPTY_COSTS = { employeeCosts: [], totalsByCurrency: {}, monthlyEstimateByCurrency: {} };
 
   const loadCore = async ({ silent = false } = {}) => {
     if (!silent) setLoading(true);
@@ -1374,8 +1379,15 @@ export default function Personal() {
         api.get(`/staff/costs?weekStart=${targetWeekStart}`),
       ]);
       if (requestSeq !== weekDataRequestSeqRef.current) return;
-      setAssignments(aRes.data?.assignments || []);
-      setCosts(cRes.data || { employeeCosts: [], totalsByCurrency: {}, monthlyEstimateByCurrency: {} });
+      const weekEnd = addDays(targetWeekStart, 6);
+      const safeAssignments = (aRes.data?.assignments || [])
+        .map((assignment) => ({
+          ...assignment,
+          date: normalizeDateOnly(assignment?.date),
+        }))
+        .filter((assignment) => assignment.date && assignment.date >= targetWeekStart && assignment.date <= weekEnd);
+      setAssignments(safeAssignments);
+      setCosts(cRes.data || EMPTY_COSTS);
     } catch (err) {
       if (requestSeq !== weekDataRequestSeqRef.current) return;
       setError(err?.response?.data?.message || 'No se pudieron cargar asignaciones o costes');
@@ -1385,7 +1397,14 @@ export default function Personal() {
   const loadAssignments = async () => {
     try {
       const aRes = await api.get(`/staff/assignments?weekStart=${weekStart}`);
-      setAssignments(aRes.data?.assignments || []);
+      const weekEnd = addDays(weekStart, 6);
+      const safeAssignments = (aRes.data?.assignments || [])
+        .map((assignment) => ({
+          ...assignment,
+          date: normalizeDateOnly(assignment?.date),
+        }))
+        .filter((assignment) => assignment.date && assignment.date >= weekStart && assignment.date <= weekEnd);
+      setAssignments(safeAssignments);
     } catch (err) {
       setError(err?.response?.data?.message || 'No se pudieron cargar asignaciones');
     }
@@ -1427,7 +1446,11 @@ export default function Personal() {
   
 
   useEffect(() => { loadCore(); }, []);
-  useEffect(() => { loadWeekData(); }, [weekStart]);
+  useEffect(() => {
+    setAssignments([]);
+    setCosts(EMPTY_COSTS);
+    loadWeekData(weekStart);
+  }, [weekStart]);
   useEffect(() => {
     if (tab === 'costs') {
       if (costsSubTab === 'monthly') loadMonthlyCosts(costMonth);

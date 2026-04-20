@@ -1727,7 +1727,7 @@ export default function Personal() {
     }, {});
 
     return (
-      <div key={shift._id} className="bg-white rounded-xl border border-gray-200 p-3 space-y-2.5">
+      <div key={shift._id} className="bg-white rounded-xl border border-gray-200 p-3 flex-1 flex flex-col gap-2">
         {/* Shift header */}
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
@@ -2255,7 +2255,7 @@ export default function Personal() {
                 return (
                   <div
                     key={day.date}
-                    className={`rounded-xl border p-3 space-y-2 ${
+                    className={`rounded-xl border p-3 flex flex-col gap-2 ${
                       isToday ? 'border-violet-300 bg-violet-50/40' : 'border-gray-200 bg-gray-50'
                     }`}
                   >

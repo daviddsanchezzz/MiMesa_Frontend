@@ -1753,7 +1753,7 @@ export default function Personal() {
     }
   };
 
-  const renderShiftCard = (day, shift) => {
+  const renderShiftCard = (day, shift, key) => {
     const key = `${day.date}__${shift._id}`;
     const rawList = assignmentsByDayShift[key] || [];
 
@@ -1772,7 +1772,7 @@ export default function Personal() {
 
     return (
       <div
-        key={shift._id}
+        key={key}
         onClick={() => setSlotEditor({ day, shift })}
         className="bg-white rounded-xl border border-gray-200 p-3 flex flex-col gap-2 h-full lg:cursor-default cursor-pointer lg:hover:border-gray-200 hover:border-violet-300 transition-colors"
       >
@@ -2341,7 +2341,7 @@ export default function Personal() {
                     days.map((day) => {
                       const shift = (shiftRowsByDay[day.date] || [])[i];
                       if (!shift) return <div key={`${day.date}-${i}`} className="rounded-xl border border-dashed border-gray-100" />;
-                      return renderShiftCard(day, shift);
+                      return renderShiftCard(day, shift, `${day.date}__${shift._id}`);
                     })
                   )}
                 </div>

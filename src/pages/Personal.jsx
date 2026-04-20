@@ -1183,14 +1183,22 @@ const PERSON_COLORS = [
   '#e11d48', // crimson
 ];
 
+const colorFromSlot = (slot) => {
+  if (slot < PERSON_COLORS.length) return PERSON_COLORS[slot];
+  const hue = Math.round((slot * 137.508) % 360); // golden-angle distribution
+  return `hsl(${hue} 72% 48%)`;
+};
+
 function assignPersonColors(names) {
-  const n = PERSON_COLORS.length;
+  const usedSlots = new Set();
   const result = new Map();
-  for (const name of [...names].sort((a, b) => a.localeCompare(b))) {
+  for (const name of [...new Set(names)].sort((a, b) => a.localeCompare(b))) {
     let h = 0;
     for (let i = 0; i < name.length; i++) { h = name.charCodeAt(i) + ((h << 5) - h); h |= 0; }
-    const idx = Math.abs(h) % n;
-    result.set(name, PERSON_COLORS[idx]);
+    let slot = Math.abs(h);
+    while (usedSlots.has(slot)) slot += 1;
+    usedSlots.add(slot);
+    result.set(name, colorFromSlot(slot));
   }
   return result;
 }

@@ -1792,6 +1792,7 @@ export default function Personal() {
             </svg>
           </button>
         </div>
+        
 
         {/* Staff chips — w-0 min-w-full prevents chips from inflating column's intrinsic width */}
         {rawList.length === 0 ? (

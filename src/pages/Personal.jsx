@@ -1139,14 +1139,26 @@ function PositionFormModal({ position, onClose, onSaved }) {
 const CHIP_LIMIT = 8;
 
 const PERSON_COLORS = [
-  '#6366f1','#8b5cf6','#a855f7','#d946ef','#ec4899',
-  '#f43f5e','#ef4444','#f97316','#f59e0b','#eab308',
-  '#84cc16','#22c55e','#16a34a','#10b981','#14b8a6',
-  '#06b6d4','#0ea5e9','#3b82f6','#4f46e5','#7c3aed',
-  '#be185d','#b45309','#15803d','#0f766e','#0369a1',
-  '#1d4ed8','#7e22ce','#9f1239','#92400e','#166534',
-  '#134e4a','#1e3a8a','#581c87','#831843','#78350f',
-  '#064e3b','#083344','#1e40af','#6b21a8','#9d174d',
+  '#6366f1', // indigo
+  '#f43f5e', // rose
+  '#10b981', // emerald
+  '#f59e0b', // amber
+  '#3b82f6', // blue
+  '#a855f7', // purple
+  '#14b8a6', // teal
+  '#ef4444', // red
+  '#84cc16', // lime
+  '#ec4899', // pink
+  '#06b6d4', // cyan
+  '#f97316', // orange
+  '#8b5cf6', // violet
+  '#22c55e', // green
+  '#0ea5e9', // sky
+  '#d946ef', // fuchsia
+  '#eab308', // yellow
+  '#64748b', // slate
+  '#0891b2', // dark cyan
+  '#e11d48', // crimson
 ];
 
 function assignPersonColors(names) {
@@ -2198,8 +2210,8 @@ export default function Personal() {
               </div>
             </div>
 
-            {/* Row 2: mobile actions (owner only) */}
-            {role === 'owner' && (
+            {/* Row 2: mobile actions */}
+            {(role === 'owner' || role === 'manager') && (
               <div className="sm:hidden flex items-center gap-2">
                 <button
                   onClick={copyPreviousWeekAssignments}

@@ -1303,6 +1303,7 @@ export default function Personal() {
     const diff = Math.round((new Date(todayIso()) - new Date(ws)) / 86400000);
     return diff >= 0 && diff <= 6 ? diff : 0;
   });
+  
   const [employees, setEmployees] = useState([]);
   const [positions, setPositions] = useState([]);
   const [assignments, setAssignments] = useState([]);

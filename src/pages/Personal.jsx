@@ -1375,7 +1375,8 @@ export default function Personal() {
   const [isCopyingWeek, setIsCopyingWeek] = useState(false);
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
   const plannerGridRef = useRef(null);
-  const exportMenuRef = useRef(null);
+  const exportMenuDesktopRef = useRef(null);
+  const exportMenuMobileRef = useRef(null);
   const mobileDayButtonRefs = useRef({});
   const mobileDayScrollerRef = useRef(null);
   const weekDataRequestSeqRef = useRef(0);
@@ -1635,7 +1636,11 @@ export default function Personal() {
   // Close export menu on outside click
   useEffect(() => {
     if (!exportMenuOpen) return;
-    const handler = (e) => { if (exportMenuRef.current && !exportMenuRef.current.contains(e.target)) setExportMenuOpen(false); };
+    const handler = (e) => {
+      const inDesktop = exportMenuDesktopRef.current?.contains(e.target);
+      const inMobile = exportMenuMobileRef.current?.contains(e.target);
+      if (!inDesktop && !inMobile) setExportMenuOpen(false);
+    };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, [exportMenuOpen]);
@@ -2306,7 +2311,7 @@ export default function Personal() {
                 </>)}
 
                 {/* Desktop: download dropdown */}
-                <div className="hidden lg:block relative" ref={exportMenuRef}>
+                <div className="hidden lg:block relative" ref={exportMenuDesktopRef}>
                   <button
                     onClick={() => setExportMenuOpen((v) => !v)}
                     disabled={isExporting}
@@ -2334,7 +2339,7 @@ export default function Personal() {
                 </div>
 
                 {/* Mobile: ··· dropdown with everything */}
-                <div className="lg:hidden relative" ref={exportMenuRef}>
+                <div className="lg:hidden relative" ref={exportMenuMobileRef}>
                   <button
                     onClick={() => setExportMenuOpen((v) => !v)}
                     className="w-8 h-8 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors flex items-center justify-center text-gray-500"

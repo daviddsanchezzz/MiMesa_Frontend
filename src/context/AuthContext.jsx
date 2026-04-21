@@ -49,7 +49,12 @@ export function AuthProvider({ children }) {
   // ── Login ──────────────────────────────────────────────────────────────────
   const login = async (email, password) => {
     const { data, error } = await authClient.signIn.email({ email, password });
-    if (error) throw new Error(error.message || 'Credenciales incorrectas');
+    if (error) {
+      if (error.code === 'EMAIL_NOT_VERIFIED') {
+        throw new Error('Debes verificar tu email antes de iniciar sesión. Revisa tu bandeja de entrada.');
+      }
+      throw new Error(error.message || 'Credenciales incorrectas');
+    }
     if (data?.token) setStoredToken(data.token);
     await refreshBusiness();
   };
@@ -58,8 +63,12 @@ export function AuthProvider({ children }) {
   const register = async (name, email, password, phone = '') => {
     const { data, error } = await authClient.signUp.email({ name, email, password, phone });
     if (error) throw new Error(error.message || 'Error al crear la cuenta');
-    if (data?.token) setStoredToken(data.token);
-    await refreshBusiness();
+    // Registration now requires email verification before accessing the app.
+    // Keep user logged out until the verification link is used.
+    if (data?.token) setStoredToken(null);
+    setBusiness(null);
+    setMemberships([]);
+    setActiveBusinessId(null);
   };
 
   // ── Logout ─────────────────────────────────────────────────────────────────

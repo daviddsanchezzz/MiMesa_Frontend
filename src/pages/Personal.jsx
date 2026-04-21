@@ -2437,17 +2437,18 @@ export default function Personal() {
                 <p style={{ fontSize: '36px', fontWeight: 700, color: '#6b7280', margin: 0 }}>{weekLabel}</p>
               </div>
               {/* Grid */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '24px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '28px' }}>
                 {days.map((day) => {
                   const dayShifts = shiftRowsByDay[day.date] || [];
+                  const isToday = day.date === todayIso();
                   return (
-                    <div key={day.date} style={{ borderRadius: '22px', border: '2px solid #e5e7eb', padding: '24px', backgroundColor: '#f9fafb' }}>
-                      <div style={{ paddingBottom: '18px', borderBottom: '2px solid #e5e7eb', marginBottom: '18px' }}>
-                        <p style={{ fontSize: '20px', fontWeight: 900, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.1em', margin: '0 0 6px' }}>{day.short}</p>
-                        <p style={{ fontSize: '42px', fontWeight: 900, color: '#111827', margin: 0, letterSpacing: '-0.02em', lineHeight: 1 }}>{day.day}</p>
+                    <div key={day.date} style={{ borderRadius: '24px', border: `2px solid ${isToday ? '#c4b5fd' : '#e5e7eb'}`, padding: '28px', backgroundColor: isToday ? '#f5f3ff' : '#f9fafb' }}>
+                      <div style={{ paddingBottom: '20px', borderBottom: `2px solid ${isToday ? '#c4b5fd' : '#e5e7eb'}`, marginBottom: '20px' }}>
+                        <p style={{ fontSize: '22px', fontWeight: 900, color: isToday ? '#8b5cf6' : '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.12em', margin: '0 0 6px' }}>{day.short}</p>
+                        <p style={{ fontSize: '48px', fontWeight: 900, color: isToday ? '#6d28d9' : '#111827', margin: 0, letterSpacing: '-0.02em', lineHeight: 1 }}>{day.day}</p>
                       </div>
                       {dayShifts.length === 0 ? (
-                        <p style={{ fontSize: '20px', color: '#d1d5db', textAlign: 'center', paddingTop: '14px', margin: 0 }}>Sin turnos</p>
+                        <p style={{ fontSize: '22px', color: '#d1d5db', textAlign: 'center', paddingTop: '16px', margin: 0 }}>Sin turnos</p>
                       ) : (
                         dayShifts.map((shift) => {
                           const key = `${day.date}__${shift._id}`;
@@ -2476,15 +2477,15 @@ export default function Personal() {
                               color: noPos ? (exportPersonColors?.get(name) || '#7c3aed') : g.color,
                             })));
                           return (
-                            <div key={shift._id} style={{ backgroundColor: '#fff', borderRadius: '20px', border: '2px solid #e5e7eb', padding: '28px 32px', marginBottom: '16px' }}>
-                              <p style={{ fontSize: '30px', fontWeight: 800, color: '#111827', margin: '0 0 6px', letterSpacing: '-0.01em' }}>{shift.name}</p>
-                              <p style={{ fontSize: '22px', color: '#9ca3af', margin: '0 0 20px' }}>{shift.startTime}–{shift.endTime}</p>
+                            <div key={shift._id} style={{ backgroundColor: '#fff', borderRadius: '20px', border: '2px solid #e5e7eb', padding: '28px', marginBottom: '14px' }}>
+                              <p style={{ fontSize: '34px', fontWeight: 800, color: '#111827', margin: '0 0 6px', letterSpacing: '-0.01em', lineHeight: 1.1 }}>{shift.name}</p>
+                              <p style={{ fontSize: '26px', fontWeight: 600, color: '#9ca3af', margin: '0 0 20px', letterSpacing: '-0.01em' }}>{shift.startTime}–{shift.endTime}</p>
                               {rawList.length === 0 ? (
-                                <p style={{ fontSize: '22px', color: '#d1d5db', fontStyle: 'italic', margin: 0 }}>Sin empleados asignados</p>
+                                <p style={{ fontSize: '24px', color: '#d1d5db', fontStyle: 'italic', margin: 0 }}>Sin empleados</p>
                               ) : (
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '14px' }}>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
                                   {allPeople.map(({ name, color }, i) => (
-                                    <span key={i} style={{ display: 'inline-flex', alignItems: 'center', padding: '16px 36px', borderRadius: '16px', fontSize: '40px', fontWeight: 700, backgroundColor: color + '28', color, lineHeight: 1.2 }}>
+                                    <span key={i} style={{ display: 'inline-flex', alignItems: 'center', padding: '14px 30px', borderRadius: '14px', fontSize: '34px', fontWeight: 700, backgroundColor: color + '28', color, lineHeight: 1.2 }}>
                                       {name.split(' ')[0]}
                                     </span>
                                   ))}

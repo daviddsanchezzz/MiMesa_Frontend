@@ -2426,7 +2426,7 @@ export default function Personal() {
           {isExporting && createPortal(
             <div
               ref={plannerGridRef}
-              style={{ position: 'fixed', left: '-9999px', top: 0, width: '3400px', backgroundColor: '#ffffff', padding: '80px 90px', boxSizing: 'border-box', fontFamily: 'system-ui, -apple-system, sans-serif' }}
+              style={{ position: 'fixed', left: '-9999px', top: 0, width: '4200px', backgroundColor: '#ffffff', padding: '90px 100px', boxSizing: 'border-box', fontFamily: 'system-ui, -apple-system, sans-serif' }}
             >
               {/* Header */}
               <div style={{ marginBottom: '52px', paddingBottom: '36px', borderBottom: '3px solid #e5e7eb', display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
@@ -2461,22 +2461,27 @@ export default function Personal() {
                             acc[gk].names.push(emp?.firstName ? `${emp.firstName} ${emp.lastName || ''}`.trim() : 'Empleado');
                             return acc;
                           }, {});
+                          const allPeople = Object.values(grouped)
+                            .sort((a, b) => {
+                              const oa = positionOrderByName.get(a.role) ?? 999;
+                              const ob = positionOrderByName.get(b.role) ?? 999;
+                              return oa !== ob ? oa - ob : a.role.localeCompare(b.role);
+                            })
+                            .flatMap(g => [...g.names].sort((a, b) => a.localeCompare(b)).map(name => ({ name, color: g.color })));
                           return (
-                            <div key={shift._id} style={{ backgroundColor: '#fff', borderRadius: '16px', border: '1.5px solid #e5e7eb', padding: '18px 20px', marginBottom: '12px' }}>
-                              <p style={{ fontSize: '26px', fontWeight: 800, color: '#111827', margin: '0 0 14px', letterSpacing: '-0.01em' }}>{shift.name}</p>
+                            <div key={shift._id} style={{ backgroundColor: '#fff', borderRadius: '20px', border: '2px solid #e5e7eb', padding: '28px 32px', marginBottom: '16px' }}>
+                              <p style={{ fontSize: '30px', fontWeight: 800, color: '#111827', margin: '0 0 6px', letterSpacing: '-0.01em' }}>{shift.name}</p>
+                              <p style={{ fontSize: '22px', color: '#9ca3af', margin: '0 0 20px' }}>{shift.startTime}–{shift.endTime}</p>
                               {rawList.length === 0 ? (
-                                <p style={{ fontSize: '20px', color: '#d1d5db', fontStyle: 'italic', margin: 0 }}>Sin empleados asignados</p>
+                                <p style={{ fontSize: '22px', color: '#d1d5db', fontStyle: 'italic', margin: 0 }}>Sin empleados asignados</p>
                               ) : (
-                                <ShiftStaffChips
-                                  size="export"
-                                  groups={Object.values(grouped)
-                                    .sort((a, b) => {
-                                      const oa = positionOrderByName.get(a.role) ?? 999;
-                                      const ob = positionOrderByName.get(b.role) ?? 999;
-                                      return oa !== ob ? oa - ob : a.role.localeCompare(b.role);
-                                    })
-                                    .map((g) => ({ roleName: g.role, roleColor: g.color, names: [...g.names].sort((a, b) => a.localeCompare(b)) }))}
-                                />
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                                  {allPeople.map(({ name, color }, i) => (
+                                    <span key={i} style={{ display: 'inline-flex', alignItems: 'center', padding: '10px 22px', borderRadius: '12px', fontSize: '24px', fontWeight: 600, backgroundColor: color + '22', color, lineHeight: 1.2 }}>
+                                      {name.split(' ')[0]}
+                                    </span>
+                                  ))}
+                                </div>
                               )}
                             </div>
                           );

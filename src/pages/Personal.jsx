@@ -2461,13 +2461,20 @@ export default function Personal() {
                             acc[gk].names.push(emp?.firstName ? `${emp.firstName} ${emp.lastName || ''}`.trim() : 'Empleado');
                             return acc;
                           }, {});
-                          const allPeople = Object.values(grouped)
+                          const groupValues = Object.values(grouped);
+                          const noPos = groupValues.every(g => g.role === 'Sin puesto');
+                          const allNames = groupValues.flatMap(g => [...g.names].sort((a, b) => a.localeCompare(b)));
+                          const exportPersonColors = noPos ? assignPersonColors(allNames) : null;
+                          const allPeople = groupValues
                             .sort((a, b) => {
                               const oa = positionOrderByName.get(a.role) ?? 999;
                               const ob = positionOrderByName.get(b.role) ?? 999;
                               return oa !== ob ? oa - ob : a.role.localeCompare(b.role);
                             })
-                            .flatMap(g => [...g.names].sort((a, b) => a.localeCompare(b)).map(name => ({ name, color: g.color })));
+                            .flatMap(g => [...g.names].sort((a, b) => a.localeCompare(b)).map(name => ({
+                              name,
+                              color: noPos ? (exportPersonColors?.get(name) || '#7c3aed') : g.color,
+                            })));
                           return (
                             <div key={shift._id} style={{ backgroundColor: '#fff', borderRadius: '20px', border: '2px solid #e5e7eb', padding: '28px 32px', marginBottom: '16px' }}>
                               <p style={{ fontSize: '30px', fontWeight: 800, color: '#111827', margin: '0 0 6px', letterSpacing: '-0.01em' }}>{shift.name}</p>
@@ -2475,9 +2482,9 @@ export default function Personal() {
                               {rawList.length === 0 ? (
                                 <p style={{ fontSize: '22px', color: '#d1d5db', fontStyle: 'italic', margin: 0 }}>Sin empleados asignados</p>
                               ) : (
-                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '14px' }}>
                                   {allPeople.map(({ name, color }, i) => (
-                                    <span key={i} style={{ display: 'inline-flex', alignItems: 'center', padding: '10px 22px', borderRadius: '12px', fontSize: '24px', fontWeight: 600, backgroundColor: color + '22', color, lineHeight: 1.2 }}>
+                                    <span key={i} style={{ display: 'inline-flex', alignItems: 'center', padding: '16px 36px', borderRadius: '16px', fontSize: '40px', fontWeight: 700, backgroundColor: color + '28', color, lineHeight: 1.2 }}>
                                       {name.split(' ')[0]}
                                     </span>
                                   ))}

@@ -2485,7 +2485,7 @@ export default function Personal() {
                               ) : (
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '12px' }}>
                                   {allPeople.map(({ name, color }, i) => (
-                                    <span key={i} style={{ display: 'inline-flex', alignItems: 'center', padding: '14px 30px', borderRadius: '14px', fontSize: '34px', fontWeight: 700, backgroundColor: color + '28', color, lineHeight: 1.2 }}>
+                                    <span key={i} style={{ display: 'inline-flex', alignItems: 'center', padding: '14px 30px', borderRadius: '14px', fontSize: '34px', fontWeight: 700, backgroundColor: color + '28', color, lineHeight: 1 }}>
                                       {name.split(' ')[0]}
                                     </span>
                                   ))}

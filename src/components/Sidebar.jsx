@@ -89,7 +89,6 @@ export default function Sidebar({
   const navigate = useNavigate();
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
-  const [switchingBusinessId, setSwitchingBusinessId] = useState('');
   const [isSmallScreen, setIsSmallScreen] = useState(false);
   const [newRsvModal, setNewRsvModal] = useState(false);
   const menuRef = useRef(null);
@@ -137,17 +136,6 @@ export default function Sidebar({
   const handleNavClick = () => {
     setMenuOpen(false);
     if (closeOnNavigate && onClose) onClose();
-  };
-
-  const handleQuickSwitchBusiness = async (businessId) => {
-    if (!businessId || business?.id === businessId) return;
-    try {
-      setSwitchingBusinessId(businessId);
-      await switchBusiness(businessId);
-      handleNavClick();
-    } finally {
-      setSwitchingBusinessId('');
-    }
   };
 
   useEffect(() => {
@@ -205,35 +193,6 @@ export default function Sidebar({
           )}
         </div>
       </div>
-
-      {!devSidebar && memberships.length > 1 && !collapsed && (
-        <div className="px-3 pt-3 pb-1">
-          <label className="block text-[10px] font-semibold uppercase tracking-widest text-slate-500 px-1 mb-1.5">
-            Negocio activo
-          </label>
-          <div className="relative">
-            <select
-              value={business?.id ?? ''}
-              onChange={(e) => { switchBusiness(e.target.value); handleNavClick(); }}
-              className="w-full appearance-none rounded-lg bg-slate-800 border border-slate-700 text-slate-100 text-sm px-3 py-2 pr-8 focus:outline-none focus:border-violet-500"
-            >
-              {memberships.map((m) => (
-                <option key={m.businessId} value={m.businessId} className="bg-slate-800 text-slate-200">
-                  {m.businessName}
-                </option>
-              ))}
-            </select>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 20 20"
-              fill="currentColor"
-              className="w-4 h-4 text-slate-400 pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2"
-            >
-              <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.168l3.71-3.938a.75.75 0 1 1 1.08 1.04l-4.25 4.5a.75.75 0 0 1-1.08 0l-4.25-4.5a.75.75 0 0 1 .02-1.06Z" clipRule="evenodd" />
-            </svg>
-          </div>
-        </div>
-      )}
 
       {!devSidebar && (
         <div className="px-3 pt-3 pb-1">
@@ -370,38 +329,6 @@ export default function Sidebar({
 
           {menuOpen && (
             <div className="absolute left-0 right-0 bottom-full mb-2 bg-slate-800 border border-slate-700 rounded-lg p-1 shadow-lg">
-              {!devSidebar && memberships.length > 1 && (
-                <>
-                  <p className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
-                    Cambiar negocio
-                  </p>
-                  <div className="px-1 pb-1 space-y-1">
-                    {memberships.map((m) => {
-                      const isActiveBiz = business?.id === m.businessId;
-                      const isSwitching = switchingBusinessId === m.businessId;
-                      return (
-                        <button
-                          key={m.businessId}
-                          type="button"
-                          disabled={isActiveBiz || isSwitching}
-                          onClick={() => handleQuickSwitchBusiness(m.businessId)}
-                          className={`w-full flex items-center justify-between gap-2 px-2.5 py-2 rounded-md text-sm transition-colors ${
-                            isActiveBiz
-                              ? 'bg-slate-700 text-slate-100'
-                              : 'text-slate-300 hover:bg-slate-700'
-                          } ${isSwitching ? 'opacity-70' : ''}`}
-                        >
-                          <span className="truncate text-left">{m.businessName}</span>
-                          <span className="text-xs text-slate-400 shrink-0">
-                            {isActiveBiz ? 'Activo' : isSwitching ? 'Cambiando...' : ''}
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                  <div className="mx-2 my-1 border-t border-slate-700" />
-                </>
-              )}
               {!devSidebar && (
                 <button
                   onClick={() => { navigate('/profile'); handleNavClick(); }}

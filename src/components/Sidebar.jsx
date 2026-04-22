@@ -125,6 +125,7 @@ export default function Sidebar({
 
   const userName = session?.user?.name || business?.userName || business?.name || 'Usuario';
   const userEmail = session?.user?.email || business?.userEmail || business?.email || '';
+  const activeBusinessId = business?.id || null;
   const initial = userName?.[0]?.toUpperCase() || 'U';
   const devSidebar = devMode || business?.isDev || false;
   const currentDevTab = new URLSearchParams(location.search).get('tab') === 'users' ? 'users' : 'businesses';
@@ -329,6 +330,38 @@ export default function Sidebar({
 
           {menuOpen && (
             <div className="absolute left-0 right-0 bottom-full mb-2 bg-slate-800 border border-slate-700 rounded-lg p-1 shadow-lg">
+              {!devSidebar && memberships.length > 1 && (
+                <>
+                  <p className="px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-slate-500">
+                    Negocio activo
+                  </p>
+                  <div className="max-h-48 overflow-y-auto mb-1">
+                    {memberships.map((m) => {
+                      const isActiveBiz = m.businessId === activeBusinessId;
+                      return (
+                        <button
+                          key={m.businessId}
+                          onClick={async () => {
+                            if (isActiveBiz) { setMenuOpen(false); return; }
+                            await switchBusiness(m.businessId);
+                            navigate('/');
+                            handleNavClick();
+                          }}
+                          className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${
+                            isActiveBiz
+                              ? 'bg-violet-600/20 text-violet-200'
+                              : 'text-slate-200 hover:bg-slate-700'
+                          }`}
+                        >
+                          <span className="block truncate">{m.businessName}</span>
+                          {!isActiveBiz && <span className="text-[11px] text-slate-400">Cambiar</span>}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div className="h-px bg-slate-700 my-1" />
+                </>
+              )}
               {!devSidebar && (
                 <button
                   onClick={() => { navigate('/profile'); handleNavClick(); }}

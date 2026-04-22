@@ -2005,8 +2005,8 @@ function PagosSection() {
         </svg>
       </div>
       <div>
-        <p className="text-sm font-semibold text-gray-900">Función disponible en el plan Basic</p>
-        <p className="text-xs text-gray-500 mt-1">Los depósitos y garantías con tarjeta requieren el plan Basic.</p>
+        <p className="text-sm font-semibold text-gray-900">Función disponible en el plan Pro</p>
+        <p className="text-xs text-gray-500 mt-1">Los depósitos y garantías con tarjeta requieren el plan Pro.</p>
       </div>
       <button
         onClick={() => window.location.search = '?tab=suscripcion'}
@@ -2296,5 +2296,4 @@ export default function Settings() {
     </div>
   );
 }
-
 

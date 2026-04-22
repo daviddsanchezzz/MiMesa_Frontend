@@ -77,7 +77,10 @@ function MobileHeader({ onMenuOpen, onNewReservation, showDefaultAction = true }
 function LayoutShell({ children, fullBleed = false, devMode = false }) {
   const { business, loading } = useAuth();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] = useState(false);
+  const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] = useState(() => {
+    if (typeof window === 'undefined') return false;
+    return window.localStorage.getItem('sidebar:desktop-collapsed') === '1';
+  });
   const [isDesktop, setIsDesktop] = useState(() => {
     if (typeof window === 'undefined' || !window.matchMedia) return false;
     return window.matchMedia('(min-width: 1024px)').matches;
@@ -91,6 +94,11 @@ function LayoutShell({ children, fullBleed = false, devMode = false }) {
     media.addEventListener('change', sync);
     return () => media.removeEventListener('change', sync);
   }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    window.localStorage.setItem('sidebar:desktop-collapsed', desktopSidebarCollapsed ? '1' : '0');
+  }, [desktopSidebarCollapsed]);
 
   if (loading) return <LoadingScreen />;
   if (!business) return <Navigate to="/login" replace />;

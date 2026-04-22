@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+﻿import { useState, useEffect, useCallback } from 'react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
-/* ── Constants ─────────────────────────────────────────────────────────── */
-const ROLE_LABELS = { owner: 'Propietario', manager: 'Manager', staff: 'Staff' };
+/* Constants */
+const ROLE_LABELS = { owner: 'Propietario', manager: 'Encargado', staff: 'Personal' };
 
 const ROLE_STYLE = {
   owner:   { pill: 'bg-violet-50 text-violet-700 ring-violet-200',   dot: 'bg-violet-500' },
@@ -26,7 +26,7 @@ function avatarGradient(str = '') {
   return AVATAR_PALETTE[Math.abs(h) % AVATAR_PALETTE.length];
 }
 
-/* ── Sub-components ────────────────────────────────────────────────────── */
+/* Sub-components */
 function Avatar({ name, email, size = 'md' }) {
   const initial = (name || email || '?')[0].toUpperCase();
   const grad    = avatarGradient(name || email);
@@ -59,7 +59,7 @@ function ErrorBanner({ msg }) {
   ) : null;
 }
 
-/* ── Main page ─────────────────────────────────────────────────────────── */
+/* Main page */
 export default function Team() {
   const { role: myRole, session, hasRole } = useAuth();
   const myUserId = session?.user?.id;
@@ -96,7 +96,7 @@ export default function Team() {
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
-  /* ── Send invitation ─────────────────────────────────────────────────── */
+  /* Send invitation */
   const handleInvite = async (e) => {
     e.preventDefault();
     setInvError('');
@@ -119,7 +119,7 @@ export default function Team() {
     setInvError('');
   };
 
-  /* ── Role change ─────────────────────────────────────────────────────── */
+  /* Role change */
   const handleRoleChange = async (memberId, newRole) => {
     try {
       await api.put(`/members/${memberId}`, { role: newRole });
@@ -129,7 +129,7 @@ export default function Team() {
     }
   };
 
-  /* ── Remove member ───────────────────────────────────────────────────── */
+  /* Remove member */
   const handleRemove = async (memberId, name) => {
     if (!confirm(`¿Eliminar a ${name || 'este miembro'} del equipo?`)) return;
     try {
@@ -140,7 +140,7 @@ export default function Team() {
     }
   };
 
-  /* ── Cancel invitation ───────────────────────────────────────────────── */
+  /* Cancel invitation */
   const handleCancelInvite = async (id) => {
     try {
       await api.delete(`/invitations/${id}`);
@@ -150,7 +150,7 @@ export default function Team() {
     }
   };
 
-  /* ── Loading / error ─────────────────────────────────────────────────── */
+  /* Loading / error */
   if (loading) return (
     <div className="flex items-center justify-center h-48">
       <div className="w-8 h-8 rounded-xl bg-violet-600 animate-pulse" />
@@ -161,7 +161,7 @@ export default function Team() {
     <>
       <div className="space-y-6">
 
-        {/* ── Page header ─────────────────────────────────────────────── */}
+        {/* Page header */}
         <div className="flex items-start justify-between">
           <div>
             <h1 className="text-xl font-bold text-gray-900">Equipo</h1>
@@ -182,7 +182,7 @@ export default function Team() {
 
         <ErrorBanner msg={pageError} />
 
-        {/* ── Members list ─────────────────────────────────────────────── */}
+        {/* Members list */}
         <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
           <div className="px-5 py-3.5 border-b border-gray-100">
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Miembros activos</p>
@@ -211,13 +211,13 @@ export default function Team() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className="text-sm font-semibold text-gray-900 truncate">
-                          {member.userName || '—'}
+                          {member.userName || '-'}
                         </p>
                         {isMe && (
                           <span className="text-[11px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-md">tú</span>
                         )}
                       </div>
-                      <p className="text-xs text-gray-400 truncate mt-0.5">{member.userEmail || '—'}</p>
+                      <p className="text-xs text-gray-400 truncate mt-0.5">{member.userEmail || '-'}</p>
                     </div>
 
                     <div className="flex items-center gap-2 shrink-0">
@@ -227,8 +227,9 @@ export default function Team() {
                           onChange={e => handleRoleChange(member._id, e.target.value)}
                           className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-violet-400 cursor-pointer hover:border-gray-300 transition-colors"
                         >
-                          <option value="staff">Staff</option>
-                          <option value="manager">Manager</option>
+                          <option value="staff">Personal</option>
+                          <option value="manager">Encargado</option>
+                          <option value="owner">Propietario</option>
                         </select>
                       ) : (
                         <RolePill role={member.role} />
@@ -252,7 +253,7 @@ export default function Team() {
           )}
         </div>
 
-        {/* ── Pending invitations ──────────────────────────────────────── */}
+        {/* Pending invitations */}
         {isManager && invitations.length > 0 && (
           <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
             <div className="px-5 py-3.5 border-b border-gray-100">
@@ -292,7 +293,7 @@ export default function Team() {
           </div>
         )}
 
-        {/* ── Role legend ──────────────────────────────────────────────── */}
+        {/* Role legend */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {[
             { role: 'owner',   desc: 'Control total, usuarios y facturación' },
@@ -307,7 +308,7 @@ export default function Team() {
         </div>
       </div>
 
-      {/* ── Invite modal ─────────────────────────────────────────────────── */}
+      {/* Invite modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           {/* Backdrop */}
@@ -369,8 +370,9 @@ export default function Team() {
                     <label className="block text-sm font-medium text-gray-700 mb-1.5">Rol</label>
                     <div className="grid grid-cols-2 gap-2">
                       {[
-                        { value: 'staff',   label: 'Staff',   sub: 'Acceso básico' },
-                        { value: 'manager', label: 'Manager', sub: 'Gestión operativa' },
+                        { value: 'staff',   label: 'Personal',  sub: 'Acceso básico' },
+                        { value: 'manager', label: 'Encargado', sub: 'Gestión operativa' },
+                        ...(isOwner ? [{ value: 'owner', label: 'Propietario', sub: 'Control total del negocio' }] : []),
                       ].map(opt => (
                         <label
                           key={opt.value}
@@ -420,3 +422,6 @@ export default function Team() {
     </>
   );
 }
+
+
+

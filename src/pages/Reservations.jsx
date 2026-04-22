@@ -20,7 +20,7 @@ function ActionBtn({ onClick, children, color = 'gray' }) {
   );
 }
 
-// â"€â"€ Mobile row: ultra-compact, max density â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€
+// Mobile row: ultra-compact, max density
 function PaymentBadge({ payment }) {
   if (!payment || payment.mode === 'none') return null;
   if (payment.mode === 'deposit') {
@@ -42,7 +42,7 @@ function MobileRow({ r, tables, onEdit, onCancel, onDelete, onAssign, onQuickSta
 
   return (
     <div className={`border-b border-gray-100 last:border-0 ${isCancelled ? 'opacity-60' : ''}`}>
-      {/* Main row â€" tap to expand */}
+      {/* Main row - tap to expand */}
       <button
         className="w-full text-left px-4 py-3 flex items-center gap-3 active:bg-gray-50 transition-colors"
         onClick={() => setExpanded(x => !x)}
@@ -50,7 +50,7 @@ function MobileRow({ r, tables, onEdit, onCancel, onDelete, onAssign, onQuickSta
         {/* Status bar left edge */}
         <div className={`w-1 self-stretch rounded-full shrink-0 ${s.bar}`} />
 
-        {/* Time â€" BIG */}
+        {/* Time - BIG */}
         <div className="shrink-0 w-14 text-center">
           <p className="text-lg font-bold text-gray-900 leading-none">{r.time}</p>
           <p className={`text-[10px] font-semibold mt-1 ${
@@ -334,7 +334,7 @@ export default function Reservations() {
   }, [filterMode, dateFilter, todayStr]);
   useEffect(() => { api.get('/tables').then(r => setTables(r.data)); }, []);
 
-  // Build timeâ†'shiftName map and ordered shift list from slots
+  // Build time->shiftName map and ordered shift list from slots
   const isSingleDayFilter = filterMode === 'today' || filterMode === 'day';
   const sortByTime = (a, b) => (a.time || '').localeCompare(b.time || '');
   const sortByDateTime = (a, b) => `${a.date} ${a.time || ''}`.localeCompare(`${b.date} ${b.time || ''}`);
@@ -542,7 +542,7 @@ export default function Reservations() {
 
   return (
     <div className="space-y-4">
-      {/* â"€â"€ MOBILE HEADER â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€ */}      <div className="sm:hidden">
+      {/* MOBILE HEADER */}      <div className="sm:hidden">
         <div className="flex items-center gap-2 flex-wrap justify-end max-w-full">
           <select
             value={filterMode}
@@ -610,7 +610,7 @@ export default function Reservations() {
         )}
       </div>
 
-      {/* â"€â"€ DESKTOP HEADER â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€ */}      <div className="hidden sm:flex flex-wrap items-start justify-between gap-3">
+      {/* DESKTOP HEADER */}      <div className="hidden sm:flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="text-xl font-bold text-gray-900">Reservas</h2>
           <p className="text-sm text-gray-400 mt-0.5">
@@ -726,7 +726,7 @@ export default function Reservations() {
         </div>
       )}
 
-      {/* â"€â"€ EMPTY STATE â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€ */}
+      {/* EMPTY STATE */}
       {reservations.length === 0 && (
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm py-16 text-center">
           <div className="w-12 h-12 rounded-xl bg-gray-50 flex items-center justify-center mx-auto mb-4">
@@ -740,7 +740,7 @@ export default function Reservations() {
         </div>
       )}
 
-      {/* â"€â"€ MOBILE LIST â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€ */}
+      {/* MOBILE LIST */}
       {reservations.length > 0 && (() => {
         const groups = groupedByShift();
         const dateGroups = groupedByDate();
@@ -764,7 +764,7 @@ export default function Reservations() {
         );
 
         
-        // No shifts or single shift â†' flat list
+        // No shifts or single shift -> flat list
         if (shouldGroupByDay) {
           return (
             <div className="sm:hidden space-y-3">
@@ -793,7 +793,7 @@ export default function Reservations() {
           );
         }
 
-        // Multiple shifts â†' grouped sections
+        // Multiple shifts -> grouped sections
         return (
           <div className="sm:hidden space-y-3">
             {Object.entries(groups).map(([shiftName, rows]) => {
@@ -824,7 +824,7 @@ export default function Reservations() {
         );
       })()}
 
-      {/* â"€â"€ DESKTOP TABLE â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€â"€ */}
+      {/* DESKTOP TABLE */}
       {reservations.length > 0 && (() => {
         const groups  = groupedByShift();
         const dateGroups = groupedByDate();
@@ -986,7 +986,7 @@ export default function Reservations() {
           );
         };
 
-        // Single / no shift â†' one table
+        // Single / no shift -> one table
         if (shouldGroupByDay) {
           return (
             <div className="hidden sm:block space-y-4">
@@ -1026,7 +1026,7 @@ export default function Reservations() {
           );
         }
 
-        // Multiple shifts â†' one table per shift with a header row
+        // Multiple shifts -> one table per shift with a header row
         return (
           <div className="hidden sm:block space-y-4">
             {Object.entries(groups).map(([shiftName, rows]) => {
@@ -1227,7 +1227,6 @@ export default function Reservations() {
     </div>
   );
 }
-
 
 
 

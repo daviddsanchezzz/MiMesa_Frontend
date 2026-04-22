@@ -17,15 +17,15 @@ export function AuthProvider({ children }) {
     else setActiveBusinessId(null);
   }, []);
 
-  // â”€â”€ Initial load: restore session from stored token â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-  // This is the primary session source for cross-origin setups (Netlify/Vercel â†’ Render).
+  // Initial load: restore session from stored token
+  // This is the primary session source for cross-origin setups (Netlify/Vercel -> Render).
   // useSession() from Better Auth relies on cookies which don't work cross-origin.
   useEffect(() => {
 
     api.get('/auth/me')
       .then(({ data }) => applyMeResponse(data))
       .catch(() => {
-        // Token invalid or expired â€” clear it
+        // Token invalid or expired - clear it
         setStoredToken(null);
         setActiveBusinessId(null);
       })
@@ -44,12 +44,12 @@ export function AuthProvider({ children }) {
     return () => window.removeEventListener('auth:logout', handle);
   }, []);
 
-  // â”€â”€ Login â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // Login
   const login = async (email, password) => {
     const { data, error } = await authClient.signIn.email({ email, password });
     if (error) {
       if (error.code === 'EMAIL_NOT_VERIFIED') {
-        throw new Error('Debes verificar tu email antes de iniciar sesiÃ³n. Revisa tu bandeja de entrada.');
+        throw new Error('Debes verificar tu email antes de iniciar sesión. Revisa tu bandeja de entrada.');
       }
       throw new Error(error.message || 'Credenciales incorrectas');
     }
@@ -57,7 +57,7 @@ export function AuthProvider({ children }) {
     await refreshBusiness();
   };
 
-  // â”€â”€ Register â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // Register
   const register = async (name, email, password, phone = '') => {
     const { data, error } = await authClient.signUp.email({ name, email, password, phone });
     if (error) throw new Error(error.message || 'Error al crear la cuenta');
@@ -69,7 +69,7 @@ export function AuthProvider({ children }) {
     setActiveBusinessId(null);
   };
 
-  // â”€â”€ Logout â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // Logout
   const logout = async () => {
     await authClient.signOut().catch(() => {});
     setStoredToken(null);
@@ -78,7 +78,7 @@ export function AuthProvider({ children }) {
     setActiveBusinessId(null);
   };
 
-  // â”€â”€ Refresh current business data â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // Refresh current business data
   const refreshBusiness = async () => {
     try {
       const { data } = await api.get('/auth/me');
@@ -86,7 +86,7 @@ export function AuthProvider({ children }) {
     } catch { /* silently ignore */ }
   };
 
-  // â”€â”€ Switch active business â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // Switch active business
   const switchBusiness = async (businessId) => {
     setActiveBusinessId(businessId);
     try {

@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
 import api from '../services/api';
 import Modal from '../components/Modal';
 import { useAuth } from '../context/AuthContext';
 
 const inputCls = 'w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-white';
 const labelCls = 'block text-xs font-medium text-gray-600 mb-1.5';
+const ROLE_LABELS = { owner: 'Propietario', manager: 'Encargado', staff: 'Personal' };
 
 function ErrorBanner({ msg }) {
   if (!msg) return null;
@@ -30,13 +31,14 @@ function Avatar({ name, email }) {
 
 function MembershipCard({ membership, onToggle, disabled = false }) {
   const prefs = membership.notificationPreferences || {};
+  const roleLabel = ROLE_LABELS[membership.role] || membership.role;
 
   return (
     <div className="border border-gray-200 rounded-2xl p-4 bg-white">
       <div className="flex items-start justify-between gap-3 mb-3">
         <div>
           <p className="text-sm font-semibold text-gray-900">{membership.businessName}</p>
-          <p className="text-xs text-gray-400 mt-0.5">Rol: {membership.role}</p>
+          <p className="text-xs text-gray-400 mt-0.5">Rol: {roleLabel}</p>
         </div>
         <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-gray-100 text-gray-600">Notificaciones</span>
       </div>
@@ -528,3 +530,4 @@ export default function Profile() {
     </div>
   );
 }
+

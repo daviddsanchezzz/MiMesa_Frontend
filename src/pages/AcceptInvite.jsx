@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { authClient } from '../lib/authClient';
 import api from '../services/api';
 import PasswordInput from '../components/PasswordInput';
 
-const ROLE_LABELS = { owner: 'Propietario', manager: 'Manager', staff: 'Staff' };
+const ROLE_LABELS = { owner: 'Propietario', manager: 'Encargado', staff: 'Personal' };
 
 export default function AcceptInvite() {
   const [searchParams] = useSearchParams();
@@ -18,7 +18,7 @@ export default function AcceptInvite() {
   const [error, setError]           = useState('');
   const [loading, setLoading]       = useState(false);
   const [phase, setPhase]           = useState('signup'); // 'signup' | 'login' | 'done'
-  // true after signUp succeeds — prevents re-registering on retry
+  // true after signUp succeeds - prevents re-registering on retry
   const [accountCreated, setAccountCreated] = useState(false);
 
   // Load invitation details
@@ -39,7 +39,7 @@ export default function AcceptInvite() {
     return data;
   };
 
-  // ── New user — sign up then accept ────────────────────────────────────
+  // New user - sign up then accept
   const handleSignup = async (e) => {
     e.preventDefault();
     setError('');
@@ -55,7 +55,7 @@ export default function AcceptInvite() {
           password: form.password,
         });
         if (signUpError) {
-          // Email already registered — switch to login phase
+          // Email already registered - switch to login phase
           if (signUpError.code === 'USER_ALREADY_EXISTS' || signUpError.status === 422) {
             setPhase('login');
             setError('Ya tienes una cuenta con ese email. Inicia sesión para aceptar la invitación.');
@@ -75,7 +75,7 @@ export default function AcceptInvite() {
     }
   };
 
-  // ── Existing user — sign in then accept ───────────────────────────────
+  // Existing user - sign in then accept
   const handleLogin = async (e) => {
     e.preventDefault();
     setError('');
@@ -96,7 +96,7 @@ export default function AcceptInvite() {
     }
   };
 
-  // ── States ─────────────────────────────────────────────────────────────
+  // States
   if (!token || fetchError) return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-6">
       <div className="max-w-sm w-full text-center bg-white border border-red-200 rounded-2xl p-8 shadow-sm">
@@ -249,3 +249,5 @@ export default function AcceptInvite() {
     </div>
   );
 }
+
+

@@ -245,7 +245,7 @@ function EmployeeFormModal({ employee, positions, onClose, onSaved }) {
                   </span>
                 )) : <span className="text-gray-400">Selecciona uno o varios puestos...</span>}
               </div>
-              <span className="text-gray-400 text-xs">{positionOpen ? 'â–²' : 'â–¼'}</span>
+              <span className="text-gray-400 text-xs">{positionOpen ? '▲' : '▼'}</span>
             </button>
 
             {positionOpen && (

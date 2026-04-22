@@ -19,6 +19,24 @@ function planPillClass(plan) {
   return 'bg-gray-50 text-gray-600 border-gray-200';
 }
 
+const IconBriefcase = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 shrink-0">
+    <path fillRule="evenodd" d="M6 5V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v1h2.25A1.75 1.75 0 0 1 18 6.75v8.5A1.75 1.75 0 0 1 16.25 17H3.75A1.75 1.75 0 0 1 2 15.25v-8.5A1.75 1.75 0 0 1 3.75 5H6Zm1.5 0h5V4a.5.5 0 0 0-.5-.5H8a.5.5 0 0 0-.5.5v1Z" clipRule="evenodd" />
+  </svg>
+);
+
+const IconCurrencyEuro = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 shrink-0">
+    <path d="M1 4.25a3.733 3.733 0 0 1 2.25-.75h13.5c.844 0 1.623.279 2.25.75A2.25 2.25 0 0 0 16.75 2H3.25A2.25 2.25 0 0 0 1 4.25ZM1 7.25a3.733 3.733 0 0 1 2.25-.75h13.5c.844 0 1.623.279 2.25.75A2.25 2.25 0 0 0 16.75 5H3.25A2.25 2.25 0 0 0 1 7.25ZM7 8a1 1 0 0 0 0 2h6a1 1 0 1 0 0-2H7ZM3.25 8A2.25 2.25 0 0 0 1 10.25v4.5A2.25 2.25 0 0 0 3.25 17h13.5A2.25 2.25 0 0 0 19 14.75v-4.5A2.25 2.25 0 0 0 16.75 8H3.25Z" />
+  </svg>
+);
+
+function ModuleIcon({ moduleKey }) {
+  if (moduleKey === 'staff') return <IconBriefcase />;
+  if (moduleKey === 'expenses') return <IconCurrencyEuro />;
+  return null;
+}
+
 function MobileBusinessCard({ b, moduleCatalog, onEdit }) {
   const activeModules = moduleCatalog.filter((m) => !!b.modules?.[m.key]?.enabled);
   return (
@@ -52,16 +70,15 @@ function MobileBusinessCard({ b, moduleCatalog, onEdit }) {
       {moduleCatalog.length > 0 && (
         <div className="rounded-xl bg-gray-50 border border-gray-100 p-2 space-y-1">
           <p className="text-[11px] text-gray-500">Modulos</p>
-          {activeModules.length === 0 ? (
-            <p className="text-xs text-gray-400 px-1">Sin modulos activos</p>
-          ) : (
+          {activeModules.length > 0 && (
             <div className="flex flex-wrap gap-1.5">
               {activeModules.map((m) => (
                 <span
                   key={m.key}
-                  className="text-[11px] font-semibold px-2 py-1 rounded-lg border bg-emerald-50 border-emerald-200 text-emerald-700"
+                  title={m.name}
+                  className="inline-flex items-center justify-center w-7 h-7 rounded-lg border bg-emerald-50 border-emerald-200 text-emerald-700"
                 >
-                  {m.name}
+                  <ModuleIcon moduleKey={m.key} />
                 </span>
               ))}
             </div>
@@ -340,14 +357,12 @@ export default function DevDashboard() {
                               .map((m) => (
                                 <span
                                   key={m.key}
-                                  className="text-[11px] font-semibold px-2 py-1 rounded-lg border bg-emerald-50 border-emerald-200 text-emerald-700"
+                                  title={m.name}
+                                  className="inline-flex items-center justify-center w-7 h-7 rounded-lg border bg-emerald-50 border-emerald-200 text-emerald-700"
                                 >
-                                  {m.name}
+                                  <ModuleIcon moduleKey={m.key} />
                                 </span>
                               ))}
-                            {moduleCatalog.filter((m) => !!b.modules?.[m.key]?.enabled).length === 0 && (
-                              <span className="text-xs text-gray-400">Sin modulos activos</span>
-                            )}
                           </div>
                         </td>
                         <td className="px-4 py-4 text-center text-gray-800 font-medium tabular-nums align-middle">{b.memberCount}</td>

@@ -89,6 +89,7 @@ export default function Sidebar({
   const navigate = useNavigate();
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [switchingBusinessId, setSwitchingBusinessId] = useState('');
   const [isSmallScreen, setIsSmallScreen] = useState(false);
   const [newRsvModal, setNewRsvModal] = useState(false);
   const menuRef = useRef(null);
@@ -136,6 +137,17 @@ export default function Sidebar({
   const handleNavClick = () => {
     setMenuOpen(false);
     if (closeOnNavigate && onClose) onClose();
+  };
+
+  const handleQuickSwitchBusiness = async (businessId) => {
+    if (!businessId || business?.id === businessId) return;
+    try {
+      setSwitchingBusinessId(businessId);
+      await switchBusiness(businessId);
+      handleNavClick();
+    } finally {
+      setSwitchingBusinessId('');
+    }
   };
 
   useEffect(() => {
@@ -341,6 +353,38 @@ export default function Sidebar({
 
           {menuOpen && (
             <div className="absolute left-0 right-0 bottom-full mb-2 bg-slate-800 border border-slate-700 rounded-lg p-1 shadow-lg">
+              {!devSidebar && memberships.length > 1 && (
+                <>
+                  <p className="px-3 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+                    Cambiar negocio
+                  </p>
+                  <div className="px-1 pb-1 space-y-1">
+                    {memberships.map((m) => {
+                      const isActiveBiz = business?.id === m.businessId;
+                      const isSwitching = switchingBusinessId === m.businessId;
+                      return (
+                        <button
+                          key={m.businessId}
+                          type="button"
+                          disabled={isActiveBiz || isSwitching}
+                          onClick={() => handleQuickSwitchBusiness(m.businessId)}
+                          className={`w-full flex items-center justify-between gap-2 px-2.5 py-2 rounded-md text-sm transition-colors ${
+                            isActiveBiz
+                              ? 'bg-slate-700 text-slate-100'
+                              : 'text-slate-300 hover:bg-slate-700'
+                          } ${isSwitching ? 'opacity-70' : ''}`}
+                        >
+                          <span className="truncate text-left">{m.businessName}</span>
+                          <span className="text-xs text-slate-400 shrink-0">
+                            {isActiveBiz ? 'Activo' : isSwitching ? 'Cambiando...' : ''}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div className="mx-2 my-1 border-t border-slate-700" />
+                </>
+              )}
               {!devSidebar && (
                 <button
                   onClick={() => { navigate('/profile'); handleNavClick(); }}

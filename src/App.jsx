@@ -78,7 +78,10 @@ function LayoutShell({ children, fullBleed = false, devMode = false }) {
   const { business, loading } = useAuth();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] = useState(false);
-  const [isDesktop, setIsDesktop] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return false;
+    return window.matchMedia('(min-width: 1024px)').matches;
+  });
   const [newRsvModal, setNewRsvModal] = useState(false);
 
   if (loading) return <LoadingScreen />;

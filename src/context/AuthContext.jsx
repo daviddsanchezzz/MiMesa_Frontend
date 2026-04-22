@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+﻿import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { authClient } from '../lib/authClient';
 import { setStoredToken, getStoredToken } from '../lib/authClient';
 import api, { setActiveBusinessId } from '../services/api';
@@ -17,17 +17,15 @@ export function AuthProvider({ children }) {
     else setActiveBusinessId(null);
   }, []);
 
-  // ── Initial load: restore session from stored token ────────────────────────
-  // This is the primary session source for cross-origin setups (Netlify/Vercel → Render).
+  // â”€â”€ Initial load: restore session from stored token â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // This is the primary session source for cross-origin setups (Netlify/Vercel â†’ Render).
   // useSession() from Better Auth relies on cookies which don't work cross-origin.
   useEffect(() => {
-    const token = getStoredToken();
-    if (!token) { setLoading(false); return; }
 
     api.get('/auth/me')
       .then(({ data }) => applyMeResponse(data))
       .catch(() => {
-        // Token invalid or expired — clear it
+        // Token invalid or expired â€” clear it
         setStoredToken(null);
         setActiveBusinessId(null);
       })
@@ -46,12 +44,12 @@ export function AuthProvider({ children }) {
     return () => window.removeEventListener('auth:logout', handle);
   }, []);
 
-  // ── Login ──────────────────────────────────────────────────────────────────
+  // â”€â”€ Login â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const login = async (email, password) => {
     const { data, error } = await authClient.signIn.email({ email, password });
     if (error) {
       if (error.code === 'EMAIL_NOT_VERIFIED') {
-        throw new Error('Debes verificar tu email antes de iniciar sesión. Revisa tu bandeja de entrada.');
+        throw new Error('Debes verificar tu email antes de iniciar sesiÃ³n. Revisa tu bandeja de entrada.');
       }
       throw new Error(error.message || 'Credenciales incorrectas');
     }
@@ -59,7 +57,7 @@ export function AuthProvider({ children }) {
     await refreshBusiness();
   };
 
-  // ── Register ───────────────────────────────────────────────────────────────
+  // â”€â”€ Register â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const register = async (name, email, password, phone = '') => {
     const { data, error } = await authClient.signUp.email({ name, email, password, phone });
     if (error) throw new Error(error.message || 'Error al crear la cuenta');
@@ -71,7 +69,7 @@ export function AuthProvider({ children }) {
     setActiveBusinessId(null);
   };
 
-  // ── Logout ─────────────────────────────────────────────────────────────────
+  // â”€â”€ Logout â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const logout = async () => {
     await authClient.signOut().catch(() => {});
     setStoredToken(null);
@@ -80,7 +78,7 @@ export function AuthProvider({ children }) {
     setActiveBusinessId(null);
   };
 
-  // ── Refresh current business data ─────────────────────────────────────────
+  // â”€â”€ Refresh current business data â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const refreshBusiness = async () => {
     try {
       const { data } = await api.get('/auth/me');
@@ -88,7 +86,7 @@ export function AuthProvider({ children }) {
     } catch { /* silently ignore */ }
   };
 
-  // ── Switch active business ─────────────────────────────────────────────────
+  // â”€â”€ Switch active business â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const switchBusiness = async (businessId) => {
     setActiveBusinessId(businessId);
     try {
@@ -198,3 +196,4 @@ export function AuthProvider({ children }) {
 }
 
 export const useAuth = () => useContext(AuthContext);
+

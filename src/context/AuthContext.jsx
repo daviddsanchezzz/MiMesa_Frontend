@@ -1,6 +1,14 @@
 ﻿import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { authClient } from '../lib/authClient';
-import { setStoredToken, getStoredToken } from '../lib/authClient';
+import {
+  setStoredToken,
+  getStoredToken,
+  getImpersonationMeta,
+  setImpersonationMeta,
+  getImpersonationOriginalToken,
+  setImpersonationOriginalToken,
+  clearImpersonationState,
+} from '../lib/authClient';
 import api, { setActiveBusinessId } from '../services/api';
 
 const AuthContext = createContext(null);
@@ -9,6 +17,7 @@ export function AuthProvider({ children }) {
   const [business, setBusiness]   = useState(null);
   const [loading, setLoading]     = useState(true);   // starts true until first load
   const [memberships, setMemberships] = useState([]);
+  const [impersonation, setImpersonation] = useState(() => getImpersonationMeta());
 
   const applyMeResponse = useCallback((data) => {
     setBusiness(data);
@@ -28,6 +37,8 @@ export function AuthProvider({ children }) {
         // Token invalid or expired - clear it
         setStoredToken(null);
         setActiveBusinessId(null);
+        clearImpersonationState();
+        setImpersonation(null);
       })
       .finally(() => setLoading(false));
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -39,6 +50,8 @@ export function AuthProvider({ children }) {
       setBusiness(null);
       setMemberships([]);
       setActiveBusinessId(null);
+      clearImpersonationState();
+      setImpersonation(null);
     };
     window.addEventListener('auth:logout', handle);
     return () => window.removeEventListener('auth:logout', handle);
@@ -76,6 +89,41 @@ export function AuthProvider({ children }) {
     setBusiness(null);
     setMemberships([]);
     setActiveBusinessId(null);
+    clearImpersonationState();
+    setImpersonation(null);
+  };
+
+  const startImpersonation = async ({ token, user }) => {
+    const currentToken = getStoredToken();
+    if (!currentToken) throw new Error('No hay sesion activa para iniciar impersonacion');
+    if (!token) throw new Error('Token de impersonacion no valido');
+
+    if (!getImpersonationOriginalToken()) {
+      setImpersonationOriginalToken(currentToken);
+    }
+
+    const meta = {
+      userId: user?.id || '',
+      userName: user?.name || user?.email || 'Usuario',
+      userEmail: user?.email || '',
+      startedAt: new Date().toISOString(),
+    };
+
+    setStoredToken(token);
+    setImpersonationMeta(meta);
+    setImpersonation(meta);
+    setActiveBusinessId(null);
+    await refreshBusiness();
+  };
+
+  const stopImpersonation = async () => {
+    const originalToken = getImpersonationOriginalToken();
+    clearImpersonationState();
+    setImpersonation(null);
+    if (!originalToken) return;
+    setStoredToken(originalToken);
+    setActiveBusinessId(null);
+    await refreshBusiness();
   };
 
   // Refresh current business data
@@ -184,6 +232,7 @@ export function AuthProvider({ children }) {
     <AuthContext.Provider value={{
       business, loading, memberships,
       login, register, logout, refreshBusiness, switchBusiness,
+      impersonation, startImpersonation, stopImpersonation,
       isDev, role, plan, subscriptionStatus,
       trialEndsAt, currentPeriodEnd, cancelAtPeriodEnd,
       hasRole, isSubscribed, canUse, planLimit,
@@ -196,4 +245,8 @@ export function AuthProvider({ children }) {
 }
 
 export const useAuth = () => useContext(AuthContext);
+
+
+
+
 

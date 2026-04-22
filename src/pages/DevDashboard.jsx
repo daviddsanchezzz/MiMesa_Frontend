@@ -1,7 +1,8 @@
 ﻿import { useState, useEffect, useCallback } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../services/api';
 import Modal from '../components/Modal';
+import { useAuth } from '../context/AuthContext';
 
 function StatCard({ label, value, sub }) {
   return (
@@ -109,6 +110,8 @@ function rolePillClass(role) {
 
 export default function DevDashboard() {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const { startImpersonation } = useAuth();
 
   const tab = searchParams.get('tab') === 'users' ? 'users' : 'businesses';
 
@@ -132,6 +135,9 @@ export default function DevDashboard() {
   const [moduleCatalog, setModuleCatalog] = useState([]);
   const [usersLoading, setUsersLoading] = useState(false);
   const [userSearch, setUserSearch] = useState('');
+  const [selectedUser, setSelectedUser] = useState(null);
+  const [userActionError, setUserActionError] = useState('');
+  const [userActionLoading, setUserActionLoading] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -178,7 +184,7 @@ export default function DevDashboard() {
   const filteredUsers = users.filter((u) => {
     const q = userSearch.trim().toLowerCase();
     if (!q) return true;
-    return (u.name || '').toLowerCase().includes(q) || (u.email || '').toLowerCase().includes(q);
+  return (u.name || '').toLowerCase().includes(q) || (u.email || '').toLowerCase().includes(q);
   });
 
   const handleCreate = async (e) => {
@@ -262,6 +268,50 @@ export default function DevDashboard() {
       setEditError(err.response?.data?.message || err.message || 'No se pudo guardar');
     } finally {
       setEditSaving(false);
+    }
+  };
+
+  const openUserActions = (user) => {
+    setSelectedUser(user);
+    setUserActionError('');
+  };
+
+  const closeUserActions = () => {
+    if (userActionLoading) return;
+    setSelectedUser(null);
+    setUserActionError('');
+  };
+
+  const handleImpersonate = async () => {
+    if (!selectedUser) return;
+    setUserActionLoading(true);
+    setUserActionError('');
+    try {
+      const { data } = await api.post(`/dev/users/${selectedUser.id}/impersonate`);
+      await startImpersonation({ token: data?.token, user: data?.user || selectedUser });
+      closeUserActions();
+      navigate('/', { replace: true });
+    } catch (err) {
+      setUserActionError(err.response?.data?.message || err.message || 'No se pudo iniciar la suplantacion');
+    } finally {
+      setUserActionLoading(false);
+    }
+  };
+
+  const handleDeleteUser = async () => {
+    if (!selectedUser) return;
+    const ok = window.confirm(`Vas a eliminar al usuario ${selectedUser.email}. Esta accion no se puede deshacer.`);
+    if (!ok) return;
+    setUserActionLoading(true);
+    setUserActionError('');
+    try {
+      await api.delete(`/dev/users/${selectedUser.id}`);
+      setUsers((prev) => prev.filter((u) => u.id !== selectedUser.id));
+      closeUserActions();
+    } catch (err) {
+      setUserActionError(err.response?.data?.message || err.message || 'No se pudo eliminar el usuario');
+    } finally {
+      setUserActionLoading(false);
     }
   };
 
@@ -415,9 +465,21 @@ export default function DevDashboard() {
             ) : (
               filteredUsers.map((u) => (
                 <div key={u.id} className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 space-y-3">
-                  <div>
-                    <p className="font-semibold text-gray-900">{u.name || 'Sin nombre'}</p>
-                    <p className="text-xs text-gray-400">{u.email}</p>
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-semibold text-gray-900">{u.name || 'Sin nombre'}</p>
+                      <p className="text-xs text-gray-400">{u.email}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => openUserActions(u)}
+                      className="w-8 h-8 inline-flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-colors"
+                      aria-label="Acciones de usuario"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                        <path d="M10 6a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM10 11.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM11.5 15.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z" />
+                      </svg>
+                    </button>
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${rolePillClass(u.role)}`}>
@@ -452,6 +514,7 @@ export default function DevDashboard() {
                       <th className="text-left px-4 py-3.5 text-[11px] font-bold text-gray-500 uppercase tracking-wide">Rol global</th>
                       <th className="text-left px-4 py-3.5 text-[11px] font-bold text-gray-500 uppercase tracking-wide">Negocios</th>
                       <th className="text-left px-4 py-3.5 text-[11px] font-bold text-gray-500 uppercase tracking-wide">Alta</th>
+                      <th className="px-4 py-3" />
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-100">
@@ -484,6 +547,18 @@ export default function DevDashboard() {
                           {u.createdAt
                             ? new Date(u.createdAt).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })
                             : '-'}
+                        </td>
+                        <td className="px-4 py-4 text-right align-middle">
+                          <button
+                            type="button"
+                            onClick={() => openUserActions(u)}
+                            className="w-8 h-8 inline-flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-colors"
+                            aria-label="Acciones de usuario"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                              <path d="M10 6a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM10 11.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM11.5 15.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z" />
+                            </svg>
+                          </button>
                         </td>
                       </tr>
                     ))}
@@ -529,7 +604,7 @@ export default function DevDashboard() {
                 <div className="space-y-2">
                   {moduleCatalog.map((m) => {
                     const enabled = !!editModules[m.key];
-                    return (
+  return (
                       <button
                         key={m.key}
                         type="button"
@@ -664,9 +739,57 @@ export default function DevDashboard() {
           </form>
         </Modal>
       )}
+
+      {selectedUser && (
+        <Modal
+          title={selectedUser.name || selectedUser.email}
+          subtitle="Acciones de usuario"
+          onClose={closeUserActions}
+          size="sm"
+        >
+          {userActionError && (
+            <div className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-4 py-3 mb-4">
+              {userActionError}
+            </div>
+          )}
+
+          <div className="space-y-2">
+            <button
+              type="button"
+              disabled={userActionLoading}
+              onClick={handleImpersonate}
+              className="w-full text-left px-4 py-3 rounded-xl border border-violet-200 bg-violet-50 text-violet-800 hover:bg-violet-100 transition-colors disabled:opacity-60"
+            >
+              Impersonalizar
+            </button>
+            <button
+              type="button"
+              disabled={userActionLoading}
+              onClick={handleDeleteUser}
+              className="w-full text-left px-4 py-3 rounded-xl border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 transition-colors disabled:opacity-60"
+            >
+              Eliminar
+            </button>
+            <button
+              type="button"
+              disabled={userActionLoading}
+              onClick={closeUserActions}
+              className="w-full text-left px-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-60"
+            >
+              Cancelar
+            </button>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }
+
+
+
+
+
+
 
 
 

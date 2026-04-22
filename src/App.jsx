@@ -74,8 +74,28 @@ function MobileHeader({ onMenuOpen, onNewReservation, showDefaultAction = true }
   );
 }
 
+function ImpersonationBanner({ impersonation, onStop }) {
+  if (!impersonation) return null;
+  return (
+    <div className="absolute top-3 left-1/2 -translate-x-1/2 z-30 px-3">
+      <div className="bg-amber-100/95 border border-amber-200 text-amber-900 rounded-full shadow-sm px-3 py-2 flex items-center gap-3">
+        <p className="text-sm font-semibold whitespace-nowrap">
+          Estas suplantando a {impersonation.userName || 'usuario'}
+        </p>
+        <button
+          type="button"
+          onClick={onStop}
+          className="text-xs font-semibold bg-white/80 border border-amber-300 hover:bg-white rounded-full px-3 py-1 transition-colors"
+        >
+          Salir
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function LayoutShell({ children, fullBleed = false, devMode = false }) {
-  const { business, loading } = useAuth();
+  const { business, loading, impersonation, stopImpersonation } = useAuth();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] = useState(() => {
     if (typeof window === 'undefined') return false;
@@ -108,7 +128,14 @@ function LayoutShell({ children, fullBleed = false, devMode = false }) {
 
   return (
     <MobileHeaderProvider>
-    <div className="flex h-[100dvh] bg-gray-50 overflow-hidden">
+    <div className="flex h-[100dvh] bg-gray-50 overflow-hidden relative">
+      <ImpersonationBanner
+        impersonation={impersonation}
+        onStop={async () => {
+          await stopImpersonation();
+          window.location.href = '/dev?tab=users';
+        }}
+      />
       {mobileSidebarOpen && !isDesktop && (
         <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={() => setMobileSidebarOpen(false)} />
       )}
@@ -128,7 +155,7 @@ function LayoutShell({ children, fullBleed = false, devMode = false }) {
           onNewReservation={() => setNewRsvModal(true)}
           showDefaultAction={!devMode}
         />
-        <main className={fullBleed ? 'flex-1 overflow-hidden flex flex-col' : 'flex-1 overflow-auto p-4 lg:p-8'}>
+        <main className={fullBleed ? 'flex-1 overflow-hidden flex flex-col' : `flex-1 overflow-auto p-4 lg:p-8 ${impersonation ? 'pt-16 lg:pt-20' : ''}`}>
           {children}
         </main>
       </div>

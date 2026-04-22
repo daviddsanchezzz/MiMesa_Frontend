@@ -1879,40 +1879,6 @@ function BillingSection() {
         </div>
       )}
 
-      {/* What's included */}
-      <div className="bg-white rounded-2xl p-6 border border-gray-200">
-        <p className="text-sm font-semibold text-gray-900 mb-4">Qué incluye cada plan</p>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-1.5 text-sm">
-          {[
-            { label: 'Reservas ilimitadas',             free: false },
-            { label: 'Página pública de reservas',      free: true  },
-            { label: 'Mesas, salas y turnos',           free: true  },
-            { label: 'Cierres y vacaciones',            free: true  },
-            { label: 'Emails automáticos (confirmación, cancelación)', free: false },
-            { label: 'Equipo y roles',                  free: false },
-            { label: 'Marketing por email',             free: false },
-            { label: 'Códigos promocionales',           free: false },
-            { label: 'Hasta 30 reservas/mes',           free: true, basicLabel: 'Ilimitadas' },
-          ].map((f) => {
-            const hasFree  = f.free;
-            const hasBasic = true;
-            return (
-              <div key={f.label} className="flex items-center gap-2 py-1">
-                <div className="flex gap-3 shrink-0">
-                  <span className={`text-xs font-mono w-4 text-center ${hasFree ? 'text-green-500' : 'text-gray-200'}`}>✓</span>
-                  <span className={`text-xs font-mono w-4 text-center ${hasBasic ? 'text-violet-500' : 'text-gray-200'}`}>✓</span>
-                </div>
-                <span className="text-gray-600 text-xs">{f.basicLabel && !hasFree ? f.basicLabel : f.label}</span>
-              </div>
-            );
-          })}
-        </div>
-        <div className="flex gap-3 mt-3 text-xs text-gray-400">
-          <span className="flex items-center gap-1"><span className="text-green-500 font-mono">✓</span> Free</span>
-          <span className="flex items-center gap-1"><span className="text-violet-500 font-mono">✓</span> Basic</span>
-        </div>
-      </div>
-
       {/* Cancel option */}
       {isOwner && !isFree && !cancelAtPeriodEnd && (
         <div className="bg-white rounded-2xl p-5 border border-gray-200">

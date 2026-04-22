@@ -183,18 +183,6 @@ export default function Sidebar({
             <p className="text-white text-sm font-semibold leading-tight">Tableo</p>
             {devSidebar ? (
               <p className="text-slate-400 text-xs truncate leading-tight mt-0.5">Panel de desarrollo</p>
-            ) : memberships.length > 1 ? (
-              <select
-                value={business?.id ?? ''}
-                onChange={(e) => { switchBusiness(e.target.value); handleNavClick(); }}
-                className="mt-0.5 w-full bg-transparent text-slate-400 text-xs focus:outline-none cursor-pointer truncate"
-              >
-                {memberships.map((m) => (
-                  <option key={m.businessId} value={m.businessId} className="bg-slate-800 text-slate-200">
-                    {m.businessName}
-                  </option>
-                ))}
-              </select>
             ) : (
               <p className="text-slate-400 text-xs truncate leading-tight mt-0.5">{business?.name}</p>
             )}
@@ -217,6 +205,35 @@ export default function Sidebar({
           )}
         </div>
       </div>
+
+      {!devSidebar && memberships.length > 1 && !collapsed && (
+        <div className="px-3 pt-3 pb-1">
+          <label className="block text-[10px] font-semibold uppercase tracking-widest text-slate-500 px-1 mb-1.5">
+            Negocio activo
+          </label>
+          <div className="relative">
+            <select
+              value={business?.id ?? ''}
+              onChange={(e) => { switchBusiness(e.target.value); handleNavClick(); }}
+              className="w-full appearance-none rounded-lg bg-slate-800 border border-slate-700 text-slate-100 text-sm px-3 py-2 pr-8 focus:outline-none focus:border-violet-500"
+            >
+              {memberships.map((m) => (
+                <option key={m.businessId} value={m.businessId} className="bg-slate-800 text-slate-200">
+                  {m.businessName}
+                </option>
+              ))}
+            </select>
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 20 20"
+              fill="currentColor"
+              className="w-4 h-4 text-slate-400 pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2"
+            >
+              <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.168l3.71-3.938a.75.75 0 1 1 1.08 1.04l-4.25 4.5a.75.75 0 0 1-1.08 0l-4.25-4.5a.75.75 0 0 1 .02-1.06Z" clipRule="evenodd" />
+            </svg>
+          </div>
+        </div>
+      )}
 
       {!devSidebar && (
         <div className="px-3 pt-3 pb-1">

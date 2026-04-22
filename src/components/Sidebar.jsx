@@ -198,7 +198,7 @@ export default function Sidebar({
         <div className="px-3 pt-3 pb-1">
           <button
             onClick={() => setNewRsvModal(true)}
-            className={`w-full flex items-center justify-center ${collapsed ? '' : 'gap-2'} px-3 py-2 rounded-lg bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold transition-colors`}
+            className={`w-full flex items-center justify-center ${collapsed ? '' : 'gap-2'} px-3 py-2 rounded-lg border border-violet-400/60 text-violet-200 bg-transparent hover:bg-violet-500/10 hover:border-violet-300 hover:text-violet-100 text-sm font-semibold transition-colors`}
             title={collapsed ? 'Nueva reserva' : undefined}
           >
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 shrink-0">

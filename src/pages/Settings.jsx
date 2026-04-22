@@ -1776,8 +1776,8 @@ function BillingSection() {
           <div>
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Plan actual</p>
             <div className="flex items-center gap-2.5 flex-wrap">
-              <span className={`text-xl font-bold ${isFree ? 'text-gray-700' : 'text-violet-700'}`}>
-                {isFree ? 'Free' : `Basic`}
+              <span className={`text-xl font-bold ${isFree ? 'text-gray-700' : plan === 'pro' ? 'text-amber-600' : 'text-violet-700'}`}>
+                {isFree ? 'Free' : plan === 'pro' ? 'Pro' : 'Basic'}
               </span>
               {isTrialing && (
                 <span className="text-xs font-semibold bg-amber-100 text-amber-700 px-2.5 py-1 rounded-full">

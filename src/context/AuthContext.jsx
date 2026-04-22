@@ -149,13 +149,18 @@ export function AuthProvider({ children }) {
     removeTableoBranding:    true,
     pendingApprovalControl:  true,
     advancedAnalytics:       true,
-    autoReminders:           true,
-    advancedReminders:       true,
+    autoReminders:           false,
+    advancedReminders:       false,
     noShowTracking:          true,
     dataExport:              true,
     reservationPayments:     true,
   };
-  const planCaps = isSubscribed ? BASIC_CAPS : FREE_CAPS;
+  const PRO_CAPS = {
+    ...BASIC_CAPS,
+    autoReminders:    true,
+    advancedReminders: true,
+  };
+  const planCaps = !isSubscribed ? FREE_CAPS : plan === 'pro' ? PRO_CAPS : BASIC_CAPS;
   const canUse    = (feature) => !!planCaps[feature];
   const planLimit = (key) => planCaps[key] ?? Infinity;
   const moduleAccess = business?.modules ?? {};

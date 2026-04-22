@@ -84,10 +84,6 @@ function LayoutShell({ children, fullBleed = false, devMode = false }) {
   });
   const [newRsvModal, setNewRsvModal] = useState(false);
 
-  if (loading) return <LoadingScreen />;
-  if (!business) return <Navigate to="/login" replace />;
-  if (!business.id && !business.isDev) return <Navigate to="/onboarding" replace />;
-
   useEffect(() => {
     const media = window.matchMedia('(min-width: 1024px)');
     const sync = () => setIsDesktop(media.matches);
@@ -95,6 +91,10 @@ function LayoutShell({ children, fullBleed = false, devMode = false }) {
     media.addEventListener('change', sync);
     return () => media.removeEventListener('change', sync);
   }, []);
+
+  if (loading) return <LoadingScreen />;
+  if (!business) return <Navigate to="/login" replace />;
+  if (!business.id && !business.isDev) return <Navigate to="/onboarding" replace />;
 
   const sidebarVisible = isDesktop ? true : mobileSidebarOpen;
 

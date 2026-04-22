@@ -28,7 +28,10 @@ export default function Register() {
   const handleGoogle = async () => {
     setError('');
     try {
-      await authClient.signIn.social({ provider: 'google', callbackURL: '/' });
+      await authClient.signIn.social({
+        provider: 'google',
+        callbackURL: `${window.location.origin}/`,
+      });
     } catch (err) {
       setError(err.message || 'Error al continuar con Google');
     }
@@ -150,3 +153,4 @@ export default function Register() {
     </div>
   );
 }
+

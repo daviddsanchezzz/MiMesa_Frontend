@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { MobileHeaderProvider, useMobileHeader } from './context/MobileHeaderContext';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -76,23 +76,54 @@ function MobileHeader({ onMenuOpen, onNewReservation, showDefaultAction = true }
 
 function LayoutShell({ children, fullBleed = false, devMode = false }) {
   const { business, loading } = useAuth();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(true);
+  const [isDesktop, setIsDesktop] = useState(false);
   const [newRsvModal, setNewRsvModal] = useState(false);
 
   if (loading) return <LoadingScreen />;
   if (!business) return <Navigate to="/login" replace />;
   if (!business.id && !business.isDev) return <Navigate to="/onboarding" replace />;
 
+  useEffect(() => {
+    const media = window.matchMedia('(min-width: 1024px)');
+    const sync = () => setIsDesktop(media.matches);
+    sync();
+    media.addEventListener('change', sync);
+    return () => media.removeEventListener('change', sync);
+  }, []);
+
+  const sidebarVisible = isDesktop ? desktopSidebarOpen : mobileSidebarOpen;
+
   return (
     <MobileHeaderProvider>
     <div className="flex h-[100dvh] bg-gray-50 overflow-hidden">
-      {sidebarOpen && (
-        <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={() => setSidebarOpen(false)} />
+      {mobileSidebarOpen && !isDesktop && (
+        <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={() => setMobileSidebarOpen(false)} />
       )}
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} devMode={devMode} />
+      {sidebarVisible && (
+        <Sidebar
+          isOpen={sidebarVisible}
+          onClose={!isDesktop ? () => setMobileSidebarOpen(false) : undefined}
+          closeOnNavigate={!isDesktop}
+          onDesktopClose={isDesktop ? () => setDesktopSidebarOpen(false) : undefined}
+          devMode={devMode}
+        />
+      )}
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+        {!sidebarVisible && (
+          <button
+            onClick={() => setDesktopSidebarOpen(true)}
+            className="hidden lg:flex fixed top-4 left-4 z-30 w-10 h-10 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 transition-colors shadow-sm"
+            aria-label="Abrir menú lateral"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
+              <path fillRule="evenodd" d="M2 4.75A.75.75 0 0 1 2.75 4h14.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 4.75ZM2 10a.75.75 0 0 1 .75-.75h14.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 10Zm0 5.25a.75.75 0 0 1 .75-.75h14.5a.75.75 0 0 1 0 1.5H2.75a.75.75 0 0 1-.75-.75Z" clipRule="evenodd" />
+            </svg>
+          </button>
+        )}
         <MobileHeader
-          onMenuOpen={() => setSidebarOpen(true)}
+          onMenuOpen={() => setMobileSidebarOpen(true)}
           onNewReservation={() => setNewRsvModal(true)}
           showDefaultAction={!devMode}
         />

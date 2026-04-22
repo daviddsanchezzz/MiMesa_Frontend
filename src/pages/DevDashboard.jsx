@@ -287,8 +287,29 @@ export default function DevDashboard() {
     setUserActionLoading(true);
     setUserActionError('');
     try {
-      const { data } = await api.post(`/dev/users/${selectedUser.id}/impersonate`);
-      await startImpersonation({ token: data?.token, user: data?.user || selectedUser });
+      let token = '';
+      let userPayload = selectedUser;
+
+      try {
+        const { data } = await api.post(`/dev/users/${selectedUser.id}/impersonate`);
+        token = data?.token || '';
+        userPayload = data?.user || selectedUser;
+      } catch (err) {
+        // Backends antiguos no tienen /api/dev/users/:id/impersonate (404).
+        // Fallback al endpoint oficial de Better Auth.
+        if (err?.response?.status !== 404) throw err;
+        const response = await api.post('/betterauth/admin/impersonate-user', {
+          userId: selectedUser.id,
+        });
+        token = response?.headers?.['set-auth-token'] || '';
+        userPayload = response?.data?.user || selectedUser;
+      }
+
+      if (!token) {
+        throw new Error('No se recibio token de suplantacion');
+      }
+
+      await startImpersonation({ token, user: userPayload });
       closeUserActions();
       navigate('/', { replace: true });
     } catch (err) {

@@ -1696,7 +1696,7 @@ function BillingSection() {
     if (!isOwner) return;
     setWorking(true); setErr('');
     try {
-      const { data } = await api.post('/stripe/checkout', { priceId: import.meta.env.VITE_STRIPE_PRICE_BASIC });
+      const { data } = await api.post('/stripe/checkout');
       window.location.href = data.url;
     } catch (e) {
       setErr(e.response?.data?.message || 'Error al iniciar el pago');

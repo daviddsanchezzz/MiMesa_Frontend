@@ -117,11 +117,31 @@ export function AuthProvider({ children }) {
   };
 
   const stopImpersonation = async () => {
+    const impersonatedToken = getStoredToken();
     const originalToken = getImpersonationOriginalToken();
+    let restoredToken = originalToken || null;
+
+    try {
+      // Preferred exit path: tell Better Auth to close impersonation and restore admin session.
+      // This is required when impersonation cookies are present.
+      const { headers } = await api.post(
+        '/betterauth/admin/stop-impersonating',
+        {},
+        impersonatedToken
+          ? { headers: { Authorization: `Bearer ${impersonatedToken}` } }
+          : undefined,
+      );
+      const tokenFromHeader = headers?.['set-auth-token'];
+      if (tokenFromHeader) restoredToken = tokenFromHeader;
+    } catch {
+      // If server-side stop is unavailable, fallback to local token restore.
+    }
+
+    if (restoredToken) setStoredToken(restoredToken);
+    else setStoredToken(null);
+
     clearImpersonationState();
     setImpersonation(null);
-    if (!originalToken) return;
-    setStoredToken(originalToken);
     setActiveBusinessId(null);
     await refreshBusiness();
   };

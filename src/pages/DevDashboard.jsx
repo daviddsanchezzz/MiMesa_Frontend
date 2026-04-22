@@ -19,7 +19,8 @@ function planPillClass(plan) {
   return 'bg-gray-50 text-gray-600 border-gray-200';
 }
 
-function MobileBusinessCard({ b, changingPlan, deleting, onPlanChange, onDelete, moduleCatalog, onModuleToggle }) {
+function MobileBusinessCard({ b, moduleCatalog, onEdit }) {
+  const activeModules = moduleCatalog.filter((m) => !!b.modules?.[m.key]?.enabled);
   return (
     <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 space-y-3">
       <div>
@@ -27,20 +28,10 @@ function MobileBusinessCard({ b, changingPlan, deleting, onPlanChange, onDelete,
         <p className="text-xs text-gray-400 mt-0.5 truncate">{b.email}</p>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex items-center">
         <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${planPillClass(b.plan)}`}>
           {b.plan}
         </span>
-        <select
-          value={b.plan}
-          disabled={changingPlan === b.id}
-          onChange={(e) => onPlanChange(b.id, e.target.value)}
-          className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-violet-500 disabled:opacity-50"
-        >
-          <option value="free">Free</option>
-          <option value="basic">Basic</option>
-          <option value="pro">Pro</option>
-        </select>
       </div>
 
       <div className="grid grid-cols-3 gap-2 text-center">
@@ -61,22 +52,20 @@ function MobileBusinessCard({ b, changingPlan, deleting, onPlanChange, onDelete,
       {moduleCatalog.length > 0 && (
         <div className="rounded-xl bg-gray-50 border border-gray-100 p-2 space-y-1">
           <p className="text-[11px] text-gray-500">Modulos</p>
-          {moduleCatalog.map((m) => {
-            const enabled = !!b.modules?.[m.key]?.enabled;
-            return (
-              <button
-                key={m.key}
-                onClick={() => onModuleToggle(b.id, m.key, enabled)}
-                className={`w-full text-left text-xs px-2 py-1 rounded-lg border transition-colors ${
-                  enabled
-                    ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
-                    : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
-                }`}
-              >
-                {m.name}: {enabled ? 'ON' : 'OFF'}
-              </button>
-            );
-          })}
+          {activeModules.length === 0 ? (
+            <p className="text-xs text-gray-400 px-1">Sin modulos activos</p>
+          ) : (
+            <div className="flex flex-wrap gap-1.5">
+              {activeModules.map((m) => (
+                <span
+                  key={m.key}
+                  className="text-[11px] font-semibold px-2 py-1 rounded-lg border bg-emerald-50 border-emerald-200 text-emerald-700"
+                >
+                  {m.name}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
@@ -84,16 +73,12 @@ function MobileBusinessCard({ b, changingPlan, deleting, onPlanChange, onDelete,
         <p className="text-xs text-gray-400">
           Alta: {new Date(b.createdAt).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
         </p>
-        {deleting === b.id ? (
-          <span className="text-xs text-gray-400">Eliminando...</span>
-        ) : (
-          <button
-            onClick={() => onDelete(b.id, b.name)}
-            className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 transition-colors"
-          >
-            Eliminar
-          </button>
-        )}
+        <button
+          onClick={() => onEdit(b)}
+          className="text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors"
+        >
+          Editar
+        </button>
       </div>
     </div>
   );
@@ -120,8 +105,11 @@ export default function DevDashboard() {
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
 
-  const [changingPlan, setChangingPlan] = useState(null);
-  const [deleting, setDeleting] = useState(null);
+  const [editingBusiness, setEditingBusiness] = useState(null);
+  const [editPlan, setEditPlan] = useState('free');
+  const [editModules, setEditModules] = useState({});
+  const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError] = useState('');
 
   const [users, setUsers] = useState([]);
   const [moduleCatalog, setModuleCatalog] = useState([]);
@@ -192,41 +180,71 @@ export default function DevDashboard() {
     }
   };
 
-  const handlePlanChange = async (id, plan) => {
-    setChangingPlan(id);
-    try {
-      await api.patch(`/dev/businesses/${id}/plan`, { plan });
-      setBusinesses((bs) => bs.map((b) => (b.id === id ? { ...b, plan } : b)));
-    } finally {
-      setChangingPlan(null);
-    }
+  const openBusinessEditor = (business) => {
+    setEditingBusiness(business);
+    setEditPlan(business.plan || 'free');
+    const modulesState = {};
+    moduleCatalog.forEach((m) => {
+      modulesState[m.key] = !!business.modules?.[m.key]?.enabled;
+    });
+    setEditModules(modulesState);
+    setEditError('');
   };
 
-  const handleModuleToggle = async (businessId, moduleKey, currentEnabled) => {
-    await api.patch(`/dev/businesses/${businessId}/modules/${moduleKey}`, { enabled: !currentEnabled });
-    setBusinesses((prev) => prev.map((b) => {
-      if (b.id !== businessId) return b;
-      return {
-        ...b,
-        modules: {
-          ...(b.modules || {}),
-          [moduleKey]: {
-            ...(b.modules?.[moduleKey] || {}),
-            enabled: !currentEnabled,
+  const closeBusinessEditor = () => {
+    if (editSaving) return;
+    setEditingBusiness(null);
+    setEditError('');
+  };
+
+  const handleEditModuleToggle = (moduleKey) => {
+    setEditModules((prev) => ({ ...prev, [moduleKey]: !prev[moduleKey] }));
+  };
+
+  const saveBusinessChanges = async () => {
+    if (!editingBusiness) return;
+    setEditSaving(true);
+    setEditError('');
+    try {
+      if (editPlan !== editingBusiness.plan) {
+        await api.patch(`/dev/businesses/${editingBusiness.id}/plan`, { plan: editPlan });
+      }
+
+      const moduleChanges = moduleCatalog.filter((m) => {
+        const currentEnabled = !!editingBusiness.modules?.[m.key]?.enabled;
+        const nextEnabled = !!editModules[m.key];
+        return currentEnabled !== nextEnabled;
+      });
+
+      for (const m of moduleChanges) {
+        await api.patch(`/dev/businesses/${editingBusiness.id}/modules/${m.key}`, {
+          enabled: !!editModules[m.key],
+        });
+      }
+
+      setBusinesses((prev) => prev.map((b) => {
+        if (b.id !== editingBusiness.id) return b;
+        return {
+          ...b,
+          plan: editPlan,
+          modules: {
+            ...(b.modules || {}),
+            ...Object.fromEntries(moduleCatalog.map((m) => [
+              m.key,
+              {
+                ...(b.modules?.[m.key] || {}),
+                enabled: !!editModules[m.key],
+              },
+            ])),
           },
-        },
-      };
-    }));
-  };
+        };
+      }));
 
-  const handleDelete = async (id, name) => {
-    if (!window.confirm(`Eliminar "${name}"? Esta accion no se puede deshacer.`)) return;
-    setDeleting(id);
-    try {
-      await api.delete(`/dev/businesses/${id}`);
-      setBusinesses((bs) => bs.filter((b) => b.id !== id));
+      setEditingBusiness(null);
+    } catch (err) {
+      setEditError(err.response?.data?.message || err.message || 'No se pudo guardar');
     } finally {
-      setDeleting(null);
+      setEditSaving(false);
     }
   };
 
@@ -276,12 +294,8 @@ export default function DevDashboard() {
                 <MobileBusinessCard
                   key={b.id}
                   b={b}
-                  changingPlan={changingPlan}
-                  deleting={deleting}
-                  onPlanChange={handlePlanChange}
-                  onDelete={handleDelete}
                   moduleCatalog={moduleCatalog}
-                  onModuleToggle={handleModuleToggle}
+                  onEdit={openBusinessEditor}
                 />
               ))
             )}
@@ -315,40 +329,25 @@ export default function DevDashboard() {
                           <p className="text-xs text-gray-400 truncate max-w-[200px]">{b.email}</p>
                         </td>
                         <td className="px-4 py-4 align-middle">
-                          <div className="flex items-center gap-2">
-                            <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${planPillClass(b.plan)}`}>
-                              {b.plan}
-                            </span>
-                            <select
-                              value={b.plan}
-                              disabled={changingPlan === b.id}
-                              onChange={(e) => handlePlanChange(b.id, e.target.value)}
-                              className="text-xs border border-gray-300 rounded-lg px-2 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-violet-500 disabled:opacity-50"
-                            >
-                              <option value="free">Free</option>
-                              <option value="basic">Basic</option>
-                              <option value="pro">Pro</option>
-                            </select>
-                          </div>
+                          <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${planPillClass(b.plan)}`}>
+                            {b.plan}
+                          </span>
                         </td>
                         <td className="px-4 py-4 align-middle">
                           <div className="flex items-center gap-1.5 flex-wrap">
-                            {moduleCatalog.map((m) => {
-                              const enabled = !!b.modules?.[m.key]?.enabled;
-                              return (
-                                <button
+                            {moduleCatalog
+                              .filter((m) => !!b.modules?.[m.key]?.enabled)
+                              .map((m) => (
+                                <span
                                   key={m.key}
-                                  onClick={() => handleModuleToggle(b.id, m.key, enabled)}
-                                  className={`text-[11px] font-semibold px-2 py-1 rounded-lg border transition-colors ${
-                                    enabled
-                                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                                      : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
-                                  }`}
+                                  className="text-[11px] font-semibold px-2 py-1 rounded-lg border bg-emerald-50 border-emerald-200 text-emerald-700"
                                 >
-                                  {m.name}: {enabled ? 'ON' : 'OFF'}
-                                </button>
-                              );
-                            })}
+                                  {m.name}
+                                </span>
+                              ))}
+                            {moduleCatalog.filter((m) => !!b.modules?.[m.key]?.enabled).length === 0 && (
+                              <span className="text-xs text-gray-400">Sin modulos activos</span>
+                            )}
                           </div>
                         </td>
                         <td className="px-4 py-4 text-center text-gray-800 font-medium tabular-nums align-middle">{b.memberCount}</td>
@@ -358,16 +357,12 @@ export default function DevDashboard() {
                           {new Date(b.createdAt).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
                         </td>
                         <td className="px-4 py-4 text-right align-middle">
-                          {deleting === b.id ? (
-                            <span className="text-xs text-gray-400">Eliminando...</span>
-                          ) : (
-                            <button
-                              onClick={() => handleDelete(b.id, b.name)}
-                              className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 transition-colors"
-                            >
-                              Eliminar
-                            </button>
-                          )}
+                          <button
+                            onClick={() => openBusinessEditor(b)}
+                            className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors"
+                          >
+                            Editar
+                          </button>
                         </td>
                       </tr>
                     ))}
@@ -483,6 +478,83 @@ export default function DevDashboard() {
             )}
           </div>
         </div>
+      )}
+
+      {editingBusiness && (
+        <Modal
+          title={`Editar negocio: ${editingBusiness.name}`}
+          subtitle="Ajusta plan y modulos. Fuera de este modal la vista es solo informativa."
+          onClose={closeBusinessEditor}
+          size="md"
+        >
+          {editError && (
+            <div className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-4 py-3 mb-4">
+              {editError}
+            </div>
+          )}
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Plan</label>
+              <select
+                value={editPlan}
+                onChange={(e) => setEditPlan(e.target.value)}
+                disabled={editSaving}
+                className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white disabled:opacity-60"
+              >
+                <option value="free">Free</option>
+                <option value="basic">Basic</option>
+                <option value="pro">Pro</option>
+              </select>
+            </div>
+
+            {moduleCatalog.length > 0 && (
+              <div>
+                <p className="text-xs font-medium text-gray-500 mb-2">Modulos</p>
+                <div className="space-y-2">
+                  {moduleCatalog.map((m) => {
+                    const enabled = !!editModules[m.key];
+                    return (
+                      <button
+                        key={m.key}
+                        type="button"
+                        disabled={editSaving}
+                        onClick={() => handleEditModuleToggle(m.key)}
+                        className={`w-full flex items-center justify-between text-sm px-3 py-2.5 rounded-xl border transition-colors disabled:opacity-60 ${
+                          enabled
+                            ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
+                            : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
+                        }`}
+                      >
+                        <span>{m.name}</span>
+                        <span className="text-xs font-semibold">{enabled ? 'ON' : 'OFF'}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            <div className="flex gap-2 pt-1">
+              <button
+                type="button"
+                onClick={closeBusinessEditor}
+                disabled={editSaving}
+                className="flex-1 border border-gray-200 text-gray-600 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors disabled:opacity-60"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={saveBusinessChanges}
+                disabled={editSaving}
+                className="flex-1 bg-violet-600 hover:bg-violet-700 text-white py-2.5 rounded-xl text-sm font-semibold transition-colors disabled:opacity-60"
+              >
+                {editSaving ? 'Guardando...' : 'Guardar cambios'}
+              </button>
+            </div>
+          </div>
+        </Modal>
       )}
 
       {showModal && (

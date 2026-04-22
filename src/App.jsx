@@ -77,7 +77,7 @@ function MobileHeader({ onMenuOpen, onNewReservation, showDefaultAction = true }
 function LayoutShell({ children, fullBleed = false, devMode = false }) {
   const { business, loading } = useAuth();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const [desktopSidebarOpen, setDesktopSidebarOpen] = useState(true);
+  const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] = useState(false);
   const [isDesktop, setIsDesktop] = useState(false);
   const [newRsvModal, setNewRsvModal] = useState(false);
 
@@ -93,7 +93,7 @@ function LayoutShell({ children, fullBleed = false, devMode = false }) {
     return () => media.removeEventListener('change', sync);
   }, []);
 
-  const sidebarVisible = isDesktop ? desktopSidebarOpen : mobileSidebarOpen;
+  const sidebarVisible = isDesktop ? true : mobileSidebarOpen;
 
   return (
     <MobileHeaderProvider>
@@ -106,22 +106,12 @@ function LayoutShell({ children, fullBleed = false, devMode = false }) {
           isOpen={sidebarVisible}
           onClose={!isDesktop ? () => setMobileSidebarOpen(false) : undefined}
           closeOnNavigate={!isDesktop}
-          onDesktopClose={isDesktop ? () => setDesktopSidebarOpen(false) : undefined}
+          collapsed={isDesktop && desktopSidebarCollapsed}
+          onDesktopToggleCollapse={isDesktop ? () => setDesktopSidebarCollapsed((v) => !v) : undefined}
           devMode={devMode}
         />
       )}
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
-        {!sidebarVisible && (
-          <button
-            onClick={() => setDesktopSidebarOpen(true)}
-            className="hidden lg:flex fixed top-4 left-4 z-30 w-10 h-10 items-center justify-center rounded-xl border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 transition-colors shadow-sm"
-            aria-label="Abrir menú lateral"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
-              <path fillRule="evenodd" d="M2 4.75A.75.75 0 0 1 2.75 4h14.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 4.75ZM2 10a.75.75 0 0 1 .75-.75h14.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 10Zm0 5.25a.75.75 0 0 1 .75-.75h14.5a.75.75 0 0 1 0 1.5H2.75a.75.75 0 0 1-.75-.75Z" clipRule="evenodd" />
-            </svg>
-          </button>
-        )}
         <MobileHeader
           onMenuOpen={() => setMobileSidebarOpen(true)}
           onNewReservation={() => setNewRsvModal(true)}

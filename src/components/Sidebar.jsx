@@ -1,4 +1,4 @@
-import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+﻿import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import Modal from './Modal';
@@ -77,7 +77,14 @@ const configLinks = [
   { to: '/configuracion', label: 'Configuracion', icon: <IconSettings /> },
 ];
 
-export default function Sidebar({ isOpen, onClose, devMode = false, closeOnNavigate = true, onDesktopClose }) {
+export default function Sidebar({
+  isOpen,
+  onClose,
+  devMode = false,
+  closeOnNavigate = true,
+  collapsed = false,
+  onDesktopToggleCollapse,
+}) {
   const { business, memberships, logout, hasRole, switchBusiness, session, isSubscribed, isModuleEnabled } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -152,7 +159,7 @@ export default function Sidebar({ isOpen, onClose, devMode = false, closeOnNavig
     <aside
       className={`
         fixed lg:relative inset-y-0 left-0 z-50 lg:z-auto
-        w-64 lg:w-56 bg-slate-900 flex flex-col shrink-0 select-none
+        w-64 ${collapsed ? 'lg:w-20' : 'lg:w-56'} bg-slate-900 flex flex-col shrink-0 select-none
         transform transition-transform duration-200 ease-in-out
         ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}
@@ -160,7 +167,7 @@ export default function Sidebar({ isOpen, onClose, devMode = false, closeOnNavig
       <div className="px-4 py-5 border-b border-slate-700/50">
         <div className="flex items-center gap-2.5">
           <img src="/logo.svg" alt="Tableo" className="w-8 h-8 shrink-0" />
-          <div className="min-w-0 flex-1">
+          <div className={`min-w-0 flex-1 ${collapsed ? 'lg:hidden' : ''}`}>
             <p className="text-white text-sm font-semibold leading-tight">Tableo</p>
             {devSidebar ? (
               <p className="text-slate-400 text-xs truncate leading-tight mt-0.5">Panel de desarrollo</p>
@@ -180,15 +187,19 @@ export default function Sidebar({ isOpen, onClose, devMode = false, closeOnNavig
               <p className="text-slate-400 text-xs truncate leading-tight mt-0.5">{business?.name}</p>
             )}
           </div>
-          {onDesktopClose && (
+          {onDesktopToggleCollapse && (
             <button
               type="button"
-              onClick={onDesktopClose}
+              onClick={onDesktopToggleCollapse}
               className="hidden lg:flex w-8 h-8 items-center justify-center rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition-colors"
-              aria-label="Cerrar menú lateral"
+              aria-label={collapsed ? 'Expandir menú lateral' : 'Colapsar menú lateral'}
             >
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
-                <path fillRule="evenodd" d="M4.22 4.22a.75.75 0 0 1 1.06 0L10 8.94l4.72-4.72a.75.75 0 1 1 1.06 1.06L11.06 10l4.72 4.72a.75.75 0 1 1-1.06 1.06L10 11.06l-4.72 4.72a.75.75 0 1 1-1.06-1.06L8.94 10 4.22 5.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
+                {collapsed ? (
+                  <path fillRule="evenodd" d="M12.53 4.47a.75.75 0 0 1 0 1.06L8.06 10l4.47 4.47a.75.75 0 1 1-1.06 1.06L6.47 10.53a.75.75 0 0 1 0-1.06l5-5a.75.75 0 0 1 1.06 0Z" clipRule="evenodd" />
+                ) : (
+                  <path fillRule="evenodd" d="M7.47 4.47a.75.75 0 0 1 1.06 0l5 5a.75.75 0 0 1 0 1.06l-5 5a.75.75 0 1 1-1.06-1.06L11.94 10 7.47 5.53a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
+                )}
               </svg>
             </button>
           )}
@@ -199,19 +210,20 @@ export default function Sidebar({ isOpen, onClose, devMode = false, closeOnNavig
         <div className="px-3 pt-3 pb-1">
           <button
             onClick={() => setNewRsvModal(true)}
-            className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold transition-colors"
+            className={`w-full flex items-center justify-center ${collapsed ? '' : 'gap-2'} px-3 py-2 rounded-lg bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold transition-colors`}
+            title={collapsed ? 'Nueva reserva' : undefined}
           >
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 shrink-0">
               <path d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z" />
             </svg>
-            Nueva reserva
+            {!collapsed && 'Nueva reserva'}
           </button>
         </div>
       )}
 
       <nav className="flex-1 px-3 py-4 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <div className="space-y-0.5">
-          <p className="text-slate-500 text-[10px] font-semibold uppercase tracking-widest px-2 pb-2">Menu</p>
+          {!collapsed && <p className="text-slate-500 text-[10px] font-semibold uppercase tracking-widest px-2 pb-2">Menu</p>}
           {devSidebar ? (
             devLinks.map((link) => {
               const active = location.pathname === '/dev' && currentDevTab === link.tab;
@@ -222,12 +234,13 @@ export default function Sidebar({ isOpen, onClose, devMode = false, closeOnNavig
                     navigate(`/dev?tab=${link.tab}`);
                     handleNavClick();
                   }}
-                  className={`w-full flex items-center gap-3 px-3 py-3 lg:py-2 rounded-lg text-sm font-medium transition-all duration-100 ${
+                  className={`w-full flex items-center ${collapsed ? 'justify-center' : 'gap-3'} px-3 py-3 lg:py-2 rounded-lg text-sm font-medium transition-all duration-100 ${
                     active ? 'bg-violet-600 text-white shadow-sm' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100'
                   }`}
+                  title={collapsed ? link.label : undefined}
                 >
                   {link.icon}
-                  {link.label}
+                  {!collapsed && link.label}
                 </button>
               );
             })
@@ -239,13 +252,14 @@ export default function Sidebar({ isOpen, onClose, devMode = false, closeOnNavig
                 end={link.to === '/'}
                 onClick={handleNavClick}
                 className={({ isActive }) =>
-                  `flex items-center gap-3 px-3 py-3 lg:py-2 rounded-lg text-sm font-medium transition-all duration-100 ${
+                  `flex items-center ${collapsed ? 'justify-center' : 'gap-3'} px-3 py-3 lg:py-2 rounded-lg text-sm font-medium transition-all duration-100 ${
                     isActive ? 'bg-violet-600 text-white shadow-sm' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100'
                   }`
                 }
+                title={collapsed ? link.label : undefined}
               >
                 {link.icon}
-                {link.label}
+                {!collapsed && link.label}
               </NavLink>
             ))
           )}
@@ -255,13 +269,14 @@ export default function Sidebar({ isOpen, onClose, devMode = false, closeOnNavig
               to="/analytics"
               onClick={handleNavClick}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-3 lg:py-2 rounded-lg text-sm font-medium transition-all duration-100 ${
+                `flex items-center ${collapsed ? 'justify-center' : 'gap-3'} px-3 py-3 lg:py-2 rounded-lg text-sm font-medium transition-all duration-100 ${
                   isActive ? 'bg-violet-600 text-white shadow-sm' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100'
                 }`
               }
+              title={collapsed ? 'Estadísticas' : undefined}
             >
               <IconChartBar />
-              Estadísticas
+              {!collapsed && 'EstadÃ­sticas'}
             </NavLink>
           )}
 
@@ -270,13 +285,14 @@ export default function Sidebar({ isOpen, onClose, devMode = false, closeOnNavig
               to="/publicidad"
               onClick={handleNavClick}
               className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-3 lg:py-2 rounded-lg text-sm font-medium transition-all duration-100 ${
+                `flex items-center ${collapsed ? 'justify-center' : 'gap-3'} px-3 py-3 lg:py-2 rounded-lg text-sm font-medium transition-all duration-100 ${
                   isActive ? 'bg-violet-600 text-white shadow-sm' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100'
                 }`
               }
+              title={collapsed ? 'Publicidad' : undefined}
             >
               <IconMegaphone />
-              Publicidad
+              {!collapsed && 'Publicidad'}
             </NavLink>
           )}
         </div>
@@ -289,33 +305,38 @@ export default function Sidebar({ isOpen, onClose, devMode = false, closeOnNavig
             to={link.to}
             onClick={handleNavClick}
             className={({ isActive }) =>
-              `mb-2 flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-100 ${
+              `mb-2 flex items-center ${collapsed ? 'justify-center' : 'gap-3'} px-3 py-2 rounded-lg text-sm font-medium transition-all duration-100 ${
                 isActive
                   ? 'bg-violet-600 text-white shadow-sm'
                   : 'text-slate-300 hover:bg-slate-800 hover:text-slate-100'
               }`
             }
+            title={collapsed ? link.label : undefined}
           >
             {link.icon}
-            {link.label}
+            {!collapsed && link.label}
           </NavLink>
         ))}
 
         <div ref={menuRef} className="relative">
           <button
             onClick={() => setMenuOpen((v) => !v)}
-            className="w-full flex items-center gap-2.5 px-2.5 py-2 rounded-lg hover:bg-slate-800 transition-colors"
+            className={`w-full flex items-center ${collapsed ? 'justify-center' : 'gap-2.5'} px-2.5 py-2 rounded-lg hover:bg-slate-800 transition-colors`}
           >
             <div className="w-8 h-8 rounded-full bg-violet-600 flex items-center justify-center text-white text-xs font-bold shrink-0">
               {initial}
             </div>
-            <div className="min-w-0 flex-1 text-left">
-              <p className="text-slate-200 text-xs font-medium truncate">{userName}</p>
-              <p className="text-slate-400 text-xs truncate">{userEmail}</p>
-            </div>
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 text-slate-500 shrink-0">
-              <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.168l3.71-3.938a.75.75 0 1 1 1.08 1.04l-4.25 4.5a.75.75 0 0 1-1.08 0l-4.25-4.5a.75.75 0 0 1 .02-1.06Z" clipRule="evenodd" />
-            </svg>
+            {!collapsed && (
+              <>
+                <div className="min-w-0 flex-1 text-left">
+                  <p className="text-slate-200 text-xs font-medium truncate">{userName}</p>
+                  <p className="text-slate-400 text-xs truncate">{userEmail}</p>
+                </div>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 text-slate-500 shrink-0">
+                  <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.168l3.71-3.938a.75.75 0 1 1 1.08 1.04l-4.25 4.5a.75.75 0 0 1-1.08 0l-4.25-4.5a.75.75 0 0 1 .02-1.06Z" clipRule="evenodd" />
+                </svg>
+              </>
+            )}
           </button>
 
           {menuOpen && (
@@ -355,3 +376,4 @@ export default function Sidebar({ isOpen, onClose, devMode = false, closeOnNavig
     </>
   );
 }
+

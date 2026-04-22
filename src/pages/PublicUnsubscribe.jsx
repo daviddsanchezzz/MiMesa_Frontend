@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 
-const API = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const API = (import.meta.env.VITE_API_URL || 'https://api.tableo.app').replace(/\/api\/?$/, '');
 
 export default function PublicUnsubscribe() {
   const [params] = useSearchParams();

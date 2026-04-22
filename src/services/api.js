@@ -1,8 +1,7 @@
 import axios from 'axios';
 
-const BASE_URL = import.meta.env.VITE_API_URL
-  ? `${import.meta.env.VITE_API_URL}/api`
-  : 'https://mimesa-backend.onrender.com/api';
+const API_ORIGIN = (import.meta.env.VITE_API_URL || 'https://api.tableo.app').replace(/\/api\/?$/, '');
+const BASE_URL = `${API_ORIGIN}/api`;
 
 const api = axios.create({
   baseURL: BASE_URL,

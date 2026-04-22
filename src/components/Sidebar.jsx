@@ -276,7 +276,7 @@ export default function Sidebar({
               title={collapsed ? 'Estadísticas' : undefined}
             >
               <IconChartBar />
-              {!collapsed && 'EstadÃ­sticas'}
+              {!collapsed && 'Estadísticas'}
             </NavLink>
           )}
 

@@ -1,6 +1,5 @@
 ﻿import { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import Modal from '../components/Modal';
 
@@ -107,7 +106,6 @@ function rolePillClass(role) {
 }
 
 export default function DevDashboard() {
-  const { session, logout } = useAuth();
   const [searchParams] = useSearchParams();
 
   const tab = searchParams.get('tab') === 'users' ? 'users' : 'businesses';
@@ -257,27 +255,6 @@ export default function DevDashboard() {
 
   return (
     <div className="space-y-4 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm px-4 py-3.5 sm:px-5 sm:py-4">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <div className="inline-flex items-center gap-2 mb-1">
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-700 border border-amber-200">DEV</span>
-              <h2 className="text-lg sm:text-xl font-bold text-gray-900">Panel de desarrollo</h2>
-            </div>
-            <p className="text-sm text-gray-500">{tab === 'users' ? 'Administración interna de usuarios.' : 'Administración interna de negocios.'}</p>
-          </div>
-          <div className="flex items-center gap-2">
-            <span className="hidden md:inline text-xs text-gray-500">{session?.user?.email}</span>
-            <button
-              onClick={logout}
-              className="text-xs font-semibold px-3 py-2 rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50"
-            >
-              Cerrar sesion
-            </button>
-          </div>
-        </div>
-      </div>
-
       {tab === 'businesses' && (
         <>
           <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
@@ -340,27 +317,27 @@ export default function DevDashboard() {
               <div className="py-14 text-center text-sm text-gray-400">Sin resultados</div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full text-sm">
+                <table className="w-full min-w-[1060px] text-sm">
                   <thead>
-                    <tr className="border-b border-gray-100 bg-gray-50">
-                      <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Negocio</th>
-                      <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Plan</th>
-                      <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Modulos</th>
-                      <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Miembros</th>
-                      <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Reservas 30d</th>
-                      <th className="text-center px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Total</th>
-                      <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Alta</th>
+                    <tr className="border-b border-gray-200 bg-slate-50/80">
+                      <th className="text-left px-6 py-3.5 text-[11px] font-bold text-gray-500 uppercase tracking-wide">Negocio</th>
+                      <th className="text-left px-4 py-3.5 text-[11px] font-bold text-gray-500 uppercase tracking-wide">Plan</th>
+                      <th className="text-left px-4 py-3.5 text-[11px] font-bold text-gray-500 uppercase tracking-wide">Modulos</th>
+                      <th className="text-center px-4 py-3.5 text-[11px] font-bold text-gray-500 uppercase tracking-wide">Miembros</th>
+                      <th className="text-center px-4 py-3.5 text-[11px] font-bold text-gray-500 uppercase tracking-wide">Reservas 30d</th>
+                      <th className="text-center px-4 py-3.5 text-[11px] font-bold text-gray-500 uppercase tracking-wide">Total</th>
+                      <th className="text-left px-4 py-3.5 text-[11px] font-bold text-gray-500 uppercase tracking-wide">Alta</th>
                       <th className="px-4 py-3" />
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-50">
+                  <tbody className="divide-y divide-gray-100">
                     {filtered.map((b) => (
-                      <tr key={b.id} className="hover:bg-gray-50/70 transition-colors">
-                        <td className="px-5 py-3.5">
+                      <tr key={b.id} className="hover:bg-slate-50/80 transition-colors">
+                        <td className="px-6 py-4 align-middle">
                           <p className="font-semibold text-gray-900 truncate max-w-[200px]">{b.name}</p>
                           <p className="text-xs text-gray-400 truncate max-w-[200px]">{b.email}</p>
                         </td>
-                        <td className="px-4 py-3.5">
+                        <td className="px-4 py-4 align-middle">
                           <div className="flex items-center gap-2">
                             <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${planPillClass(b.plan)}`}>
                               {b.plan}
@@ -369,7 +346,7 @@ export default function DevDashboard() {
                               value={b.plan}
                               disabled={changingPlan === b.id}
                               onChange={(e) => handlePlanChange(b.id, e.target.value)}
-                              className="text-xs border border-gray-200 rounded-lg px-2 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-violet-500 disabled:opacity-50"
+                              className="text-xs border border-gray-300 rounded-lg px-2 py-1 bg-white focus:outline-none focus:ring-2 focus:ring-violet-500 disabled:opacity-50"
                             >
                               <option value="free">Free</option>
                               <option value="basic">Basic</option>
@@ -377,7 +354,7 @@ export default function DevDashboard() {
                             </select>
                           </div>
                         </td>
-                        <td className="px-4 py-3.5">
+                        <td className="px-4 py-4 align-middle">
                           <div className="flex items-center gap-1.5 flex-wrap">
                             {moduleCatalog.map((m) => {
                               const enabled = !!b.modules?.[m.key]?.enabled;
@@ -388,7 +365,7 @@ export default function DevDashboard() {
                                   className={`text-[11px] font-semibold px-2 py-1 rounded-lg border transition-colors ${
                                     enabled
                                       ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                                      : 'bg-white text-gray-600 border-gray-200 hover:bg-gray-50'
+                                      : 'bg-white text-gray-600 border-gray-300 hover:bg-gray-50'
                                   }`}
                                 >
                                   {m.name}: {enabled ? 'ON' : 'OFF'}
@@ -397,19 +374,19 @@ export default function DevDashboard() {
                             })}
                           </div>
                         </td>
-                        <td className="px-4 py-3.5 text-center text-gray-700">{b.memberCount}</td>
-                        <td className="px-4 py-3.5 text-center text-gray-700">{b.reservationsLast30d}</td>
-                        <td className="px-4 py-3.5 text-center text-gray-500">{b.totalReservations}</td>
-                        <td className="px-4 py-3.5 text-xs text-gray-400 whitespace-nowrap">
+                        <td className="px-4 py-4 text-center text-gray-800 font-medium tabular-nums align-middle">{b.memberCount}</td>
+                        <td className="px-4 py-4 text-center text-gray-800 font-medium tabular-nums align-middle">{b.reservationsLast30d}</td>
+                        <td className="px-4 py-4 text-center text-gray-600 tabular-nums align-middle">{b.totalReservations}</td>
+                        <td className="px-4 py-4 text-xs text-gray-500 whitespace-nowrap align-middle">
                           {new Date(b.createdAt).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
                         </td>
-                        <td className="px-4 py-3.5 text-right">
+                        <td className="px-4 py-4 text-right align-middle">
                           {deleting === b.id ? (
                             <span className="text-xs text-gray-400">Eliminando...</span>
                           ) : (
                             <button
                               onClick={() => handleDelete(b.id, b.name)}
-                              className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 transition-colors"
+                              className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 transition-colors"
                             >
                               Eliminar
                             </button>
@@ -504,8 +481,8 @@ export default function DevDashboard() {
               <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-4">
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
                   <div>
-                    <h3 className="text-base font-semibold text-gray-900">Usuarios</h3>
-                    <p className="text-xs text-gray-500 mt-0.5">{filteredUsers.length} de {users.length}</p>
+                    <h3 className="text-base font-semibold text-gray-900">Listado de usuarios</h3>
+                    <p className="text-xs text-gray-500 mt-0.5">{filteredUsers.length} de {users.length} resultados</p>
                   </div>
                   <input
                     value={userSearch}
@@ -554,40 +531,42 @@ export default function DevDashboard() {
                   <div className="py-14 text-center text-sm text-gray-400">Sin usuarios</div>
                 ) : (
                   <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
+                    <table className="w-full min-w-[860px] text-sm">
                       <thead>
-                        <tr className="border-b border-gray-100 bg-gray-50">
-                          <th className="text-left px-5 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Usuario</th>
-                          <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Rol</th>
-                          <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Negocios</th>
-                          <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Alta</th>
+                        <tr className="border-b border-gray-200 bg-slate-50/80">
+                          <th className="text-left px-6 py-3.5 text-[11px] font-bold text-gray-500 uppercase tracking-wide">Usuario</th>
+                          <th className="text-left px-4 py-3.5 text-[11px] font-bold text-gray-500 uppercase tracking-wide">Rol global</th>
+                          <th className="text-left px-4 py-3.5 text-[11px] font-bold text-gray-500 uppercase tracking-wide">Negocios</th>
+                          <th className="text-left px-4 py-3.5 text-[11px] font-bold text-gray-500 uppercase tracking-wide">Alta</th>
                         </tr>
                       </thead>
-                      <tbody className="divide-y divide-gray-50">
+                      <tbody className="divide-y divide-gray-100">
                         {filteredUsers.map((u) => (
-                          <tr key={u.id} className="hover:bg-gray-50/70 transition-colors">
-                            <td className="px-5 py-3.5">
+                          <tr key={u.id} className="hover:bg-slate-50/80 transition-colors">
+                            <td className="px-6 py-4 align-middle">
                               <p className="font-semibold text-gray-900">{u.name || 'Sin nombre'}</p>
                               <p className="text-xs text-gray-400">{u.email}</p>
                             </td>
-                            <td className="px-4 py-3.5">
+                            <td className="px-4 py-4 align-middle">
                               <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${rolePillClass(u.role)}`}>
                                 {u.role}
                               </span>
                             </td>
-                            <td className="px-4 py-3.5 text-xs text-gray-600">
+                            <td className="px-4 py-4 text-xs text-gray-600 align-middle">
                               {u.businessCount === 0 ? (
-                                <span className="text-gray-400">Sin membership</span>
+                                <span className="text-gray-400">Sin membresia</span>
                               ) : (
-                                <div className="space-y-0.5">
+                                <div className="space-y-1">
                                   {u.businesses.slice(0, 2).map((biz) => (
-                                    <p key={`${u.id}-${biz.businessId}`}>{biz.businessName} · {biz.role}</p>
+                                    <p key={`${u.id}-${biz.businessId}`} className="text-gray-700">
+                                      {biz.businessName} <span className="text-gray-400">·</span> <span className="text-gray-500">{biz.role}</span>
+                                    </p>
                                   ))}
                                   {u.businesses.length > 2 && <p className="text-gray-400">+{u.businesses.length - 2} mas</p>}
                                 </div>
                               )}
                             </td>
-                            <td className="px-4 py-3.5 text-xs text-gray-400 whitespace-nowrap">
+                            <td className="px-4 py-4 text-xs text-gray-500 whitespace-nowrap align-middle">
                               {u.createdAt
                                 ? new Date(u.createdAt).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })
                                 : '-'}
@@ -690,6 +669,8 @@ export default function DevDashboard() {
     </div>
   );
 }
+
+
 
 
 

@@ -118,7 +118,7 @@ export default function DevDashboard() {
   const [planFilter, setPlanFilter] = useState('all');
 
   const [showModal, setShowModal] = useState(false);
-  const [form, setForm] = useState({ name: '', email: '', phone: '', plan: 'free' });
+  const [form, setForm] = useState({ name: '', email: '', phone: '', address: '', plan: 'free' });
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
 
@@ -188,7 +188,7 @@ export default function DevDashboard() {
     try {
       await api.post('/dev/businesses', form);
       setShowModal(false);
-      setForm({ name: '', email: '', phone: '', plan: 'free' });
+      setForm({ name: '', email: '', phone: '', address: '', plan: 'free' });
       await load();
     } catch (err) {
       setFormError(err.response?.data?.message || err.message);
@@ -617,6 +617,15 @@ export default function DevDashboard() {
                 value={form.phone}
                 onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
                 placeholder="+34 600 000 000"
+                className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Direccion</label>
+              <input
+                value={form.address}
+                onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))}
+                placeholder="Calle Mayor 123, Madrid"
                 className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
               />
             </div>

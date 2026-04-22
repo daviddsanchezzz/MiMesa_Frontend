@@ -89,7 +89,7 @@ export default function Profile() {
   const [profileForm, setProfileForm] = useState({ name: '' });
   const [passwordForm, setPasswordForm] = useState({ newPassword: '', confirmPassword: '' });
   const [showPasswordModal, setShowPasswordModal] = useState(false);
-  const [newBusiness, setNewBusiness] = useState({ name: '', email: '', phone: '', cif: '' });
+  const [newBusiness, setNewBusiness] = useState({ name: '', email: '', phone: '', address: '', cif: '' });
   const [showCreateBusinessModal, setShowCreateBusinessModal] = useState(false);
 
   const summary = useMemo(() => ({
@@ -199,7 +199,7 @@ export default function Profile() {
     try {
       await api.post('/businesses', newBusiness);
       setShowCreateBusinessModal(false);
-      setNewBusiness({ name: '', email: '', phone: '', cif: '' });
+      setNewBusiness({ name: '', email: '', phone: '', address: '', cif: '' });
       await refreshBusiness();
       await load();
     } catch (err) {
@@ -476,7 +476,7 @@ export default function Profile() {
           subtitle="Crea un nuevo restaurante y te asignaremos como owner"
           onClose={() => {
             setShowCreateBusinessModal(false);
-            setNewBusiness({ name: '', email: '', phone: '', cif: '' });
+            setNewBusiness({ name: '', email: '', phone: '', address: '', cif: '' });
           }}
         >
           <form onSubmit={handleCreateBusiness} className="space-y-4">
@@ -508,6 +508,16 @@ export default function Profile() {
                   onChange={(e) => setNewBusiness((b) => ({ ...b, phone: e.target.value }))}
                 />
               </div>
+              <div>
+                <label className={labelCls}>Direccion</label>
+                <input
+                  className={inputCls}
+                  value={newBusiness.address}
+                  onChange={(e) => setNewBusiness((b) => ({ ...b, address: e.target.value }))}
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
                 <label className={labelCls}>CIF</label>
                 <input

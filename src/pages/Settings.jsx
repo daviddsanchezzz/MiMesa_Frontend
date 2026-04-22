@@ -1244,12 +1244,13 @@ function LimitesSection() {
 // ═══════════════════════════════════════════════════════════════════════════
 
 function NegocioSection() {
-  const { business, refreshBusiness, hasRole } = useAuth();
-  const canEdit = hasRole('manager');
+  const { business, refreshBusiness } = useAuth();
+  const canEdit = true;
   const [form, setForm] = useState({
     name: business?.name || '',
     email: business?.email || '',
     phone: business?.phone || '',
+    address: business?.address || '',
     cif: business?.cif || '',
   });
   const [saving, setSaving] = useState(false);
@@ -1260,13 +1261,13 @@ function NegocioSection() {
       name: business?.name || '',
       email: business?.email || '',
       phone: business?.phone || '',
+      address: business?.address || '',
       cif: business?.cif || '',
     });
   }, [business]);
 
   const onSubmit = async (e) => {
     e.preventDefault();
-    if (!canEdit) return;
     setSaving(true);
     setError('');
     try {
@@ -1298,6 +1299,10 @@ function NegocioSection() {
             <div>
               <label className={labelCls}>Telefono</label>
               <input className={inputCls} value={form.phone} disabled={!canEdit || saving} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} />
+            </div>
+            <div>
+              <label className={labelCls}>Direccion</label>
+              <input className={inputCls} value={form.address} disabled={!canEdit || saving} onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))} />
             </div>
             <div>
               <label className={labelCls}>CIF</label>
@@ -2296,4 +2301,3 @@ export default function Settings() {
     </div>
   );
 }
-

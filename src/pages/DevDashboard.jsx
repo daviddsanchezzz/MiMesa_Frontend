@@ -1,4 +1,5 @@
 ﻿import { useState, useEffect, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import Modal from '../components/Modal';
@@ -10,22 +11,6 @@ function StatCard({ label, value, sub }) {
       <p className="text-2xl font-bold text-gray-900 leading-tight mt-1">{value}</p>
       {sub && <p className="text-xs text-gray-500 mt-1">{sub}</p>}
     </div>
-  );
-}
-
-function TabButton({ active, onClick, children }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`px-3 py-2 text-sm font-semibold rounded-xl transition-colors ${
-        active
-          ? 'bg-violet-600 text-white shadow-sm'
-          : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
-      }`}
-    >
-      {children}
-    </button>
   );
 }
 
@@ -123,8 +108,9 @@ function rolePillClass(role) {
 
 export default function DevDashboard() {
   const { session, logout } = useAuth();
+  const [searchParams] = useSearchParams();
 
-  const [tab, setTab] = useState('businesses');
+  const tab = searchParams.get('tab') === 'users' ? 'users' : 'businesses';
 
   const [businesses, setBusinesses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -278,7 +264,7 @@ export default function DevDashboard() {
               <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-md bg-amber-100 text-amber-700 border border-amber-200">DEV</span>
               <h2 className="text-lg sm:text-xl font-bold text-gray-900">Panel de desarrollo</h2>
             </div>
-            <p className="text-sm text-gray-500">Administración interna de negocios y usuarios.</p>
+            <p className="text-sm text-gray-500">{tab === 'users' ? 'Administración interna de usuarios.' : 'Administración interna de negocios.'}</p>
           </div>
           <div className="flex items-center gap-2">
             <span className="hidden md:inline text-xs text-gray-500">{session?.user?.email}</span>
@@ -289,11 +275,6 @@ export default function DevDashboard() {
               Cerrar sesion
             </button>
           </div>
-        </div>
-
-        <div className="mt-3 flex items-center gap-2">
-          <TabButton active={tab === 'businesses'} onClick={() => setTab('businesses')}>Negocios</TabButton>
-          <TabButton active={tab === 'users'} onClick={() => setTab('users')}>Usuarios</TabButton>
         </div>
       </div>
 
@@ -709,3 +690,6 @@ export default function DevDashboard() {
     </div>
   );
 }
+
+
+

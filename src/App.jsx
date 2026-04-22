@@ -41,7 +41,7 @@ function LoadingScreen() {
   );
 }
 
-function MobileHeader({ onMenuOpen, onNewReservation }) {
+function MobileHeader({ onMenuOpen, onNewReservation, showDefaultAction = true }) {
   const { title, actions } = useMobileHeader();
   return (
     <div className="lg:hidden flex items-center gap-3 px-4 py-3 bg-white border-b border-gray-200 shrink-0 z-30">
@@ -58,7 +58,7 @@ function MobileHeader({ onMenuOpen, onNewReservation }) {
         <img src="/logo.svg" alt="Tableo" className="w-6 h-6 shrink-0" />
         <p className="text-sm font-semibold text-gray-900">{title || 'Tableo'}</p>
       </div>
-      {actions ?? (
+      {actions ?? (showDefaultAction ? (
         <button
           onClick={onNewReservation}
           className="flex items-center gap-1.5 bg-violet-600 hover:bg-violet-700 text-white px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors"
@@ -69,12 +69,12 @@ function MobileHeader({ onMenuOpen, onNewReservation }) {
           </svg>
           Reserva
         </button>
-      )}
+      ) : null)}
     </div>
   );
 }
 
-function LayoutShell({ children, fullBleed = false }) {
+function LayoutShell({ children, fullBleed = false, devMode = false }) {
   const { business, loading } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [newRsvModal, setNewRsvModal] = useState(false);
@@ -89,17 +89,18 @@ function LayoutShell({ children, fullBleed = false }) {
       {sidebarOpen && (
         <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={() => setSidebarOpen(false)} />
       )}
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} devMode={devMode} />
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
         <MobileHeader
           onMenuOpen={() => setSidebarOpen(true)}
           onNewReservation={() => setNewRsvModal(true)}
+          showDefaultAction={!devMode}
         />
         <main className={fullBleed ? 'flex-1 overflow-hidden flex flex-col' : 'flex-1 overflow-auto p-4 lg:p-8'}>
           {children}
         </main>
       </div>
-      {newRsvModal && (
+      {!devMode && newRsvModal && (
         <Modal title="Nueva reserva" onClose={() => setNewRsvModal(false)}>
           <ReservationForm
             onSave={() => {
@@ -122,6 +123,10 @@ function PrivateLayout({ children }) {
 // Full-bleed layout: no padding, for map/canvas views
 function FullBleedLayout({ children }) {
   return <LayoutShell fullBleed>{children}</LayoutShell>;
+}
+
+function DevLayout({ children }) {
+  return <LayoutShell devMode>{children}</LayoutShell>;
 }
 
 function PublicRoute({ children }) {
@@ -184,7 +189,7 @@ export default function App() {
           <Route path="/verify-email"    element={<VerifyEmail />} />
           <Route path="/invite"          element={<AcceptInvite />} />
           <Route path="/onboarding" element={<OnboardingRoute><Onboarding /></OnboardingRoute>} />
-          <Route path="/dev"        element={<DevRoute><DevDashboard /></DevRoute>} />
+          <Route path="/dev"        element={<DevRoute><DevLayout><DevDashboard /></DevLayout></DevRoute>} />
           <Route path="/"             element={<DevRedirect><PrivateLayout><Dashboard /></PrivateLayout></DevRedirect>} />
           <Route path="/rooms"        element={<RoleRoute minRole="manager"><PrivateLayout><Rooms /></PrivateLayout></RoleRoute>} />
           <Route path="/tables"       element={<RoleRoute minRole="manager"><FullBleedLayout><Tables /></FullBleedLayout></RoleRoute>} />

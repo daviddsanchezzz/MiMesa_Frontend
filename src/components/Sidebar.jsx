@@ -1,4 +1,4 @@
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import Modal from './Modal';
@@ -77,9 +77,10 @@ const configLinks = [
   { to: '/configuracion', label: 'Configuracion', icon: <IconSettings /> },
 ];
 
-export default function Sidebar({ isOpen, onClose }) {
+export default function Sidebar({ isOpen, onClose, devMode = false }) {
   const { business, memberships, logout, hasRole, switchBusiness, session, isSubscribed, isModuleEnabled } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
   const [isSmallScreen, setIsSmallScreen] = useState(false);
   const [newRsvModal, setNewRsvModal] = useState(false);
@@ -118,6 +119,12 @@ export default function Sidebar({ isOpen, onClose }) {
   const userName = session?.user?.name || business?.userName || business?.name || 'Usuario';
   const userEmail = session?.user?.email || business?.userEmail || business?.email || '';
   const initial = userName?.[0]?.toUpperCase() || 'U';
+  const devSidebar = devMode || business?.isDev || false;
+  const currentDevTab = new URLSearchParams(location.search).get('tab') === 'users' ? 'users' : 'businesses';
+  const devLinks = [
+    { tab: 'businesses', label: 'Negocios', icon: <IconBriefcase /> },
+    { tab: 'users', label: 'Usuarios', icon: <IconUsers /> },
+  ];
 
   const handleNavClick = () => {
     setMenuOpen(false);
@@ -155,7 +162,9 @@ export default function Sidebar({ isOpen, onClose }) {
           <img src="/logo.svg" alt="Tableo" className="w-8 h-8 shrink-0" />
           <div className="min-w-0 flex-1">
             <p className="text-white text-sm font-semibold leading-tight">Tableo</p>
-            {memberships.length > 1 ? (
+            {devSidebar ? (
+              <p className="text-slate-400 text-xs truncate leading-tight mt-0.5">Panel de desarrollo</p>
+            ) : memberships.length > 1 ? (
               <select
                 value={business?.id ?? ''}
                 onChange={(e) => { switchBusiness(e.target.value); handleNavClick(); }}
@@ -174,39 +183,62 @@ export default function Sidebar({ isOpen, onClose }) {
         </div>
       </div>
 
-      <div className="px-3 pt-3 pb-1">
-        <button
-          onClick={() => setNewRsvModal(true)}
-          className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold transition-colors"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 shrink-0">
-            <path d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z" />
-          </svg>
-          Nueva reserva
-        </button>
-      </div>
+      {!devSidebar && (
+        <div className="px-3 pt-3 pb-1">
+          <button
+            onClick={() => setNewRsvModal(true)}
+            className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-lg bg-violet-600 hover:bg-violet-500 text-white text-sm font-semibold transition-colors"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 shrink-0">
+              <path d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z" />
+            </svg>
+            Nueva reserva
+          </button>
+        </div>
+      )}
 
       <nav className="flex-1 px-3 py-4 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <div className="space-y-0.5">
           <p className="text-slate-500 text-[10px] font-semibold uppercase tracking-widest px-2 pb-2">Menu</p>
-          {navLinks.map((link) => (
-            <NavLink
-              key={link.to}
-              to={link.to}
-              end={link.to === '/'}
-              onClick={handleNavClick}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3 py-3 lg:py-2 rounded-lg text-sm font-medium transition-all duration-100 ${
-                  isActive ? 'bg-violet-600 text-white shadow-sm' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100'
-                }`
-              }
-            >
-              {link.icon}
-              {link.label}
-            </NavLink>
-          ))}
+          {devSidebar ? (
+            devLinks.map((link) => {
+              const active = location.pathname === '/dev' && currentDevTab === link.tab;
+              return (
+                <button
+                  key={link.tab}
+                  onClick={() => {
+                    navigate(`/dev?tab=${link.tab}`);
+                    handleNavClick();
+                  }}
+                  className={`w-full flex items-center gap-3 px-3 py-3 lg:py-2 rounded-lg text-sm font-medium transition-all duration-100 ${
+                    active ? 'bg-violet-600 text-white shadow-sm' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100'
+                  }`}
+                >
+                  {link.icon}
+                  {link.label}
+                </button>
+              );
+            })
+          ) : (
+            navLinks.map((link) => (
+              <NavLink
+                key={link.to}
+                to={link.to}
+                end={link.to === '/'}
+                onClick={handleNavClick}
+                className={({ isActive }) =>
+                  `flex items-center gap-3 px-3 py-3 lg:py-2 rounded-lg text-sm font-medium transition-all duration-100 ${
+                    isActive ? 'bg-violet-600 text-white shadow-sm' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100'
+                  }`
+                }
+              >
+                {link.icon}
+                {link.label}
+              </NavLink>
+            ))
+          )}
 
-          {!isStaff && !isFree && hasRole('manager') && (
+          {!devSidebar && !isStaff && !isFree && hasRole('manager') && (
             <NavLink
               to="/analytics"
               onClick={handleNavClick}
@@ -221,7 +253,7 @@ export default function Sidebar({ isOpen, onClose }) {
             </NavLink>
           )}
 
-          {!isStaff && !isFree && hasRole('manager') && (
+          {!devSidebar && !isStaff && !isFree && hasRole('manager') && (
             <NavLink
               to="/publicidad"
               onClick={handleNavClick}
@@ -239,7 +271,7 @@ export default function Sidebar({ isOpen, onClose }) {
       </nav>
 
       <div className="px-3 pb-4 border-t border-slate-700/50 pt-3">
-        {visibleConfigLinks.map((link) => (
+        {!devSidebar && visibleConfigLinks.map((link) => (
           <NavLink
             key={link.to}
             to={link.to}
@@ -276,12 +308,14 @@ export default function Sidebar({ isOpen, onClose }) {
 
           {menuOpen && (
             <div className="absolute left-0 right-0 bottom-full mb-2 bg-slate-800 border border-slate-700 rounded-lg p-1 shadow-lg">
-              <button
-                onClick={() => { navigate('/profile'); handleNavClick(); }}
-                className="w-full text-left px-3 py-2 rounded-md text-sm text-slate-200 hover:bg-slate-700 transition-colors"
-              >
-                Perfil
-              </button>
+              {!devSidebar && (
+                <button
+                  onClick={() => { navigate('/profile'); handleNavClick(); }}
+                  className="w-full text-left px-3 py-2 rounded-md text-sm text-slate-200 hover:bg-slate-700 transition-colors"
+                >
+                  Perfil
+                </button>
+              )}
               <button
                 onClick={() => { logout(); if (onClose) onClose(); }}
                 className="w-full text-left px-3 py-2 rounded-md text-sm text-red-300 hover:bg-red-500/10 transition-colors"
@@ -294,7 +328,7 @@ export default function Sidebar({ isOpen, onClose }) {
       </div>
     </aside>
 
-    {newRsvModal && (
+    {!devSidebar && newRsvModal && (
       <Modal title="Nueva reserva" onClose={() => setNewRsvModal(false)}>
         <ReservationForm
           onSave={() => {
@@ -309,6 +343,4 @@ export default function Sidebar({ isOpen, onClose }) {
     </>
   );
 }
-
-
 

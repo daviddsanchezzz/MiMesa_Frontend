@@ -27,9 +27,19 @@ function resolveTableShape(table) {
   return TABLE_SHAPES[table?.shape] ? table.shape : inferShapeFromCapacity(Number(table?.capacity) || 2);
 }
 
-function tableGeometry(capacity, shape) {
+function normalizeAngle(angle) {
+  return Number(angle) === 90 ? 90 : 0;
+}
+
+function resolveTableAngle(table, shape) {
+  if (shape !== 'rect') return 0;
+  return normalizeAngle(table?.angle);
+}
+
+function tableGeometry(capacity, shape, angle = 0) {
   const cap = Number(capacity) || 2;
   const resolvedShape = TABLE_SHAPES[shape] ? shape : inferShapeFromCapacity(cap);
+  const resolvedAngle = resolvedShape === 'rect' ? normalizeAngle(angle) : 0;
 
   if (resolvedShape === 'circle') {
     if (cap <= 2) return { w: 88, h: 88, shape: resolvedShape };
@@ -45,11 +55,14 @@ function tableGeometry(capacity, shape) {
     return { w: 126, h: 126, shape: resolvedShape };
   }
 
-  if (cap <= 4) return { w: 130, h: 82, shape: resolvedShape };
-  if (cap <= 6) return { w: 152, h: 90, shape: resolvedShape };
-  if (cap <= 8) return { w: 182, h: 92, shape: resolvedShape };
-  if (cap <= 10) return { w: 204, h: 94, shape: resolvedShape };
-  return { w: 228, h: 96, shape: resolvedShape };
+  let w = 228;
+  let h = 96;
+  if (cap <= 4) { w = 130; h = 82; }
+  else if (cap <= 6) { w = 152; h = 90; }
+  else if (cap <= 8) { w = 182; h = 92; }
+  else if (cap <= 10) { w = 204; h = 94; }
+  if (resolvedAngle === 90) return { w: h, h: w, shape: resolvedShape, angle: resolvedAngle };
+  return { w, h, shape: resolvedShape, angle: resolvedAngle };
 }
 
 // ─── Chair positions (relative to table top-left) ────────────────────────────
@@ -134,7 +147,9 @@ const NEUTRAL = { bg: '#ffffff', ring: '#e2e8f0', text: '#475569', dot: '#94a3b8
 
 // ─── Table node ───────────────────────────────────────────────────────────────
 function TableNode({ table, isActive, isDragging, editMode, showStatus, onPointerDown, onClick }) {
-  const geo  = tableGeometry(table.capacity, resolveTableShape(table));
+  const resolvedShape = resolveTableShape(table);
+  const angle = resolveTableAngle(table, resolvedShape);
+  const geo  = tableGeometry(table.capacity, resolvedShape, angle);
   const { w, h, shape } = geo;
   const st   = showStatus ? (STATUS[table.status] ?? STATUS.free) : NEUTRAL;
   const chairs = generateChairs(table.capacity, w, h, shape);
@@ -233,7 +248,9 @@ function TableNode({ table, isActive, isDragging, editMode, showStatus, onPointe
 
 // ─── Status popup ────────────────────────────────────────────────────────────
 function StatusPopup({ table, onStatusChange, onClose, pan, scale }) {
-  const geo    = tableGeometry(table.capacity, resolveTableShape(table));
+  const shape  = resolveTableShape(table);
+  const angle  = resolveTableAngle(table, shape);
+  const geo    = tableGeometry(table.capacity, shape, angle);
   const vx     = table.x * scale + pan.x;
   const vy     = (table.y + geo.h) * scale + pan.y + 12;
   const popupW = 180;
@@ -286,7 +303,9 @@ function autoArrange(tables) {
   const GAP = 32;
   let x = 60, y = 60, rowH = 0;
   return tables.map(t => {
-    const { w, h } = tableGeometry(t.capacity, resolveTableShape(t));
+    const shape = resolveTableShape(t);
+    const angle = resolveTableAngle(t, shape);
+    const { w, h } = tableGeometry(t.capacity, shape, angle);
     const bleed = CHAIR_GAP + Math.max(CW, CH) + 8;
     const totalW = w + bleed * 2 + GAP;
     const totalH = h + bleed * 2;
@@ -319,7 +338,7 @@ export default function FloorPlan({ tables, rooms, onStatusChange, onRefresh, ed
   const [scale,        _setScale]      = useState(0.75);
   const [roomFilter,   setRoomFilter]  = useState(null);
   const [editingTable, setEditingTable] = useState(null);
-  const [editForm,     setEditForm]    = useState({ name: '', capacity: 2, shape: 'circle' });
+  const [editForm,     setEditForm]    = useState({ name: '', capacity: 2, shape: 'circle', angle: 0 });
   const [editSaving,   setEditSaving]  = useState(false);
   const [editError,    setEditError]   = useState('');
   const [saving,       setSaving]      = useState(false);
@@ -401,7 +420,9 @@ export default function FloorPlan({ tables, rooms, onStatusChange, onRefresh, ed
     const bleed = CHAIR_GAP + Math.max(CW, CH) + 8;
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     for (const t of arranged) {
-      const { w, h } = tableGeometry(t.capacity, resolveTableShape(t));
+      const shape = resolveTableShape(t);
+      const angle = resolveTableAngle(t, shape);
+      const { w, h } = tableGeometry(t.capacity, shape, angle);
       minX = Math.min(minX, t.x - bleed);
       minY = Math.min(minY, t.y - bleed);
       maxX = Math.max(maxX, t.x + w + bleed);
@@ -451,7 +472,13 @@ export default function FloorPlan({ tables, rooms, onStatusChange, onRefresh, ed
     if (!showStatus) {
       if (!lastMovedRef.current) {
         setEditingTable(table);
-        setEditForm({ name: table.name, capacity: table.capacity, shape: resolveTableShape(table) });
+        const shape = resolveTableShape(table);
+        setEditForm({
+          name: table.name,
+          capacity: table.capacity,
+          shape,
+          angle: resolveTableAngle(table, shape),
+        });
         setEditError('');
       }
       return;
@@ -542,12 +569,14 @@ export default function FloorPlan({ tables, rooms, onStatusChange, onRefresh, ed
     const cap = Number(editForm.capacity);
     if (!cap || cap < 1) { setEditError('La capacidad debe ser al menos 1'); return; }
     if (!TABLE_SHAPES[editForm.shape]) { setEditError('Selecciona una forma válida'); return; }
+    const angle = editForm.shape === 'rect' ? normalizeAngle(editForm.angle) : 0;
     setEditSaving(true); setEditError('');
     try {
       await api.put(`/tables/${editingTable._id}`, {
         name: editForm.name.trim(),
         capacity: cap,
         shape: editForm.shape,
+        angle,
       });
       onRefresh?.();
       setEditingTable(null);
@@ -567,7 +596,8 @@ export default function FloorPlan({ tables, rooms, onStatusChange, onRefresh, ed
 
   const pct = Math.round(scale * 100);
   const editShape = TABLE_SHAPES[editForm.shape] ? editForm.shape : inferShapeFromCapacity(Number(editForm.capacity) || 2);
-  const editPreview = tableGeometry(Number(editForm.capacity) || 2, editShape);
+  const editAngle = editShape === 'rect' ? normalizeAngle(editForm.angle) : 0;
+  const editPreview = tableGeometry(Number(editForm.capacity) || 2, editShape, editAngle);
 
   return (
     <div className="flex flex-col h-full bg-white rounded-2xl border border-gray-200 overflow-hidden">
@@ -796,6 +826,36 @@ export default function FloorPlan({ tables, rooms, onStatusChange, onRefresh, ed
                 </div>
               </div>
 
+              {editShape === 'rect' && (
+                <div>
+                  <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#6b7280', marginBottom: 8 }}>Orientación</label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setEditForm(f => ({ ...f, angle: 0 }))}
+                      className={`rounded-xl border px-2 py-2 text-xs font-semibold transition-all ${
+                        editAngle === 0
+                          ? 'border-violet-400 bg-violet-50 text-violet-700'
+                          : 'border-gray-200 bg-white text-gray-500 hover:bg-gray-50'
+                      }`}
+                    >
+                      Horizontal
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditForm(f => ({ ...f, angle: 90 }))}
+                      className={`rounded-xl border px-2 py-2 text-xs font-semibold transition-all ${
+                        editAngle === 90
+                          ? 'border-violet-400 bg-violet-50 text-violet-700'
+                          : 'border-gray-200 bg-white text-gray-500 hover:bg-gray-50'
+                      }`}
+                    >
+                      Vertical
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <div className="rounded-xl border border-gray-200 bg-gray-50 p-3">
                 <p className="text-[11px] font-semibold text-gray-600 mb-2">Vista previa</p>
                 <div className="flex items-center justify-between">
@@ -812,7 +872,10 @@ export default function FloorPlan({ tables, rooms, onStatusChange, onRefresh, ed
                     />
                     <div>
                       <p className="text-xs font-semibold text-gray-700">{TABLE_SHAPES[editShape].label}</p>
-                      <p className="text-[11px] text-gray-500">{Number(editForm.capacity) || 0} personas</p>
+                      <p className="text-[11px] text-gray-500">
+                        {Number(editForm.capacity) || 0} personas
+                        {editShape === 'rect' ? ` · ${editAngle === 90 ? 'Vertical' : 'Horizontal'}` : ''}
+                      </p>
                     </div>
                   </div>
                   <p className="text-[11px] text-gray-400">{editPreview.w}×{editPreview.h}</p>

@@ -7,8 +7,38 @@ import Modal from '../components/Modal';
 
 const inputCls = 'w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent';
 const labelCls = 'block text-sm font-medium text-gray-700 mb-1.5';
+const TABLE_SHAPE_OPTIONS = [
+  { value: 'circle', label: 'Circular' },
+  { value: 'square', label: 'Cuadrada' },
+  { value: 'rect', label: 'Rectangular' },
+];
+const TABLE_ANGLE_OPTIONS = [
+  { value: 0, label: 'Horizontal' },
+  { value: 90, label: 'Vertical' },
+];
 
-const emptyRange = () => ({ prefix: 'Mesa ', from: 1, to: 10, capacity: 2, roomId: '' });
+function inferTableShape(capacity) {
+  if (capacity <= 2) return 'circle';
+  if (capacity <= 4) return 'square';
+  return 'rect';
+}
+
+function resolveTableShape(table) {
+  return TABLE_SHAPE_OPTIONS.some(s => s.value === table?.shape)
+    ? table.shape
+    : inferTableShape(Number(table?.capacity) || 2);
+}
+
+function normalizeTableAngle(angle) {
+  return Number(angle) === 90 ? 90 : 0;
+}
+
+function resolveTableAngle(table) {
+  if (resolveTableShape(table) !== 'rect') return 0;
+  return normalizeTableAngle(table?.angle);
+}
+
+const emptyRange = () => ({ prefix: 'Mesa ', from: 1, to: 10, capacity: 2, roomId: '', shape: 'circle', angle: 0 });
 
 function buildPreview(ranges) {
   const names = [];
@@ -28,7 +58,7 @@ export default function Tables() {
   const [tables,  setTables]  = useState([]);
   const [rooms,   setRooms]   = useState([]);
   const [modal,   setModal]   = useState(null);
-  const [form,    setForm]    = useState({ name: '', capacity: 2, roomId: '' });
+  const [form,    setForm]    = useState({ name: '', capacity: 2, roomId: '', shape: 'circle', angle: 0 });
   const [error,   setError]   = useState('');
 
   const [quickOpen,    setQuickOpen]    = useState(false);
@@ -54,13 +84,32 @@ export default function Tables() {
   };
   useEffect(() => { load(); }, []);
 
-  const openCreate = () => { setForm({ name: '', capacity: 2, roomId: '' }); setError(''); setModal('create'); };
-  const openEdit   = (t) => { setForm({ name: t.name, capacity: t.capacity, roomId: t.roomId?._id || '' }); setError(''); setModal(t); };
+  const openCreate = () => { setForm({ name: '', capacity: 2, roomId: '', shape: 'circle', angle: 0 }); setError(''); setModal('create'); };
+  const openEdit   = (t) => {
+    setForm({
+      name: t.name,
+      capacity: t.capacity,
+      roomId: t.roomId?._id || '',
+      shape: resolveTableShape(t),
+      angle: resolveTableAngle(t),
+    });
+    setError('');
+    setModal(t);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault(); setError('');
     try {
-      const payload = { ...form, capacity: Number(form.capacity), roomId: form.roomId || null };
+      const resolvedShape = TABLE_SHAPE_OPTIONS.some(s => s.value === form.shape)
+        ? form.shape
+        : inferTableShape(Number(form.capacity) || 2);
+      const payload = {
+        ...form,
+        capacity: Number(form.capacity),
+        roomId: form.roomId || null,
+        shape: resolvedShape,
+        angle: resolvedShape === 'rect' ? normalizeTableAngle(form.angle) : 0,
+      };
       if (modal === 'create') await api.post('/tables', payload);
       else                    await api.put(`/tables/${modal._id}`, payload);
       await load(); setModal(null);
@@ -85,7 +134,16 @@ export default function Tables() {
       const from = Number(r.from), to = Number(r.to);
       if (!from || !to || from > to) continue;
       for (let i = from; i <= to; i++) {
-        tables.push({ name: `${r.prefix}${i}`, capacity: Number(r.capacity) || 2, roomId: r.roomId || null });
+        const resolvedShape = TABLE_SHAPE_OPTIONS.some(s => s.value === r.shape)
+          ? r.shape
+          : inferTableShape(Number(r.capacity) || 2);
+        tables.push({
+          name: `${r.prefix}${i}`,
+          capacity: Number(r.capacity) || 2,
+          roomId: r.roomId || null,
+          shape: resolvedShape,
+          angle: resolvedShape === 'rect' ? normalizeTableAngle(r.angle) : 0,
+        });
       }
     }
     try {
@@ -237,11 +295,32 @@ export default function Tables() {
                       className={inputCls} />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-4 gap-2">
                   <div>
                     <label className={labelCls}>Capacidad</label>
                     <input type="number" min="1" value={r.capacity} onChange={e => updateRange(i, 'capacity', e.target.value)}
                       className={inputCls} />
+                  </div>
+                  <div>
+                    <label className={labelCls}>Forma</label>
+                    <select value={r.shape} onChange={e => updateRange(i, 'shape', e.target.value)} className={inputCls}>
+                      {TABLE_SHAPE_OPTIONS.map(shape => (
+                        <option key={shape.value} value={shape.value}>{shape.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className={labelCls}>Orientación</label>
+                    <select
+                      value={normalizeTableAngle(r.angle)}
+                      onChange={e => updateRange(i, 'angle', Number(e.target.value))}
+                      disabled={r.shape !== 'rect'}
+                      className={inputCls}
+                    >
+                      {TABLE_ANGLE_OPTIONS.map(angle => (
+                        <option key={angle.value} value={angle.value}>{angle.label}</option>
+                      ))}
+                    </select>
                   </div>
                   <div>
                     <label className={labelCls}>Sala</label>
@@ -310,12 +389,33 @@ export default function Tables() {
                 placeholder="Mesa 1, Terraza A, Barra..."
                 className={inputCls} />
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-4 gap-3">
               <div>
                 <label className={labelCls}>Capacidad *</label>
                 <input type="number" required min="1" value={form.capacity}
                   onChange={e => setForm(f => ({ ...f, capacity: e.target.value }))}
                   className={inputCls} />
+              </div>
+              <div>
+                <label className={labelCls}>Forma *</label>
+                <select value={form.shape}
+                  onChange={e => setForm(f => ({ ...f, shape: e.target.value }))}
+                  className={inputCls}>
+                  {TABLE_SHAPE_OPTIONS.map(shape => (
+                    <option key={shape.value} value={shape.value}>{shape.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className={labelCls}>Orientación</label>
+                <select value={normalizeTableAngle(form.angle)}
+                  disabled={form.shape !== 'rect'}
+                  onChange={e => setForm(f => ({ ...f, angle: Number(e.target.value) }))}
+                  className={inputCls}>
+                  {TABLE_ANGLE_OPTIONS.map(angle => (
+                    <option key={angle.value} value={angle.value}>{angle.label}</option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label className={labelCls}>Sala</label>

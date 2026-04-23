@@ -12,6 +12,10 @@ const TABLE_SHAPE_OPTIONS = [
   { value: 'square', label: 'Cuadrada' },
   { value: 'rect', label: 'Rectangular' },
 ];
+const TABLE_ANGLE_OPTIONS = [
+  { value: 0, label: 'Horizontal' },
+  { value: 90, label: 'Vertical' },
+];
 
 function inferTableShape(capacity) {
   if (capacity <= 2) return 'circle';
@@ -23,6 +27,15 @@ function resolveTableShape(table) {
   return TABLE_SHAPE_OPTIONS.some(s => s.value === table?.shape)
     ? table.shape
     : inferTableShape(Number(table?.capacity) || 2);
+}
+
+function normalizeTableAngle(angle) {
+  return Number(angle) === 90 ? 90 : 0;
+}
+
+function resolveTableAngle(table) {
+  if (resolveTableShape(table) !== 'rect') return 0;
+  return normalizeTableAngle(table?.angle);
 }
 
 // ─── Icons ──────────────────────────────────────────────────────────────────
@@ -234,7 +247,7 @@ function MesasSection() {
   const [tables,   setTables]   = useState([]);
   const [rooms,    setRooms]    = useState([]);
   const [modal,    setModal]    = useState(null);
-  const [form,     setForm]     = useState({ name: '', capacity: 2, roomId: '', shape: 'circle' });
+  const [form,     setForm]     = useState({ name: '', capacity: 2, roomId: '', shape: 'circle', angle: 0 });
   const [error,    setError]    = useState('');
   const [search,   setSearch]   = useState('');
   const [viewMode, setViewMode] = useState('lista');
@@ -246,22 +259,28 @@ function MesasSection() {
   };
   useEffect(() => { load(); }, []);
 
-  const openCreate = () => { setForm({ name: '', capacity: 2, roomId: '', shape: 'circle' }); setError(''); setModal('create'); };
+  const openCreate = () => { setForm({ name: '', capacity: 2, roomId: '', shape: 'circle', angle: 0 }); setError(''); setModal('create'); };
   const openEdit   = (t) => {
-    setForm({ name: t.name, capacity: t.capacity, roomId: t.roomId?._id || '', shape: resolveTableShape(t) });
+    setForm({
+      name: t.name,
+      capacity: t.capacity,
+      roomId: t.roomId?._id || '',
+      shape: resolveTableShape(t),
+      angle: resolveTableAngle(t),
+    });
     setError('');
     setModal(t);
   };
 
   // Quick creator
   const [quickOpen,    setQuickOpen]    = useState(false);
-  const [ranges,       setRanges]       = useState([{ prefix: 'Mesa ', from: 1, to: 10, capacity: 2, roomId: '', shape: 'circle' }]);
+  const [ranges,       setRanges]       = useState([{ prefix: 'Mesa ', from: 1, to: 10, capacity: 2, roomId: '', shape: 'circle', angle: 0 }]);
   const [quickError,   setQuickError]   = useState('');
   const [quickLoading, setQuickLoading] = useState(false);
 
   const updateRange = (i, field, value) =>
     setRanges(rs => rs.map((r, idx) => idx === i ? { ...r, [field]: value } : r));
-  const addRange    = () => setRanges(rs => [...rs, { prefix: 'Mesa ', from: 1, to: 10, capacity: 2, roomId: '', shape: 'circle' }]);
+  const addRange    = () => setRanges(rs => [...rs, { prefix: 'Mesa ', from: 1, to: 10, capacity: 2, roomId: '', shape: 'circle', angle: 0 }]);
   const removeRange = (i) => setRanges(rs => rs.filter((_, idx) => idx !== i));
 
   const quickPreview = (() => {
@@ -290,6 +309,9 @@ function MesasSection() {
           shape: TABLE_SHAPE_OPTIONS.some(s => s.value === r.shape)
             ? r.shape
             : inferTableShape(Number(r.capacity) || 2),
+          angle: (TABLE_SHAPE_OPTIONS.some(s => s.value === r.shape) ? r.shape : inferTableShape(Number(r.capacity) || 2)) === 'rect'
+            ? normalizeTableAngle(r.angle)
+            : 0,
         });
     }
     try {
@@ -297,7 +319,7 @@ function MesasSection() {
       await api.post('/tables/bulk', { tables: tbls });
       await load();
       setQuickOpen(false);
-      setRanges([{ prefix: 'Mesa ', from: 1, to: 10, capacity: 2, roomId: '', shape: 'circle' }]);
+      setRanges([{ prefix: 'Mesa ', from: 1, to: 10, capacity: 2, roomId: '', shape: 'circle', angle: 0 }]);
     } catch (err) {
       setQuickError(err.response?.data?.message || 'Error al crear mesas');
     } finally {
@@ -315,6 +337,11 @@ function MesasSection() {
         shape: TABLE_SHAPE_OPTIONS.some(s => s.value === form.shape)
           ? form.shape
           : inferTableShape(Number(form.capacity) || 2),
+        angle: (TABLE_SHAPE_OPTIONS.some(s => s.value === form.shape)
+          ? form.shape
+          : inferTableShape(Number(form.capacity) || 2)) === 'rect'
+          ? normalizeTableAngle(form.angle)
+          : 0,
       };
       if (modal === 'create') await api.post('/tables', payload);
       else                    await api.put(`/tables/${modal._id}`, payload);
@@ -395,7 +422,7 @@ function MesasSection() {
                 <span className="text-xs text-gray-400">{tables.length}/{planLimit('maxTables')}</span>
               )}
               <button
-                onClick={() => { setRanges([{ prefix: 'Mesa ', from: 1, to: 10, capacity: 2, roomId: '', shape: 'circle' }]); setQuickError(''); setQuickOpen(true); }}
+                onClick={() => { setRanges([{ prefix: 'Mesa ', from: 1, to: 10, capacity: 2, roomId: '', shape: 'circle', angle: 0 }]); setQuickError(''); setQuickOpen(true); }}
                 disabled={tables.length >= planLimit('maxTables')}
                 className="flex items-center gap-1.5 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-3.5 py-2 rounded-xl text-sm font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
@@ -456,6 +483,7 @@ function MesasSection() {
                         <p className="text-sm font-semibold text-gray-900">{t.name}</p>
                         <p className="text-xs text-gray-400">
                           {t.capacity} personas · {TABLE_SHAPE_OPTIONS.find(s => s.value === resolveTableShape(t))?.label}
+                          {resolveTableShape(t) === 'rect' ? ` ${resolveTableAngle(t) === 90 ? 'vertical' : 'horizontal'}` : ''}
                         </p>
                       </div>
                     </div>
@@ -517,7 +545,7 @@ function MesasSection() {
                       className={inputCls} />
                   </div>
                 </div>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-4 gap-2">
                   <div>
                     <label className={labelCls}>Capacidad</label>
                     <input type="number" min="1" value={r.capacity} onChange={e => updateRange(i, 'capacity', e.target.value)}
@@ -528,6 +556,19 @@ function MesasSection() {
                     <select value={r.shape} onChange={e => updateRange(i, 'shape', e.target.value)} className={inputCls}>
                       {TABLE_SHAPE_OPTIONS.map(shape => (
                         <option key={shape.value} value={shape.value}>{shape.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className={labelCls}>Orientación</label>
+                    <select
+                      value={normalizeTableAngle(r.angle)}
+                      onChange={e => updateRange(i, 'angle', Number(e.target.value))}
+                      disabled={r.shape !== 'rect'}
+                      className={inputCls}
+                    >
+                      {TABLE_ANGLE_OPTIONS.map(angle => (
+                        <option key={angle.value} value={angle.value}>{angle.label}</option>
                       ))}
                     </select>
                   </div>
@@ -587,7 +628,7 @@ function MesasSection() {
                 placeholder="Mesa 1, Terraza A, Barra..."
                 className={inputCls} />
             </div>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-4 gap-3">
               <div>
                 <label className={labelCls}>Capacidad *</label>
                 <input type="number" required min="1" value={form.capacity}
@@ -601,6 +642,17 @@ function MesasSection() {
                   className={inputCls}>
                   {TABLE_SHAPE_OPTIONS.map(shape => (
                     <option key={shape.value} value={shape.value}>{shape.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className={labelCls}>Orientación</label>
+                <select value={normalizeTableAngle(form.angle)}
+                  disabled={form.shape !== 'rect'}
+                  onChange={e => setForm(f => ({ ...f, angle: Number(e.target.value) }))}
+                  className={inputCls}>
+                  {TABLE_ANGLE_OPTIONS.map(angle => (
+                    <option key={angle.value} value={angle.value}>{angle.label}</option>
                   ))}
                 </select>
               </div>

@@ -744,13 +744,24 @@ export default function Reservations() {
     const cap = Number(table?.capacity) || 2;
     const shape = resolveTableShape(table);
     const angle = resolveMapTableAngle(table, shape);
-    if (shape === 'circle') return { w: 98, h: 98, shape };
-    if (shape === 'square') return { w: 108, h: 108, shape };
-    let w = 200;
-    let h = 94;
-    if (cap <= 4) { w = 136; h = 84; }
-    else if (cap <= 6) { w = 156; h = 92; }
-    else if (cap <= 8) { w = 184; h = 94; }
+    if (shape === 'circle') {
+      if (cap <= 2) return { w: 88, h: 88, shape, angle: 0 };
+      if (cap <= 4) return { w: 104, h: 104, shape, angle: 0 };
+      if (cap <= 6) return { w: 118, h: 118, shape, angle: 0 };
+      return { w: 130, h: 130, shape, angle: 0 };
+    }
+    if (shape === 'square') {
+      if (cap <= 2) return { w: 86, h: 86, shape, angle };
+      if (cap <= 4) return { w: 104, h: 104, shape, angle };
+      if (cap <= 6) return { w: 116, h: 116, shape, angle };
+      return { w: 126, h: 126, shape, angle };
+    }
+    let w = 228;
+    let h = 96;
+    if (cap <= 4) { w = 130; h = 82; }
+    else if (cap <= 6) { w = 152; h = 90; }
+    else if (cap <= 8) { w = 182; h = 92; }
+    else if (cap <= 10) { w = 204; h = 94; }
     if (angle === 90) return { w: h, h: w, shape, angle };
     return { w, h, shape, angle };
   };
@@ -925,8 +936,20 @@ export default function Reservations() {
                   const colors = MAP_STATUS[visualStatus] || MAP_STATUS.free;
                   const borderRadius = size.shape === 'circle' ? '999px' : size.shape === 'square' ? '18px' : '14px';
                   const chairs = buildMapChairs(table.capacity, size.w, size.h, size.shape, size.angle);
+                  const chairBleed = MAP_CHAIR_GAP + Math.max(MAP_CHAIR_W, MAP_CHAIR_H) + 4;
+                  const wrapW = size.w + chairBleed * 2;
+                  const wrapH = size.h + chairBleed * 2;
                   return (
-                    <div key={table._id} style={{ position: 'absolute', left: x, top: y, width: size.w, height: size.h }}>
+                    <div
+                      key={table._id}
+                      style={{
+                        position: 'absolute',
+                        left: x - chairBleed,
+                        top: y - chairBleed,
+                        width: wrapW,
+                        height: wrapH,
+                      }}
+                    >
                       {chairs.map((chair, idx) => {
                         const width = chair.wide ? MAP_CHAIR_W : MAP_CHAIR_H;
                         const height = chair.wide ? MAP_CHAIR_H : MAP_CHAIR_W;
@@ -935,8 +958,8 @@ export default function Reservations() {
                             key={`${table._id}-chair-${idx}`}
                             style={{
                               position: 'absolute',
-                              left: chair.cx - width / 2,
-                              top: chair.cy - height / 2,
+                              left: chair.cx + chairBleed - width / 2,
+                              top: chair.cy + chairBleed - height / 2,
                               width,
                               height,
                               borderRadius: 4,
@@ -949,6 +972,9 @@ export default function Reservations() {
                       })}
                       <div
                         style={{
+                          position: 'absolute',
+                          left: chairBleed,
+                          top: chairBleed,
                           width: size.w,
                           height: size.h,
                           borderRadius,
@@ -963,8 +989,8 @@ export default function Reservations() {
                           overflow: 'hidden',
                         }}
                       >
-                        <div className="text-[30px] font-extrabold leading-none tracking-tight">{table.name}</div>
-                        <div className="text-[14px] font-semibold opacity-90 mt-1">{table.capacity} pax</div>
+                        <div className="text-[28px] font-extrabold leading-none tracking-tight">{table.name}</div>
+                        <div className="text-[13px] font-semibold opacity-90 mt-1">{table.capacity} pax</div>
                         {tableReservations.length > 0 && (
                           <div
                             style={{

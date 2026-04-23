@@ -67,6 +67,11 @@ function BellIcon() {
   );
 }
 
+function normalizePhone(raw) {
+  if (!raw) return '';
+  return String(raw).replace(/\D/g, '');
+}
+
 export default function ReservationForm({ reservation, onSave, onCancel, initialContext = null }) {
   const { business } = useAuth();
   const isEdit = Boolean(reservation?._id);
@@ -153,6 +158,10 @@ export default function ReservationForm({ reservation, onSave, onCancel, initial
   const quickPeopleMax = Math.max(1, Number(business?.maxReservationPeople) || 10);
   const peopleOptions = Array.from({ length: quickPeopleMax }, (_, i) => i + 1);
   const [customPeopleOpen, setCustomPeopleOpen] = useState(form.people > quickPeopleMax);
+  const [customers, setCustomers] = useState([]);
+  const [customersLoading, setCustomersLoading] = useState(false);
+  const [customerQuery, setCustomerQuery] = useState(reservation?.guestName || '');
+  const [selectedCustomer, setSelectedCustomer] = useState(null);
 
   const isDatePast = (day) => new Date(calYear, calMonth, day) < today;
   const fmtDay = (day) => `${calYear}-${String(calMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
@@ -193,17 +202,86 @@ export default function ReservationForm({ reservation, onSave, onCancel, initial
 
   const [saving, setSaving] = useState(false);
 
+  useEffect(() => {
+    if (isEdit) return;
+    setCustomersLoading(true);
+    api.get('/customers')
+      .then((r) => setCustomers(Array.isArray(r.data) ? r.data : []))
+      .catch(() => setCustomers([]))
+      .finally(() => setCustomersLoading(false));
+  }, [isEdit]);
+
+  const customerMatches = useMemo(() => {
+    if (isEdit) return [];
+    const query = customerQuery.trim().toLowerCase();
+    const queryPhone = normalizePhone(customerQuery);
+    if (!query && !queryPhone) return [];
+    return customers
+      .filter((c) => {
+        const name = String(c?.name || '').toLowerCase();
+        const phone = String(c?.phone || '');
+        const normalized = normalizePhone(c?.normalizedPhone || c?.phone || '');
+        const byName = query ? name.includes(query) : false;
+        const byPhone = queryPhone ? phone.includes(queryPhone) || normalized.includes(queryPhone) : false;
+        return byName || byPhone;
+      })
+      .slice(0, 8);
+  }, [customers, customerQuery, isEdit]);
+
+  const showInlineCreateFields = !isEdit && !selectedCustomer && customerQuery.trim() !== '' && customerMatches.length === 0;
+  const showContactFields = isEdit || showInlineCreateFields || (Boolean(selectedCustomer) && !String(form.guestPhone || '').trim());
+
+  const handleCustomerQueryChange = (value) => {
+    const hadSelectedCustomer = Boolean(selectedCustomer);
+    setCustomerQuery(value);
+    setSelectedCustomer(null);
+    setForm((f) => ({
+      ...f,
+      guestName: value,
+      guestPhone: hadSelectedCustomer ? '' : f.guestPhone,
+      guestEmail: hadSelectedCustomer ? '' : f.guestEmail,
+    }));
+  };
+
+  const selectCustomer = (customer) => {
+    const nextName = customer?.name || '';
+    const nextPhone = customer?.phone || '';
+    const nextEmail = customer?.email || '';
+    setSelectedCustomer(customer);
+    setCustomerQuery(nextName);
+    setForm((f) => ({
+      ...f,
+      guestName: nextName,
+      guestPhone: nextPhone,
+      guestEmail: nextEmail,
+    }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (saving) return;
     setError('');
-    if (!form.guestName.trim()) {
+    const guestName = (isEdit ? form.guestName : (selectedCustomer?.name || customerQuery)).trim();
+    const guestPhone = String(form.guestPhone || '').trim();
+    const guestEmail = String(form.guestEmail || '').trim();
+
+    if (!guestName) {
       setError('El nombre es obligatorio');
+      return;
+    }
+    if (!isEdit && !guestPhone) {
+      setError('El telefono es obligatorio');
       return;
     }
     setSaving(true);
     try {
-      const payload = { ...form, roomId: form.roomId || null };
+      const payload = {
+        ...form,
+        guestName,
+        guestPhone,
+        guestEmail,
+        roomId: form.roomId || null,
+      };
       if (isEdit) await api.put(`/reservations/${reservation._id}`, payload);
       else await api.post('/reservations', payload);
       onSave();
@@ -388,21 +466,72 @@ export default function ReservationForm({ reservation, onSave, onCancel, initial
 
           {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-3 py-2">{error}</div>}
 
-          <div>
-            <label className={labelCls}>Nombre *</label>
-            <input required autoFocus value={form.guestName} onChange={(e) => setForm((f) => ({ ...f, guestName: e.target.value }))} className={inputCls} />
-          </div>
+          {isEdit ? (
+            <div>
+              <label className={labelCls}>Nombre *</label>
+              <input required autoFocus value={form.guestName} onChange={(e) => setForm((f) => ({ ...f, guestName: e.target.value }))} className={inputCls} />
+            </div>
+          ) : (
+            <div>
+              <label className={labelCls}>Nombre *</label>
+              <input
+                required
+                autoFocus
+                value={customerQuery}
+                onChange={(e) => handleCustomerQueryChange(e.target.value)}
+                placeholder="Buscar por nombre o telefono"
+                className={inputCls}
+              />
+              {customersLoading && (
+                <p className="mt-2 text-xs text-gray-400">Cargando clientes...</p>
+              )}
+              {!customersLoading && customerQuery.trim() !== '' && !selectedCustomer && customerMatches.length > 0 && (
+                <div className="mt-2 rounded-xl border border-gray-200 bg-white max-h-52 overflow-auto">
+                  {customerMatches.map((customer) => (
+                    <button
+                      key={customer._id}
+                      type="button"
+                      onClick={() => selectCustomer(customer)}
+                      className="w-full text-left px-3.5 py-2.5 border-b border-gray-100 last:border-b-0 hover:bg-gray-50 transition-colors"
+                    >
+                      <p className="text-sm font-semibold text-gray-900">{customer.name}</p>
+                      <p className="text-xs text-gray-500">{customer.phone || customer.email || 'Sin contacto'}</p>
+                    </button>
+                  ))}
+                </div>
+              )}
+              {selectedCustomer && (
+                <p className="mt-2 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-lg px-2.5 py-1.5 inline-block">
+                  Cliente existente seleccionado
+                </p>
+              )}
+              {!customersLoading && showInlineCreateFields && (
+                <p className="mt-2 text-xs text-gray-500">
+                  No hay coincidencias. Completa telefono y email para crear el cliente al guardar la reserva.
+                </p>
+              )}
+            </div>
+          )}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className={labelCls}>Telefono <span className="text-gray-400 font-normal">(opc.)</span></label>
-              <input value={form.guestPhone} onChange={(e) => setForm((f) => ({ ...f, guestPhone: e.target.value }))} className={inputCls} />
+          {showContactFields && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className={labelCls}>
+                  Telefono {!isEdit && <span className="text-rose-500">*</span>}
+                </label>
+                <input
+                  required={!isEdit}
+                  value={form.guestPhone}
+                  onChange={(e) => setForm((f) => ({ ...f, guestPhone: e.target.value }))}
+                  className={inputCls}
+                />
+              </div>
+              <div>
+                <label className={labelCls}>Email <span className="text-gray-400 font-normal">(opc.)</span></label>
+                <input type="email" value={form.guestEmail} onChange={(e) => setForm((f) => ({ ...f, guestEmail: e.target.value }))} className={inputCls} />
+              </div>
             </div>
-            <div>
-              <label className={labelCls}>Email <span className="text-gray-400 font-normal">(opc.)</span></label>
-              <input type="email" value={form.guestEmail} onChange={(e) => setForm((f) => ({ ...f, guestEmail: e.target.value }))} className={inputCls} />
-            </div>
-          </div>
+          )}
 
           {isEdit && (
             <div>

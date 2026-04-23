@@ -110,8 +110,9 @@ function generateChairs(capacity, w, h, shape, angle = 0) {
   const px = 16; // padding from corners
   rowChairs(top, px,     w - px, -(CHAIR_GAP + CH / 2),  0  );
   rowChairs(bot, px,     w - px, h + CHAIR_GAP + CH / 2, 180);
-  colChairs(lft, px,     h - px, -(CHAIR_GAP + CH / 2),  270);
-  colChairs(rgt, px,     h - px, w + CHAIR_GAP + CH / 2, 90 );
+  // Side chairs keep their long edge parallel to the table side.
+  colChairs(lft, px,     h - px, -(CHAIR_GAP + CH / 2),  0);
+  colChairs(rgt, px,     h - px, w + CHAIR_GAP + CH / 2, 0);
 
   if (normalizeAngle(angle) !== 90 || shape === 'rect') return chairs;
 

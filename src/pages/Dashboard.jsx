@@ -498,7 +498,7 @@ export default function Dashboard() {
           <button
             type="button"
             onClick={() => navigate('/exceptions')}
-            className="inline-flex items-center justify-center gap-2 px-2.5 sm:px-3 py-2 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
+            className="inline-flex items-center justify-center gap-2 p-2 sm:px-3 sm:py-2 rounded-lg sm:rounded-xl border-0 sm:border sm:border-gray-200 text-sm font-semibold text-gray-700 hover:bg-transparent sm:hover:bg-gray-50 transition-colors"
             title="Gestionar excepciones"
           >
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 text-violet-600">

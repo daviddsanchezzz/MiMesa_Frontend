@@ -21,6 +21,15 @@ const MAP_STATUS = {
   cancelled: { tableBg: '#f1f5f9', tableBorder: '#cbd5e1', text: '#475569', chipBg: '#64748b', chipText: '#f8fafc', chair: '#94a3b8', accent: '#94a3b8' },
 };
 
+const MAP_STATUS_LABELS = {
+  free: 'Libre',
+  pending: 'Pendiente',
+  confirmed: 'Confirmada',
+  seated: 'Sentada',
+  no_show: 'No-show',
+  cancelled: 'Cancelada',
+};
+
 function ReservationsViewTabs({ viewMode, onChange }) {
   const tabs = [
     { id: 'list', label: 'Reservas' },
@@ -802,13 +811,27 @@ export default function Reservations() {
     const canvasW = 1200;
     const canvasH = 580;
     const scale = activeMapLayout
-      ? Math.min((canvasW - 44) / activeMapLayout.width, (canvasH - 44) / activeMapLayout.height, 1)
+      ? Math.min((canvasW - 70) / activeMapLayout.width, (canvasH - 70) / activeMapLayout.height, 1.35)
       : 1;
+    const contentW = activeMapLayout ? activeMapLayout.width * scale : 0;
+    const contentH = activeMapLayout ? activeMapLayout.height * scale : 0;
+    const offsetX = Math.max(24, (canvasW - contentW) / 2);
+    const offsetY = Math.max(20, (canvasH - contentH) / 2);
+    const activeMapStatusCounts = (() => {
+      const base = { free: 0, pending: 0, confirmed: 0, seated: 0, no_show: 0, cancelled: 0 };
+      if (!activeMapGroup) return base;
+      activeMapGroup.tables.forEach((table) => {
+        const assigned = pickReservationForTable(table._id?.toString(), mapSourceReservations);
+        const status = assigned?.status || 'free';
+        base[status] = (base[status] || 0) + 1;
+      });
+      return base;
+    })();
     return (
       <div className="space-y-4">
         <ReservationsViewTabs viewMode={viewMode} onChange={changeViewMode} />
         <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
-          <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/80">
+          <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/80 space-y-2.5">
             <div className="flex items-center gap-2 overflow-x-auto pb-1">
               {mapRoomGroups.map((group) => {
                 const active = group.id === activeMapGroup?.id;
@@ -816,10 +839,10 @@ export default function Reservations() {
                   <button
                     key={group.id}
                     onClick={() => setSelectedMapRoom(group.id)}
-                    className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                    className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
                       active
-                        ? 'bg-violet-600 text-white border-violet-600'
-                        : 'bg-white text-gray-600 border-gray-200 hover:border-violet-200 hover:text-violet-600'
+                        ? 'bg-violet-600 text-white border-violet-600 shadow-sm'
+                        : 'bg-white text-gray-600 border-gray-200 hover:border-violet-200 hover:text-violet-600 hover:bg-violet-50/50'
                     }`}
                   >
                     {group.name}
@@ -827,19 +850,15 @@ export default function Reservations() {
                 );
               })}
             </div>
-            <div className="mt-2 flex items-center justify-between gap-2 text-xs">
+            <div className="flex items-center justify-between gap-3 text-xs">
               <p className="font-semibold text-gray-700">
-                {activeMapGroup ? activeMapGroup.name : 'Sin sala'}
+                {activeMapGroup ? `${activeMapGroup.name} · ${activeMapGroup.tables.length} mesas` : 'Sin sala'}
               </p>
-              <div className="flex items-center gap-3 text-gray-500">
+              <div className="flex items-center gap-2 text-gray-500 flex-wrap justify-end">
                 {Object.entries(MAP_STATUS).map(([statusKey, cfg]) => (
-                  <span key={statusKey} className="inline-flex items-center gap-1">
+                  <span key={statusKey} className="inline-flex items-center gap-1 rounded-md border border-gray-200 bg-white px-2 py-1">
                     <span className="w-2 h-2 rounded-full" style={{ backgroundColor: cfg.accent }} />
-                    {statusKey === 'pending' ? 'Pendiente' :
-                     statusKey === 'confirmed' ? 'Confirmada' :
-                     statusKey === 'seated' ? 'Sentada' :
-                     statusKey === 'no_show' ? 'No-show' :
-                     statusKey === 'cancelled' ? 'Cancelada' : 'Libre'}
+                    {MAP_STATUS_LABELS[statusKey]} {activeMapStatusCounts[statusKey] || 0}
                   </span>
                 ))}
               </div>
@@ -856,11 +875,13 @@ export default function Reservations() {
           >
             {activeMapLayout ? (
               <div
-                className="absolute left-1/2 top-1/2 origin-center"
+                className="absolute origin-top-left"
                 style={{
                   width: activeMapLayout.width,
                   height: activeMapLayout.height,
-                  transform: `translate(-50%, -50%) scale(${scale})`,
+                  left: offsetX,
+                  top: offsetY,
+                  transform: `scale(${scale})`,
                 }}
               >
                 {activeMapLayout.nodes.map(({ table, size, x, y }) => {
@@ -928,15 +949,16 @@ export default function Reservations() {
                       <div
                         style={{
                           position: 'absolute',
-                          left: 8,
-                          right: 8,
-                          top: size.h * 0.5 - 11,
+                          left: '50%',
+                          transform: 'translateX(-50%)',
+                          width: Math.min(size.w + 26, 150),
+                          top: size.h + 8,
                           background: colors.chipBg,
                           color: colors.chipText,
                           borderRadius: 4,
                           fontSize: 12,
                           fontWeight: 700,
-                          textAlign: 'left',
+                          textAlign: 'center',
                           padding: '2px 6px',
                           letterSpacing: '0.02em',
                           whiteSpace: 'nowrap',

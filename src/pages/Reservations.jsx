@@ -8,14 +8,17 @@ import { statusConfig, Avatar, TableCell } from '../components/ReservationCard';
 import Calendar from './Calendar';
 
 const MAP_WORLD_W = 2400;
+const MAP_CHAIR_W = 18;
+const MAP_CHAIR_H = 10;
+const MAP_CHAIR_GAP = 7;
 
 const MAP_STATUS = {
-  free: { tableBg: '#f8fafc', tableBorder: '#cbd5e1', text: '#0f172a', chipBg: '#334155', chipText: '#f8fafc' },
-  pending: { tableBg: '#f59e0b', tableBorder: '#fbbf24', text: '#ffffff', chipBg: '#0f172a', chipText: '#f8fafc' },
-  confirmed: { tableBg: '#06b6d4', tableBorder: '#22d3ee', text: '#ffffff', chipBg: '#0f172a', chipText: '#f8fafc' },
-  seated: { tableBg: '#d946ef', tableBorder: '#e879f9', text: '#ffffff', chipBg: '#0f172a', chipText: '#f8fafc' },
-  no_show: { tableBg: '#ef4444', tableBorder: '#f87171', text: '#ffffff', chipBg: '#0f172a', chipText: '#f8fafc' },
-  cancelled: { tableBg: '#64748b', tableBorder: '#94a3b8', text: '#ffffff', chipBg: '#0f172a', chipText: '#f8fafc' },
+  free: { tableBg: '#ffffff', tableBorder: '#cbd5e1', text: '#0f172a', chipBg: '#334155', chipText: '#f8fafc', chair: '#94a3b8', accent: '#cbd5e1' },
+  pending: { tableBg: '#fffbeb', tableBorder: '#fcd34d', text: '#78350f', chipBg: '#92400e', chipText: '#fff7ed', chair: '#f59e0b', accent: '#f59e0b' },
+  confirmed: { tableBg: '#ecfeff', tableBorder: '#67e8f9', text: '#155e75', chipBg: '#0e7490', chipText: '#ecfeff', chair: '#22d3ee', accent: '#06b6d4' },
+  seated: { tableBg: '#f5f3ff', tableBorder: '#c4b5fd', text: '#5b21b6', chipBg: '#6d28d9', chipText: '#f5f3ff', chair: '#a78bfa', accent: '#8b5cf6' },
+  no_show: { tableBg: '#fff1f2', tableBorder: '#fda4af', text: '#9f1239', chipBg: '#be123c', chipText: '#ffe4e6', chair: '#fb7185', accent: '#f43f5e' },
+  cancelled: { tableBg: '#f1f5f9', tableBorder: '#cbd5e1', text: '#475569', chipBg: '#64748b', chipText: '#f8fafc', chair: '#94a3b8', accent: '#94a3b8' },
 };
 
 function ReservationsViewTabs({ viewMode, onChange }) {
@@ -245,6 +248,7 @@ export default function Reservations() {
   const [toasts,       setToasts]       = useState([]);
   const [confirmDialog, setConfirmDialog] = useState(null);
   const [confirmLoading, setConfirmLoading] = useState(false);
+  const [selectedMapRoom, setSelectedMapRoom] = useState(null);
   const todayStr = new Date().toISOString().slice(0, 10);
 
   const changeViewMode = (nextView) => {
@@ -635,10 +639,68 @@ export default function Reservations() {
     return Number(table?.capacity) <= 4 ? 'square' : 'rect';
   };
 
+  const normalizeAngle = (angle) => (Number(angle) === 90 ? 90 : 0);
+
+  const buildMapChairs = (capacity, w, h, shape, angle = 0) => {
+    const chairs = [];
+    const cap = Math.max(1, Math.min(Number(capacity) || 1, 12));
+
+    if (shape === 'circle') {
+      const r = w / 2 + MAP_CHAIR_GAP + MAP_CHAIR_H / 2;
+      for (let i = 0; i < cap; i += 1) {
+        const a = (i / cap) * 2 * Math.PI - Math.PI / 2;
+        chairs.push({
+          cx: w / 2 + r * Math.cos(a),
+          cy: h / 2 + r * Math.sin(a),
+          rot: a * 180 / Math.PI + 90,
+          wide: false,
+        });
+      }
+      return chairs;
+    }
+
+    let top = 0;
+    let bottom = 0;
+    let left = 0;
+    let right = 0;
+    if (cap <= 2) { top = 1; bottom = 1; }
+    else if (cap <= 4) { top = 2; bottom = 2; }
+    else if (cap <= 6) { top = 2; bottom = 2; left = 1; right = 1; }
+    else if (cap <= 8) { top = 3; bottom = 3; left = 1; right = 1; }
+    else { top = 4; bottom = 4; left = Math.ceil((cap - 8) / 2); right = Math.floor((cap - 8) / 2); }
+
+    if (shape === 'rect' && normalizeAngle(angle) === 90) {
+      [top, left] = [left, top];
+      [bottom, right] = [right, bottom];
+    }
+
+    const px = 16;
+    const pushRow = (count, x0, x1, y, rotDeg) => {
+      if (!count) return;
+      const step = count === 1 ? 0 : (x1 - x0) / (count - 1);
+      for (let i = 0; i < count; i += 1) {
+        chairs.push({ cx: count === 1 ? (x0 + x1) / 2 : x0 + i * step, cy: y, rot: rotDeg, wide: true });
+      }
+    };
+    const pushCol = (count, y0, y1, x, rotDeg) => {
+      if (!count) return;
+      const step = count === 1 ? 0 : (y1 - y0) / (count - 1);
+      for (let i = 0; i < count; i += 1) {
+        chairs.push({ cx: x, cy: count === 1 ? (y0 + y1) / 2 : y0 + i * step, rot: rotDeg, wide: false });
+      }
+    };
+
+    pushRow(top, px, w - px, -(MAP_CHAIR_GAP + MAP_CHAIR_H / 2), 0);
+    pushRow(bottom, px, w - px, h + MAP_CHAIR_GAP + MAP_CHAIR_H / 2, 180);
+    pushCol(left, px, h - px, -(MAP_CHAIR_GAP + MAP_CHAIR_H / 2), 0);
+    pushCol(right, px, h - px, w + MAP_CHAIR_GAP + MAP_CHAIR_H / 2, 0);
+    return chairs;
+  };
+
   const mapTableSize = (table) => {
     const cap = Number(table?.capacity) || 2;
     const shape = resolveTableShape(table);
-    const angle = Number(table?.angle) === 90 ? 90 : 0;
+    const angle = normalizeAngle(table?.angle);
     if (shape === 'circle') return { w: 98, h: 98, shape };
     if (shape === 'square') return { w: 108, h: 108, shape };
     let w = 200;
@@ -668,6 +730,15 @@ export default function Reservations() {
     });
     return [...groups.values()].filter((g) => g.tables.length > 0);
   })();
+
+  useEffect(() => {
+    if (mapRoomGroups.length === 0) {
+      if (selectedMapRoom !== null) setSelectedMapRoom(null);
+      return;
+    }
+    const stillExists = mapRoomGroups.some((group) => group.id === selectedMapRoom);
+    if (!stillExists) setSelectedMapRoom(mapRoomGroups[0].id);
+  }, [mapRoomGroups, selectedMapRoom]);
 
   const buildRoomLayout = (roomTables) => {
     const nodes = roomTables.map((table) => ({
@@ -713,6 +784,9 @@ export default function Reservations() {
     return { nodes, width, height };
   };
 
+  const activeMapGroup = mapRoomGroups.find((group) => group.id === selectedMapRoom) || mapRoomGroups[0] || null;
+  const activeMapLayout = activeMapGroup ? buildRoomLayout(activeMapGroup.tables) : null;
+
   if (viewMode === 'calendar') {
     return (
       <div className="space-y-4">
@@ -725,107 +799,163 @@ export default function Reservations() {
   }
 
   if (viewMode === 'map') {
+    const canvasW = 1200;
+    const canvasH = 580;
+    const scale = activeMapLayout
+      ? Math.min((canvasW - 44) / activeMapLayout.width, (canvasH - 44) / activeMapLayout.height, 1)
+      : 1;
     return (
       <div className="space-y-4">
         <ReservationsViewTabs viewMode={viewMode} onChange={changeViewMode} />
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-          {mapRoomGroups.map((group) => {
-            const layout = buildRoomLayout(group.tables);
-            const canvasW = 1120;
-            const canvasH = 520;
-            const scale = Math.min((canvasW - 40) / layout.width, (canvasH - 40) / layout.height, 1);
-            return (
-              <div key={group.id} className="rounded-2xl border border-slate-700/50 overflow-hidden bg-slate-700">
-                <div className="px-4 py-2.5 border-b border-slate-600/60 bg-slate-800/70 flex items-center justify-between">
-                  <p className="text-sm font-bold text-slate-100">{group.name}</p>
-                  <span className="text-xs font-semibold text-slate-300">{group.tables.length} mesas</span>
-                </div>
-                <div
-                  className="relative overflow-hidden"
-                  style={{
-                    height: canvasH,
-                    backgroundColor: '#3f4a5a',
-                    backgroundImage: 'radial-gradient(circle, rgba(169,184,206,0.45) 1px, transparent 1px)',
-                    backgroundSize: '80px 80px',
-                  }}
-                >
-                  <div
-                    className="absolute left-1/2 top-1/2 origin-center"
-                    style={{
-                      width: layout.width,
-                      height: layout.height,
-                      transform: `translate(-50%, -50%) scale(${scale})`,
-                    }}
+        <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
+          <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/80">
+            <div className="flex items-center gap-2 overflow-x-auto pb-1">
+              {mapRoomGroups.map((group) => {
+                const active = group.id === activeMapGroup?.id;
+                return (
+                  <button
+                    key={group.id}
+                    onClick={() => setSelectedMapRoom(group.id)}
+                    className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-colors ${
+                      active
+                        ? 'bg-violet-600 text-white border-violet-600'
+                        : 'bg-white text-gray-600 border-gray-200 hover:border-violet-200 hover:text-violet-600'
+                    }`}
                   >
-                    {layout.nodes.map(({ table, size, x, y }) => {
-                      const assigned = pickReservationForTable(table._id?.toString(), mapSourceReservations);
-                      const visualStatus = assigned?.status || 'free';
-                      const colors = MAP_STATUS[visualStatus] || MAP_STATUS.free;
-                      const borderRadius = size.shape === 'circle' ? '999px' : size.shape === 'square' ? '14px' : '10px';
-                      const chipText = assigned
-                        ? `${assigned.people || 0} | ${(assigned.guestName || '').split(' ')[0] || 'Reserva'}`
-                        : `${table.capacity || 0} | Libre`;
-                      return (
-                        <div key={table._id} style={{ position: 'absolute', left: x, top: y, width: size.w, height: size.h }}>
+                    {group.name}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="mt-2 flex items-center justify-between gap-2 text-xs">
+              <p className="font-semibold text-gray-700">
+                {activeMapGroup ? activeMapGroup.name : 'Sin sala'}
+              </p>
+              <div className="flex items-center gap-3 text-gray-500">
+                {Object.entries(MAP_STATUS).map(([statusKey, cfg]) => (
+                  <span key={statusKey} className="inline-flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: cfg.accent }} />
+                    {statusKey === 'pending' ? 'Pendiente' :
+                     statusKey === 'confirmed' ? 'Confirmada' :
+                     statusKey === 'seated' ? 'Sentada' :
+                     statusKey === 'no_show' ? 'No-show' :
+                     statusKey === 'cancelled' ? 'Cancelada' : 'Libre'}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+          <div
+            className="relative overflow-hidden"
+            style={{
+              height: canvasH,
+              backgroundColor: '#f8fafc',
+              backgroundImage: 'radial-gradient(circle, #cbd5e1 1px, transparent 1px)',
+              backgroundSize: '48px 48px',
+            }}
+          >
+            {activeMapLayout ? (
+              <div
+                className="absolute left-1/2 top-1/2 origin-center"
+                style={{
+                  width: activeMapLayout.width,
+                  height: activeMapLayout.height,
+                  transform: `translate(-50%, -50%) scale(${scale})`,
+                }}
+              >
+                {activeMapLayout.nodes.map(({ table, size, x, y }) => {
+                  const assigned = pickReservationForTable(table._id?.toString(), mapSourceReservations);
+                  const visualStatus = assigned?.status || 'free';
+                  const colors = MAP_STATUS[visualStatus] || MAP_STATUS.free;
+                  const borderRadius = size.shape === 'circle' ? '999px' : size.shape === 'square' ? '18px' : '14px';
+                  const chipText = assigned
+                    ? `${assigned.people || 0} | ${(assigned.guestName || '').split(' ')[0] || 'Reserva'}`
+                    : `${table.capacity || 0} | Libre`;
+                  const chairs = buildMapChairs(table.capacity, size.w, size.h, size.shape, table.angle);
+                  return (
+                    <div key={table._id} style={{ position: 'absolute', left: x, top: y, width: size.w, height: size.h }}>
+                      {chairs.map((chair, idx) => {
+                        const width = chair.wide ? MAP_CHAIR_W : MAP_CHAIR_H;
+                        const height = chair.wide ? MAP_CHAIR_H : MAP_CHAIR_W;
+                        return (
                           <div
+                            key={`${table._id}-chair-${idx}`}
                             style={{
                               position: 'absolute',
-                              left: size.w * 0.12,
-                              right: size.w * 0.12,
-                              top: -13,
-                              height: 16,
+                              left: chair.cx - width / 2,
+                              top: chair.cy - height / 2,
+                              width,
+                              height,
                               borderRadius: 4,
-                              background: '#a7b3c7',
-                              opacity: 0.85,
+                              transform: `rotate(${chair.rot}deg)`,
+                              backgroundColor: colors.chair,
+                              opacity: 0.6,
                             }}
                           />
-                          <div
-                            style={{
-                              width: size.w,
-                              height: size.h,
-                              borderRadius,
-                              backgroundColor: colors.tableBg,
-                              border: `2px solid ${colors.tableBorder}`,
-                              boxShadow: '0 8px 20px rgba(2, 6, 23, 0.2)',
-                              display: 'flex',
-                              flexDirection: 'column',
-                              alignItems: 'center',
-                              justifyContent: 'center',
-                              color: colors.text,
-                            }}
-                          >
-                            <div className="text-[34px] font-extrabold leading-none tracking-tight">{table.name}</div>
-                            <div className="text-[16px] font-semibold opacity-85 mt-1">{table.capacity} pax</div>
-                          </div>
+                        );
+                      })}
+                      <div
+                        style={{
+                          width: size.w,
+                          height: size.h,
+                          borderRadius,
+                          backgroundColor: colors.tableBg,
+                          border: `2px solid ${colors.tableBorder}`,
+                          boxShadow: '0 2px 8px rgba(15, 23, 42, 0.08), 0 1px 2px rgba(15, 23, 42, 0.04)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          color: colors.text,
+                          overflow: 'hidden',
+                        }}
+                      >
+                        {size.shape === 'rect' && (
                           <div
                             style={{
                               position: 'absolute',
-                              left: 8,
-                              right: 8,
-                              top: size.h * 0.5 - 11,
-                              background: colors.chipBg,
-                              color: colors.chipText,
-                              borderRadius: 3,
-                              fontSize: 12,
-                              fontWeight: 700,
-                              textAlign: 'left',
-                              padding: '2px 6px',
-                              letterSpacing: '0.02em',
-                              whiteSpace: 'nowrap',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
+                              top: 0,
+                              left: 0,
+                              right: 0,
+                              height: 4,
+                              backgroundColor: colors.accent,
                             }}
-                          >
-                            {chipText}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
+                          />
+                        )}
+                        <div className="text-[30px] font-extrabold leading-none tracking-tight">{table.name}</div>
+                        <div className="text-[14px] font-semibold opacity-90 mt-1">{table.capacity} pax</div>
+                      </div>
+                      <div
+                        style={{
+                          position: 'absolute',
+                          left: 8,
+                          right: 8,
+                          top: size.h * 0.5 - 11,
+                          background: colors.chipBg,
+                          color: colors.chipText,
+                          borderRadius: 4,
+                          fontSize: 12,
+                          fontWeight: 700,
+                          textAlign: 'left',
+                          padding: '2px 6px',
+                          letterSpacing: '0.02em',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                        }}
+                      >
+                        {chipText}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-            );
-          })}
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center text-sm text-gray-400 font-medium">
+                No hay mesas en esta sala
+              </div>
+            )}
+          </div>
         </div>
       </div>
     );

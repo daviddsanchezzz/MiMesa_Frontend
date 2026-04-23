@@ -12,6 +12,7 @@ import Rooms from './pages/Rooms';
 import Tables from './pages/Tables';
 import Reservations from './pages/Reservations';
 import Customers from './pages/Customers';
+import CustomerDetail from './pages/CustomerDetail';
 import Settings from './pages/Settings';
 import Team from './pages/Team';
 import Profile from './pages/Profile';
@@ -253,6 +254,7 @@ export default function App() {
           <Route path="/tables"       element={<RoleRoute minRole="manager"><FullBleedLayout><Tables /></FullBleedLayout></RoleRoute>} />
           <Route path="/reservations" element={<PrivateLayout><Reservations /></PrivateLayout>} />
           <Route path="/customers"    element={<RoleRoute minRole="manager"><PrivateLayout><Customers /></PrivateLayout></RoleRoute>} />
+          <Route path="/customers/:id" element={<RoleRoute minRole="manager"><PrivateLayout><CustomerDetail /></PrivateLayout></RoleRoute>} />
           <Route path="/configuracion" element={<RoleRoute minRole="manager"><PrivateLayout><Settings /></PrivateLayout></RoleRoute>} />
           <Route path="/settings"      element={<Navigate to="/configuracion" replace />} />
           <Route path="/profile"       element={<PrivateLayout><Profile /></PrivateLayout>} />

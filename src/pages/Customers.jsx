@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import CustomerForm from '../components/CustomerForm';
 import Modal from '../components/Modal';
@@ -14,9 +15,9 @@ function Avatar({ name, size = 'md' }) {
   );
 }
 
-function CustomerCard({ c, onEdit }) {
+function CustomerCard({ c, onEdit, onOpen }) {
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 flex items-start gap-3">
+    <button onClick={onOpen} className="w-full text-left bg-white rounded-2xl border border-gray-200 shadow-sm p-4 flex items-start gap-3 hover:bg-gray-50/60 transition-colors">
       <Avatar name={c.name} size="lg" />
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
@@ -50,18 +51,21 @@ function CustomerCard({ c, onEdit }) {
         </div>
       </div>
       <button
-        onClick={onEdit}
+        onClick={(e) => {
+          e.stopPropagation();
+          onEdit();
+        }}
         className="shrink-0 w-9 h-9 flex items-center justify-center rounded-xl text-violet-600 hover:bg-violet-50 transition-colors"
       >
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
           <path d="M13.488 2.513a1.75 1.75 0 0 0-2.475 0L6.75 6.774a2.75 2.75 0 0 0-.596.892l-.848 2.047a.75.75 0 0 0 .98.98l2.047-.848a2.75 2.75 0 0 0 .892-.596l4.261-4.263a1.75 1.75 0 0 0 0-2.474ZM4.75 3.5c-.69 0-1.25.56-1.25 1.25v6.5c0 .69.56 1.25 1.25 1.25h6.5c.69 0 1.25-.56 1.25-1.25V9a.75.75 0 0 1 1.5 0v2.25A2.75 2.75 0 0 1 11.25 14h-6.5A2.75 2.75 0 0 1 2 11.25v-6.5A2.75 2.75 0 0 1 4.75 2H7a.75.75 0 0 1 0 1.5H4.75Z" />
         </svg>
       </button>
-    </div>
+    </button>
   );
 }
 
-function MobileCustomerRow({ c, onEdit }) {
+function MobileCustomerRow({ c, onEdit, onOpen }) {
   const [open, setOpen] = useState(false);
   const hasContact = Boolean(c.phone || c.email);
   const badgeCls =
@@ -76,6 +80,7 @@ function MobileCustomerRow({ c, onEdit }) {
       <button
         className="w-full text-left px-4 py-3 flex items-center gap-3 active:bg-gray-50 transition-colors"
         onClick={() => setOpen((v) => !v)}
+        onDoubleClick={onOpen}
       >
         <Avatar name={c.name} />
         <div className="flex-1 min-w-0">
@@ -128,10 +133,22 @@ function MobileCustomerRow({ c, onEdit }) {
               </a>
             )}
             <button
-              onClick={onEdit}
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit();
+              }}
               className={`${hasContact ? 'px-3' : 'flex-1'} py-2 rounded-xl text-xs font-semibold bg-gray-100 text-gray-700 active:bg-gray-200 transition-colors`}
             >
               Editar
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onOpen();
+              }}
+              className="px-3 py-2 rounded-xl text-xs font-semibold bg-violet-600 text-white active:bg-violet-700 transition-colors"
+            >
+              Ficha
             </button>
           </div>
         </div>
@@ -141,6 +158,7 @@ function MobileCustomerRow({ c, onEdit }) {
 }
 
 export default function Customers() {
+  const navigate = useNavigate();
   const [customers, setCustomers] = useState([]);
   const [modal, setModal] = useState(null);
   const [search, setSearch] = useState('');
@@ -267,7 +285,12 @@ export default function Customers() {
         <div className="space-y-3 sm:hidden">
           <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden divide-y divide-gray-100">
             {filtered.map((c) => (
-              <MobileCustomerRow key={c._id} c={c} onEdit={() => setModal({ mode: 'edit', customer: c })} />
+              <MobileCustomerRow
+                key={c._id}
+                c={c}
+                onEdit={() => setModal({ mode: 'edit', customer: c })}
+                onOpen={() => navigate(`/customers/${c._id}`)}
+              />
             ))}
           </div>
         </div>
@@ -290,7 +313,8 @@ export default function Customers() {
               <tbody>
                 {filtered.map((c, i) => (
                   <tr key={c._id}
-                    className={`hover:bg-gray-50/60 transition-colors ${i < filtered.length - 1 ? 'border-b border-gray-50' : ''}`}
+                    onClick={() => navigate(`/customers/${c._id}`)}
+                    className={`hover:bg-gray-50/60 transition-colors cursor-pointer ${i < filtered.length - 1 ? 'border-b border-gray-50' : ''}`}
                   >
                     <td className="px-5 py-3.5">
                       <div className="flex items-center gap-3">
@@ -337,7 +361,10 @@ export default function Customers() {
                     </td>
                     <td className="px-4 py-3.5">
                       <button
-                        onClick={() => setModal({ mode: 'edit', customer: c })}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setModal({ mode: 'edit', customer: c });
+                        }}
                         className="text-xs font-medium px-2.5 py-1.5 rounded-lg text-violet-600 hover:bg-violet-50 transition-colors"
                       >
                         Editar
@@ -367,6 +394,5 @@ export default function Customers() {
     </div>
   );
 }
-
 
 

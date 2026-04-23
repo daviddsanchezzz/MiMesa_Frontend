@@ -630,18 +630,23 @@ export default function Reservations() {
     return [];
   };
 
-  const pickReservationForTable = (tableId, source) => {
-    const rank = { seated: 0, confirmed: 1, pending: 2, no_show: 3, cancelled: 4 };
-    const candidates = source
-      .filter((r) => reservationTableIds(r).includes(tableId))
-      .sort((a, b) => {
-        const ra = rank[a.status] ?? 99;
-        const rb = rank[b.status] ?? 99;
-        if (ra !== rb) return ra - rb;
-        return `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`);
-      });
-    return candidates[0] || null;
+  const initialsFromGuest = (name) => {
+    const parts = String(name || '')
+      .trim()
+      .split(/\s+/)
+      .filter(Boolean);
+    if (parts.length === 0) return 'R.';
+    if (parts.length === 1) return `${parts[0][0].toUpperCase()}.`;
+    return `${parts[0][0].toUpperCase()}.${parts[parts.length - 1][0].toUpperCase()}.`;
   };
+
+  const getTableReservations = (tableId, source) => (
+    source
+      .filter((r) => reservationTableIds(r).includes(tableId))
+      .sort((a, b) => `${a.date} ${a.time || ''}`.localeCompare(`${b.date} ${b.time || ''}`))
+  );
+
+  const pickReservationForTable = (tableId, source) => getTableReservations(tableId, source)[0] || null;
 
   const resolveTableShape = (table) => {
     if (table?.shape === 'circle' || table?.shape === 'square' || table?.shape === 'rect') return table.shape;
@@ -886,12 +891,10 @@ export default function Reservations() {
               >
                 {activeMapLayout.nodes.map(({ table, size, x, y }) => {
                   const assigned = pickReservationForTable(table._id?.toString(), mapSourceReservations);
+                  const tableReservations = getTableReservations(table._id?.toString(), mapSourceReservations);
                   const visualStatus = assigned?.status || 'free';
                   const colors = MAP_STATUS[visualStatus] || MAP_STATUS.free;
                   const borderRadius = size.shape === 'circle' ? '999px' : size.shape === 'square' ? '18px' : '14px';
-                  const chipText = assigned
-                    ? `${assigned.people || 0} | ${(assigned.guestName || '').split(' ')[0] || 'Reserva'}`
-                    : `${table.capacity || 0} | Libre`;
                   const chairs = buildMapChairs(table.capacity, size.w, size.h, size.shape, table.angle);
                   return (
                     <div key={table._id} style={{ position: 'absolute', left: x, top: y, width: size.w, height: size.h }}>
@@ -946,28 +949,56 @@ export default function Reservations() {
                         <div className="text-[30px] font-extrabold leading-none tracking-tight">{table.name}</div>
                         <div className="text-[14px] font-semibold opacity-90 mt-1">{table.capacity} pax</div>
                       </div>
-                      <div
-                        style={{
-                          position: 'absolute',
-                          left: '50%',
-                          transform: 'translateX(-50%)',
-                          width: Math.min(size.w + 26, 150),
-                          top: size.h + 8,
-                          background: colors.chipBg,
-                          color: colors.chipText,
-                          borderRadius: 4,
-                          fontSize: 12,
-                          fontWeight: 700,
-                          textAlign: 'center',
-                          padding: '2px 6px',
-                          letterSpacing: '0.02em',
-                          whiteSpace: 'nowrap',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                        }}
-                      >
-                        {chipText}
-                      </div>
+                      {tableReservations.length > 0 && (
+                        <div
+                          style={{
+                            position: 'absolute',
+                            left: '50%',
+                            transform: 'translateX(-50%)',
+                            width: Math.min(size.w + 34, 186),
+                            top: size.h + 8,
+                            display: 'flex',
+                            flexDirection: 'column',
+                            gap: 4,
+                          }}
+                        >
+                          {tableReservations.slice(0, 3).map((rsv) => (
+                            <div
+                              key={rsv._id}
+                              style={{
+                                background: colors.chipBg,
+                                color: colors.chipText,
+                                borderRadius: 4,
+                                fontSize: 11,
+                                fontWeight: 700,
+                                textAlign: 'center',
+                                padding: '2px 6px',
+                                letterSpacing: '0.02em',
+                                whiteSpace: 'nowrap',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                              }}
+                            >
+                              {(rsv.time || '--:--')} | {rsv.people || 0} | {initialsFromGuest(rsv.guestName)}
+                            </div>
+                          ))}
+                          {tableReservations.length > 3 && (
+                            <div
+                              style={{
+                                background: '#475569',
+                                color: '#f8fafc',
+                                borderRadius: 4,
+                                fontSize: 10,
+                                fontWeight: 700,
+                                textAlign: 'center',
+                                padding: '2px 6px',
+                              }}
+                            >
+                              +{tableReservations.length - 3} más
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
                   );
                 })}

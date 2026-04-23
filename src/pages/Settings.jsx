@@ -640,20 +640,42 @@ function TurnosSection() {
   const rmManualSlot    = (i)    => setForm(f => ({ ...f, manualSlots: f.manualSlots.filter((_, idx) => idx !== i) }));
   const updManualSlot   = (i, v) => setForm(f => ({ ...f, manualSlots: f.manualSlots.map((s, idx) => idx === i ? v : s) }));
 
+  const limit        = planLimit('maxShifts');
+  const activeShifts = shifts.filter(s => !s.isLocked);
+  const lockedShifts = shifts.filter(s => s.isLocked);
+  const atLimit      = limit !== Infinity && activeShifts.length >= limit;
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <p className="text-sm text-gray-500">
-          {shifts.length} turno{shifts.length !== 1 ? 's' : ''} configurado{shifts.length !== 1 ? 's' : ''}
-          {planLimit('maxShifts') !== Infinity && (
-            <span className="ml-1 text-gray-400">/ {planLimit('maxShifts')} en Free</span>
+          {activeShifts.length}{limit !== Infinity ? ` / ${limit}` : ''} turno{activeShifts.length !== 1 ? 's' : ''} activo{activeShifts.length !== 1 ? 's' : ''}
+          {lockedShifts.length > 0 && (
+            <span className="ml-1 text-amber-500">· {lockedShifts.length} bloqueado{lockedShifts.length !== 1 ? 's' : ''}</span>
           )}
         </p>
-        <button onClick={openCreate} disabled={shifts.length >= planLimit('maxShifts')}
+        <button onClick={openCreate} disabled={atLimit}
+          title={atLimit ? `Límite de ${limit} turnos alcanzado` : undefined}
           className="flex items-center gap-1.5 bg-violet-600 hover:bg-violet-700 text-white px-3.5 py-2 rounded-xl text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed">
           <IconPlus /> Nuevo turno
         </button>
       </div>
+
+      {/* Upgrade banner when locked shifts exist */}
+      {lockedShifts.length > 0 && (
+        <div className="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+          <svg className="w-4 h-4 text-amber-500 shrink-0" fill="currentColor" viewBox="0 0 16 16">
+            <path fillRule="evenodd" d="M8 1a3.5 3.5 0 0 0-3.5 3.5V7A1.5 1.5 0 0 0 3 8.5v5A1.5 1.5 0 0 0 4.5 15h7a1.5 1.5 0 0 0 1.5-1.5v-5A1.5 1.5 0 0 0 11.5 7V4.5A3.5 3.5 0 0 0 8 1Zm-2 6V4.5a2 2 0 1 1 4 0V7H6Z" clipRule="evenodd" />
+          </svg>
+          <p className="text-sm text-amber-800 flex-1">
+            <strong>{lockedShifts.length} turno{lockedShifts.length !== 1 ? 's' : ''} bloqueado{lockedShifts.length !== 1 ? 's' : ''}</strong> — el plan Free solo permite {limit}.
+            Los clientes solo verán los {limit} primeros.
+          </p>
+          <a href="/configuracion?tab=suscripcion" className="text-xs font-semibold text-amber-700 underline hover:no-underline shrink-0">
+            Actualiza tu plan
+          </a>
+        </div>
+      )}
 
       {shifts.length === 0 ? (
         <EmptyState
@@ -664,17 +686,23 @@ function TurnosSection() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {shifts.map((shift, idx) => {
-            const clr = colorOf(idx);
+            const clr        = colorOf(idx);
             const isSpecific = !!(shift.startDate && shift.endDate);
+            const locked     = !!shift.isLocked;
             return (
-              <div key={shift._id} className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 flex flex-col gap-3">
+              <div key={shift._id}
+                className={`rounded-2xl border shadow-sm p-5 flex flex-col gap-3 ${locked ? 'bg-gray-50 border-gray-200 opacity-60' : 'bg-white border-gray-200'}`}>
                 {/* Name + time range */}
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2 min-w-0">
-                    <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${clr.dot}`} />
+                    {locked
+                      ? <svg className="w-3.5 h-3.5 text-gray-400 shrink-0" fill="currentColor" viewBox="0 0 16 16"><path fillRule="evenodd" d="M8 1a3.5 3.5 0 0 0-3.5 3.5V7A1.5 1.5 0 0 0 3 8.5v5A1.5 1.5 0 0 0 4.5 15h7a1.5 1.5 0 0 0 1.5-1.5v-5A1.5 1.5 0 0 0 11.5 7V4.5A3.5 3.5 0 0 0 8 1Zm-2 6V4.5a2 2 0 1 1 4 0V7H6Z" clipRule="evenodd" /></svg>
+                      : <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${clr.dot}`} />
+                    }
                     <h3 className="font-semibold text-gray-900 truncate">{shift.name}</h3>
+                    {locked && <span className="text-[10px] font-semibold text-gray-400 bg-gray-200 px-1.5 py-0.5 rounded-full shrink-0">Bloqueado</span>}
                   </div>
-                  <span className={`text-xs font-semibold px-2 py-1 rounded-lg shrink-0 ${clr.bg} ${clr.text}`}>
+                  <span className={`text-xs font-semibold px-2 py-1 rounded-lg shrink-0 ${locked ? 'bg-gray-100 text-gray-400' : `${clr.bg} ${clr.text}`}`}>
                     {shift.startTime} – {shift.endTime}
                   </span>
                 </div>
@@ -695,7 +723,9 @@ function TurnosSection() {
                   {DAYS.map(d => (
                     <span key={d.value} title={d.full}
                       className={`w-6 h-6 rounded-md text-[9px] flex items-center justify-center font-bold ${
-                        shift.days?.includes(d.value) ? `${clr.bg} ${clr.text}` : 'bg-gray-100 text-gray-300'
+                        shift.days?.includes(d.value)
+                          ? locked ? 'bg-gray-200 text-gray-400' : `${clr.bg} ${clr.text}`
+                          : 'bg-gray-100 text-gray-300'
                       }`}>
                       {d.label}
                     </span>
@@ -706,7 +736,7 @@ function TurnosSection() {
                 {shift.subShifts.length > 0 ? (
                   <div className="flex flex-wrap gap-1.5">
                     {shift.subShifts.map((ss, i) => (
-                      <div key={i} className={`flex items-center gap-1 px-2 py-1 rounded-lg border text-xs font-medium ${clr.bg} ${clr.border} ${clr.text}`}>
+                      <div key={i} className={`flex items-center gap-1 px-2 py-1 rounded-lg border text-xs font-medium ${locked ? 'bg-gray-100 border-gray-200 text-gray-400' : `${clr.bg} ${clr.border} ${clr.text}`}`}>
                         <IconClock /> {ss.time}
                         {ss.label && <span className="opacity-60">· {ss.label}</span>}
                       </div>
@@ -717,10 +747,12 @@ function TurnosSection() {
                 )}
 
                 <div className="flex gap-2 pt-1 border-t border-gray-100">
-                  <button onClick={() => openEdit(shift)}
-                    className="flex-1 flex items-center justify-center gap-1.5 text-xs py-1.5 rounded-lg bg-gray-50 hover:bg-violet-50 hover:text-violet-600 text-gray-500 font-medium transition-colors">
-                    <IconEdit /> Editar
-                  </button>
+                  {!locked && (
+                    <button onClick={() => openEdit(shift)}
+                      className="flex-1 flex items-center justify-center gap-1.5 text-xs py-1.5 rounded-lg bg-gray-50 hover:bg-violet-50 hover:text-violet-600 text-gray-500 font-medium transition-colors">
+                      <IconEdit /> Editar
+                    </button>
+                  )}
                   <button onClick={() => handleDelete(shift._id)}
                     className="flex-1 flex items-center justify-center gap-1.5 text-xs py-1.5 rounded-lg bg-gray-50 hover:bg-rose-50 hover:text-rose-600 text-gray-500 font-medium transition-colors">
                     <IconTrash /> Eliminar
@@ -1662,19 +1694,52 @@ function MarketingSection() {
 // ═══════════════════════════════════════════════════════════════════════════
 // BILLING / SUBSCRIPTION SECTION
 // ═══════════════════════════════════════════════════════════════════════════
+const BASIC_FEATURES = [
+  'Reservas ilimitadas',
+  'Emails automáticos de confirmación y cancelación',
+  'Página pública de reservas con tu marca',
+  'Integración en tu web (iframe)',
+  'Mesas, salas y turnos ilimitados',
+  'Hasta 5 usuarios de equipo',
+  'Historial completo de clientes',
+];
+
+const PRO_EXTRAS = [
+  'Equipo y roles ilimitados',
+  'Marketing y campañas de email',
+  'Códigos promocionales',
+  'Estadísticas avanzadas',
+  'Recordatorios automáticos 24h antes',
+  'Cobros automáticos por cancelación',
+  'Módulo de finanzas y caja diaria',
+  'Gestión de turnos del personal',
+  'Soporte prioritario',
+];
+
+function CheckIcon() {
+  return (
+    <svg className="w-4 h-4 text-violet-500 shrink-0 mt-0.5" viewBox="0 0 16 16" fill="none">
+      <path d="M3 8l3.5 3.5L13 4.5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 function BillingSection() {
   const { plan, subscriptionStatus, trialEndsAt, currentPeriodEnd, cancelAtPeriodEnd, hasRole, refreshBusiness } = useAuth();
-  const [status, setStatus]   = useState(null);   // billing status from API
+  const [status, setStatus]   = useState(null);
   const [loading, setLoading] = useState(true);
-  const [working, setWorking] = useState(false);
-  const [msg, setMsg]         = useState('');
-  const [err, setErr]         = useState('');
+  const [working, setWorking]           = useState(false);
+  const [msg, setMsg]                   = useState('');
+  const [err, setErr]                   = useState('');
+  const [showDowngradeModal, setShowDowngradeModal] = useState(false);
 
   const isOwner    = hasRole('owner');
   const isActive   = subscriptionStatus === 'active' || subscriptionStatus === 'trialing';
   const isTrialing = subscriptionStatus === 'trialing';
   const isPastDue  = subscriptionStatus === 'past_due';
   const isFree     = !isActive || plan === 'free';
+  const isPro      = isActive && plan === 'pro';
+  const isBasic    = !isFree && !isPro;
 
   const load = async () => {
     try {
@@ -1692,16 +1757,30 @@ function BillingSection() {
     return new Date(dateStr).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
   };
 
-  const handleUpgrade = async () => {
+  const handleUpgrade = async (targetPlan = 'basic') => {
     if (!isOwner) return;
     setWorking(true); setErr('');
     try {
-      const { data } = await api.post('/stripe/checkout');
+      const { data } = await api.post('/stripe/checkout', { plan: targetPlan });
       window.location.href = data.url;
     } catch (e) {
       setErr(e.response?.data?.message || 'Error al iniciar el pago');
       setWorking(false);
     }
+  };
+
+  const handleChangePlan = async (newPlan) => {
+    if (!isOwner) return;
+    setWorking(true); setErr('');
+    try {
+      await api.post('/stripe/change-plan', { plan: newPlan });
+      const label = newPlan === 'pro' ? 'Pro' : 'Basic';
+      setMsg(`¡Listo! Cambiando a ${label}…`);
+      await refreshBusiness();
+      await load();
+    } catch (e) {
+      setErr(e.response?.data?.message || 'Error al cambiar el plan');
+    } finally { setWorking(false); }
   };
 
   const handlePortal = async () => {
@@ -1740,18 +1819,17 @@ function BillingSection() {
     } finally { setWorking(false); }
   };
 
-  const used  = status?.usage?.reservations?.used  ?? 0;
-  const limit = status?.usage?.reservations?.limit ?? 30;
-  const pct   = isFree ? Math.min(100, Math.round((used / limit) * 100)) : 0;
+  const used      = status?.usage?.reservations?.used  ?? 0;
+  const limit     = status?.usage?.reservations?.limit ?? 30;
+  const pct       = isFree ? Math.min(100, Math.round((used / limit) * 100)) : 0;
   const nearLimit = isFree && used >= limit * 0.8;
 
-  // Check for subscription=success in URL after Stripe redirect
+  // Poll for plan update after Stripe redirect
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get('subscription') === 'success') {
-      setMsg('¡Listo! Activando tu suscripción Basic…');
+      setMsg('¡Listo! Activando tu suscripción…');
       window.history.replaceState({}, '', window.location.pathname + '?tab=suscripcion');
-      // Poll until plan updates (webhook may take a moment)
       let attempts = 0;
       const poll = setInterval(async () => {
         await refreshBusiness();
@@ -1765,140 +1843,460 @@ function BillingSection() {
   return (
     <div className="space-y-4">
       {msg && (
-        <div className="bg-green-50 border border-green-200 text-green-700 text-sm rounded-xl px-4 py-3">
+        <div className="flex items-center gap-2 bg-green-50 border border-green-200 text-green-700 text-sm rounded-xl px-4 py-3">
+          <svg className="w-4 h-4 shrink-0" viewBox="0 0 16 16" fill="none"><path d="M3 8l3.5 3.5L13 4.5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
           {msg}
         </div>
       )}
       {err && (
-        <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3">
-          {err}
-        </div>
+        <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3">{err}</div>
       )}
 
-      {/* Plan status card */}
-      <div className="bg-white rounded-2xl p-6 border border-gray-200">
-        <div className="flex items-start justify-between gap-4 flex-wrap">
-          <div>
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Plan actual</p>
-            <div className="flex items-center gap-2.5 flex-wrap">
-              <span className={`text-xl font-bold ${isFree ? 'text-gray-700' : plan === 'pro' ? 'text-amber-600' : 'text-violet-700'}`}>
-                {isFree ? 'Free' : plan === 'pro' ? 'Pro' : 'Basic'}
-              </span>
-              {isTrialing && (
-                <span className="text-xs font-semibold bg-amber-100 text-amber-700 px-2.5 py-1 rounded-full">
-                  Trial activo
+      {/* ── FREE ── */}
+      {isFree && (
+        <>
+          {/* Current plan */}
+          <div className="bg-white rounded-2xl p-6 border border-gray-200">
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Plan actual</p>
+            <div className="flex items-center justify-between gap-4 flex-wrap">
+              <div>
+                <p className="text-2xl font-bold text-gray-800">Free</p>
+                <p className="text-sm text-gray-500 mt-0.5">Hasta {limit} reservas al mes · 2 turnos · 15 mesas</p>
+              </div>
+              <span className="text-xs font-semibold bg-gray-100 text-gray-500 px-3 py-1.5 rounded-full">Gratuito</span>
+            </div>
+
+            {/* Usage bar */}
+            <div className="mt-5">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-xs font-medium text-gray-600">Reservas este mes</p>
+                <span className={`text-xs font-bold ${nearLimit ? 'text-amber-600' : 'text-gray-600'}`}>
+                  {loading ? '…' : `${used} / ${limit}`}
                 </span>
-              )}
-              {isPastDue && (
-                <span className="text-xs font-semibold bg-red-100 text-red-600 px-2.5 py-1 rounded-full">
-                  Pago fallido
-                </span>
-              )}
-              {cancelAtPeriodEnd && (
-                <span className="text-xs font-semibold bg-orange-100 text-orange-700 px-2.5 py-1 rounded-full">
-                  Cancela el {fmt(currentPeriodEnd)}
-                </span>
+              </div>
+              <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all ${pct >= 100 ? 'bg-red-500' : nearLimit ? 'bg-amber-400' : 'bg-violet-500'}`}
+                  style={{ width: `${pct}%` }}
+                />
+              </div>
+              {nearLimit && (
+                <p className="text-xs text-amber-700 mt-1.5">
+                  {pct >= 100
+                    ? 'Límite alcanzado. Las nuevas reservas están bloqueadas.'
+                    : `Te quedan ${limit - used} reservas este mes.`}
+                </p>
               )}
             </div>
-            {isTrialing && trialEndsAt && (
-              <p className="text-sm text-gray-500 mt-1">
-                Tu prueba gratuita termina el <strong>{fmt(trialEndsAt)}</strong>
-              </p>
-            )}
-            {!isFree && !isTrialing && currentPeriodEnd && !cancelAtPeriodEnd && (
-              <p className="text-sm text-gray-500 mt-1">
-                Próxima factura el <strong>{fmt(currentPeriodEnd)}</strong>
-              </p>
-            )}
-            {isPastDue && (
-              <p className="text-sm text-red-600 mt-1">
-                El último pago ha fallado. Actualiza tu método de pago para no perder el acceso.
-              </p>
-            )}
           </div>
 
+          {/* Trial plan cards */}
           {isOwner && (
-            <div className="flex gap-2 flex-wrap">
-              {isFree && (
-                <button
-                  onClick={handleUpgrade}
-                  disabled={working}
-                  className="px-4 py-2 bg-violet-600 text-white text-sm font-semibold rounded-xl hover:bg-violet-700 disabled:opacity-50 transition-colors"
-                >
-                  {working ? 'Redirigiendo…' : 'Activar Basic · 14 días gratis'}
-                </button>
-              )}
-              {!isFree && (isPastDue || cancelAtPeriodEnd) && (
-                <button
-                  onClick={handlePortal}
-                  disabled={working}
-                  className="px-4 py-2 bg-violet-600 text-white text-sm font-semibold rounded-xl hover:bg-violet-700 disabled:opacity-50"
-                >
-                  Gestionar suscripción
-                </button>
-              )}
-              {!isFree && !cancelAtPeriodEnd && !isPastDue && (
-                <button
-                  onClick={handlePortal}
-                  disabled={working}
-                  className="px-4 py-2 bg-white text-gray-700 text-sm font-medium rounded-xl border border-gray-200 hover:bg-gray-50 disabled:opacity-50"
-                >
-                  Gestionar facturación
-                </button>
-              )}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+              {/* Basic trial card */}
+              <div className="bg-white rounded-2xl border-2 border-violet-200 overflow-hidden flex flex-col">
+                <div className="bg-gradient-to-r from-violet-600 to-violet-500 px-5 py-4 flex items-center justify-between">
+                  <div>
+                    <p className="text-white font-bold text-lg">Basic</p>
+                    <p className="text-violet-200 text-xs">Sin límites, sin complicaciones</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-white font-bold text-2xl">19€</p>
+                    <p className="text-violet-200 text-xs">/ mes</p>
+                  </div>
+                </div>
+                <div className="p-5 flex flex-col flex-1">
+                  <ul className="space-y-2 mb-5 flex-1">
+                    {BASIC_FEATURES.map(f => (
+                      <li key={f} className="flex items-start gap-2 text-sm text-gray-700">
+                        <CheckIcon />
+                        {f}
+                      </li>
+                    ))}
+                  </ul>
+                  <button
+                    onClick={() => handleUpgrade('basic')}
+                    disabled={working}
+                    className="w-full bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white font-semibold py-2.5 rounded-xl text-sm transition-colors"
+                  >
+                    {working ? 'Redirigiendo…' : 'Probar Basic gratis 14 días'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Pro trial card */}
+              <div className="bg-white rounded-2xl border-2 border-amber-300 overflow-hidden flex flex-col">
+                <div className="bg-gradient-to-r from-amber-500 to-orange-500 px-5 py-4 flex items-center justify-between">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <p className="text-white font-bold text-lg">Pro</p>
+                      <span className="text-xs font-semibold bg-white/20 text-white px-2 py-0.5 rounded-full">Recomendado</span>
+                    </div>
+                    <p className="text-amber-100 text-xs">Para restaurantes que quieren más</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-white font-bold text-2xl">39€</p>
+                    <p className="text-amber-100 text-xs">/ mes</p>
+                  </div>
+                </div>
+                <div className="p-5 flex flex-col flex-1">
+                  <p className="text-xs font-semibold text-gray-500 mb-2">Todo lo de Basic, más:</p>
+                  <ul className="space-y-2 mb-5 flex-1">
+                    {PRO_EXTRAS.map(f => (
+                      <li key={f} className="flex items-start gap-2 text-sm text-gray-700">
+                        <svg className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" viewBox="0 0 16 16" fill="none">
+                          <path d="M3 8l3.5 3.5L13 4.5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                        {f}
+                      </li>
+                    ))}
+                  </ul>
+                  <button
+                    onClick={() => handleUpgrade('pro')}
+                    disabled={working}
+                    className="w-full bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white font-semibold py-2.5 rounded-xl text-sm transition-colors"
+                  >
+                    {working ? 'Redirigiendo…' : 'Probar Pro gratis 14 días'}
+                  </button>
+                </div>
+              </div>
+
             </div>
           )}
-        </div>
-      </div>
-
-      {/* Monthly usage (free plan) */}
-      {isFree && (
-        <div className={`bg-white rounded-2xl p-6 border ${nearLimit ? 'border-amber-200' : 'border-gray-200'}`}>
-          <div className="flex items-center justify-between mb-3">
-            <div>
-              <p className="text-sm font-semibold text-gray-900">Reservas este mes</p>
-              <p className="text-xs text-gray-400 mt-0.5">Se reinicia el 1 de cada mes</p>
-            </div>
-            <span className={`text-sm font-bold ${nearLimit ? 'text-amber-600' : 'text-gray-700'}`}>
-              {loading ? '…' : `${used} / ${limit}`}
-            </span>
-          </div>
-          <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-            <div
-              className={`h-full rounded-full transition-all ${pct >= 100 ? 'bg-red-500' : nearLimit ? 'bg-amber-400' : 'bg-violet-500'}`}
-              style={{ width: `${pct}%` }}
-            />
-          </div>
-          {nearLimit && (
-            <p className="text-xs text-amber-700 mt-2">
-              {pct >= 100
-                ? 'Límite alcanzado. Las nuevas reservas están bloqueadas.'
-                : `Casi en el límite. Te quedan ${limit - used} reservas este mes.`}
-              {isOwner && (
-                <button onClick={handleUpgrade} disabled={working} className="ml-1.5 font-semibold underline hover:no-underline">
-                  Actualizar a Basic
-                </button>
-              )}
+          {isOwner && (
+            <p className="text-center text-xs text-gray-400">
+              Sin cargo durante 14 días · Cancela cuando quieras
             </p>
           )}
-        </div>
+        </>
       )}
 
-      {/* Cancel option */}
-      {isOwner && !isFree && !cancelAtPeriodEnd && (
-        <div className="bg-white rounded-2xl p-5 border border-gray-200">
-          <p className="text-sm font-semibold text-gray-900 mb-1">Cancelar suscripción</p>
-          <p className="text-xs text-gray-500 mb-3">
-            Seguirás teniendo acceso hasta el {fmt(currentPeriodEnd)}. Después se degradará automáticamente al plan Free.
-          </p>
-          <button
-            onClick={handleCancel}
-            disabled={working}
-            className="text-sm text-red-500 hover:text-red-600 font-medium disabled:opacity-50 underline hover:no-underline"
-          >
-            Cancelar suscripción
-          </button>
-        </div>
+      {/* ── BASIC (trialing or active) ── */}
+      {isBasic && (
+        <>
+          {/* Status banner */}
+          {isPastDue && (
+            <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+              <svg className="w-4 h-4 text-red-500 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 16 16"><path fillRule="evenodd" d="M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14Zm-.75-9.5a.75.75 0 0 1 1.5 0v3.5a.75.75 0 0 1-1.5 0V5.5Zm.75 6.5a.875.875 0 1 1 0-1.75.875.875 0 0 1 0 1.75Z" clipRule="evenodd"/></svg>
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-red-700">Pago fallido</p>
+                <p className="text-xs text-red-600 mt-0.5">Actualiza tu método de pago para no perder el acceso.</p>
+              </div>
+              {isOwner && (
+                <button onClick={handlePortal} disabled={working} className="text-xs font-semibold text-red-700 underline hover:no-underline shrink-0">
+                  Actualizar
+                </button>
+              )}
+            </div>
+          )}
+
+          {cancelAtPeriodEnd && (
+            <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+              <svg className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 16 16"><path fillRule="evenodd" d="M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14Zm-.75-9.5a.75.75 0 0 1 1.5 0v3.5a.75.75 0 0 1-1.5 0V5.5Zm.75 6.5a.875.875 0 1 1 0-1.75.875.875 0 0 1 0 1.75Z" clipRule="evenodd"/></svg>
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-amber-800">Suscripción cancelada</p>
+                <p className="text-xs text-amber-700 mt-0.5">
+                  Tienes acceso hasta el <strong>{fmt(currentPeriodEnd || trialEndsAt)}</strong>. Después pasarás al plan Free.
+                </p>
+              </div>
+              {isOwner && (
+                <button onClick={handleReactivate} disabled={working} className="text-xs font-semibold text-amber-800 underline hover:no-underline shrink-0">
+                  Reactivar
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Plan card */}
+          <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+            <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between gap-4 flex-wrap">
+              <div>
+                <div className="flex items-center gap-2.5 mb-1">
+                  <p className="text-xl font-bold text-violet-700">Basic</p>
+                  {isTrialing && (
+                    <span className="text-xs font-semibold bg-amber-100 text-amber-700 px-2.5 py-1 rounded-full">
+                      Prueba activa
+                    </span>
+                  )}
+                  {!isTrialing && !cancelAtPeriodEnd && !isPastDue && (
+                    <span className="text-xs font-semibold bg-violet-100 text-violet-700 px-2.5 py-1 rounded-full">
+                      Activo
+                    </span>
+                  )}
+                </div>
+                {isTrialing && trialEndsAt && (
+                  <p className="text-sm text-gray-500">
+                    Prueba gratuita · finaliza el <strong className="text-gray-700">{fmt(trialEndsAt)}</strong>
+                  </p>
+                )}
+                {!isTrialing && currentPeriodEnd && !cancelAtPeriodEnd && (
+                  <p className="text-sm text-gray-500">
+                    Próxima factura el <strong className="text-gray-700">{fmt(currentPeriodEnd)}</strong> · 19€/mes
+                  </p>
+                )}
+              </div>
+              {isOwner && !isPastDue && !cancelAtPeriodEnd && isTrialing && (
+                <button
+                  onClick={() => handleChangePlan('pro')}
+                  disabled={working}
+                  className="px-4 py-2 text-sm font-semibold text-white bg-amber-500 hover:bg-amber-600 disabled:opacity-50 rounded-xl transition-colors"
+                >
+                  {working ? '…' : 'Cambiar a Pro →'}
+                </button>
+              )}
+              {isOwner && !isPastDue && !cancelAtPeriodEnd && !isTrialing && (
+                <button
+                  onClick={handlePortal}
+                  disabled={working}
+                  className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-50 border border-gray-200 rounded-xl hover:bg-gray-100 disabled:opacity-50 transition-colors"
+                >
+                  {working ? '…' : 'Gestionar facturación'}
+                </button>
+              )}
+              {isOwner && (isPastDue || cancelAtPeriodEnd) && (
+                <button
+                  onClick={handlePortal}
+                  disabled={working}
+                  className="px-4 py-2 text-sm font-semibold text-white bg-violet-600 rounded-xl hover:bg-violet-700 disabled:opacity-50 transition-colors"
+                >
+                  {working ? '…' : 'Gestionar suscripción'}
+                </button>
+              )}
+            </div>
+
+            <div className="px-6 py-5">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Incluido en tu plan</p>
+              <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
+                {BASIC_FEATURES.map(f => (
+                  <li key={f} className="flex items-start gap-2 text-sm text-gray-600">
+                    <CheckIcon />
+                    {f}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+
+          {/* Cancel (subtle, only when active and not already cancelled) */}
+          {isOwner && !cancelAtPeriodEnd && !isPastDue && (
+            <div className="flex items-center justify-between px-1">
+              <p className="text-xs text-gray-400">
+                {isTrialing
+                  ? 'Puedes cancelar antes de que termine la prueba y no se te cobrará nada.'
+                  : 'Seguirás teniendo acceso hasta el final del período si cancelas.'}
+              </p>
+              <button
+                onClick={handleCancel}
+                disabled={working}
+                className="text-xs text-gray-400 hover:text-red-500 font-medium disabled:opacity-50 underline hover:no-underline shrink-0 ml-4 transition-colors"
+              >
+                Cancelar
+              </button>
+            </div>
+          )}
+
+          {/* Pro upgrade card (only when active/trialing basic, no issues) */}
+          {isOwner && !isPastDue && !cancelAtPeriodEnd && (
+            <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl border border-amber-200 overflow-hidden">
+              <div className="px-6 py-5 border-b border-amber-100 flex items-center justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <p className="text-base font-bold text-amber-700">Pro</p>
+                    <span className="text-xs font-semibold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">39€/mes</span>
+                  </div>
+                  <p className="text-xs text-amber-600">
+                    {isTrialing
+                      ? 'Cambia a Pro ahora — tu prueba de 14 días continúa'
+                      : 'Para restaurantes que quieren más control'}
+                  </p>
+                </div>
+                <button
+                  onClick={() => handleChangePlan('pro')}
+                  disabled={working}
+                  className="px-4 py-2 text-sm font-semibold text-white bg-amber-500 hover:bg-amber-600 disabled:opacity-50 rounded-xl transition-colors shrink-0"
+                >
+                  {working ? '…' : isTrialing ? 'Cambiar a Pro' : 'Subir a Pro'}
+                </button>
+              </div>
+              <div className="px-6 py-4">
+                <p className="text-xs font-semibold text-amber-700 mb-2.5">Todo lo de Basic, más:</p>
+                <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1.5">
+                  {PRO_EXTRAS.map(f => (
+                    <li key={f} className="flex items-start gap-2 text-xs text-amber-800">
+                      <svg className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" viewBox="0 0 16 16" fill="none">
+                        <path d="M3 8l3.5 3.5L13 4.5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                      {f}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* ── PRO ── */}
+      {isPro && (
+        <>
+          {isPastDue && (
+            <div className="flex items-start gap-3 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+              <svg className="w-4 h-4 text-red-500 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 16 16"><path fillRule="evenodd" d="M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14Zm-.75-9.5a.75.75 0 0 1 1.5 0v3.5a.75.75 0 0 1-1.5 0V5.5Zm.75 6.5a.875.875 0 1 1 0-1.75.875.875 0 0 1 0 1.75Z" clipRule="evenodd"/></svg>
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-red-700">Pago fallido</p>
+                <p className="text-xs text-red-600 mt-0.5">Actualiza tu método de pago para no perder el acceso.</p>
+              </div>
+              {isOwner && (
+                <button onClick={handlePortal} disabled={working} className="text-xs font-semibold text-red-700 underline hover:no-underline shrink-0">
+                  Actualizar
+                </button>
+              )}
+            </div>
+          )}
+
+          {cancelAtPeriodEnd && (
+            <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+              <svg className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 16 16"><path fillRule="evenodd" d="M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14Zm-.75-9.5a.75.75 0 0 1 1.5 0v3.5a.75.75 0 0 1-1.5 0V5.5Zm.75 6.5a.875.875 0 1 1 0-1.75.875.875 0 0 1 0 1.75Z" clipRule="evenodd"/></svg>
+              <div className="flex-1">
+                <p className="text-sm font-semibold text-amber-800">Suscripción cancelada</p>
+                <p className="text-xs text-amber-700 mt-0.5">
+                  Tienes acceso hasta el <strong>{fmt(currentPeriodEnd || trialEndsAt)}</strong>. Después pasarás al plan Free.
+                </p>
+              </div>
+              {isOwner && (
+                <button onClick={handleReactivate} disabled={working} className="text-xs font-semibold text-amber-800 underline hover:no-underline shrink-0">
+                  Reactivar
+                </button>
+              )}
+            </div>
+          )}
+
+          <div className="bg-white rounded-2xl border border-amber-200 overflow-hidden">
+            <div className="px-6 py-5 border-b border-amber-100 flex items-center justify-between gap-4 flex-wrap">
+              <div>
+                <div className="flex items-center gap-2.5 mb-1">
+                  <p className="text-xl font-bold text-amber-600">Pro</p>
+                  {isTrialing && (
+                    <span className="text-xs font-semibold bg-amber-100 text-amber-700 px-2.5 py-1 rounded-full">Prueba activa</span>
+                  )}
+                  {!isTrialing && !cancelAtPeriodEnd && !isPastDue && (
+                    <span className="text-xs font-semibold bg-amber-100 text-amber-700 px-2.5 py-1 rounded-full">Activo</span>
+                  )}
+                </div>
+                {isTrialing && trialEndsAt && (
+                  <p className="text-sm text-gray-500">Prueba gratuita · finaliza el <strong className="text-gray-700">{fmt(trialEndsAt)}</strong></p>
+                )}
+                {!isTrialing && currentPeriodEnd && !cancelAtPeriodEnd && (
+                  <p className="text-sm text-gray-500">Próxima factura el <strong className="text-gray-700">{fmt(currentPeriodEnd)}</strong> · 39€/mes</p>
+                )}
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                {isOwner && !isPastDue && !cancelAtPeriodEnd && isTrialing && (
+                  <button
+                    onClick={() => handleChangePlan('basic')}
+                    disabled={working}
+                    className="px-3 py-2 text-xs font-medium text-gray-600 bg-gray-50 border border-gray-200 rounded-xl hover:bg-gray-100 disabled:opacity-50 transition-colors"
+                  >
+                    {working ? '…' : 'Cambiar a Basic'}
+                  </button>
+                )}
+                {isOwner && (
+                  <button
+                    onClick={handlePortal}
+                    disabled={working}
+                    className="px-4 py-2 text-sm font-medium text-gray-600 bg-gray-50 border border-gray-200 rounded-xl hover:bg-gray-100 disabled:opacity-50 transition-colors"
+                  >
+                    {working ? '…' : 'Gestionar facturación'}
+                  </button>
+                )}
+              </div>
+            </div>
+            <div className="px-6 py-5">
+              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Incluido en tu plan</p>
+              <ul className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2">
+                {[...BASIC_FEATURES, ...PRO_EXTRAS].map(f => (
+                  <li key={f} className="flex items-start gap-2 text-sm text-gray-600">
+                    <CheckIcon />
+                    {f}
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+
+          {isOwner && !cancelAtPeriodEnd && !isPastDue && (
+            <div className="flex items-center justify-between px-1">
+              <p className="text-xs text-gray-400">
+                {isTrialing
+                  ? 'Puedes cancelar antes de que termine la prueba y no se te cobrará nada.'
+                  : 'Seguirás teniendo acceso hasta el final del período si cancelas.'}
+              </p>
+              <div className="flex items-center gap-3 shrink-0 ml-4">
+                {!isTrialing && (
+                  <button
+                    onClick={() => setShowDowngradeModal(true)}
+                    disabled={working}
+                    className="text-xs text-gray-400 hover:text-gray-600 font-medium disabled:opacity-50 underline hover:no-underline transition-colors"
+                  >
+                    Bajar a Basic
+                  </button>
+                )}
+                <button
+                  onClick={handleCancel}
+                  disabled={working}
+                  className="text-xs text-gray-400 hover:text-red-500 font-medium disabled:opacity-50 underline hover:no-underline transition-colors"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* ── Modal confirmación downgrade Pro → Basic ── */}
+      {showDowngradeModal && (
+        <Modal
+          title="¿Bajar a Basic?"
+          subtitle="Esta acción cambia tu plan inmediatamente"
+          onClose={() => setShowDowngradeModal(false)}
+          size="sm"
+        >
+          <div className="space-y-4">
+            <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+              <p className="text-sm font-semibold text-amber-800 mb-1">Perderás acceso a funciones Pro</p>
+              <ul className="space-y-1">
+                {PRO_EXTRAS.map(f => (
+                  <li key={f} className="flex items-center gap-2 text-xs text-amber-700">
+                    <svg className="w-3 h-3 shrink-0 text-amber-400" viewBox="0 0 16 16" fill="currentColor">
+                      <path d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z"/>
+                    </svg>
+                    {f}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <p className="text-xs text-gray-500">
+              El cambio a Basic es inmediato. No se realiza ningún reembolso por el tiempo restante del ciclo Pro.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setShowDowngradeModal(false)}
+                className="flex-1 px-4 py-2.5 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => { setShowDowngradeModal(false); handleChangePlan('basic'); }}
+                disabled={working}
+                className="flex-1 px-4 py-2.5 text-sm font-semibold text-white bg-gray-700 hover:bg-gray-800 disabled:opacity-50 rounded-xl transition-colors"
+              >
+                {working ? '…' : 'Sí, bajar a Basic'}
+              </button>
+            </div>
+          </div>
+        </Modal>
       )}
     </div>
   );
@@ -2010,14 +2408,14 @@ function PagosSection() {
         </svg>
       </div>
       <div>
-        <p className="text-sm font-semibold text-gray-900">Función disponible en el plan Pro</p>
-        <p className="text-xs text-gray-500 mt-1">Los depósitos y garantías con tarjeta requieren el plan Pro.</p>
+        <p className="text-sm font-semibold text-gray-900">Disponible en el plan Basic</p>
+        <p className="text-xs text-gray-500 mt-1">Los depósitos y garantías con tarjeta requieren el plan Basic.</p>
       </div>
       <button
         onClick={() => window.location.search = '?tab=suscripcion'}
         className="inline-flex items-center gap-1.5 text-xs font-semibold px-4 py-2 rounded-xl bg-violet-600 text-white hover:bg-violet-700 transition-colors"
       >
-        Ver planes
+        Ver plan Basic
       </button>
     </div>
   );

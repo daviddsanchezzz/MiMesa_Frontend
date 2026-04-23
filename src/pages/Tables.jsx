@@ -1,5 +1,7 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import api from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import FloorPlan from '../components/FloorPlan';
 import Modal from '../components/Modal';
 
@@ -20,16 +22,18 @@ function buildPreview(ranges) {
 }
 
 export default function Tables() {
+  const { planLimit } = useAuth();
+  const limit = planLimit('maxTables'); // Infinity on Basic/Pro, 15 on Free
+
   const [tables,  setTables]  = useState([]);
   const [rooms,   setRooms]   = useState([]);
   const [modal,   setModal]   = useState(null);
   const [form,    setForm]    = useState({ name: '', capacity: 2, roomId: '' });
   const [error,   setError]   = useState('');
 
-  // Quick creator state
-  const [quickOpen,   setQuickOpen]   = useState(false);
-  const [ranges,      setRanges]      = useState([emptyRange()]);
-  const [quickError,  setQuickError]  = useState('');
+  const [quickOpen,    setQuickOpen]    = useState(false);
+  const [ranges,       setRanges]       = useState([emptyRange()]);
+  const [quickError,   setQuickError]   = useState('');
   const [quickLoading, setQuickLoading] = useState(false);
 
   const updateRange = (i, field, value) =>
@@ -39,30 +43,9 @@ export default function Tables() {
 
   const preview = buildPreview(ranges);
 
-  const handleQuickCreate = async () => {
-    setQuickError('');
-    if (preview.length === 0) { setQuickError('Define al menos un rango válido'); return; }
-    if (preview.length > 200) { setQuickError('Máximo 200 mesas por operación'); return; }
-    const tables = [];
-    for (const r of ranges) {
-      const from = Number(r.from), to = Number(r.to);
-      if (!from || !to || from > to) continue;
-      for (let i = from; i <= to; i++) {
-        tables.push({ name: `${r.prefix}${i}`, capacity: Number(r.capacity) || 2, roomId: r.roomId || null });
-      }
-    }
-    try {
-      setQuickLoading(true);
-      await api.post('/tables/bulk', { tables });
-      await load();
-      setQuickOpen(false);
-      setRanges([emptyRange()]);
-    } catch (err) {
-      setQuickError(err.response?.data?.message || 'Error al crear mesas');
-    } finally {
-      setQuickLoading(false);
-    }
-  };
+  const activeTables = tables.filter(t => !t.isLocked);
+  const lockedTables = tables.filter(t => t.isLocked);
+  const atLimit      = limit !== Infinity && activeTables.length >= limit;
 
   const load = async () => {
     const [t, r] = await Promise.all([api.get('/tables'), api.get('/rooms')]);
@@ -93,20 +76,49 @@ export default function Tables() {
     await api.put(`/tables/${id}`, { status }); load();
   };
 
+  const handleQuickCreate = async () => {
+    setQuickError('');
+    if (preview.length === 0) { setQuickError('Define al menos un rango válido'); return; }
+    if (preview.length > 200) { setQuickError('Máximo 200 mesas por operación'); return; }
+    const tables = [];
+    for (const r of ranges) {
+      const from = Number(r.from), to = Number(r.to);
+      if (!from || !to || from > to) continue;
+      for (let i = from; i <= to; i++) {
+        tables.push({ name: `${r.prefix}${i}`, capacity: Number(r.capacity) || 2, roomId: r.roomId || null });
+      }
+    }
+    try {
+      setQuickLoading(true);
+      await api.post('/tables/bulk', { tables });
+      await load();
+      setQuickOpen(false);
+      setRanges([emptyRange()]);
+    } catch (err) {
+      setQuickError(err.response?.data?.message || 'Error al crear mesas');
+    } finally {
+      setQuickLoading(false);
+    }
+  };
+
   return (
     <div className="h-full flex flex-col">
-      {/* Slim header */}
+      {/* Header */}
       <div className="flex items-center justify-between px-6 py-3 bg-white border-b border-gray-200 shrink-0">
         <div>
           <h2 className="text-lg font-bold text-gray-900">Mesas</h2>
           <p className="text-xs text-gray-400 mt-0.5">
-            {tables.length} mesa{tables.length !== 1 ? 's' : ''} · {rooms.length} sala{rooms.length !== 1 ? 's' : ''}
+            {activeTables.length}{limit !== Infinity ? ` / ${limit}` : ''} mesa{activeTables.length !== 1 ? 's' : ''} activa{activeTables.length !== 1 ? 's' : ''}
+            {lockedTables.length > 0 && <span className="text-amber-500 ml-1">· {lockedTables.length} bloqueada{lockedTables.length !== 1 ? 's' : ''}</span>}
+            {' · '}{rooms.length} sala{rooms.length !== 1 ? 's' : ''}
           </p>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={() => { setRanges([emptyRange()]); setQuickError(''); setQuickOpen(true); }}
-            className="flex items-center gap-1.5 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-3.5 py-2 rounded-xl text-sm font-semibold transition-colors"
+            disabled={atLimit}
+            title={atLimit ? `Límite de ${limit} mesas alcanzado` : undefined}
+            className="flex items-center gap-1.5 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-3.5 py-2 rounded-xl text-sm font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 text-violet-500">
               <path d="M2 2.75A.75.75 0 0 1 2.75 2h10.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 2.75ZM2 8a.75.75 0 0 1 .75-.75h10.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 8Zm0 5.25a.75.75 0 0 1 .75-.75h4.5a.75.75 0 0 1 0 1.5h-4.5a.75.75 0 0 1-.75-.75Z" />
@@ -115,7 +127,9 @@ export default function Tables() {
           </button>
           <button
             onClick={openCreate}
-            className="flex items-center gap-1.5 bg-violet-600 hover:bg-violet-700 text-white px-3.5 py-2 rounded-xl text-sm font-semibold transition-colors shadow-sm"
+            disabled={atLimit}
+            title={atLimit ? `Límite de ${limit} mesas alcanzado` : undefined}
+            className="flex items-center gap-1.5 bg-violet-600 hover:bg-violet-700 text-white px-3.5 py-2 rounded-xl text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
           >
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
               <path d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z" />
@@ -125,16 +139,66 @@ export default function Tables() {
         </div>
       </div>
 
-      {/* Full-height floor plan */}
+      {/* Upgrade banner when at limit */}
+      {atLimit && (
+        <div className="mx-6 mt-3 flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 shrink-0">
+          <svg className="w-4 h-4 text-amber-500 shrink-0" fill="currentColor" viewBox="0 0 16 16">
+            <path fillRule="evenodd" d="M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14Zm-.75-9.5a.75.75 0 0 1 1.5 0v3.5a.75.75 0 0 1-1.5 0V5.5Zm.75 6.5a.875.875 0 1 1 0-1.75.875.875 0 0 1 0 1.75Z" clipRule="evenodd" />
+          </svg>
+          <p className="text-sm text-amber-800 flex-1">
+            Has llegado al límite de <strong>{limit} mesas</strong> del plan Free.
+            {lockedTables.length > 0 && <> {lockedTables.length} mesa{lockedTables.length !== 1 ? 's' : ''} están bloqueadas y no se usan en las reservas.</>}
+          </p>
+          <Link to="/configuracion?tab=suscripcion" className="text-xs font-semibold text-amber-700 underline hover:no-underline shrink-0">
+            Actualiza tu plan
+          </Link>
+        </div>
+      )}
+
+      {/* Floor plan — only active tables */}
       <div className="flex-1 overflow-hidden">
         <FloorPlan
-          tables={tables}
+          tables={activeTables}
           rooms={rooms}
           onStatusChange={handleStatusChange}
           onRefresh={load}
           fullHeight={true}
         />
       </div>
+
+      {/* Locked tables section */}
+      {lockedTables.length > 0 && (
+        <div className="shrink-0 border-t border-gray-200 bg-gray-50 px-6 py-4">
+          <div className="flex items-center gap-2 mb-3">
+            <svg className="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 16 16">
+              <path fillRule="evenodd" d="M8 1a3.5 3.5 0 0 0-3.5 3.5V7A1.5 1.5 0 0 0 3 8.5v5A1.5 1.5 0 0 0 4.5 15h7a1.5 1.5 0 0 0 1.5-1.5v-5A1.5 1.5 0 0 0 11.5 7V4.5A3.5 3.5 0 0 0 8 1Zm-2 6V4.5a2 2 0 1 1 4 0V7H6Z" clipRule="evenodd" />
+            </svg>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
+              Mesas bloqueadas ({lockedTables.length}) — plan Free
+            </p>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {lockedTables.map(t => (
+              <div key={t._id} className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 py-2 opacity-60">
+                <svg className="w-3.5 h-3.5 text-gray-400 shrink-0" fill="currentColor" viewBox="0 0 16 16">
+                  <path fillRule="evenodd" d="M8 1a3.5 3.5 0 0 0-3.5 3.5V7A1.5 1.5 0 0 0 3 8.5v5A1.5 1.5 0 0 0 4.5 15h7a1.5 1.5 0 0 0 1.5-1.5v-5A1.5 1.5 0 0 0 11.5 7V4.5A3.5 3.5 0 0 0 8 1Zm-2 6V4.5a2 2 0 1 1 4 0V7H6Z" clipRule="evenodd" />
+                </svg>
+                <span className="text-xs text-gray-600 font-medium">{t.name}</span>
+                <span className="text-xs text-gray-400">{t.capacity} px</span>
+                <button
+                  onClick={() => handleDelete(t._id)}
+                  className="ml-1 text-gray-300 hover:text-red-400 transition-colors"
+                  title="Eliminar"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
+                    <path d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z" />
+                  </svg>
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Quick creator modal */}
       {quickOpen && (
@@ -196,7 +260,6 @@ export default function Tables() {
             + Añadir otro rango
           </button>
 
-          {/* Preview */}
           {preview.length > 0 && (
             <div className="mt-3 bg-violet-50 border border-violet-100 rounded-xl p-3">
               <p className="text-xs font-semibold text-violet-700 mb-2">

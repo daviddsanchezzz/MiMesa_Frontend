@@ -2,7 +2,7 @@ import { createAuthClient } from 'better-auth/react';
 import { twoFactorClient } from 'better-auth/client/plugins';
 import { adminClient }     from 'better-auth/client/plugins';
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'https://api.tableo.app';
+const BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.DEV ? 'http://localhost:5000' : 'https://api.tableo.app');
 const TOKEN_KEY = 'ba_session_token';
 const IMPERSONATION_META_KEY = 'ba_impersonation_meta';
 const IMPERSONATION_ORIGINAL_TOKEN_KEY = 'ba_impersonation_original_token';

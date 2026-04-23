@@ -687,13 +687,16 @@ export default function Reservations() {
     let bottom = 0;
     let left = 0;
     let right = 0;
-    if (cap <= 2) { top = 1; bottom = 1; }
-    else if (cap <= 4) { top = 2; bottom = 2; }
+    if (cap <= 2) {
+      // Horizontal tables with 2 pax look cleaner with chairs on the sides.
+      left = 1;
+      right = 1;
+    } else if (cap <= 4) { top = 2; bottom = 2; }
     else if (cap <= 6) { top = 2; bottom = 2; left = 1; right = 1; }
     else if (cap <= 8) { top = 3; bottom = 3; left = 1; right = 1; }
     else { top = 4; bottom = 4; left = Math.ceil((cap - 8) / 2); right = Math.floor((cap - 8) / 2); }
 
-    if (shape === 'rect' && normalizeAngle(angle) === 90) {
+    if ((shape === 'rect' || shape === 'square') && normalizeAngle(angle) === 90) {
       [top, left] = [left, top];
       [bottom, right] = [right, bottom];
     }

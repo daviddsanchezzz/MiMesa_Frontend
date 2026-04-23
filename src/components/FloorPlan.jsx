@@ -267,19 +267,23 @@ function autoArrange(tables) {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 export default function FloorPlan({ tables, rooms, onStatusChange, onRefresh, editOnly = false, showStatus = true }) {
-  const viewportRef       = useRef(null);
-  const dragRef           = useRef(null);   // table drag state
-  const panDragRef        = useRef(null);   // canvas pan state
-  const posRef            = useRef({});
-  const lastMovedRef      = useRef(false);  // was last pointer-up a drag?
-  const snapshotRef       = useRef({});     // positions snapshot when entering edit mode
+  const viewportRef  = useRef(null);
+  const dragRef      = useRef(null);
+  const panDragRef   = useRef(null);
+  const posRef       = useRef({});
+  const lastMovedRef = useRef(false);
+  const snapshotRef  = useRef({});
+  // Keep pan/scale in refs so pointer handlers never go stale
+  const panRef       = useRef({ x: 40, y: 40 });
+  const scaleRef     = useRef(0.75);
+  const editModeRef  = useRef(editOnly);
 
   const [positions,    _setPositions]  = useState({});
   const [activeId,     setActiveId]    = useState(null);
   const [draggingId,   setDraggingId]  = useState(null);
-  const [editMode,     setEditMode]    = useState(editOnly);
-  const [pan,          setPan]         = useState({ x: 40, y: 40 });
-  const [scale,        setScale]       = useState(0.75);
+  const [editMode,     _setEditMode]   = useState(editOnly);
+  const [pan,          _setPan]        = useState({ x: 40, y: 40 });
+  const [scale,        _setScale]      = useState(0.75);
   const [roomFilter,   setRoomFilter]  = useState(null);
   const [editingTable, setEditingTable] = useState(null);
   const [editForm,     setEditForm]    = useState({ name: '', capacity: 2 });
@@ -287,7 +291,22 @@ export default function FloorPlan({ tables, rooms, onStatusChange, onRefresh, ed
   const [editError,    setEditError]   = useState('');
   const [saving,       setSaving]      = useState(false);
 
-  // Sync posRef
+  // Setters that keep refs in sync
+  const setPan = useCallback((v) => {
+    const next = typeof v === 'function' ? v(panRef.current) : v;
+    panRef.current = next;
+    _setPan(next);
+  }, []);
+  const setScale = useCallback((v) => {
+    const next = typeof v === 'function' ? v(scaleRef.current) : v;
+    scaleRef.current = next;
+    _setScale(next);
+  }, []);
+  const setEditMode = useCallback((v) => {
+    const next = typeof v === 'function' ? v(editModeRef.current) : v;
+    editModeRef.current = next;
+    _setEditMode(next);
+  }, []);
   const setPositions = useCallback((updater) => {
     _setPositions(prev => {
       const next = typeof updater === 'function' ? updater(prev) : updater;
@@ -319,29 +338,29 @@ export default function FloorPlan({ tables, rooms, onStatusChange, onRefresh, ed
   const hasPos   = withPos.filter(t => t.x !== null);
   const arranged = [...hasPos, ...(noPos.length ? autoArrange(noPos) : [])];
 
-  // ── Coordinate helpers ─────────────────────────────────────────────────────
+  // ── Coordinate helpers — reads from refs, never stale ─────────────────────
   const toWorld = useCallback((clientX, clientY) => {
-    const rect = viewportRef.current.getBoundingClientRect();
-    return { x: (clientX - rect.left - pan.x) / scale, y: (clientY - rect.top - pan.y) / scale };
-  }, [pan, scale]);
+    const el = viewportRef.current;
+    if (!el) return { x: 0, y: 0 };
+    const rect = el.getBoundingClientRect();
+    const p = panRef.current, s = scaleRef.current;
+    return { x: (clientX - rect.left - p.x) / s, y: (clientY - rect.top - p.y) / s };
+  }, []); // stable forever
 
   // ── Zoom ──────────────────────────────────────────────────────────────────
   const zoom = useCallback((factor, cx, cy) => {
-    setScale(prev => {
-      const next = clamp(prev * factor, MIN_ZOOM, MAX_ZOOM);
-      if (cx != null && cy != null) {
-        const rect = viewportRef.current?.getBoundingClientRect();
-        if (rect) {
-          const mx = cx - rect.left, my = cy - rect.top;
-          setPan(p => ({
-            x: mx - (mx - p.x) * (next / prev),
-            y: my - (my - p.y) * (next / prev),
-          }));
-        }
+    const prev = scaleRef.current;
+    const next = clamp(prev * factor, MIN_ZOOM, MAX_ZOOM);
+    if (cx != null && cy != null) {
+      const rect = viewportRef.current?.getBoundingClientRect();
+      if (rect) {
+        const mx = cx - rect.left, my = cy - rect.top;
+        const p = panRef.current;
+        setPan({ x: mx - (mx - p.x) * (next / prev), y: my - (my - p.y) * (next / prev) });
       }
-      return next;
-    });
-  }, []);
+    }
+    setScale(next);
+  }, [setPan, setScale]);
 
   const fitToScreen = useCallback(() => {
     if (!viewportRef.current || arranged.length === 0) return;
@@ -355,7 +374,7 @@ export default function FloorPlan({ tables, rooms, onStatusChange, onRefresh, ed
       maxX = Math.max(maxX, t.x + w + bleed);
       maxY = Math.max(maxY, t.y + h + bleed);
     }
-    const pad     = 40;
+    const pad = 40;
     const newScale = clamp(
       Math.min((rect.width - pad * 2) / (maxX - minX), (rect.height - pad * 2) / (maxY - minY)),
       MIN_ZOOM, MAX_ZOOM
@@ -365,7 +384,7 @@ export default function FloorPlan({ tables, rooms, onStatusChange, onRefresh, ed
       x: (rect.width  - (maxX - minX) * newScale) / 2 - minX * newScale,
       y: (rect.height - (maxY - minY) * newScale) / 2 - minY * newScale,
     });
-  }, [arranged]);
+  }, [arranged, setPan, setScale]);
 
   // Fit on load / room change
   useEffect(() => {
@@ -382,26 +401,21 @@ export default function FloorPlan({ tables, rooms, onStatusChange, onRefresh, ed
     return () => el.removeEventListener('wheel', onWheel);
   }, [zoom]);
 
-  // ── Table drag (edit mode) ──────────────────────────────────────────────────
+  // ── Table drag — all handlers are stable (no stale closures) ──────────────
   const onTablePointerDown = useCallback((e, table) => {
-    if (!editMode || e.button !== 0) return;
+    if (!editModeRef.current || e.button !== 0) return;
     e.preventDefault(); e.stopPropagation();
-    const pos = getPos(table) || { x: 0, y: 0 };
+    const pos = posRef.current[table._id] ?? (table.x != null ? { x: table.x, y: table.y } : { x: 0, y: 0 });
     const worldCursor = toWorld(e.clientX, e.clientY);
-    dragRef.current = {
-      id:      table._id,
-      offX:    worldCursor.x - pos.x,
-      offY:    worldCursor.y - pos.y,
-      moved:   false,
-    };
-    viewportRef.current.setPointerCapture(e.pointerId);
+    dragRef.current = { id: table._id, offX: worldCursor.x - pos.x, offY: worldCursor.y - pos.y, moved: false };
+    viewportRef.current?.setPointerCapture(e.pointerId);
     setDraggingId(table._id);
     setActiveId(null);
-  }, [editMode, getPos, toWorld]);
+  }, [toWorld]); // toWorld is stable
 
   const onTableClick = useCallback((e, table) => {
     e.stopPropagation();
-    if (editMode) {
+    if (!showStatus) {
       if (!lastMovedRef.current) {
         setEditingTable(table);
         setEditForm({ name: table.name, capacity: table.capacity });
@@ -409,32 +423,34 @@ export default function FloorPlan({ tables, rooms, onStatusChange, onRefresh, ed
       }
       return;
     }
+    if (editModeRef.current) return;
     setActiveId(prev => prev === table._id ? null : table._id);
-  }, [editMode]);
+  }, [showStatus]);
 
-  // ── Canvas pointer events ──────────────────────────────────────────────────
+  // ── Canvas pointer events — all stable ────────────────────────────────────
   const onCanvasPointerDown = useCallback((e) => {
     if (e.button !== 0) return;
-    if (dragRef.current) return; // table drag in progress
-    panDragRef.current = { startX: e.clientX - pan.x, startY: e.clientY - pan.y };
+    if (dragRef.current) return;
+    const p = panRef.current;
+    panDragRef.current = { startX: e.clientX - p.x, startY: e.clientY - p.y };
     setActiveId(null);
-  }, [pan]);
+  }, []);
 
   const onCanvasPointerMove = useCallback((e) => {
-    // Table drag
-    if (dragRef.current) {
+    const dr = dragRef.current;
+    if (dr) {
       const world = toWorld(e.clientX, e.clientY);
-      const x = snap(clamp(world.x - dragRef.current.offX, 0, WORLD_W - 200));
-      const y = snap(clamp(world.y - dragRef.current.offY, 0, WORLD_H - 200));
-      setPositions(p => ({ ...p, [dragRef.current.id]: { x, y } }));
-      dragRef.current.moved = true;
+      const id = dr.id; // capture before any async work
+      const x = snap(clamp(world.x - dr.offX, 0, WORLD_W - 200));
+      const y = snap(clamp(world.y - dr.offY, 0, WORLD_H - 200));
+      setPositions(p => ({ ...p, [id]: { x, y } }));
+      dr.moved = true;
       return;
     }
-    // Pan
     if (panDragRef.current) {
       setPan({ x: e.clientX - panDragRef.current.startX, y: e.clientY - panDragRef.current.startY });
     }
-  }, [toWorld, setPositions]);
+  }, [toWorld, setPositions, setPan]);
 
   const onCanvasPointerUp = useCallback(() => {
     if (dragRef.current) {
@@ -654,7 +670,7 @@ export default function FloorPlan({ tables, rooms, onStatusChange, onRefresh, ed
         })()}
 
         {/* ── Table edit panel ────────────────────────────────────────────── */}
-        {editMode && editingTable && (
+        {editingTable && (
           <div
             className="absolute top-4 right-4 w-64 bg-white rounded-2xl border border-gray-200 shadow-xl overflow-hidden"
             onPointerDown={e => e.stopPropagation()}

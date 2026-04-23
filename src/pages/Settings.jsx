@@ -388,7 +388,6 @@ function MesasSection() {
             rooms={rooms}
             onStatusChange={handleStatusChange}
             onRefresh={load}
-            editOnly={true}
           />
         </div>
       )}

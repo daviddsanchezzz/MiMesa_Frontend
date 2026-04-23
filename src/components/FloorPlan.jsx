@@ -265,11 +265,12 @@ function autoArrange(tables) {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 export default function FloorPlan({ tables, rooms, onStatusChange, onRefresh, editOnly = false }) {
-  const viewportRef  = useRef(null);
-  const dragRef      = useRef(null);   // table drag state
-  const panDragRef   = useRef(null);   // canvas pan state
-  const posRef       = useRef({});
-  const lastMovedRef = useRef(false);  // was last pointer-up a drag?
+  const viewportRef       = useRef(null);
+  const dragRef           = useRef(null);   // table drag state
+  const panDragRef        = useRef(null);   // canvas pan state
+  const posRef            = useRef({});
+  const lastMovedRef      = useRef(false);  // was last pointer-up a drag?
+  const snapshotRef       = useRef({});     // positions snapshot when entering edit mode
 
   const [positions,    _setPositions]  = useState({});
   const [activeId,     setActiveId]    = useState(null);
@@ -277,11 +278,12 @@ export default function FloorPlan({ tables, rooms, onStatusChange, onRefresh, ed
   const [editMode,     setEditMode]    = useState(editOnly);
   const [pan,          setPan]         = useState({ x: 40, y: 40 });
   const [scale,        setScale]       = useState(0.75);
-  const [roomFilter,   setRoomFilter]  = useState(null); // null = first room
-  const [editingTable, setEditingTable] = useState(null); // table open in edit panel
+  const [roomFilter,   setRoomFilter]  = useState(null);
+  const [editingTable, setEditingTable] = useState(null);
   const [editForm,     setEditForm]    = useState({ name: '', capacity: 2 });
   const [editSaving,   setEditSaving]  = useState(false);
   const [editError,    setEditError]   = useState('');
+  const [saving,       setSaving]      = useState(false);
 
   // Sync posRef
   const setPositions = useCallback((updater) => {
@@ -432,32 +434,58 @@ export default function FloorPlan({ tables, rooms, onStatusChange, onRefresh, ed
     }
   }, [toWorld, setPositions]);
 
-  const onCanvasPointerUp = useCallback(async () => {
+  const onCanvasPointerUp = useCallback(() => {
     if (dragRef.current) {
-      const { id, moved } = dragRef.current;
+      const { moved } = dragRef.current;
       lastMovedRef.current = moved;
       dragRef.current = null;
       setDraggingId(null);
-      if (moved) {
-        const pos = posRef.current[id];
-        if (pos) api.put(`/tables/${id}`, pos).catch(() => {});
-      }
+      // positions are stored locally — saved only when user clicks "Guardar"
     } else {
       lastMovedRef.current = false;
     }
     panDragRef.current = null;
   }, []);
 
-  // ── Auto-arrange ───────────────────────────────────────────────────────────
-  const handleAutoArrange = async () => {
+  // ── Enter / exit edit mode ─────────────────────────────────────────────────
+  const enterEditMode = () => {
+    snapshotRef.current = { ...posRef.current };
+    setEditMode(true);
+    setActiveId(null);
+  };
+
+  const cancelEditMode = () => {
+    setPositions(snapshotRef.current);
+    setEditMode(false);
+    setEditingTable(null);
+    setActiveId(null);
+  };
+
+  // ── Save all positions at once ─────────────────────────────────────────────
+  const saveAllPositions = async () => {
+    setSaving(true);
+    try {
+      const toSave = arranged.filter(t => posRef.current[t._id]);
+      await Promise.all(toSave.map(t =>
+        api.put(`/tables/${t._id}`, posRef.current[t._id]).catch(() => {})
+      ));
+      onRefresh?.();
+      if (!editOnly) setEditMode(false);
+      setEditingTable(null);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // ── Auto-arrange (local only, saved with "Guardar") ────────────────────────
+  const handleAutoArrange = () => {
     const rearranged = autoArrange(filtered);
     const newPos = Object.fromEntries(rearranged.map(t => [t._id, { x: t.x, y: t.y }]));
     setPositions(p => ({ ...p, ...newPos }));
-    await Promise.all(rearranged.map(t => api.put(`/tables/${t._id}`, { x: t.x, y: t.y }).catch(() => {})));
-    onRefresh?.();
     setTimeout(fitToScreen, 100);
   };
 
+  // ── Table property edit (name / capacity) ──────────────────────────────────
   const handleEditSave = async () => {
     if (!editForm.name.trim()) { setEditError('El nombre es obligatorio'); return; }
     const cap = Number(editForm.capacity);
@@ -474,7 +502,7 @@ export default function FloorPlan({ tables, rooms, onStatusChange, onRefresh, ed
     }
   };
 
-  const changeRoom = (id) => { setRoomFilter(id); setActiveId(null); setEditMode(editOnly); setEditingTable(null); };
+  const changeRoom = (id) => { setRoomFilter(id); setActiveId(null); setEditingTable(null); if (!editOnly) setEditMode(false); };
 
   const roomTabs = [
     ...rooms.map(r => ({ id: r._id, label: r.name, count: tables.filter(t => t.roomId?._id === r._id || t.roomId === r._id).length })),
@@ -510,26 +538,41 @@ export default function FloorPlan({ tables, rooms, onStatusChange, onRefresh, ed
 
         {/* Right actions */}
         <div className="flex items-center gap-1.5 shrink-0">
-          {editMode && (
-            <button onClick={handleAutoArrange}
-              className="flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-violet-600 px-3 py-1.5 rounded-lg hover:bg-violet-50 border border-gray-200 hover:border-violet-200 transition-all">
-              <svg viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
-                <path fillRule="evenodd" d="M3 3a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1V4a1 1 0 0 0-1-1H3Zm0 6a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1H3Zm6-6a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1V4a1 1 0 0 0-1-1H9Zm0 6a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1H9Z" clipRule="evenodd" />
-              </svg>
-              Auto-organizar
-            </button>
-          )}
-          {!editOnly && (
+          {editMode ? (
+            <>
+              <button onClick={handleAutoArrange}
+                className="flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-violet-600 px-3 py-1.5 rounded-lg hover:bg-violet-50 border border-gray-200 hover:border-violet-200 transition-all">
+                <svg viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
+                  <path fillRule="evenodd" d="M3 3a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1V4a1 1 0 0 0-1-1H3Zm0 6a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1H3Zm6-6a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1V4a1 1 0 0 0-1-1H9Zm0 6a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1H9Z" clipRule="evenodd" />
+                </svg>
+                Auto-organizar
+              </button>
+              {!editOnly && (
+                <button onClick={cancelEditMode}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 transition-all">
+                  Cancelar
+                </button>
+              )}
+              <button
+                onClick={saveAllPositions}
+                disabled={saving}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white transition-all"
+              >
+                <svg viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
+                  <path fillRule="evenodd" d="M12.416 3.376a.75.75 0 0 1 .208 1.04l-5 7.5a.75.75 0 0 1-1.154.114l-3-3a.75.75 0 0 1 1.06-1.06l2.353 2.353 4.493-6.74a.75.75 0 0 1 1.04-.207Z" clipRule="evenodd" />
+                </svg>
+                {saving ? 'Guardando...' : 'Guardar disposición'}
+              </button>
+            </>
+          ) : (
             <button
-              onClick={() => { setEditMode(m => !m); setActiveId(null); }}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
-                editMode ? 'bg-violet-600 text-white border-violet-600' : 'bg-white text-gray-600 border-gray-200 hover:border-violet-300 hover:text-violet-600'
-              }`}
+              onClick={enterEditMode}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-gray-200 bg-white text-gray-600 hover:border-violet-300 hover:text-violet-600 transition-all"
             >
-              {editMode
-                ? <><svg viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5"><path fillRule="evenodd" d="M12.416 3.376a.75.75 0 0 1 .208 1.04l-5 7.5a.75.75 0 0 1-1.154.114l-3-3a.75.75 0 0 1 1.06-1.06l2.353 2.353 4.493-6.74a.75.75 0 0 1 1.04-.207Z" clipRule="evenodd" /></svg>Guardar</>
-                : <><svg viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5"><path d="M13.488 2.513a1.75 1.75 0 0 0-2.475 0L6.75 6.774a2.75 2.75 0 0 0-.596.892l-.848 2.047a.75.75 0 0 0 .98.98l2.047-.848a2.75 2.75 0 0 0 .892-.596l4.261-4.263a1.75 1.75 0 0 0 0-2.474Z" /></svg>Editar disposición</>
-              }
+              <svg viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
+                <path d="M13.488 2.513a1.75 1.75 0 0 0-2.475 0L6.75 6.774a2.75 2.75 0 0 0-.596.892l-.848 2.047a.75.75 0 0 0 .98.98l2.047-.848a2.75 2.75 0 0 0 .892-.596l4.261-4.263a1.75 1.75 0 0 0 0-2.474Z" />
+              </svg>
+              Editar disposición
             </button>
           )}
         </div>
@@ -542,7 +585,7 @@ export default function FloorPlan({ tables, rooms, onStatusChange, onRefresh, ed
             <path fillRule="evenodd" d="M15 8A7 7 0 1 1 1 8a7 7 0 0 1 14 0ZM9 5a1 1 0 1 1-2 0 1 1 0 0 1 2 0ZM6.75 8a.75.75 0 0 0 0 1.5h.75v1.75a.75.75 0 0 0 1.5 0v-2.5A.75.75 0 0 0 8.25 8h-1.5Z" clipRule="evenodd" />
           </svg>
           <p className="text-xs text-violet-700 font-medium">
-            Modo edición — <strong>arrastra las mesas</strong> para reposicionarlas · arrastra el fondo para mover la vista
+            Modo edición — <strong>arrastra</strong> para mover mesas · <strong>clic</strong> para editar nombre/capacidad · arrastra el fondo para mover la vista
           </p>
         </div>
       )}

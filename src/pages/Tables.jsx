@@ -18,7 +18,6 @@ const TABLE_ANGLE_OPTIONS = [
 ];
 
 function inferTableShape(capacity) {
-  if (capacity <= 2) return 'circle';
   if (capacity <= 4) return 'square';
   return 'rect';
 }
@@ -34,11 +33,12 @@ function normalizeTableAngle(angle) {
 }
 
 function resolveTableAngle(table) {
-  if (resolveTableShape(table) !== 'rect') return 0;
+  const shape = resolveTableShape(table);
+  if (shape !== 'rect' && shape !== 'square') return 0;
   return normalizeTableAngle(table?.angle);
 }
 
-const emptyRange = () => ({ prefix: 'Mesa ', from: 1, to: 10, capacity: 2, roomId: '', shape: 'circle', angle: 0 });
+const emptyRange = () => ({ prefix: 'Mesa ', from: 1, to: 10, capacity: 2, roomId: '', shape: 'square', angle: 0 });
 
 function buildPreview(ranges) {
   const names = [];
@@ -58,7 +58,7 @@ export default function Tables() {
   const [tables,  setTables]  = useState([]);
   const [rooms,   setRooms]   = useState([]);
   const [modal,   setModal]   = useState(null);
-  const [form,    setForm]    = useState({ name: '', capacity: 2, roomId: '', shape: 'circle', angle: 0 });
+  const [form,    setForm]    = useState({ name: '', capacity: 2, roomId: '', shape: 'square', angle: 0 });
   const [error,   setError]   = useState('');
 
   const [quickOpen,    setQuickOpen]    = useState(false);
@@ -84,7 +84,7 @@ export default function Tables() {
   };
   useEffect(() => { load(); }, []);
 
-  const openCreate = () => { setForm({ name: '', capacity: 2, roomId: '', shape: 'circle', angle: 0 }); setError(''); setModal('create'); };
+  const openCreate = () => { setForm({ name: '', capacity: 2, roomId: '', shape: 'square', angle: 0 }); setError(''); setModal('create'); };
   const openEdit   = (t) => {
     setForm({
       name: t.name,
@@ -108,7 +108,7 @@ export default function Tables() {
         capacity: Number(form.capacity),
         roomId: form.roomId || null,
         shape: resolvedShape,
-        angle: resolvedShape === 'rect' ? normalizeTableAngle(form.angle) : 0,
+        angle: (resolvedShape === 'rect' || resolvedShape === 'square') ? normalizeTableAngle(form.angle) : 0,
       };
       if (modal === 'create') await api.post('/tables', payload);
       else                    await api.put(`/tables/${modal._id}`, payload);
@@ -142,7 +142,7 @@ export default function Tables() {
           capacity: Number(r.capacity) || 2,
           roomId: r.roomId || null,
           shape: resolvedShape,
-          angle: resolvedShape === 'rect' ? normalizeTableAngle(r.angle) : 0,
+          angle: (resolvedShape === 'rect' || resolvedShape === 'square') ? normalizeTableAngle(r.angle) : 0,
         });
       }
     }
@@ -314,7 +314,7 @@ export default function Tables() {
                     <select
                       value={normalizeTableAngle(r.angle)}
                       onChange={e => updateRange(i, 'angle', Number(e.target.value))}
-                      disabled={r.shape !== 'rect'}
+                      disabled={r.shape !== 'rect' && r.shape !== 'square'}
                       className={inputCls}
                     >
                       {TABLE_ANGLE_OPTIONS.map(angle => (
@@ -409,7 +409,7 @@ export default function Tables() {
               <div>
                 <label className={labelCls}>Orientación</label>
                 <select value={normalizeTableAngle(form.angle)}
-                  disabled={form.shape !== 'rect'}
+                  disabled={form.shape !== 'rect' && form.shape !== 'square'}
                   onChange={e => setForm(f => ({ ...f, angle: Number(e.target.value) }))}
                   className={inputCls}>
                   {TABLE_ANGLE_OPTIONS.map(angle => (

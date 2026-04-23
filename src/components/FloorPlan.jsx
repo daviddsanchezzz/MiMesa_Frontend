@@ -18,7 +18,6 @@ const TABLE_SHAPES = {
 };
 
 function inferShapeFromCapacity(capacity) {
-  if (capacity <= 2) return 'circle';
   if (capacity <= 4) return 'square';
   return 'rect';
 }
@@ -32,14 +31,14 @@ function normalizeAngle(angle) {
 }
 
 function resolveTableAngle(table, shape) {
-  if (shape !== 'rect') return 0;
+  if (shape !== 'rect' && shape !== 'square') return 0;
   return normalizeAngle(table?.angle);
 }
 
 function tableGeometry(capacity, shape, angle = 0) {
   const cap = Number(capacity) || 2;
   const resolvedShape = TABLE_SHAPES[shape] ? shape : inferShapeFromCapacity(cap);
-  const resolvedAngle = resolvedShape === 'rect' ? normalizeAngle(angle) : 0;
+  const resolvedAngle = (resolvedShape === 'rect' || resolvedShape === 'square') ? normalizeAngle(angle) : 0;
 
   if (resolvedShape === 'circle') {
     if (cap <= 2) return { w: 88, h: 88, shape: resolvedShape };
@@ -68,7 +67,7 @@ function tableGeometry(capacity, shape, angle = 0) {
 // ─── Chair positions (relative to table top-left) ────────────────────────────
 const CW = 18, CH = 10, CHAIR_GAP = 7;
 
-function generateChairs(capacity, w, h, shape) {
+function generateChairs(capacity, w, h, shape, angle = 0) {
   const chairs = [];
   const cap = Math.min(capacity, 12);
 
@@ -108,7 +107,20 @@ function generateChairs(capacity, w, h, shape) {
   colChairs(lft, px,     h - px, -(CHAIR_GAP + CH / 2),  270);
   colChairs(rgt, px,     h - px, w + CHAIR_GAP + CH / 2, 90 );
 
-  return chairs;
+  if (normalizeAngle(angle) !== 90) return chairs;
+
+  const cx0 = w / 2;
+  const cy0 = h / 2;
+  return chairs.map(ch => {
+    const dx = ch.cx - cx0;
+    const dy = ch.cy - cy0;
+    return {
+      ...ch,
+      cx: cx0 + dy,
+      cy: cy0 - dx,
+      rot: ch.rot + 90,
+    };
+  });
 }
 
 // ─── Status config ───────────────────────────────────────────────────────────
@@ -152,7 +164,7 @@ function TableNode({ table, isActive, isDragging, editMode, showStatus, onPointe
   const geo  = tableGeometry(table.capacity, resolvedShape, angle);
   const { w, h, shape } = geo;
   const st   = showStatus ? (STATUS[table.status] ?? STATUS.free) : NEUTRAL;
-  const chairs = generateChairs(table.capacity, w, h, shape);
+  const chairs = generateChairs(table.capacity, w, h, shape, angle);
 
   const CHAIR_BLEED = CHAIR_GAP + Math.max(CW, CH) + 4;
   const wrapW = w + CHAIR_BLEED * 2;
@@ -338,7 +350,7 @@ export default function FloorPlan({ tables, rooms, onStatusChange, onRefresh, ed
   const [scale,        _setScale]      = useState(0.75);
   const [roomFilter,   setRoomFilter]  = useState(null);
   const [editingTable, setEditingTable] = useState(null);
-  const [editForm,     setEditForm]    = useState({ name: '', capacity: 2, shape: 'circle', angle: 0 });
+  const [editForm,     setEditForm]    = useState({ name: '', capacity: 2, shape: 'square', angle: 0 });
   const [editSaving,   setEditSaving]  = useState(false);
   const [editError,    setEditError]   = useState('');
   const [saving,       setSaving]      = useState(false);
@@ -569,7 +581,7 @@ export default function FloorPlan({ tables, rooms, onStatusChange, onRefresh, ed
     const cap = Number(editForm.capacity);
     if (!cap || cap < 1) { setEditError('La capacidad debe ser al menos 1'); return; }
     if (!TABLE_SHAPES[editForm.shape]) { setEditError('Selecciona una forma válida'); return; }
-    const angle = editForm.shape === 'rect' ? normalizeAngle(editForm.angle) : 0;
+    const angle = (editForm.shape === 'rect' || editForm.shape === 'square') ? normalizeAngle(editForm.angle) : 0;
     setEditSaving(true); setEditError('');
     try {
       await api.put(`/tables/${editingTable._id}`, {
@@ -596,7 +608,7 @@ export default function FloorPlan({ tables, rooms, onStatusChange, onRefresh, ed
 
   const pct = Math.round(scale * 100);
   const editShape = TABLE_SHAPES[editForm.shape] ? editForm.shape : inferShapeFromCapacity(Number(editForm.capacity) || 2);
-  const editAngle = editShape === 'rect' ? normalizeAngle(editForm.angle) : 0;
+  const editAngle = (editShape === 'rect' || editShape === 'square') ? normalizeAngle(editForm.angle) : 0;
   const editPreview = tableGeometry(Number(editForm.capacity) || 2, editShape, editAngle);
 
   return (
@@ -826,7 +838,7 @@ export default function FloorPlan({ tables, rooms, onStatusChange, onRefresh, ed
                 </div>
               </div>
 
-              {editShape === 'rect' && (
+              {(editShape === 'rect' || editShape === 'square') && (
                 <div>
                   <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#6b7280', marginBottom: 8 }}>Orientación</label>
                   <div className="grid grid-cols-2 gap-2">
@@ -874,7 +886,7 @@ export default function FloorPlan({ tables, rooms, onStatusChange, onRefresh, ed
                       <p className="text-xs font-semibold text-gray-700">{TABLE_SHAPES[editShape].label}</p>
                       <p className="text-[11px] text-gray-500">
                         {Number(editForm.capacity) || 0} personas
-                        {editShape === 'rect' ? ` · ${editAngle === 90 ? 'Vertical' : 'Horizontal'}` : ''}
+                        {(editShape === 'rect' || editShape === 'square') ? ` · ${editAngle === 90 ? 'Vertical' : 'Horizontal'}` : ''}
                       </p>
                     </div>
                   </div>

@@ -228,6 +228,7 @@ export default function Reservations() {
   const canModeratePending = hasRole('manager');
   const [reservations, setReservations] = useState([]);
   const [tables,       setTables]       = useState([]);
+  const [rooms,        setRooms]        = useState([]);
   const [slots,        setSlots]        = useState([]);   // [{time, shiftName}]
   const [pendingReservations, setPendingReservations] = useState([]);
   const [pendingEnabled, setPendingEnabled] = useState(canModeratePending);
@@ -390,7 +391,17 @@ export default function Reservations() {
       .then(r => setSlots(r.data))
       .catch(() => setSlots([]));
   }, [filterMode, dateFilter, todayStr]);
-  useEffect(() => { api.get('/tables').then(r => setTables(r.data)); }, []);
+  useEffect(() => {
+    Promise.all([api.get('/tables'), api.get('/rooms')])
+      .then(([tablesRes, roomsRes]) => {
+        setTables(tablesRes.data || []);
+        setRooms(roomsRes.data || []);
+      })
+      .catch(() => {
+        setTables([]);
+        setRooms([]);
+      });
+  }, []);
 
   // Build time->shiftName map and ordered shift list from slots
   const isSingleDayFilter = filterMode === 'today' || filterMode === 'day';

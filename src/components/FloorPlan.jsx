@@ -265,18 +265,23 @@ function autoArrange(tables) {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 export default function FloorPlan({ tables, rooms, onStatusChange, onRefresh, editOnly = false }) {
-  const viewportRef = useRef(null);
-  const dragRef     = useRef(null);   // table drag state
-  const panDragRef  = useRef(null);   // canvas pan state
-  const posRef      = useRef({});
+  const viewportRef  = useRef(null);
+  const dragRef      = useRef(null);   // table drag state
+  const panDragRef   = useRef(null);   // canvas pan state
+  const posRef       = useRef({});
+  const lastMovedRef = useRef(false);  // was last pointer-up a drag?
 
-  const [positions,  _setPositions] = useState({});
-  const [activeId,   setActiveId]   = useState(null);
-  const [draggingId, setDraggingId] = useState(null);
-  const [editMode,   setEditMode]   = useState(editOnly);
-  const [pan,        setPan]        = useState({ x: 40, y: 40 });
-  const [scale,      setScale]      = useState(0.75);
-  const [roomFilter, setRoomFilter] = useState(null); // null = first room
+  const [positions,    _setPositions]  = useState({});
+  const [activeId,     setActiveId]    = useState(null);
+  const [draggingId,   setDraggingId]  = useState(null);
+  const [editMode,     setEditMode]    = useState(editOnly);
+  const [pan,          setPan]         = useState({ x: 40, y: 40 });
+  const [scale,        setScale]       = useState(0.75);
+  const [roomFilter,   setRoomFilter]  = useState(null); // null = first room
+  const [editingTable, setEditingTable] = useState(null); // table open in edit panel
+  const [editForm,     setEditForm]    = useState({ name: '', capacity: 2 });
+  const [editSaving,   setEditSaving]  = useState(false);
+  const [editError,    setEditError]   = useState('');
 
   // Sync posRef
   const setPositions = useCallback((updater) => {
@@ -391,8 +396,15 @@ export default function FloorPlan({ tables, rooms, onStatusChange, onRefresh, ed
   }, [editMode, getPos, toWorld]);
 
   const onTableClick = useCallback((e, table) => {
-    if (editMode) return;
     e.stopPropagation();
+    if (editMode) {
+      if (!lastMovedRef.current) {
+        setEditingTable(table);
+        setEditForm({ name: table.name, capacity: table.capacity });
+        setEditError('');
+      }
+      return;
+    }
     setActiveId(prev => prev === table._id ? null : table._id);
   }, [editMode]);
 
@@ -423,12 +435,15 @@ export default function FloorPlan({ tables, rooms, onStatusChange, onRefresh, ed
   const onCanvasPointerUp = useCallback(async () => {
     if (dragRef.current) {
       const { id, moved } = dragRef.current;
+      lastMovedRef.current = moved;
       dragRef.current = null;
       setDraggingId(null);
       if (moved) {
         const pos = posRef.current[id];
         if (pos) api.put(`/tables/${id}`, pos).catch(() => {});
       }
+    } else {
+      lastMovedRef.current = false;
     }
     panDragRef.current = null;
   }, []);
@@ -443,7 +458,23 @@ export default function FloorPlan({ tables, rooms, onStatusChange, onRefresh, ed
     setTimeout(fitToScreen, 100);
   };
 
-  const changeRoom = (id) => { setRoomFilter(id); setActiveId(null); setEditMode(editOnly); };
+  const handleEditSave = async () => {
+    if (!editForm.name.trim()) { setEditError('El nombre es obligatorio'); return; }
+    const cap = Number(editForm.capacity);
+    if (!cap || cap < 1) { setEditError('La capacidad debe ser al menos 1'); return; }
+    setEditSaving(true); setEditError('');
+    try {
+      await api.put(`/tables/${editingTable._id}`, { name: editForm.name.trim(), capacity: cap });
+      onRefresh?.();
+      setEditingTable(null);
+    } catch (err) {
+      setEditError(err.response?.data?.message || 'Error al guardar');
+    } finally {
+      setEditSaving(false);
+    }
+  };
+
+  const changeRoom = (id) => { setRoomFilter(id); setActiveId(null); setEditMode(editOnly); setEditingTable(null); };
 
   const roomTabs = [
     ...rooms.map(r => ({ id: r._id, label: r.name, count: tables.filter(t => t.roomId?._id === r._id || t.roomId === r._id).length })),
@@ -575,6 +606,91 @@ export default function FloorPlan({ tables, rooms, onStatusChange, onRefresh, ed
             />
           );
         })()}
+
+        {/* ── Table edit panel ────────────────────────────────────────────── */}
+        {editMode && editingTable && (
+          <div
+            className="absolute top-4 right-4 w-64 bg-white rounded-2xl border border-gray-200 shadow-xl overflow-hidden"
+            onPointerDown={e => e.stopPropagation()}
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-lg bg-violet-100 flex items-center justify-center">
+                  <svg viewBox="0 0 14 14" fill="#6366f1" className="w-3.5 h-3.5">
+                    <path fillRule="evenodd" d="M1 2.75A.75.75 0 0 1 1.75 2h10.5a.75.75 0 0 1 0 1.5H12v5.75A2.75 2.75 0 0 1 9.25 12H4.75A2.75 2.75 0 0 1 2 9.25V3.5h-.25A.75.75 0 0 1 1 2.75Z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <span className="text-sm font-semibold text-gray-800">Editar mesa</span>
+              </div>
+              <button
+                onClick={() => setEditingTable(null)}
+                className="w-6 h-6 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+              >
+                <svg viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
+                  <path d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Form */}
+            <div className="p-4 space-y-3">
+              <div>
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#6b7280', marginBottom: 6 }}>Nombre</label>
+                <input
+                  value={editForm.name}
+                  onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))}
+                  onKeyDown={e => e.key === 'Enter' && handleEditSave()}
+                  className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                  placeholder="Mesa 1, Terraza A..."
+                />
+              </div>
+              <div>
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#6b7280', marginBottom: 6 }}>Personas</label>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setEditForm(f => ({ ...f, capacity: Math.max(1, Number(f.capacity) - 1) }))}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 hover:bg-gray-100 text-gray-600 font-bold text-lg transition-colors"
+                  >−</button>
+                  <input
+                    type="number" min="1" max="20"
+                    value={editForm.capacity}
+                    onChange={e => setEditForm(f => ({ ...f, capacity: e.target.value }))}
+                    className="flex-1 border border-gray-300 rounded-xl px-3 py-2 text-sm text-center font-semibold focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                  />
+                  <button
+                    onClick={() => setEditForm(f => ({ ...f, capacity: Math.min(20, Number(f.capacity) + 1) }))}
+                    className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 hover:bg-gray-100 text-gray-600 font-bold text-lg transition-colors"
+                  >+</button>
+                </div>
+                <p className="text-[10px] text-gray-400 mt-1.5">
+                  Forma: {Number(editForm.capacity) <= 2 ? 'circular' : Number(editForm.capacity) <= 4 ? 'cuadrada' : 'rectangular'}
+                </p>
+              </div>
+
+              {editError && (
+                <p className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">{editError}</p>
+              )}
+
+              <div className="flex gap-2 pt-1">
+                <button
+                  onClick={handleEditSave}
+                  disabled={editSaving}
+                  className="flex-1 bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white py-2 rounded-xl text-xs font-semibold transition-colors"
+                >
+                  {editSaving ? 'Guardando...' : 'Guardar'}
+                </button>
+                <button
+                  onClick={() => setEditingTable(null)}
+                  className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 rounded-xl text-xs font-medium transition-colors"
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* ── Zoom controls (bottom-right) ────────────────────────────────── */}
         <div

@@ -382,13 +382,15 @@ function MesasSection() {
       </div>
 
       {viewMode === 'mapa' && (
-        <FloorPlan
-          tables={activeTables}
-          rooms={rooms}
-          onStatusChange={handleStatusChange}
-          onRefresh={load}
-          editOnly={true}
-        />
+        <div style={{ height: '72vh' }}>
+          <FloorPlan
+            tables={activeTables}
+            rooms={rooms}
+            onStatusChange={handleStatusChange}
+            onRefresh={load}
+            editOnly={true}
+          />
+        </div>
       )}
 
       {viewMode === 'lista' && (filtered.length === 0 ? (

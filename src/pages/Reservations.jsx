@@ -1,9 +1,48 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import api from '../services/api';
 import ReservationForm from '../components/ReservationForm';
 import Modal from '../components/Modal';
 import { useAuth } from '../context/AuthContext';
 import { statusConfig, Avatar, TableCell } from '../components/ReservationCard';
+import Calendar from './Calendar';
+
+const MAP_WORLD_W = 2400;
+const MAP_WORLD_H = 1600;
+
+const MAP_STATUS = {
+  free: { tableBg: '#f8fafc', tableBorder: '#cbd5e1', text: '#0f172a', chipBg: '#334155', chipText: '#f8fafc' },
+  pending: { tableBg: '#f59e0b', tableBorder: '#fbbf24', text: '#ffffff', chipBg: '#0f172a', chipText: '#f8fafc' },
+  confirmed: { tableBg: '#06b6d4', tableBorder: '#22d3ee', text: '#ffffff', chipBg: '#0f172a', chipText: '#f8fafc' },
+  seated: { tableBg: '#d946ef', tableBorder: '#e879f9', text: '#ffffff', chipBg: '#0f172a', chipText: '#f8fafc' },
+  no_show: { tableBg: '#ef4444', tableBorder: '#f87171', text: '#ffffff', chipBg: '#0f172a', chipText: '#f8fafc' },
+  cancelled: { tableBg: '#64748b', tableBorder: '#94a3b8', text: '#ffffff', chipBg: '#0f172a', chipText: '#f8fafc' },
+};
+
+function ReservationsViewTabs({ viewMode, onChange }) {
+  const tabs = [
+    { id: 'list', label: 'Reservas' },
+    { id: 'calendar', label: 'Calendario' },
+    { id: 'map', label: 'Mapa' },
+  ];
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <div className="inline-flex items-center bg-gray-100 rounded-xl p-1 gap-1">
+        {tabs.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => onChange(tab.id)}
+            className={`px-3 py-1.5 text-xs sm:text-sm rounded-lg font-semibold transition-colors ${
+              viewMode === tab.id ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 function ActionBtn({ onClick, children, color = 'gray' }) {
   const cls = {
@@ -181,6 +220,12 @@ function MobileRow({ r, tables, onEdit, onCancel, onDelete, onAssign, onQuickSta
 
 export default function Reservations() {
   const { hasRole } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const initialView = (() => {
+    const q = searchParams.get('view');
+    return ['list', 'calendar', 'map'].includes(q) ? q : 'list';
+  })();
+  const [viewMode, setViewMode] = useState(initialView);
   const canModeratePending = hasRole('manager');
   const [reservations, setReservations] = useState([]);
   const [tables,       setTables]       = useState([]);
@@ -201,6 +246,14 @@ export default function Reservations() {
   const [confirmDialog, setConfirmDialog] = useState(null);
   const [confirmLoading, setConfirmLoading] = useState(false);
   const todayStr = new Date().toISOString().slice(0, 10);
+
+  const changeViewMode = (nextView) => {
+    setViewMode(nextView);
+    const next = new URLSearchParams(searchParams);
+    if (nextView === 'list') next.delete('view');
+    else next.set('view', nextView);
+    setSearchParams(next, { replace: true });
+  };
 
   const pushToast = (message, type = 'success') => {
     const id = `${Date.now()}-${Math.random().toString(16).slice(2)}`;
@@ -315,6 +368,12 @@ export default function Reservations() {
   useEffect(() => {
     loadPendingReservations();
   }, [canModeratePending]);
+
+  useEffect(() => {
+    const q = searchParams.get('view');
+    const normalized = ['list', 'calendar', 'map'].includes(q) ? q : 'list';
+    setViewMode((prev) => (prev === normalized ? prev : normalized));
+  }, [searchParams]);
 
   useEffect(() => {
     const handler = () => { load(); loadPendingReservations(); };
@@ -540,8 +599,174 @@ export default function Reservations() {
   const dateLabel = new Date(labelDate + 'T12:00:00').toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
   const dayHeaderLabel = (date) => new Date(`${date}T12:00:00`).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
 
+  const reservationTableIds = (reservation) => {
+    if (Array.isArray(reservation.tableIds) && reservation.tableIds.length > 0) {
+      return reservation.tableIds.map((t) => t?._id?.toString() || t?.toString()).filter(Boolean);
+    }
+    if (reservation.tableId) return [reservation.tableId?._id?.toString() || reservation.tableId?.toString()];
+    return [];
+  };
+
+  const pickReservationForTable = (tableId, source) => {
+    const rank = { seated: 0, confirmed: 1, pending: 2, no_show: 3, cancelled: 4 };
+    const candidates = source
+      .filter((r) => reservationTableIds(r).includes(tableId))
+      .sort((a, b) => {
+        const ra = rank[a.status] ?? 99;
+        const rb = rank[b.status] ?? 99;
+        if (ra !== rb) return ra - rb;
+        return `${a.date} ${a.time}`.localeCompare(`${b.date} ${b.time}`);
+      });
+    return candidates[0] || null;
+  };
+
+  const resolveTableShape = (table) => {
+    if (table?.shape === 'circle' || table?.shape === 'square' || table?.shape === 'rect') return table.shape;
+    return Number(table?.capacity) <= 4 ? 'square' : 'rect';
+  };
+
+  const mapTableSize = (table) => {
+    const cap = Number(table?.capacity) || 2;
+    const shape = resolveTableShape(table);
+    const angle = Number(table?.angle) === 90 ? 90 : 0;
+    if (shape === 'circle') return { w: 98, h: 98, shape };
+    if (shape === 'square') return { w: 108, h: 108, shape };
+    let w = 200;
+    let h = 94;
+    if (cap <= 4) { w = 136; h = 84; }
+    else if (cap <= 6) { w = 156; h = 92; }
+    else if (cap <= 8) { w = 184; h = 94; }
+    if (angle === 90) return { w: h, h: w, shape };
+    return { w, h, shape };
+  };
+
+  const mapSourceReservations = displayReservations.filter((r) => r.status !== 'cancelled');
+
+  const mapTables = (() => {
+    const withPos = tables.filter((t) => t.x != null && t.y != null);
+    const withoutPos = tables.filter((t) => t.x == null || t.y == null);
+    const arranged = [...withPos];
+    let x = 80;
+    let y = 80;
+    let rowH = 0;
+    withoutPos.forEach((table) => {
+      const size = mapTableSize(table);
+      if (x + size.w + 120 > MAP_WORLD_W) {
+        x = 80;
+        y += rowH + 110;
+        rowH = 0;
+      }
+      arranged.push({ ...table, x, y });
+      x += size.w + 120;
+      rowH = Math.max(rowH, size.h);
+    });
+    return arranged;
+  })();
+
+  if (viewMode === 'calendar') {
+    return (
+      <div className="space-y-4">
+        <ReservationsViewTabs viewMode={viewMode} onChange={changeViewMode} />
+        <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden h-[78vh]">
+          <Calendar />
+        </div>
+      </div>
+    );
+  }
+
+  if (viewMode === 'map') {
+    return (
+      <div className="space-y-4">
+        <ReservationsViewTabs viewMode={viewMode} onChange={changeViewMode} />
+        <div className="rounded-2xl border border-slate-700/50 overflow-hidden bg-slate-700">
+          <div
+            className="relative overflow-auto"
+            style={{
+              height: '78vh',
+              backgroundColor: '#3f4a5a',
+              backgroundImage: 'radial-gradient(circle, rgba(169,184,206,0.45) 1px, transparent 1px)',
+              backgroundSize: '80px 80px',
+            }}
+          >
+            <div className="relative" style={{ width: MAP_WORLD_W, height: MAP_WORLD_H }}>
+              {mapTables.map((table) => {
+                const assigned = pickReservationForTable(table._id?.toString(), mapSourceReservations);
+                const visualStatus = assigned?.status || 'free';
+                const colors = MAP_STATUS[visualStatus] || MAP_STATUS.free;
+                const size = mapTableSize(table);
+                const borderRadius = size.shape === 'circle' ? '999px' : size.shape === 'square' ? '14px' : '10px';
+                const chipText = assigned
+                  ? `${assigned.people || 0} | ${(assigned.guestName || '').split(' ')[0] || 'Reserva'}`
+                  : `${table.capacity || 0} | Libre`;
+                return (
+                  <div
+                    key={table._id}
+                    style={{ position: 'absolute', left: table.x, top: table.y, width: size.w, height: size.h }}
+                  >
+                    <div
+                      style={{
+                        position: 'absolute',
+                        left: size.w * 0.12,
+                        right: size.w * 0.12,
+                        top: -13,
+                        height: 16,
+                        borderRadius: 4,
+                        background: '#a7b3c7',
+                        opacity: 0.85,
+                      }}
+                    />
+                    <div
+                      style={{
+                        width: size.w,
+                        height: size.h,
+                        borderRadius,
+                        backgroundColor: colors.tableBg,
+                        border: `2px solid ${colors.tableBorder}`,
+                        boxShadow: '0 8px 20px rgba(2, 6, 23, 0.2)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: colors.text,
+                      }}
+                    >
+                      <div className="text-[34px] font-extrabold leading-none tracking-tight">{table.name}</div>
+                      <div className="text-[16px] font-semibold opacity-85 mt-1">{table.capacity} pax</div>
+                    </div>
+                    <div
+                      style={{
+                        position: 'absolute',
+                        left: 8,
+                        right: 8,
+                        top: size.h * 0.5 - 11,
+                        background: colors.chipBg,
+                        color: colors.chipText,
+                        borderRadius: 3,
+                        fontSize: 12,
+                        fontWeight: 700,
+                        textAlign: 'left',
+                        padding: '2px 6px',
+                        letterSpacing: '0.02em',
+                        whiteSpace: 'nowrap',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                      }}
+                    >
+                      {chipText}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4">
+      <ReservationsViewTabs viewMode={viewMode} onChange={changeViewMode} />
       {/* MOBILE HEADER */}      <div className="sm:hidden">
         <div className="flex items-center gap-2 flex-wrap justify-end max-w-full">
           <select
@@ -1227,6 +1452,7 @@ export default function Reservations() {
     </div>
   );
 }
+
 
 
 

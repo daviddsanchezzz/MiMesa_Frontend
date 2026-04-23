@@ -20,7 +20,6 @@ import DevDashboard from './pages/DevDashboard';
 import Onboarding from './pages/Onboarding';
 import Publicidad from './pages/Publicidad';
 import Analytics from './pages/Analytics';
-import Calendar from './pages/Calendar';
 import Personal from './pages/Personal';
 import Finanzas from './pages/Finanzas';
 import PublicReservation from './pages/PublicReservation';
@@ -259,7 +258,7 @@ export default function App() {
           <Route path="/profile"       element={<PrivateLayout><Profile /></PrivateLayout>} />
           <Route path="/team"         element={<RoleRoute minRole="manager"><PrivateLayout><Team /></PrivateLayout></RoleRoute>} />
           <Route path="/analytics"    element={<RoleRoute minRole="manager"><PrivateLayout><Analytics /></PrivateLayout></RoleRoute>} />
-          <Route path="/calendario"   element={<RoleRoute minRole="staff"><FullBleedLayout><Calendar /></FullBleedLayout></RoleRoute>} />
+          <Route path="/calendario"   element={<Navigate to="/reservations?view=calendar" replace />} />
           <Route path="/publicidad"   element={<RoleRoute minRole="manager"><PrivateLayout><Publicidad /></PrivateLayout></RoleRoute>} />
           <Route path="/personal"     element={<ModuleRoute moduleKey="staff"><RoleRoute minRole="manager"><PrivateLayout><Personal /></PrivateLayout></RoleRoute></ModuleRoute>} />
           <Route path="/finanzas"     element={<ModuleRoute moduleKey="expenses"><RoleRoute minRole="owner"><PrivateLayout><Finanzas /></PrivateLayout></RoleRoute></ModuleRoute>} />

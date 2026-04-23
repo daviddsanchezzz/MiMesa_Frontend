@@ -88,6 +88,12 @@ function generateChairs(capacity, w, h, shape, angle = 0) {
   else if (cap <= 8) { top = 3; bot = 3; lft = 1; rgt = 1; }
   else               { top = 4; bot = 4; lft = Math.ceil((cap-8)/2); rgt = Math.floor((cap-8)/2); }
 
+  // For vertical rectangular tables, favor the long side (left/right).
+  if (shape === 'rect' && normalizeAngle(angle) === 90) {
+    [top, lft] = [lft, top];
+    [bot, rgt] = [rgt, bot];
+  }
+
   const rowChairs = (count, cx0, cx1, cy, rotDeg) => {
     if (count === 0) return;
     const step = count === 1 ? 0 : (cx1 - cx0) / (count - 1);

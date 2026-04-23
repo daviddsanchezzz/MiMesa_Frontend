@@ -665,6 +665,11 @@ export default function Reservations() {
 
   const normalizeAngle = (angle) => (Number(angle) === 90 ? 90 : 0);
 
+  const resolveMapTableAngle = (table, shape) => {
+    if (shape !== 'rect' && shape !== 'square') return 0;
+    return normalizeAngle(table?.angle);
+  };
+
   const buildMapChairs = (capacity, w, h, shape, angle = 0) => {
     const chairs = [];
     const cap = Math.max(1, Math.min(Number(capacity) || 1, 12));
@@ -696,7 +701,7 @@ export default function Reservations() {
     else if (cap <= 8) { top = 3; bottom = 3; left = 1; right = 1; }
     else { top = 4; bottom = 4; left = Math.ceil((cap - 8) / 2); right = Math.floor((cap - 8) / 2); }
 
-    if ((shape === 'rect' || shape === 'square') && normalizeAngle(angle) === 90) {
+    if (shape === 'rect' && normalizeAngle(angle) === 90) {
       [top, left] = [left, top];
       [bottom, right] = [right, bottom];
     }
@@ -721,13 +726,27 @@ export default function Reservations() {
     pushRow(bottom, px, w - px, h + MAP_CHAIR_GAP + MAP_CHAIR_H / 2, 180);
     pushCol(left, px, h - px, -(MAP_CHAIR_GAP + MAP_CHAIR_H / 2), 0);
     pushCol(right, px, h - px, w + MAP_CHAIR_GAP + MAP_CHAIR_H / 2, 0);
-    return chairs;
+
+    if (normalizeAngle(angle) !== 90 || shape === 'rect') return chairs;
+
+    const cx0 = w / 2;
+    const cy0 = h / 2;
+    return chairs.map((chair) => {
+      const dx = chair.cx - cx0;
+      const dy = chair.cy - cy0;
+      return {
+        ...chair,
+        cx: cx0 + dy,
+        cy: cy0 - dx,
+        rot: chair.rot + 90,
+      };
+    });
   };
 
   const mapTableSize = (table) => {
     const cap = Number(table?.capacity) || 2;
     const shape = resolveTableShape(table);
-    const angle = normalizeAngle(table?.angle);
+    const angle = resolveMapTableAngle(table, shape);
     if (shape === 'circle') return { w: 98, h: 98, shape };
     if (shape === 'square') return { w: 108, h: 108, shape };
     let w = 200;
@@ -735,8 +754,8 @@ export default function Reservations() {
     if (cap <= 4) { w = 136; h = 84; }
     else if (cap <= 6) { w = 156; h = 92; }
     else if (cap <= 8) { w = 184; h = 94; }
-    if (angle === 90) return { w: h, h: w, shape };
-    return { w, h, shape };
+    if (angle === 90) return { w: h, h: w, shape, angle };
+    return { w, h, shape, angle };
   };
 
   const mapSourceReservations = displayReservations.filter((r) => r.status !== 'cancelled');
@@ -908,7 +927,7 @@ export default function Reservations() {
                   const visualStatus = assigned?.status || 'free';
                   const colors = MAP_STATUS[visualStatus] || MAP_STATUS.free;
                   const borderRadius = size.shape === 'circle' ? '999px' : size.shape === 'square' ? '18px' : '14px';
-                  const chairs = buildMapChairs(table.capacity, size.w, size.h, size.shape, table.angle);
+                  const chairs = buildMapChairs(table.capacity, size.w, size.h, size.shape, size.angle);
                   return (
                     <div key={table._id} style={{ position: 'absolute', left: x, top: y, width: size.w, height: size.h }}>
                       {chairs.map((chair, idx) => {
@@ -947,18 +966,6 @@ export default function Reservations() {
                           overflow: 'hidden',
                         }}
                       >
-                        {size.shape === 'rect' && (
-                          <div
-                            style={{
-                              position: 'absolute',
-                              top: 0,
-                              left: 0,
-                              right: 0,
-                              height: 4,
-                              backgroundColor: colors.accent,
-                            }}
-                          />
-                        )}
                         <div className="text-[30px] font-extrabold leading-none tracking-tight">{table.name}</div>
                         <div className="text-[14px] font-semibold opacity-90 mt-1">{table.capacity} pax</div>
                         {tableReservations.length > 0 && (

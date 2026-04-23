@@ -11,12 +11,45 @@ const MIN_ZOOM = 0.25;
 const MAX_ZOOM = 2.5;
 
 // ─── Table geometry ──────────────────────────────────────────────────────────
-function tableGeometry(capacity) {
-  if (capacity <= 2)  return { w: 80,  h: 80,  shape: 'circle' };
-  if (capacity <= 4)  return { w: 100, h: 100, shape: 'square' };
-  if (capacity <= 6)  return { w: 148, h: 88,  shape: 'rect'   };
-  if (capacity <= 10) return { w: 188, h: 88,  shape: 'rect'   };
-  return                     { w: 228, h: 88,  shape: 'rect'   };
+const TABLE_SHAPES = {
+  circle: { label: 'Circular' },
+  square: { label: 'Cuadrada' },
+  rect: { label: 'Rectangular' },
+};
+
+function inferShapeFromCapacity(capacity) {
+  if (capacity <= 2) return 'circle';
+  if (capacity <= 4) return 'square';
+  return 'rect';
+}
+
+function resolveTableShape(table) {
+  return TABLE_SHAPES[table?.shape] ? table.shape : inferShapeFromCapacity(Number(table?.capacity) || 2);
+}
+
+function tableGeometry(capacity, shape) {
+  const cap = Number(capacity) || 2;
+  const resolvedShape = TABLE_SHAPES[shape] ? shape : inferShapeFromCapacity(cap);
+
+  if (resolvedShape === 'circle') {
+    if (cap <= 2) return { w: 88, h: 88, shape: resolvedShape };
+    if (cap <= 4) return { w: 104, h: 104, shape: resolvedShape };
+    if (cap <= 6) return { w: 118, h: 118, shape: resolvedShape };
+    return { w: 130, h: 130, shape: resolvedShape };
+  }
+
+  if (resolvedShape === 'square') {
+    if (cap <= 2) return { w: 86, h: 86, shape: resolvedShape };
+    if (cap <= 4) return { w: 104, h: 104, shape: resolvedShape };
+    if (cap <= 6) return { w: 116, h: 116, shape: resolvedShape };
+    return { w: 126, h: 126, shape: resolvedShape };
+  }
+
+  if (cap <= 4) return { w: 130, h: 82, shape: resolvedShape };
+  if (cap <= 6) return { w: 152, h: 90, shape: resolvedShape };
+  if (cap <= 8) return { w: 182, h: 92, shape: resolvedShape };
+  if (cap <= 10) return { w: 204, h: 94, shape: resolvedShape };
+  return { w: 228, h: 96, shape: resolvedShape };
 }
 
 // ─── Chair positions (relative to table top-left) ────────────────────────────
@@ -101,7 +134,7 @@ const NEUTRAL = { bg: '#ffffff', ring: '#e2e8f0', text: '#475569', dot: '#94a3b8
 
 // ─── Table node ───────────────────────────────────────────────────────────────
 function TableNode({ table, isActive, isDragging, editMode, showStatus, onPointerDown, onClick }) {
-  const geo  = tableGeometry(table.capacity);
+  const geo  = tableGeometry(table.capacity, resolveTableShape(table));
   const { w, h, shape } = geo;
   const st   = showStatus ? (STATUS[table.status] ?? STATUS.free) : NEUTRAL;
   const chairs = generateChairs(table.capacity, w, h, shape);
@@ -200,7 +233,7 @@ function TableNode({ table, isActive, isDragging, editMode, showStatus, onPointe
 
 // ─── Status popup ────────────────────────────────────────────────────────────
 function StatusPopup({ table, onStatusChange, onClose, pan, scale }) {
-  const geo    = tableGeometry(table.capacity);
+  const geo    = tableGeometry(table.capacity, resolveTableShape(table));
   const vx     = table.x * scale + pan.x;
   const vy     = (table.y + geo.h) * scale + pan.y + 12;
   const popupW = 180;
@@ -253,7 +286,7 @@ function autoArrange(tables) {
   const GAP = 32;
   let x = 60, y = 60, rowH = 0;
   return tables.map(t => {
-    const { w, h } = tableGeometry(t.capacity);
+    const { w, h } = tableGeometry(t.capacity, resolveTableShape(t));
     const bleed = CHAIR_GAP + Math.max(CW, CH) + 8;
     const totalW = w + bleed * 2 + GAP;
     const totalH = h + bleed * 2;
@@ -286,7 +319,7 @@ export default function FloorPlan({ tables, rooms, onStatusChange, onRefresh, ed
   const [scale,        _setScale]      = useState(0.75);
   const [roomFilter,   setRoomFilter]  = useState(null);
   const [editingTable, setEditingTable] = useState(null);
-  const [editForm,     setEditForm]    = useState({ name: '', capacity: 2 });
+  const [editForm,     setEditForm]    = useState({ name: '', capacity: 2, shape: 'circle' });
   const [editSaving,   setEditSaving]  = useState(false);
   const [editError,    setEditError]   = useState('');
   const [saving,       setSaving]      = useState(false);
@@ -368,7 +401,7 @@ export default function FloorPlan({ tables, rooms, onStatusChange, onRefresh, ed
     const bleed = CHAIR_GAP + Math.max(CW, CH) + 8;
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     for (const t of arranged) {
-      const { w, h } = tableGeometry(t.capacity);
+      const { w, h } = tableGeometry(t.capacity, resolveTableShape(t));
       minX = Math.min(minX, t.x - bleed);
       minY = Math.min(minY, t.y - bleed);
       maxX = Math.max(maxX, t.x + w + bleed);
@@ -418,7 +451,7 @@ export default function FloorPlan({ tables, rooms, onStatusChange, onRefresh, ed
     if (!showStatus) {
       if (!lastMovedRef.current) {
         setEditingTable(table);
-        setEditForm({ name: table.name, capacity: table.capacity });
+        setEditForm({ name: table.name, capacity: table.capacity, shape: resolveTableShape(table) });
         setEditError('');
       }
       return;
@@ -508,9 +541,14 @@ export default function FloorPlan({ tables, rooms, onStatusChange, onRefresh, ed
     if (!editForm.name.trim()) { setEditError('El nombre es obligatorio'); return; }
     const cap = Number(editForm.capacity);
     if (!cap || cap < 1) { setEditError('La capacidad debe ser al menos 1'); return; }
+    if (!TABLE_SHAPES[editForm.shape]) { setEditError('Selecciona una forma válida'); return; }
     setEditSaving(true); setEditError('');
     try {
-      await api.put(`/tables/${editingTable._id}`, { name: editForm.name.trim(), capacity: cap });
+      await api.put(`/tables/${editingTable._id}`, {
+        name: editForm.name.trim(),
+        capacity: cap,
+        shape: editForm.shape,
+      });
       onRefresh?.();
       setEditingTable(null);
     } catch (err) {
@@ -528,6 +566,8 @@ export default function FloorPlan({ tables, rooms, onStatusChange, onRefresh, ed
   ];
 
   const pct = Math.round(scale * 100);
+  const editShape = TABLE_SHAPES[editForm.shape] ? editForm.shape : inferShapeFromCapacity(Number(editForm.capacity) || 2);
+  const editPreview = tableGeometry(Number(editForm.capacity) || 2, editShape);
 
   return (
     <div className="flex flex-col h-full bg-white rounded-2xl border border-gray-200 overflow-hidden">
@@ -603,7 +643,7 @@ export default function FloorPlan({ tables, rooms, onStatusChange, onRefresh, ed
             <path fillRule="evenodd" d="M15 8A7 7 0 1 1 1 8a7 7 0 0 1 14 0ZM9 5a1 1 0 1 1-2 0 1 1 0 0 1 2 0ZM6.75 8a.75.75 0 0 0 0 1.5h.75v1.75a.75.75 0 0 0 1.5 0v-2.5A.75.75 0 0 0 8.25 8h-1.5Z" clipRule="evenodd" />
           </svg>
           <p className="text-xs text-violet-700 font-medium">
-            Modo edición — <strong>arrastra</strong> para mover mesas · <strong>clic</strong> para editar nombre/capacidad · arrastra el fondo para mover la vista
+            Modo edición — <strong>arrastra</strong> para mover mesas · <strong>clic</strong> para editar nombre/personas/forma · arrastra el fondo para mover la vista
           </p>
         </div>
       )}
@@ -672,7 +712,7 @@ export default function FloorPlan({ tables, rooms, onStatusChange, onRefresh, ed
         {/* ── Table edit panel ────────────────────────────────────────────── */}
         {editingTable && (
           <div
-            className="absolute top-4 right-4 w-64 bg-white rounded-2xl border border-gray-200 shadow-xl overflow-hidden"
+            className="absolute top-4 right-4 w-80 bg-white rounded-2xl border border-gray-200 shadow-xl overflow-hidden"
             onPointerDown={e => e.stopPropagation()}
             onClick={e => e.stopPropagation()}
           >
@@ -697,7 +737,7 @@ export default function FloorPlan({ tables, rooms, onStatusChange, onRefresh, ed
             </div>
 
             {/* Form */}
-            <div className="p-4 space-y-3">
+            <div className="p-4 space-y-4">
               <div>
                 <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#6b7280', marginBottom: 6 }}>Nombre</label>
                 <input
@@ -726,9 +766,57 @@ export default function FloorPlan({ tables, rooms, onStatusChange, onRefresh, ed
                     className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 hover:bg-gray-100 text-gray-600 font-bold text-lg transition-colors"
                   >+</button>
                 </div>
-                <p className="text-[10px] text-gray-400 mt-1.5">
-                  Forma: {Number(editForm.capacity) <= 2 ? 'circular' : Number(editForm.capacity) <= 4 ? 'cuadrada' : 'rectangular'}
-                </p>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#6b7280', marginBottom: 8 }}>Forma</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {Object.entries(TABLE_SHAPES).map(([shapeId, shapeCfg]) => {
+                    const active = editShape === shapeId;
+                    return (
+                      <button
+                        key={shapeId}
+                        type="button"
+                        onClick={() => setEditForm(f => ({ ...f, shape: shapeId }))}
+                        className={`rounded-xl border px-2 py-2 text-xs font-semibold transition-all ${
+                          active
+                            ? 'border-violet-400 bg-violet-50 text-violet-700'
+                            : 'border-gray-200 bg-white text-gray-500 hover:bg-gray-50'
+                        }`}
+                      >
+                        <div className="mx-auto mb-1 flex h-7 w-10 items-center justify-center">
+                          {shapeId === 'circle' && <span className="h-6 w-6 rounded-full border-2 border-current opacity-70" />}
+                          {shapeId === 'square' && <span className="h-6 w-6 rounded-md border-2 border-current opacity-70" />}
+                          {shapeId === 'rect' && <span className="h-5 w-8 rounded-md border-2 border-current opacity-70" />}
+                        </div>
+                        {shapeCfg.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-gray-200 bg-gray-50 p-3">
+                <p className="text-[11px] font-semibold text-gray-600 mb-2">Vista previa</p>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div
+                      style={{
+                        width: Math.max(34, Math.min(56, Math.round(editPreview.w * 0.34))),
+                        height: Math.max(34, Math.min(56, Math.round(editPreview.h * 0.34))),
+                        borderRadius: editPreview.shape === 'circle' ? '999px' : editPreview.shape === 'square' ? 10 : 8,
+                        backgroundColor: '#ffffff',
+                        border: '2px solid #cbd5e1',
+                        boxShadow: '0 1px 2px rgba(15, 23, 42, 0.1)',
+                      }}
+                    />
+                    <div>
+                      <p className="text-xs font-semibold text-gray-700">{TABLE_SHAPES[editShape].label}</p>
+                      <p className="text-[11px] text-gray-500">{Number(editForm.capacity) || 0} personas</p>
+                    </div>
+                  </div>
+                  <p className="text-[11px] text-gray-400">{editPreview.w}×{editPreview.h}</p>
+                </div>
               </div>
 
               {editError && (

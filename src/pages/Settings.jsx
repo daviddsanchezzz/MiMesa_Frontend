@@ -7,6 +7,23 @@ import FloorPlan from '../components/FloorPlan';
 
 const inputCls = 'w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent';
 const labelCls = 'block text-xs font-medium text-gray-600 mb-1.5';
+const TABLE_SHAPE_OPTIONS = [
+  { value: 'circle', label: 'Circular' },
+  { value: 'square', label: 'Cuadrada' },
+  { value: 'rect', label: 'Rectangular' },
+];
+
+function inferTableShape(capacity) {
+  if (capacity <= 2) return 'circle';
+  if (capacity <= 4) return 'square';
+  return 'rect';
+}
+
+function resolveTableShape(table) {
+  return TABLE_SHAPE_OPTIONS.some(s => s.value === table?.shape)
+    ? table.shape
+    : inferTableShape(Number(table?.capacity) || 2);
+}
 
 // ─── Icons ──────────────────────────────────────────────────────────────────
 const IconPlus = () => (
@@ -217,7 +234,7 @@ function MesasSection() {
   const [tables,   setTables]   = useState([]);
   const [rooms,    setRooms]    = useState([]);
   const [modal,    setModal]    = useState(null);
-  const [form,     setForm]     = useState({ name: '', capacity: 2, roomId: '' });
+  const [form,     setForm]     = useState({ name: '', capacity: 2, roomId: '', shape: 'circle' });
   const [error,    setError]    = useState('');
   const [search,   setSearch]   = useState('');
   const [viewMode, setViewMode] = useState('lista');
@@ -229,18 +246,22 @@ function MesasSection() {
   };
   useEffect(() => { load(); }, []);
 
-  const openCreate = () => { setForm({ name: '', capacity: 2, roomId: '' }); setError(''); setModal('create'); };
-  const openEdit   = (t) => { setForm({ name: t.name, capacity: t.capacity, roomId: t.roomId?._id || '' }); setError(''); setModal(t); };
+  const openCreate = () => { setForm({ name: '', capacity: 2, roomId: '', shape: 'circle' }); setError(''); setModal('create'); };
+  const openEdit   = (t) => {
+    setForm({ name: t.name, capacity: t.capacity, roomId: t.roomId?._id || '', shape: resolveTableShape(t) });
+    setError('');
+    setModal(t);
+  };
 
   // Quick creator
   const [quickOpen,    setQuickOpen]    = useState(false);
-  const [ranges,       setRanges]       = useState([{ prefix: 'Mesa ', from: 1, to: 10, capacity: 2, roomId: '' }]);
+  const [ranges,       setRanges]       = useState([{ prefix: 'Mesa ', from: 1, to: 10, capacity: 2, roomId: '', shape: 'circle' }]);
   const [quickError,   setQuickError]   = useState('');
   const [quickLoading, setQuickLoading] = useState(false);
 
   const updateRange = (i, field, value) =>
     setRanges(rs => rs.map((r, idx) => idx === i ? { ...r, [field]: value } : r));
-  const addRange    = () => setRanges(rs => [...rs, { prefix: 'Mesa ', from: 1, to: 10, capacity: 2, roomId: '' }]);
+  const addRange    = () => setRanges(rs => [...rs, { prefix: 'Mesa ', from: 1, to: 10, capacity: 2, roomId: '', shape: 'circle' }]);
   const removeRange = (i) => setRanges(rs => rs.filter((_, idx) => idx !== i));
 
   const quickPreview = (() => {
@@ -262,14 +283,21 @@ function MesasSection() {
       const from = Number(r.from), to = Number(r.to);
       if (!from || !to || from > to) continue;
       for (let i = from; i <= to; i++)
-        tbls.push({ name: `${r.prefix}${i}`, capacity: Number(r.capacity) || 2, roomId: r.roomId || null });
+        tbls.push({
+          name: `${r.prefix}${i}`,
+          capacity: Number(r.capacity) || 2,
+          roomId: r.roomId || null,
+          shape: TABLE_SHAPE_OPTIONS.some(s => s.value === r.shape)
+            ? r.shape
+            : inferTableShape(Number(r.capacity) || 2),
+        });
     }
     try {
       setQuickLoading(true);
       await api.post('/tables/bulk', { tables: tbls });
       await load();
       setQuickOpen(false);
-      setRanges([{ prefix: 'Mesa ', from: 1, to: 10, capacity: 2, roomId: '' }]);
+      setRanges([{ prefix: 'Mesa ', from: 1, to: 10, capacity: 2, roomId: '', shape: 'circle' }]);
     } catch (err) {
       setQuickError(err.response?.data?.message || 'Error al crear mesas');
     } finally {
@@ -280,7 +308,14 @@ function MesasSection() {
   const handleSubmit = async (e) => {
     e.preventDefault(); setError('');
     try {
-      const payload = { ...form, capacity: Number(form.capacity), roomId: form.roomId || null };
+      const payload = {
+        ...form,
+        capacity: Number(form.capacity),
+        roomId: form.roomId || null,
+        shape: TABLE_SHAPE_OPTIONS.some(s => s.value === form.shape)
+          ? form.shape
+          : inferTableShape(Number(form.capacity) || 2),
+      };
       if (modal === 'create') await api.post('/tables', payload);
       else                    await api.put(`/tables/${modal._id}`, payload);
       await load(); setModal(null);
@@ -360,7 +395,7 @@ function MesasSection() {
                 <span className="text-xs text-gray-400">{tables.length}/{planLimit('maxTables')}</span>
               )}
               <button
-                onClick={() => { setRanges([{ prefix: 'Mesa ', from: 1, to: 10, capacity: 2, roomId: '' }]); setQuickError(''); setQuickOpen(true); }}
+                onClick={() => { setRanges([{ prefix: 'Mesa ', from: 1, to: 10, capacity: 2, roomId: '', shape: 'circle' }]); setQuickError(''); setQuickOpen(true); }}
                 disabled={tables.length >= planLimit('maxTables')}
                 className="flex items-center gap-1.5 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-3.5 py-2 rounded-xl text-sm font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
@@ -419,7 +454,9 @@ function MesasSection() {
                       </div>
                       <div>
                         <p className="text-sm font-semibold text-gray-900">{t.name}</p>
-                        <p className="text-xs text-gray-400">{t.capacity} personas</p>
+                        <p className="text-xs text-gray-400">
+                          {t.capacity} personas · {TABLE_SHAPE_OPTIONS.find(s => s.value === resolveTableShape(t))?.label}
+                        </p>
                       </div>
                     </div>
                     <div className="flex items-center gap-1">
@@ -480,11 +517,19 @@ function MesasSection() {
                       className={inputCls} />
                   </div>
                 </div>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="grid grid-cols-3 gap-2">
                   <div>
                     <label className={labelCls}>Capacidad</label>
                     <input type="number" min="1" value={r.capacity} onChange={e => updateRange(i, 'capacity', e.target.value)}
                       className={inputCls} />
+                  </div>
+                  <div>
+                    <label className={labelCls}>Forma</label>
+                    <select value={r.shape} onChange={e => updateRange(i, 'shape', e.target.value)} className={inputCls}>
+                      {TABLE_SHAPE_OPTIONS.map(shape => (
+                        <option key={shape.value} value={shape.value}>{shape.label}</option>
+                      ))}
+                    </select>
                   </div>
                   <div>
                     <label className={labelCls}>Sala</label>
@@ -542,12 +587,22 @@ function MesasSection() {
                 placeholder="Mesa 1, Terraza A, Barra..."
                 className={inputCls} />
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-3 gap-3">
               <div>
                 <label className={labelCls}>Capacidad *</label>
                 <input type="number" required min="1" value={form.capacity}
                   onChange={e => setForm(f => ({ ...f, capacity: e.target.value }))}
                   className={inputCls} />
+              </div>
+              <div>
+                <label className={labelCls}>Forma *</label>
+                <select value={form.shape}
+                  onChange={e => setForm(f => ({ ...f, shape: e.target.value }))}
+                  className={inputCls}>
+                  {TABLE_SHAPE_OPTIONS.map(shape => (
+                    <option key={shape.value} value={shape.value}>{shape.label}</option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label className={labelCls}>Sala</label>

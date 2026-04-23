@@ -3,6 +3,7 @@ import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import Modal from '../components/Modal';
 import PlanGate from '../components/PlanGate';
+import FloorPlan from '../components/FloorPlan';
 
 const inputCls = 'w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent';
 const labelCls = 'block text-xs font-medium text-gray-600 mb-1.5';
@@ -213,12 +214,13 @@ function SalasSection() {
 // ═══════════════════════════════════════════════════════════════════════════
 function MesasSection() {
   const { planLimit } = useAuth();
-  const [tables, setTables] = useState([]);
-  const [rooms,  setRooms]  = useState([]);
-  const [modal,  setModal]  = useState(null);
-  const [form,   setForm]   = useState({ name: '', capacity: 2, roomId: '' });
-  const [error,  setError]  = useState('');
-  const [search, setSearch] = useState('');
+  const [tables,   setTables]   = useState([]);
+  const [rooms,    setRooms]    = useState([]);
+  const [modal,    setModal]    = useState(null);
+  const [form,     setForm]     = useState({ name: '', capacity: 2, roomId: '' });
+  const [error,    setError]    = useState('');
+  const [search,   setSearch]   = useState('');
+  const [viewMode, setViewMode] = useState('lista');
 
   const load = async () => {
     const [t, r] = await Promise.all([api.get('/tables'), api.get('/rooms')]);
@@ -291,6 +293,13 @@ function MesasSection() {
     load();
   };
 
+  const handleStatusChange = async (id, status) => {
+    await api.put(`/tables/${id}`, { status });
+    load();
+  };
+
+  const activeTables = tables.filter(t => !t.isLocked);
+
   const filtered = tables.filter(t =>
     t.name.toLowerCase().includes(search.toLowerCase()) ||
     (t.roomId?.name || '').toLowerCase().includes(search.toLowerCase())
@@ -307,42 +316,82 @@ function MesasSection() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
-        <div className="relative flex-1 max-w-xs">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor"
-            className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
-            <path fillRule="evenodd" d="M9.965 11.026a5 5 0 1 1 1.06-1.06l2.755 2.754a.75.75 0 1 1-1.06 1.06l-2.755-2.754ZM10.5 7a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0Z" clipRule="evenodd" />
-          </svg>
-          <input
-            value={search} onChange={e => setSearch(e.target.value)}
-            placeholder="Buscar mesa o sala..."
-            className="w-full border border-gray-300 rounded-xl pl-9 pr-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
-          />
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          {planLimit('maxTables') !== Infinity && (
-            <span className="text-xs text-gray-400">{tables.length}/{planLimit('maxTables')}</span>
-          )}
-          <button
-            onClick={() => { setRanges([{ prefix: 'Mesa ', from: 1, to: 10, capacity: 2, roomId: '' }]); setQuickError(''); setQuickOpen(true); }}
-            disabled={tables.length >= planLimit('maxTables')}
-            className="flex items-center gap-1.5 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-3.5 py-2 rounded-xl text-sm font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 text-violet-500">
-              <path d="M2 2.75A.75.75 0 0 1 2.75 2h10.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 2.75ZM2 8a.75.75 0 0 1 .75-.75h10.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 8Zm0 5.25a.75.75 0 0 1 .75-.75h4.5a.75.75 0 0 1 0 1.5h-4.5a.75.75 0 0 1-.75-.75Z" />
+        {viewMode === 'lista' ? (
+          <div className="relative flex-1 max-w-xs">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor"
+              className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none">
+              <path fillRule="evenodd" d="M9.965 11.026a5 5 0 1 1 1.06-1.06l2.755 2.754a.75.75 0 1 1-1.06 1.06l-2.755-2.754ZM10.5 7a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0Z" clipRule="evenodd" />
             </svg>
-            Creación rápida
-          </button>
-          <button
-            onClick={openCreate}
-            disabled={tables.length >= planLimit('maxTables')}
-            className="flex items-center gap-1.5 bg-violet-600 hover:bg-violet-700 text-white px-3.5 py-2 rounded-xl text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            <IconPlus /> Nueva mesa
-          </button>
+            <input
+              value={search} onChange={e => setSearch(e.target.value)}
+              placeholder="Buscar mesa o sala..."
+              className="w-full border border-gray-300 rounded-xl pl-9 pr-3.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+            />
+          </div>
+        ) : (
+          <div className="flex-1" />
+        )}
+        <div className="flex items-center gap-2 shrink-0">
+          {/* Vista toggle */}
+          <div className="flex items-center bg-gray-100 rounded-xl p-0.5 gap-0.5">
+            <button
+              onClick={() => setViewMode('lista')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${viewMode === 'lista' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
+                <path d="M2 2.75A.75.75 0 0 1 2.75 2h10.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 2.75ZM2 8a.75.75 0 0 1 .75-.75h10.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 8Zm0 5.25a.75.75 0 0 1 .75-.75h4.5a.75.75 0 0 1 0 1.5h-4.5a.75.75 0 0 1-.75-.75Z" />
+              </svg>
+              Lista
+            </button>
+            <button
+              onClick={() => setViewMode('mapa')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${viewMode === 'mapa' ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'}`}
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
+                <path fillRule="evenodd" d="M8 1a7 7 0 1 0 0 14A7 7 0 0 0 8 1ZM3 8a5 5 0 0 1 5-5v10a5 5 0 0 1-5-5Zm7-4.464A5 5 0 0 1 13 8a5 5 0 0 1-3 4.464V3.536Z" clipRule="evenodd" />
+              </svg>
+              Mapa
+            </button>
+          </div>
+
+          {viewMode === 'lista' && (
+            <>
+              {planLimit('maxTables') !== Infinity && (
+                <span className="text-xs text-gray-400">{tables.length}/{planLimit('maxTables')}</span>
+              )}
+              <button
+                onClick={() => { setRanges([{ prefix: 'Mesa ', from: 1, to: 10, capacity: 2, roomId: '' }]); setQuickError(''); setQuickOpen(true); }}
+                disabled={tables.length >= planLimit('maxTables')}
+                className="flex items-center gap-1.5 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-3.5 py-2 rounded-xl text-sm font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 text-violet-500">
+                  <path d="M2 2.75A.75.75 0 0 1 2.75 2h10.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 2.75ZM2 8a.75.75 0 0 1 .75-.75h10.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 8Zm0 5.25a.75.75 0 0 1 .75-.75h4.5a.75.75 0 0 1 0 1.5h-4.5a.75.75 0 0 1-.75-.75Z" />
+                </svg>
+                Creación rápida
+              </button>
+              <button
+                onClick={openCreate}
+                disabled={tables.length >= planLimit('maxTables')}
+                className="flex items-center gap-1.5 bg-violet-600 hover:bg-violet-700 text-white px-3.5 py-2 rounded-xl text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                <IconPlus /> Nueva mesa
+              </button>
+            </>
+          )}
         </div>
       </div>
 
-      {filtered.length === 0 ? (
+      {viewMode === 'mapa' && (
+        <FloorPlan
+          tables={activeTables}
+          rooms={rooms}
+          onStatusChange={handleStatusChange}
+          onRefresh={load}
+          editOnly={true}
+        />
+      )}
+
+      {viewMode === 'lista' && (filtered.length === 0 ? (
         <EmptyState
           text={search ? 'Sin resultados' : 'Sin mesas todavía'}
           onAction={!search ? openCreate : null}
@@ -392,7 +441,7 @@ function MesasSection() {
             </div>
           ))}
         </div>
-      )}
+      ))}
 
       {quickOpen && (
         <Modal

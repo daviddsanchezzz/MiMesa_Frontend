@@ -203,6 +203,7 @@ export default function PublicReservation() {
   const [success, setSuccess] = useState('');
   const [slots, setSlots] = useState(null);
   const [vacation, setVacation] = useState(null);
+  const [publicExceptions, setPublicExceptions] = useState({ blockedShifts: [], roomClosures: [] });
   const [loading, setLoading] = useState(true);
   const [hasActivePromo, setHasActivePromo] = useState(false);
   const [promoStatus, setPromoStatus] = useState(null); // null | 'checking' | 'valid' | 'invalid'
@@ -281,17 +282,44 @@ export default function PublicReservation() {
     Promise.all([
       publicApi.get(`/shifts/public/slots?date=${form.date}&businessId=${businessId}`),
       publicApi.get(`/vacations/public/check?date=${form.date}&businessId=${businessId}`),
+      publicApi.get(`/exceptions/public/check?date=${form.date}&businessId=${businessId}`).catch(() => ({ data: { blockedShifts: [], roomClosures: [] } })),
     ])
-      .then(([slotsRes, vacRes]) => {
+      .then(([slotsRes, vacRes, exRes]) => {
         const slotsData = Array.isArray(slotsRes.data) ? slotsRes.data
           : Array.isArray(slotsRes.data?.slots) ? slotsRes.data.slots : [];
+        const blockedSet = new Set((exRes.data?.blockedShifts || []).map((r) => r.shiftName));
+        const filteredSlots = slotsData.filter((s) => !blockedSet.has(s.shiftName));
         setVacation(vacRes.data.closed ? vacRes.data : false);
-        setSlots(vacRes.data.closed ? [] : slotsData);
+        setPublicExceptions({
+          blockedShifts: Array.isArray(exRes.data?.blockedShifts) ? exRes.data.blockedShifts : [],
+          roomClosures: Array.isArray(exRes.data?.roomClosures) ? exRes.data.roomClosures : [],
+        });
+        setSlots(vacRes.data.closed ? [] : filteredSlots);
       })
-      .catch(() => { setSlots([]); setVacation(false); });
+      .catch(() => {
+        setSlots([]);
+        setVacation(false);
+        setPublicExceptions({ blockedShifts: [], roomClosures: [] });
+      });
   }, [form.date, businessId]);
 
+  useEffect(() => {
+    if (!form.roomId) return;
+    if (closedRoomIdsForSelectedShift.has(String(form.roomId))) {
+      setForm((f) => ({ ...f, roomId: '' }));
+    }
+  }, [closedRoomIdsForSelectedShift, form.roomId]);
+
   const selectedSlot = slots?.find(s => s.time === form.time);
+  const selectedShiftName = selectedSlot?.shiftName || null;
+  const closedRoomIdsForSelectedShift = useMemo(() => {
+    if (!selectedShiftName) return new Set();
+    const rows = (publicExceptions?.roomClosures || []).filter((r) => r.shiftName === selectedShiftName);
+    return new Set(rows.map((r) => String(r.roomId)).filter(Boolean));
+  }, [publicExceptions, selectedShiftName]);
+  const availableRooms = useMemo(() => (
+    rooms.filter((r) => !closedRoomIdsForSelectedShift.has(String(r._id)))
+  ), [rooms, closedRoomIdsForSelectedShift]);
   const maxPeople = Math.min(
     business?.maxReservationPeople || 20,
     selectedSlot?.remaining ?? (business?.maxReservationPeople || 20)
@@ -552,6 +580,15 @@ export default function PublicReservation() {
                   ) : slots.length === 0 ? (
                     <div className="space-y-3">
                       <div className="text-gray-500 text-sm">{tr.noSlots}</div>
+                      {(publicExceptions?.blockedShifts || []).length > 0 && (
+                        <div className="space-y-1.5">
+                          {(publicExceptions.blockedShifts || []).map((b, idx) => (
+                            <p key={`${b.shiftName}-${idx}`} className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5">
+                              <strong>{b.shiftName}:</strong> {b.message || 'No disponible por excepcion'}
+                            </p>
+                          ))}
+                        </div>
+                      )}
                       <button type="button" onClick={() => setStep(1)}
                         className="text-sm font-medium hover:underline" style={{ color: brandColor }}>
                         {tr.changeDate}
@@ -611,6 +648,11 @@ export default function PublicReservation() {
                           <label className="block text-sm font-medium text-gray-700 mb-2">
                             {tr.room} <span className="text-gray-400 font-normal">{tr.roomOptional}</span>
                           </label>
+                          {selectedShiftName && closedRoomIdsForSelectedShift.size > 0 && (
+                            <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5 mb-2">
+                              Algunas salas están cerradas para el turno <strong>{selectedShiftName}</strong>.
+                            </p>
+                          )}
                           <div className="grid grid-cols-2 gap-2">
                             <button type="button"
                               onClick={() => setForm(f => ({ ...f, roomId: '' }))}
@@ -620,7 +662,7 @@ export default function PublicReservation() {
                               style={form.roomId === '' ? bs : {}}>
                               {tr.noPreference}
                             </button>
-                            {rooms.map(r => (
+                            {availableRooms.map(r => (
                               <button key={r._id} type="button"
                                 onClick={() => setForm(f => ({ ...f, roomId: r._id }))}
                                 className={`px-3 py-2 text-sm rounded-lg border transition-colors ${

@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import Modal from '../components/Modal';
@@ -108,6 +109,7 @@ function getActiveShiftInfo(slots, shiftOrder) {
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 export default function Dashboard() {
+  const navigate = useNavigate();
   const { business, hasRole } = useAuth();
   const canModeratePending = hasRole('manager');
   const canMarkNoShow      = hasRole('manager');
@@ -492,6 +494,19 @@ export default function Dashboard() {
           <h2 className="text-xl font-bold text-gray-900">{business?.name}</h2>
           <p className="text-sm text-gray-400 capitalize">{todayLabel}</p>
         </div>
+        {canModeratePending && (
+          <button
+            type="button"
+            onClick={() => navigate('/exceptions')}
+            className="inline-flex items-center gap-2 px-3 py-2 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors"
+            title="Gestionar excepciones"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 text-violet-600">
+              <path fillRule="evenodd" d="M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14Zm.75-9.75a.75.75 0 0 0-1.5 0v4a.75.75 0 0 0 1.5 0v-4ZM8 12a.875.875 0 1 0 0-1.75A.875.875 0 0 0 8 12Z" clipRule="evenodd" />
+            </svg>
+            Excepciones
+          </button>
+        )}
       </div>
 
       {/* Period selector */}

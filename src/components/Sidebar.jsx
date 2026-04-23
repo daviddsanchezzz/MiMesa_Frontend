@@ -60,12 +60,6 @@ const IconMegaphone = () => (
   </svg>
 );
 
-const IconExclamationCircle = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 shrink-0">
-    <path fillRule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm.75-11.25a.75.75 0 0 0-1.5 0v4.5a.75.75 0 0 0 1.5 0v-4.5ZM10 14a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" clipRule="evenodd" />
-  </svg>
-);
-
 const links = [
   { to: '/', label: 'Dashboard', icon: <IconHome /> },
   { to: '/reservations', label: 'Reservas', icon: <IconCalendar /> },
@@ -113,7 +107,6 @@ export default function Sidebar({
     mainLinks[0],
     mainLinks[1],
     ...mainLinks.slice(2),
-    ...(hasRole('manager') && !isStaff ? [{ to: '/exceptions', label: 'Excepciones', icon: <IconExclamationCircle /> }] : []),
     ...lowerLinks,
     ...personalLink,
     ...finanzasLink,

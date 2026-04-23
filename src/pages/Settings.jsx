@@ -386,8 +386,8 @@ function MesasSection() {
           <FloorPlan
             tables={activeTables}
             rooms={rooms}
-            onStatusChange={handleStatusChange}
             onRefresh={load}
+            showStatus={false}
           />
         </div>
       )}

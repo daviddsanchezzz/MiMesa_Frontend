@@ -97,11 +97,13 @@ function Chair({ chair, statusColor, scale }) {
   );
 }
 
+const NEUTRAL = { bg: '#ffffff', ring: '#e2e8f0', text: '#475569', dot: '#94a3b8', accent: '#cbd5e1' };
+
 // ─── Table node ───────────────────────────────────────────────────────────────
-function TableNode({ table, isActive, isDragging, editMode, onPointerDown, onClick }) {
+function TableNode({ table, isActive, isDragging, editMode, showStatus, onPointerDown, onClick }) {
   const geo  = tableGeometry(table.capacity);
   const { w, h, shape } = geo;
-  const st   = STATUS[table.status] ?? STATUS.free;
+  const st   = showStatus ? (STATUS[table.status] ?? STATUS.free) : NEUTRAL;
   const chairs = generateChairs(table.capacity, w, h, shape);
 
   const CHAIR_BLEED = CHAIR_GAP + Math.max(CW, CH) + 4;
@@ -264,7 +266,7 @@ function autoArrange(tables) {
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
-export default function FloorPlan({ tables, rooms, onStatusChange, onRefresh, editOnly = false }) {
+export default function FloorPlan({ tables, rooms, onStatusChange, onRefresh, editOnly = false, showStatus = true }) {
   const viewportRef       = useRef(null);
   const dragRef           = useRef(null);   // table drag state
   const panDragRef        = useRef(null);   // canvas pan state
@@ -628,6 +630,7 @@ export default function FloorPlan({ tables, rooms, onStatusChange, onRefresh, ed
                 isDragging={draggingId === table._id}
                 isActive={activeId === table._id}
                 editMode={editMode}
+                showStatus={showStatus}
                 onPointerDown={e => onTablePointerDown(e, table)}
                 onClick={e => onTableClick(e, table)}
               />
@@ -635,8 +638,8 @@ export default function FloorPlan({ tables, rooms, onStatusChange, onRefresh, ed
           </div>
         </div>
 
-        {/* Status popup — positioned in viewport coords */}
-        {!editMode && activeId && (() => {
+        {/* Status popup — only in operational view */}
+        {showStatus && !editMode && activeId && (() => {
           const t = arranged.find(t => t._id === activeId);
           if (!t) return null;
           return (
@@ -752,18 +755,20 @@ export default function FloorPlan({ tables, rooms, onStatusChange, onRefresh, ed
           </button>
         </div>
 
-        {/* ── Legend (bottom-left) ─────────────────────────────────────────── */}
-        <div
-          className="absolute bottom-4 left-4 flex items-center gap-4 bg-white/90 backdrop-blur-sm border border-gray-200 rounded-xl shadow-sm px-3 py-2"
-          onPointerDown={e => e.stopPropagation()}
-        >
-          {Object.entries(STATUS).map(([, cfg]) => (
-            <div key={cfg.label} className="flex items-center gap-1.5">
-              <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: cfg.accent }} />
-              <span className="text-xs text-gray-500 font-medium">{cfg.label}</span>
-            </div>
-          ))}
-        </div>
+        {/* ── Legend (bottom-left) — only in operational view ─────────────── */}
+        {showStatus && (
+          <div
+            className="absolute bottom-4 left-4 flex items-center gap-4 bg-white/90 backdrop-blur-sm border border-gray-200 rounded-xl shadow-sm px-3 py-2"
+            onPointerDown={e => e.stopPropagation()}
+          >
+            {Object.entries(STATUS).map(([, cfg]) => (
+              <div key={cfg.label} className="flex items-center gap-1.5">
+                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: cfg.accent }} />
+                <span className="text-xs text-gray-500 font-medium">{cfg.label}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

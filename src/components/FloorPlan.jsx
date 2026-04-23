@@ -107,7 +107,7 @@ function generateChairs(capacity, w, h, shape, angle = 0) {
   colChairs(lft, px,     h - px, -(CHAIR_GAP + CH / 2),  270);
   colChairs(rgt, px,     h - px, w + CHAIR_GAP + CH / 2, 90 );
 
-  if (normalizeAngle(angle) !== 90) return chairs;
+  if (normalizeAngle(angle) !== 90 || shape === 'rect') return chairs;
 
   const cx0 = w / 2;
   const cy0 = h / 2;

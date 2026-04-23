@@ -8,7 +8,6 @@ import { statusConfig, Avatar, TableCell } from '../components/ReservationCard';
 import Calendar from './Calendar';
 
 const MAP_WORLD_W = 2400;
-const MAP_WORLD_H = 1600;
 
 const MAP_STATUS = {
   free: { tableBg: '#f8fafc', tableBorder: '#cbd5e1', text: '#0f172a', chipBg: '#334155', chipText: '#f8fafc' },
@@ -642,26 +641,66 @@ export default function Reservations() {
 
   const mapSourceReservations = displayReservations.filter((r) => r.status !== 'cancelled');
 
-  const mapTables = (() => {
-    const withPos = tables.filter((t) => t.x != null && t.y != null);
-    const withoutPos = tables.filter((t) => t.x == null || t.y == null);
-    const arranged = [...withPos];
-    let x = 80;
-    let y = 80;
+  const mapRoomGroups = (() => {
+    const groups = new Map();
+    rooms.forEach((room) => {
+      const id = room?._id?.toString?.() || room?._id || room?.toString?.();
+      if (!id) return;
+      groups.set(id, { id, name: room.name || 'Sala', tables: [] });
+    });
+    tables.forEach((table) => {
+      const roomId = table.roomId?._id?.toString?.() || table.roomId?.toString?.() || '__none__';
+      if (!groups.has(roomId)) {
+        groups.set(roomId, { id: roomId, name: roomId === '__none__' ? 'Sin sala' : 'Sala', tables: [] });
+      }
+      groups.get(roomId).tables.push(table);
+    });
+    return [...groups.values()].filter((g) => g.tables.length > 0);
+  })();
+
+  const buildRoomLayout = (roomTables) => {
+    const nodes = roomTables.map((table) => ({
+      table,
+      size: mapTableSize(table),
+      x: table.x != null ? Number(table.x) : null,
+      y: table.y != null ? Number(table.y) : null,
+    }));
+    const withPos = nodes.filter((n) => Number.isFinite(n.x) && Number.isFinite(n.y));
+    const withoutPos = nodes.filter((n) => !Number.isFinite(n.x) || !Number.isFinite(n.y));
+
+    if (withPos.length > 0) {
+      const minX = Math.min(...withPos.map((n) => n.x));
+      const minY = Math.min(...withPos.map((n) => n.y));
+      withPos.forEach((n) => {
+        n.x = n.x - minX + 70;
+        n.y = n.y - minY + 70;
+      });
+    }
+
+    let maxX = withPos.length > 0 ? Math.max(...withPos.map((n) => n.x + n.size.w)) : 0;
+    let maxY = withPos.length > 0 ? Math.max(...withPos.map((n) => n.y + n.size.h)) : 0;
+
+    let x = 70;
+    let y = maxY > 0 ? maxY + 90 : 70;
     let rowH = 0;
-    withoutPos.forEach((table) => {
-      const size = mapTableSize(table);
-      if (x + size.w + 120 > MAP_WORLD_W) {
-        x = 80;
-        y += rowH + 110;
+    withoutPos.forEach((n) => {
+      if (x + n.size.w + 90 > MAP_WORLD_W) {
+        x = 70;
+        y += rowH + 90;
         rowH = 0;
       }
-      arranged.push({ ...table, x, y });
-      x += size.w + 120;
-      rowH = Math.max(rowH, size.h);
+      n.x = x;
+      n.y = y;
+      x += n.size.w + 90;
+      rowH = Math.max(rowH, n.size.h);
+      maxX = Math.max(maxX, n.x + n.size.w);
+      maxY = Math.max(maxY, n.y + n.size.h);
     });
-    return arranged;
-  })();
+
+    const width = Math.max(540, maxX + 80);
+    const height = Math.max(360, maxY + 80);
+    return { nodes, width, height };
+  };
 
   if (viewMode === 'calendar') {
     return (
@@ -678,87 +717,104 @@ export default function Reservations() {
     return (
       <div className="space-y-4">
         <ReservationsViewTabs viewMode={viewMode} onChange={changeViewMode} />
-        <div className="rounded-2xl border border-slate-700/50 overflow-hidden bg-slate-700">
-          <div
-            className="relative overflow-auto"
-            style={{
-              height: '78vh',
-              backgroundColor: '#3f4a5a',
-              backgroundImage: 'radial-gradient(circle, rgba(169,184,206,0.45) 1px, transparent 1px)',
-              backgroundSize: '80px 80px',
-            }}
-          >
-            <div className="relative" style={{ width: MAP_WORLD_W, height: MAP_WORLD_H }}>
-              {mapTables.map((table) => {
-                const assigned = pickReservationForTable(table._id?.toString(), mapSourceReservations);
-                const visualStatus = assigned?.status || 'free';
-                const colors = MAP_STATUS[visualStatus] || MAP_STATUS.free;
-                const size = mapTableSize(table);
-                const borderRadius = size.shape === 'circle' ? '999px' : size.shape === 'square' ? '14px' : '10px';
-                const chipText = assigned
-                  ? `${assigned.people || 0} | ${(assigned.guestName || '').split(' ')[0] || 'Reserva'}`
-                  : `${table.capacity || 0} | Libre`;
-                return (
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+          {mapRoomGroups.map((group) => {
+            const layout = buildRoomLayout(group.tables);
+            const canvasW = 1120;
+            const canvasH = 520;
+            const scale = Math.min((canvasW - 40) / layout.width, (canvasH - 40) / layout.height, 1);
+            return (
+              <div key={group.id} className="rounded-2xl border border-slate-700/50 overflow-hidden bg-slate-700">
+                <div className="px-4 py-2.5 border-b border-slate-600/60 bg-slate-800/70 flex items-center justify-between">
+                  <p className="text-sm font-bold text-slate-100">{group.name}</p>
+                  <span className="text-xs font-semibold text-slate-300">{group.tables.length} mesas</span>
+                </div>
+                <div
+                  className="relative overflow-hidden"
+                  style={{
+                    height: canvasH,
+                    backgroundColor: '#3f4a5a',
+                    backgroundImage: 'radial-gradient(circle, rgba(169,184,206,0.45) 1px, transparent 1px)',
+                    backgroundSize: '80px 80px',
+                  }}
+                >
                   <div
-                    key={table._id}
-                    style={{ position: 'absolute', left: table.x, top: table.y, width: size.w, height: size.h }}
+                    className="absolute left-1/2 top-1/2 origin-center"
+                    style={{
+                      width: layout.width,
+                      height: layout.height,
+                      transform: `translate(-50%, -50%) scale(${scale})`,
+                    }}
                   >
-                    <div
-                      style={{
-                        position: 'absolute',
-                        left: size.w * 0.12,
-                        right: size.w * 0.12,
-                        top: -13,
-                        height: 16,
-                        borderRadius: 4,
-                        background: '#a7b3c7',
-                        opacity: 0.85,
-                      }}
-                    />
-                    <div
-                      style={{
-                        width: size.w,
-                        height: size.h,
-                        borderRadius,
-                        backgroundColor: colors.tableBg,
-                        border: `2px solid ${colors.tableBorder}`,
-                        boxShadow: '0 8px 20px rgba(2, 6, 23, 0.2)',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        color: colors.text,
-                      }}
-                    >
-                      <div className="text-[34px] font-extrabold leading-none tracking-tight">{table.name}</div>
-                      <div className="text-[16px] font-semibold opacity-85 mt-1">{table.capacity} pax</div>
-                    </div>
-                    <div
-                      style={{
-                        position: 'absolute',
-                        left: 8,
-                        right: 8,
-                        top: size.h * 0.5 - 11,
-                        background: colors.chipBg,
-                        color: colors.chipText,
-                        borderRadius: 3,
-                        fontSize: 12,
-                        fontWeight: 700,
-                        textAlign: 'left',
-                        padding: '2px 6px',
-                        letterSpacing: '0.02em',
-                        whiteSpace: 'nowrap',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                      }}
-                    >
-                      {chipText}
-                    </div>
+                    {layout.nodes.map(({ table, size, x, y }) => {
+                      const assigned = pickReservationForTable(table._id?.toString(), mapSourceReservations);
+                      const visualStatus = assigned?.status || 'free';
+                      const colors = MAP_STATUS[visualStatus] || MAP_STATUS.free;
+                      const borderRadius = size.shape === 'circle' ? '999px' : size.shape === 'square' ? '14px' : '10px';
+                      const chipText = assigned
+                        ? `${assigned.people || 0} | ${(assigned.guestName || '').split(' ')[0] || 'Reserva'}`
+                        : `${table.capacity || 0} | Libre`;
+                      return (
+                        <div key={table._id} style={{ position: 'absolute', left: x, top: y, width: size.w, height: size.h }}>
+                          <div
+                            style={{
+                              position: 'absolute',
+                              left: size.w * 0.12,
+                              right: size.w * 0.12,
+                              top: -13,
+                              height: 16,
+                              borderRadius: 4,
+                              background: '#a7b3c7',
+                              opacity: 0.85,
+                            }}
+                          />
+                          <div
+                            style={{
+                              width: size.w,
+                              height: size.h,
+                              borderRadius,
+                              backgroundColor: colors.tableBg,
+                              border: `2px solid ${colors.tableBorder}`,
+                              boxShadow: '0 8px 20px rgba(2, 6, 23, 0.2)',
+                              display: 'flex',
+                              flexDirection: 'column',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              color: colors.text,
+                            }}
+                          >
+                            <div className="text-[34px] font-extrabold leading-none tracking-tight">{table.name}</div>
+                            <div className="text-[16px] font-semibold opacity-85 mt-1">{table.capacity} pax</div>
+                          </div>
+                          <div
+                            style={{
+                              position: 'absolute',
+                              left: 8,
+                              right: 8,
+                              top: size.h * 0.5 - 11,
+                              background: colors.chipBg,
+                              color: colors.chipText,
+                              borderRadius: 3,
+                              fontSize: 12,
+                              fontWeight: 700,
+                              textAlign: 'left',
+                              padding: '2px 6px',
+                              letterSpacing: '0.02em',
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                            }}
+                          >
+                            {chipText}
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                );
-              })}
-            </div>
-          </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
     );

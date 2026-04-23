@@ -7,12 +7,12 @@ import Modal from '../components/Modal';
 import ReservationForm from '../components/ReservationForm';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-const PX_PER_MIN  = 2;
+const PX_PER_MIN  = 3;
 const TABLE_COL_W = 80;
 const ROW_H       = 52;
 const HEADER_H    = 36;
 const ROOM_H      = 28;
-const SLOT_EVERY  = 30;
+const SLOT_EVERY  = 15;
 
 const BLOCK = {
   pending:   { bg: '#FEF3C7', text: '#92400E', border: '#FDE68A' },
@@ -544,7 +544,10 @@ export default function Calendar() {
                   <div className="sticky left-0 z-30 shrink-0 bg-white border-r border-gray-100" style={{ width: TABLE_COL_W }} />
                   <div className="relative flex-1" style={{ width: timelineWidth }}>
                     {slots.map(m => {
-                      const isHour = m % 60 === 0;
+                      const minute = m % 60;
+                      const isHour = minute === 0;
+                      const isHalf = minute === 30;
+                      const isQuarter = minute === 15 || minute === 45;
                       return (
                         <div key={m} className="absolute flex flex-col items-start"
                           style={{ left: (m - effectiveStart) * PX_PER_MIN, top: 0, bottom: 0 }}>
@@ -553,7 +556,17 @@ export default function Calendar() {
                               {minutesToLabel(m)}
                             </span>
                           )}
-                          <div className={`mt-auto w-px ${isHour ? 'bg-gray-300 h-3' : 'bg-gray-200 h-2'}`} />
+                          <div
+                            className={`mt-auto w-px ${
+                              isHour
+                                ? 'bg-gray-300 h-3'
+                                : isHalf
+                                ? 'bg-gray-300/80 h-2.5'
+                                : isQuarter
+                                ? 'bg-gray-300/65 h-2'
+                                : 'bg-gray-200 h-1.5'
+                            }`}
+                          />
                         </div>
                       );
                     })}
@@ -590,12 +603,21 @@ export default function Calendar() {
                           </div>
 
                           <div className="relative" style={{ width: timelineWidth, height: ROW_H }}>
-                            {slots.map(m => (
-                              <div key={m}
-                                className={`absolute top-0 bottom-0 w-px ${m % 60 === 0 ? 'bg-gray-200' : 'bg-gray-100'}`}
-                                style={{ left: (m - effectiveStart) * PX_PER_MIN }}
-                              />
-                            ))}
+                            {slots.map(m => {
+                              const minute = m % 60;
+                              const isHour = minute === 0;
+                              const isHalf = minute === 30;
+                              const isQuarter = minute === 15 || minute === 45;
+                              return (
+                                <div
+                                  key={m}
+                                  className={`absolute top-0 bottom-0 w-px ${
+                                    isHour ? 'bg-gray-200' : isHalf ? 'bg-gray-200/90' : isQuarter ? 'bg-gray-200/70' : 'bg-gray-100'
+                                  }`}
+                                  style={{ left: (m - effectiveStart) * PX_PER_MIN }}
+                                />
+                              );
+                            })}
 
                             {tableRsvs.map(r => {
                               const rMin    = timeToMinutes(r.time);

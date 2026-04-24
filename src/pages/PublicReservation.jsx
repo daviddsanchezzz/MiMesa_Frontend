@@ -303,13 +303,6 @@ export default function PublicReservation() {
       });
   }, [form.date, businessId]);
 
-  useEffect(() => {
-    if (!form.roomId) return;
-    if (closedRoomIdsForSelectedShift.has(String(form.roomId))) {
-      setForm((f) => ({ ...f, roomId: '' }));
-    }
-  }, [closedRoomIdsForSelectedShift, form.roomId]);
-
   const selectedSlot = slots?.find(s => s.time === form.time);
   const selectedShiftName = selectedSlot?.shiftName || null;
   const closedRoomIdsForSelectedShift = useMemo(() => {
@@ -320,6 +313,13 @@ export default function PublicReservation() {
   const availableRooms = useMemo(() => (
     rooms.filter((r) => !closedRoomIdsForSelectedShift.has(String(r._id)))
   ), [rooms, closedRoomIdsForSelectedShift]);
+  useEffect(() => {
+    if (!form.roomId) return;
+    if (closedRoomIdsForSelectedShift.has(String(form.roomId))) {
+      setForm((f) => ({ ...f, roomId: '' }));
+    }
+  }, [closedRoomIdsForSelectedShift, form.roomId]);
+
   const maxPeople = Math.min(
     business?.maxReservationPeople || 20,
     selectedSlot?.remaining ?? (business?.maxReservationPeople || 20)

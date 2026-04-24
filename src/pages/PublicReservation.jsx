@@ -5,6 +5,7 @@ import TRANSLATIONS from '../i18n';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 
+const ALL_SHIFTS_KEY = '__all__';
 
 
 function CalIcon() {
@@ -287,8 +288,11 @@ export default function PublicReservation() {
       .then(([slotsRes, vacRes, exRes]) => {
         const slotsData = Array.isArray(slotsRes.data) ? slotsRes.data
           : Array.isArray(slotsRes.data?.slots) ? slotsRes.data.slots : [];
+        const hasAllShiftsBlocked = (exRes.data?.blockedShifts || []).some((r) => r?.allShifts || r?.shiftName === ALL_SHIFTS_KEY);
         const blockedSet = new Set((exRes.data?.blockedShifts || []).map((r) => r.shiftName));
-        const filteredSlots = slotsData.filter((s) => !blockedSet.has(s.shiftName));
+        const filteredSlots = hasAllShiftsBlocked
+          ? []
+          : slotsData.filter((s) => !blockedSet.has(s.shiftName));
         setVacation(vacRes.data.closed ? vacRes.data : false);
         setPublicExceptions({
           blockedShifts: Array.isArray(exRes.data?.blockedShifts) ? exRes.data.blockedShifts : [],
@@ -307,7 +311,9 @@ export default function PublicReservation() {
   const selectedShiftName = selectedSlot?.shiftName || null;
   const closedRoomIdsForSelectedShift = useMemo(() => {
     if (!selectedShiftName) return new Set();
-    const rows = (publicExceptions?.roomClosures || []).filter((r) => r.shiftName === selectedShiftName);
+    const rows = (publicExceptions?.roomClosures || []).filter((r) => (
+      r.shiftName === selectedShiftName || r?.allShifts || r?.shiftName === ALL_SHIFTS_KEY
+    ));
     return new Set(rows.map((r) => String(r.roomId)).filter(Boolean));
   }, [publicExceptions, selectedShiftName]);
   const availableRooms = useMemo(() => (
@@ -584,7 +590,7 @@ export default function PublicReservation() {
                         <div className="space-y-1.5">
                           {(publicExceptions.blockedShifts || []).map((b, idx) => (
                             <p key={`${b.shiftName}-${idx}`} className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5">
-                              <strong>{b.shiftName}:</strong> {b.message || 'No disponible por excepcion'}
+                              <strong>{b?.allShifts || b?.shiftName === ALL_SHIFTS_KEY ? 'Todos los turnos' : b.shiftName}:</strong> {b.message || 'No disponible por excepcion'}
                             </p>
                           ))}
                         </div>

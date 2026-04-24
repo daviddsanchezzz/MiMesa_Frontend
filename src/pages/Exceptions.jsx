@@ -3,6 +3,7 @@ import api from '../services/api';
 
 const inputCls = 'w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-white';
 const labelCls = 'block text-sm font-medium text-gray-700 mb-1.5';
+const ALL_SHIFTS_KEY = '__all__';
 
 const typeOptions = [
   { value: 'closed', label: 'Restaurante cerrado (turno bloqueado)' },
@@ -21,6 +22,10 @@ function typeBadge(type) {
 
 function typeLabel(type) {
   return typeOptions.find((t) => t.value === type)?.label || type;
+}
+
+function shiftLabel(shiftName) {
+  return shiftName === ALL_SHIFTS_KEY ? 'Todos los turnos' : shiftName;
 }
 
 export default function Exceptions() {
@@ -191,7 +196,7 @@ export default function Exceptions() {
                 {futureRows.map((row, i) => (
                   <tr key={row._id} className={i < futureRows.length - 1 ? 'border-b border-gray-50' : ''}>
                     <td className="px-5 py-3.5 text-gray-800 font-medium">{row.date}</td>
-                    <td className="px-4 py-3.5 text-gray-800 font-medium">{row.shiftName}</td>
+                    <td className="px-4 py-3.5 text-gray-800 font-medium">{shiftLabel(row.shiftName)}</td>
                     <td className="px-4 py-3.5">
                       <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold ${typeBadge(row.type)}`}>
                         {typeLabel(row.type)}
@@ -263,6 +268,7 @@ export default function Exceptions() {
                   required
                 >
                   <option value="">Selecciona turno</option>
+                  <option value={ALL_SHIFTS_KEY}>Todos los turnos</option>
                   {shiftNames.map((name) => (
                     <option key={name} value={name}>{name}</option>
                   ))}

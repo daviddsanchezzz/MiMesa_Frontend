@@ -501,7 +501,7 @@ export default function Dashboard() {
             className="inline-flex items-center justify-center gap-2 p-2 sm:px-3 sm:py-2 rounded-lg sm:rounded-xl border-0 sm:border sm:border-gray-200 text-sm font-semibold text-gray-700 hover:bg-transparent sm:hover:bg-gray-50 transition-colors"
             title="Gestionar excepciones"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 text-violet-600">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-5 h-5 sm:w-4 sm:h-4 text-violet-600">
               <path fillRule="evenodd" d="M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14Zm.75-9.75a.75.75 0 0 0-1.5 0v4a.75.75 0 0 0 1.5 0v-4ZM8 12a.875.875 0 1 0 0-1.75A.875.875 0 0 0 8 12Z" clipRule="evenodd" />
             </svg>
             <span className="hidden sm:inline">Excepciones</span>
@@ -583,9 +583,9 @@ export default function Dashboard() {
       )}
 
       {/* Stats pills */}
-      {!loading && total > 0 && (
+      {!loading && total > 0 && view !== 'today' && (
         <div className="flex items-center gap-2 flex-wrap">
-          {view === 'today' ? (
+          {false ? (
             <>
               <Pill value={total}     label="reservas"   color="gray" />
               {pending   > 0 && <Pill value={pending}   label="pendientes"  color="amber" />}
@@ -604,7 +604,7 @@ export default function Dashboard() {
       )}
 
       {/* Active shift indicator */}
-      {view === 'today' && !loading && activeShiftInfo && (
+      {false && view === 'today' && !loading && activeShiftInfo && (
         <div className="flex items-center gap-2">
           <span className={`inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-full ${
             activeShiftInfo.isCurrent
@@ -652,7 +652,9 @@ export default function Dashboard() {
                   const visibleRows = activeShiftInfo ? rows.filter(r => timeToShift[r.time] === activeShiftInfo.name) : rows;
                   if (visibleRows.length === 0) return null;
                   const label = shiftName === '__otros__' ? 'Sin turno' : shiftName;
-                  const active = visibleRows.filter(r => r.status !== 'cancelled' && r.status !== 'no_show').length;
+                  const activeRows = visibleRows.filter(r => r.status !== 'cancelled' && r.status !== 'no_show');
+                  const activeReservations = activeRows.length;
+                  const activePeople = activeRows.reduce((sum, r) => sum + (Number(r.people) || 0), 0);
                   return (
                     <div key={shiftName}>
                       <div className="flex items-center gap-2 px-1 mb-1.5">
@@ -660,7 +662,7 @@ export default function Dashboard() {
                         <div className="flex items-center gap-1.5 shrink-0">
                           <span className="text-xs font-bold text-gray-500 uppercase tracking-wide">{label}</span>
                           <span className="text-[10px] font-semibold bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full">
-                            {active} activa{active !== 1 ? 's' : ''}
+                            {activeReservations}R {activePeople}P
                           </span>
                         </div>
                         <div className="h-px flex-1 bg-gray-200" />
@@ -696,13 +698,15 @@ export default function Dashboard() {
                   const visibleRows = activeShiftInfo ? rows.filter(r => timeToShift[r.time] === activeShiftInfo.name) : rows;
                   if (visibleRows.length === 0) return null;
                   const label = shiftName === '__otros__' ? 'Sin turno' : shiftName;
-                  const active = visibleRows.filter(r => r.status !== 'cancelled' && r.status !== 'no_show').length;
+                  const activeRows = visibleRows.filter(r => r.status !== 'cancelled' && r.status !== 'no_show');
+                  const activeReservations = activeRows.length;
+                  const activePeople = activeRows.reduce((sum, r) => sum + (Number(r.people) || 0), 0);
                   return (
                     <div key={shiftName} className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
                       <div className="flex items-center justify-between px-5 py-3 bg-gray-50 border-b border-gray-100">
                         <h3 className="text-sm font-bold text-gray-700">{label}</h3>
                         <span className="text-xs font-semibold bg-white border border-gray-200 text-gray-500 px-2 py-0.5 rounded-full">
-                          {active} reserva{active !== 1 ? 's' : ''} activa{active !== 1 ? 's' : ''}
+                          {activeReservations}R {activePeople}P
                         </span>
                       </div>
                       <div className="overflow-x-auto">

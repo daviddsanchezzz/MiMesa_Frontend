@@ -28,6 +28,14 @@ function shiftLabel(shiftName) {
   return shiftName === ALL_SHIFTS_KEY ? 'Todos los turnos' : shiftName;
 }
 
+function defaultMessageForType(type) {
+  if (type === 'closed') return 'Restaurante cerrado en este turno';
+  if (type === 'full') return 'Turno completo';
+  if (type === 'call') return 'Por favor, llama por telefono';
+  if (type === 'close_room') return 'Sala cerrada para este turno';
+  return 'Excepcion activa en este turno';
+}
+
 export default function Exceptions() {
   const today = new Date().toISOString().slice(0, 10);
   const [rows, setRows] = useState([]);
@@ -94,7 +102,7 @@ export default function Exceptions() {
       shiftName: '',
       type: 'closed',
       roomId: '',
-      message: '',
+      message: defaultMessageForType('closed'),
     });
     setFormOpen(true);
     setError('');
@@ -107,7 +115,7 @@ export default function Exceptions() {
       shiftName: row.shiftName,
       type: row.type,
       roomId: row.roomId?._id || row.roomId || '',
-      message: row.message || '',
+      message: row.message || defaultMessageForType(row.type),
     });
     setFormOpen(true);
     setError('');
@@ -322,7 +330,17 @@ export default function Exceptions() {
                 <label className={labelCls}>Tipo de excepcion</label>
                 <select
                   value={form.type}
-                  onChange={(e) => setForm((f) => ({ ...f, type: e.target.value, roomId: '' }))}
+                  onChange={(e) => setForm((f) => {
+                    const nextType = e.target.value;
+                    const prevDefault = defaultMessageForType(f.type);
+                    const shouldUpdateMessage = !String(f.message || '').trim() || f.message === prevDefault;
+                    return {
+                      ...f,
+                      type: nextType,
+                      roomId: '',
+                      message: shouldUpdateMessage ? defaultMessageForType(nextType) : f.message,
+                    };
+                  })}
                   className={inputCls}
                   required
                 >

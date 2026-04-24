@@ -162,6 +162,7 @@ export default function ReservationForm({ reservation, onSave, onCancel, initial
   const [customersLoading, setCustomersLoading] = useState(false);
   const [customerQuery, setCustomerQuery] = useState(reservation?.guestName || '');
   const [selectedCustomer, setSelectedCustomer] = useState(null);
+  const [createCustomerMode, setCreateCustomerMode] = useState(false);
 
   const isDatePast = (day) => new Date(calYear, calMonth, day) < today;
   const fmtDay = (day) => `${calYear}-${String(calMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
@@ -228,11 +229,22 @@ export default function ReservationForm({ reservation, onSave, onCancel, initial
       .slice(0, 8);
   }, [customers, customerQuery, isEdit]);
 
-  const showInlineCreateFields = !isEdit && !selectedCustomer && customerQuery.trim() !== '' && customerMatches.length === 0;
-  const showContactFields = isEdit || showInlineCreateFields || (Boolean(selectedCustomer) && !String(form.guestPhone || '').trim());
+  const hasCustomerQuery = customerQuery.trim() !== '';
+  const showInlineCreateFields =
+    !isEdit &&
+    !selectedCustomer &&
+    hasCustomerQuery &&
+    (createCustomerMode || customerMatches.length === 0);
+  const showCustomerMatches = !isEdit && hasCustomerQuery && !selectedCustomer && !createCustomerMode && customerMatches.length > 0;
+  const showCreateCustomerCta = !isEdit && hasCustomerQuery && !selectedCustomer;
+  const showContactFields =
+    isEdit ||
+    showInlineCreateFields ||
+    (Boolean(selectedCustomer) && !String(form.guestPhone || '').trim());
 
   const handleCustomerQueryChange = (value) => {
     const hadSelectedCustomer = Boolean(selectedCustomer);
+    if (!value.trim()) setCreateCustomerMode(false);
     setCustomerQuery(value);
     setSelectedCustomer(null);
     setForm((f) => ({
@@ -247,6 +259,7 @@ export default function ReservationForm({ reservation, onSave, onCancel, initial
     const nextName = customer?.name || '';
     const nextPhone = customer?.phone || '';
     const nextEmail = customer?.email || '';
+    setCreateCustomerMode(false);
     setSelectedCustomer(customer);
     setCustomerQuery(nextName);
     setForm((f) => ({
@@ -485,7 +498,7 @@ export default function ReservationForm({ reservation, onSave, onCancel, initial
               {customersLoading && (
                 <p className="mt-2 text-xs text-gray-400">Cargando clientes...</p>
               )}
-              {!customersLoading && customerQuery.trim() !== '' && !selectedCustomer && customerMatches.length > 0 && (
+              {!customersLoading && showCustomerMatches && (
                 <div className="mt-2 rounded-xl border border-gray-200 bg-white max-h-52 overflow-auto">
                   {customerMatches.map((customer) => (
                     <button
@@ -500,6 +513,30 @@ export default function ReservationForm({ reservation, onSave, onCancel, initial
                   ))}
                 </div>
               )}
+              {!customersLoading && showCreateCustomerCta && (
+                <div className="mt-2 flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCreateCustomerMode(true);
+                      setSelectedCustomer(null);
+                      setForm((f) => ({ ...f, guestName: customerQuery }));
+                    }}
+                    className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-violet-50 text-violet-700 hover:bg-violet-100 transition-colors"
+                  >
+                    + Crear cliente nuevo
+                  </button>
+                  {createCustomerMode && customerMatches.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setCreateCustomerMode(false)}
+                      className="text-xs font-medium text-gray-500 hover:text-gray-700"
+                    >
+                      Ver coincidencias
+                    </button>
+                  )}
+                </div>
+              )}
               {selectedCustomer && (
                 <p className="mt-2 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-lg px-2.5 py-1.5 inline-block">
                   Cliente existente seleccionado
@@ -507,7 +544,7 @@ export default function ReservationForm({ reservation, onSave, onCancel, initial
               )}
               {!customersLoading && showInlineCreateFields && (
                 <p className="mt-2 text-xs text-gray-500">
-                  No hay coincidencias. Completa telefono y email para crear el cliente al guardar la reserva.
+                  Completa telefono y email para crear el cliente nuevo al guardar la reserva.
                 </p>
               )}
             </div>

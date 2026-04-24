@@ -180,53 +180,97 @@ export default function Exceptions() {
         ) : futureRows.length === 0 ? (
           <div className="px-5 py-8 text-sm text-gray-500">No hay excepciones futuras.</div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-100">
-                  <th className="text-left px-5 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Fecha</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Turno</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Tipo</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Sala</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Mensaje</th>
-                  <th className="px-4 py-3" />
-                </tr>
-              </thead>
-              <tbody>
-                {futureRows.map((row, i) => (
-                  <tr key={row._id} className={i < futureRows.length - 1 ? 'border-b border-gray-50' : ''}>
-                    <td className="px-5 py-3.5 text-gray-800 font-medium">{row.date}</td>
-                    <td className="px-4 py-3.5 text-gray-800 font-medium">{shiftLabel(row.shiftName)}</td>
-                    <td className="px-4 py-3.5">
-                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold ${typeBadge(row.type)}`}>
-                        {typeLabel(row.type)}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3.5 text-gray-600">{row.roomId?.name || '-'}</td>
-                    <td className="px-4 py-3.5 text-gray-500 max-w-[320px]">
-                      <p className="truncate">{row.message || '-'}</p>
-                    </td>
-                    <td className="px-4 py-3.5">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => openEdit(row)}
-                          className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-violet-50 text-violet-700 hover:bg-violet-100 transition-colors"
-                        >
-                          Editar
-                        </button>
-                        <button
-                          onClick={() => removeRow(row._id)}
-                          className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 transition-colors"
-                        >
-                          Eliminar
-                        </button>
-                      </div>
-                    </td>
+          <>
+            <div className="sm:hidden p-3 space-y-2.5">
+              {futureRows.map((row) => (
+                <article key={row._id} className="rounded-xl border border-gray-200 bg-white p-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold text-gray-900">{row.date}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">{shiftLabel(row.shiftName)}</p>
+                    </div>
+                    <span className={`inline-flex items-center px-2 py-1 rounded-full text-[11px] font-semibold ${typeBadge(row.type)}`}>
+                      {typeLabel(row.type)}
+                    </span>
+                  </div>
+
+                  <dl className="mt-2.5 space-y-1.5 text-xs">
+                    <div className="flex gap-2">
+                      <dt className="text-gray-400 min-w-12">Sala</dt>
+                      <dd className="text-gray-700">{row.roomId?.name || '-'}</dd>
+                    </div>
+                    <div className="flex gap-2">
+                      <dt className="text-gray-400 min-w-12">Mensaje</dt>
+                      <dd className="text-gray-700 break-words">{row.message || '-'}</dd>
+                    </div>
+                  </dl>
+
+                  <div className="mt-3 grid grid-cols-2 gap-2">
+                    <button
+                      onClick={() => openEdit(row)}
+                      className="text-xs font-semibold px-2.5 py-2 rounded-lg bg-violet-50 text-violet-700 hover:bg-violet-100 transition-colors"
+                    >
+                      Editar
+                    </button>
+                    <button
+                      onClick={() => removeRow(row._id)}
+                      className="text-xs font-semibold px-2.5 py-2 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 transition-colors"
+                    >
+                      Eliminar
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </div>
+
+            <div className="hidden sm:block overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-100">
+                    <th className="text-left px-5 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Fecha</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Turno</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Tipo</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Sala</th>
+                    <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Mensaje</th>
+                    <th className="px-4 py-3" />
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {futureRows.map((row, i) => (
+                    <tr key={row._id} className={i < futureRows.length - 1 ? 'border-b border-gray-50' : ''}>
+                      <td className="px-5 py-3.5 text-gray-800 font-medium">{row.date}</td>
+                      <td className="px-4 py-3.5 text-gray-800 font-medium">{shiftLabel(row.shiftName)}</td>
+                      <td className="px-4 py-3.5">
+                        <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-semibold ${typeBadge(row.type)}`}>
+                          {typeLabel(row.type)}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3.5 text-gray-600">{row.roomId?.name || '-'}</td>
+                      <td className="px-4 py-3.5 text-gray-500 max-w-[320px]">
+                        <p className="truncate">{row.message || '-'}</p>
+                      </td>
+                      <td className="px-4 py-3.5">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            onClick={() => openEdit(row)}
+                            className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-violet-50 text-violet-700 hover:bg-violet-100 transition-colors"
+                          >
+                            Editar
+                          </button>
+                          <button
+                            onClick={() => removeRow(row._id)}
+                            className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 transition-colors"
+                          >
+                            Eliminar
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
 

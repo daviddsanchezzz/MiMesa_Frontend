@@ -238,7 +238,7 @@ export default function Estadisticas() {
             <KpiCard
               label="Reservas"
               value={s.totalReservations}
-              sub={`${s.totalCovers} comensales`}
+              sub={`${s.totalCovers} comensales · ${s.theforkReservations || 0} TheFork`}
               trend={t.totalReservations}
               trendLabel={trendLabel}
               color="violet"

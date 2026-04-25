@@ -73,8 +73,9 @@ function normalizePhone(raw) {
 }
 
 export default function ReservationForm({ reservation, onSave, onCancel, initialContext = null }) {
-  const { business } = useAuth();
+  const { business, isModuleEnabled } = useAuth();
   const isEdit = Boolean(reservation?._id);
+  const theForkModuleEnabled = isModuleEnabled('thefork');
   const initialDate = reservation?.date || initialContext?.date || new Date().toISOString().slice(0, 10);
   const [rooms, setRooms] = useState(initialContext?.rooms || []);
   const [step, setStep] = useState(isEdit ? 4 : 1);
@@ -87,6 +88,7 @@ export default function ReservationForm({ reservation, onSave, onCancel, initial
     time: reservation?.time || initialContext?.slots?.[0]?.time || '',
     people: reservation?.people || 2,
     status: reservation?.status || 'pending',
+    thefork: Boolean(reservation?.thefork),
     notes: reservation?.notes || '',
   });
   const [error, setError] = useState('');
@@ -586,6 +588,18 @@ export default function ReservationForm({ reservation, onSave, onCancel, initial
             <label className={labelCls}>Notas <span className="text-gray-400 font-normal">(opcional)</span></label>
             <textarea value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} rows={2} className={`${inputCls} resize-none`} />
           </div>
+
+          {theForkModuleEnabled && (
+            <label className="flex items-center gap-2.5 text-sm text-gray-700">
+              <input
+                type="checkbox"
+                checked={Boolean(form.thefork)}
+                onChange={(e) => setForm((f) => ({ ...f, thefork: e.target.checked }))}
+                className="w-4 h-4 rounded accent-violet-600"
+              />
+              TheFork
+            </label>
+          )}
 
           <div className="flex gap-3 pt-1">
             <button type="button" onClick={() => setStep(3)} className="px-4 py-2.5 rounded-xl text-sm font-medium text-gray-500 hover:bg-gray-100 transition-colors">

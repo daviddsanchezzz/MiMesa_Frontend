@@ -32,9 +32,16 @@ const IconCurrencyEuro = () => (
   </svg>
 );
 
+const IconBookmark = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 shrink-0">
+    <path d="M5 3.75A1.75 1.75 0 0 1 6.75 2h6.5A1.75 1.75 0 0 1 15 3.75v13.11a.75.75 0 0 1-1.149.634L10 15.032l-3.851 2.463A.75.75 0 0 1 5 16.861V3.75Z" />
+  </svg>
+);
+
 function ModuleIcon({ moduleKey }) {
   if (moduleKey === 'staff') return <IconBriefcase />;
   if (moduleKey === 'expenses') return <IconCurrencyEuro />;
+  if (moduleKey === 'thefork') return <IconBookmark />;
   return null;
 }
 

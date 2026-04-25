@@ -30,6 +30,8 @@ import PublicUnsubscribe from './pages/PublicUnsubscribe';
 import Sidebar from './components/Sidebar';
 import Modal from './components/Modal';
 import ReservationForm from './components/ReservationForm';
+import ToastStack from './components/ToastStack';
+import useTransientToasts from './hooks/useTransientToasts';
 
 function LoadingScreen() {
   return (
@@ -49,7 +51,7 @@ function MobileHeader({ onMenuOpen, onNewReservation, showDefaultAction = true }
       <button
         onClick={onMenuOpen}
         className="w-9 h-9 flex items-center justify-center rounded-xl text-gray-600 hover:bg-gray-100 transition-colors"
-        aria-label="Abrir menÃº"
+        aria-label="Abrir menú"
       >
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
           <path fillRule="evenodd" d="M2 4.75A.75.75 0 0 1 2.75 4h14.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 4.75ZM2 10a.75.75 0 0 1 .75-.75h14.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 10Zm0 5.25a.75.75 0 0 1 .75-.75h14.5a.75.75 0 0 1 0 1.5H2.75a.75.75 0 0 1-.75-.75Z" clipRule="evenodd" />
@@ -107,6 +109,21 @@ function LayoutShell({ children, fullBleed = false, devMode = false }) {
     return window.matchMedia('(min-width: 1024px)').matches;
   });
   const [newRsvModal, setNewRsvModal] = useState(false);
+  const { toasts, pushToast } = useTransientToasts();
+
+  useEffect(() => {
+    const onToast = (event) => {
+      const detail = event?.detail;
+      if (!detail) return;
+      if (typeof detail === 'string') {
+        pushToast(detail);
+        return;
+      }
+      pushToast(detail.message, detail.type || 'success');
+    };
+    window.addEventListener('app:toast', onToast);
+    return () => window.removeEventListener('app:toast', onToast);
+  }, [pushToast]);
 
   useEffect(() => {
     const media = window.matchMedia('(min-width: 1024px)');
@@ -166,11 +183,13 @@ function LayoutShell({ children, fullBleed = false, devMode = false }) {
             onSave={() => {
               setNewRsvModal(false);
               window.dispatchEvent(new CustomEvent('reservation:created'));
+              window.dispatchEvent(new CustomEvent('app:toast', { detail: { message: 'Reserva creada', type: 'success' } }));
             }}
             onCancel={() => setNewRsvModal(false)}
           />
         </Modal>
       )}
+      <ToastStack toasts={toasts} />
     </div>
     </MobileHeaderProvider>
   );
@@ -272,3 +291,4 @@ export default function App() {
     </AuthProvider>
   );
 }
+

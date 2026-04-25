@@ -5,6 +5,8 @@ import PlanGate from '../components/PlanGate';
 import { statusConfig, Avatar } from '../components/ReservationCard';
 import Modal from '../components/Modal';
 import ReservationForm from '../components/ReservationForm';
+import ToastStack from '../components/ToastStack';
+import useTransientToasts from '../hooks/useTransientToasts';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const PX_PER_MIN  = 3;
@@ -229,6 +231,7 @@ function ReservationDrawer({ reservation, onClose, onAction, onEdit }) {
 export default function Calendar() {
   const { business } = useAuth();
   const reservationDuration = business?.reservationDuration;
+  const { toasts, pushToast } = useTransientToasts();
 
   const today = getToday();
   const [date, setDate]                 = useState(today);
@@ -272,13 +275,17 @@ export default function Calendar() {
 
   // ── Handlers ──
   const handleAction = async (rsv, action) => {
-    if (action === 'no_show') {
-      await api.put(`/reservations/${rsv._id}/no-show`);
-    } else {
-      await api.put(`/reservations/${rsv._id}`, { status: action });
+    try {
+      if (action === 'no_show') {
+        await api.put(`/reservations/${rsv._id}/no-show`);
+      } else {
+        await api.put(`/reservations/${rsv._id}`, { status: action });
+      }
+      setSelectedRsv(null);
+      loadReservations();
+    } catch (err) {
+      pushToast(err?.response?.data?.message || 'No se pudo actualizar la reserva', 'error');
     }
-    setSelectedRsv(null);
-    loadReservations();
   };
 
   const handleEdit = (rsv) => {
@@ -286,9 +293,10 @@ export default function Calendar() {
     setEditRsv(rsv);
   };
 
-  const afterSave = () => {
+  const afterSave = ({ mode } = {}) => {
     setEditRsv(null);
     loadReservations();
+    pushToast(mode === 'create' ? 'Reserva creada' : 'Reserva actualizada');
   };
 
   // ── Drag to reassign table ──
@@ -700,6 +708,7 @@ export default function Calendar() {
             />
           </Modal>
         )}
+        <ToastStack toasts={toasts} />
       </div>
     </PlanGate>
   );

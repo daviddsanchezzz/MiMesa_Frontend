@@ -299,7 +299,7 @@ export default function ReservationForm({ reservation, onSave, onCancel, initial
       };
       if (isEdit) await api.put(`/reservations/${reservation._id}`, payload);
       else await api.post('/reservations', payload);
-      onSave();
+      onSave({ mode: isEdit ? 'edit' : 'create' });
     } catch (err) {
       setError(err.response?.data?.message || 'Error al guardar');
       setSaving(false);

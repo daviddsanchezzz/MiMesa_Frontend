@@ -1659,7 +1659,7 @@ export default function Reservations() {
         >
           <ReservationForm
             reservation={modal.reservation}
-            onSave={() => { setModal(null); Promise.all([load(), loadPendingReservations()]); }}
+            onSave={() => { setModal(null); Promise.all([load(), loadPendingReservations()]); pushToast('Reserva actualizada'); }}
             onCancel={() => setModal(null)}
           />
         </Modal>

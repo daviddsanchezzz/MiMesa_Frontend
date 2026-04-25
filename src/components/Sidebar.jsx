@@ -3,6 +3,8 @@ import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import Modal from './Modal';
 import ReservationForm from './ReservationForm';
+import ToastStack from './ToastStack';
+import useTransientToasts from '../hooks/useTransientToasts';
 
 const IconTeam = () => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 shrink-0">
@@ -84,6 +86,7 @@ export default function Sidebar({
   const [menuOpen, setMenuOpen] = useState(false);
   const [isSmallScreen, setIsSmallScreen] = useState(false);
   const [newRsvModal, setNewRsvModal] = useState(false);
+  const { toasts, pushToast } = useTransientToasts();
   const menuRef = useRef(null);
   const isStaff = business?.role === 'staff';
   const isFree = !isSubscribed;
@@ -378,11 +381,13 @@ export default function Sidebar({
             setNewRsvModal(false);
             handleNavClick();
             window.dispatchEvent(new CustomEvent('reservation:created'));
+            pushToast('Reserva creada');
           }}
           onCancel={() => setNewRsvModal(false)}
         />
       </Modal>
     )}
+    <ToastStack toasts={toasts} />
     </>
   );
 }

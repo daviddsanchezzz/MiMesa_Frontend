@@ -2,6 +2,7 @@
 import api from '../services/api';
 import Modal from '../components/Modal';
 import { useAuth } from '../context/AuthContext';
+import PushNotificationToggle from '../components/PushNotificationToggle';
 
 const inputCls = 'w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-white';
 const labelCls = 'block text-xs font-medium text-gray-600 mb-1.5';
@@ -375,6 +376,8 @@ export default function Profile() {
             )}
           </div>
         )}
+
+        <PushNotificationToggle />
       </section>
 
       {isOwnerAnyBusiness && (

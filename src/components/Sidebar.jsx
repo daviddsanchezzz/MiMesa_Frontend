@@ -77,6 +77,7 @@ export default function Sidebar({
   closeOnNavigate = true,
   collapsed = false,
   onDesktopToggleCollapse,
+  onReservationCreated,
 }) {
   const { business, memberships, logout, hasRole, switchBusiness, session, isSubscribed, isModuleEnabled } = useAuth();
   const navigate = useNavigate();
@@ -376,8 +377,11 @@ export default function Sidebar({
         <ReservationForm
           onSave={() => {
             setNewRsvModal(false);
-            window.dispatchEvent(new CustomEvent('reservation:created'));
-            window.dispatchEvent(new CustomEvent('app:toast', { detail: { message: 'Reserva creada', type: 'success' } }));
+            if (typeof onReservationCreated === 'function') onReservationCreated();
+            else {
+              window.dispatchEvent(new CustomEvent('reservation:created'));
+              window.dispatchEvent(new CustomEvent('app:toast', { detail: { message: 'Reserva creada', type: 'success' } }));
+            }
             handleNavClick();
           }}
           onCancel={() => setNewRsvModal(false)}

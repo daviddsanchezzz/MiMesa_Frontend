@@ -12,10 +12,14 @@ export default function CustomerForm({ customer, onSave, onCancel }) {
     notes: customer?.notes || '',
   });
   const [error, setError] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (saving || deleting) return;
     setError('');
+    setSaving(true);
     try {
       if (customer?._id) {
         await api.put(`/customers/${customer._id}`, form);
@@ -25,6 +29,22 @@ export default function CustomerForm({ customer, onSave, onCancel }) {
       onSave();
     } catch (err) {
       setError(err.response?.data?.message || 'Error al guardar');
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!customer?._id || saving || deleting) return;
+    const ok = window.confirm(`Vas a eliminar al cliente "${customer.name}". Esta accion no se puede deshacer.`);
+    if (!ok) return;
+    setError('');
+    setDeleting(true);
+    try {
+      await api.delete(`/customers/${customer._id}`);
+      onSave();
+    } catch (err) {
+      setError(err.response?.data?.message || 'Error al eliminar');
+      setDeleting(false);
     }
   };
 
@@ -68,12 +88,23 @@ export default function CustomerForm({ customer, onSave, onCancel }) {
       </div>
 
       <div className="flex gap-3 pt-1">
+        {customer && (
+          <button
+            type="button"
+            onClick={handleDelete}
+            disabled={saving || deleting}
+            className="bg-rose-50 hover:bg-rose-100 text-rose-700 py-2.5 px-3 rounded-xl text-sm font-semibold transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+          >
+            {deleting ? 'Eliminando...' : 'Eliminar'}
+          </button>
+        )}
         <button type="submit"
-          className="flex-1 bg-violet-600 hover:bg-violet-700 text-white py-2.5 rounded-xl text-sm font-semibold transition-colors">
-          {customer ? 'Guardar cambios' : 'Crear cliente'}
+          disabled={saving || deleting}
+          className="flex-1 bg-violet-600 hover:bg-violet-700 text-white py-2.5 rounded-xl text-sm font-semibold transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
+          {saving ? 'Guardando...' : customer ? 'Guardar cambios' : 'Crear cliente'}
         </button>
-        <button type="button" onClick={onCancel}
-          className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-2.5 rounded-xl text-sm font-medium transition-colors">
+        <button type="button" onClick={onCancel} disabled={saving || deleting}
+          className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-2.5 rounded-xl text-sm font-medium transition-colors disabled:opacity-60 disabled:cursor-not-allowed">
           Cancelar
         </button>
       </div>

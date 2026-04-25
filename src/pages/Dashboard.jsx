@@ -5,8 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import Modal from '../components/Modal';
 import ReservationForm from '../components/ReservationForm';
 import { ReservationCard, TableCell, Avatar, statusConfig } from '../components/ReservationCard';
-import ToastStack from '../components/ToastStack';
-import useTransientToasts from '../hooks/useTransientToasts';
+import { toast } from 'sonner';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function getToday() {
@@ -129,7 +128,6 @@ export default function Dashboard() {
   const [pendingProposal, setPendingProposal] = useState(null);
   const [pendingProposalSlots, setPendingProposalSlots] = useState([]);
   const [pendingProposalSaving, setPendingProposalSaving] = useState(false);
-  const { toasts, pushToast } = useTransientToasts();
 
   const today      = getToday();
   const todayLabel = new Date().toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
@@ -801,7 +799,7 @@ export default function Dashboard() {
             onSave={({ mode } = {}) => {
               setModal(null);
               loadReservations();
-              pushToast(mode === 'create' ? 'Reserva creada' : 'Reserva actualizada');
+              toast.success(mode === 'create' ? 'Reserva creada' : 'Reserva actualizada');
             }}
             onCancel={() => setModal(null)}
           />
@@ -903,7 +901,6 @@ export default function Dashboard() {
           </form>
         </Modal>
       )}
-      <ToastStack toasts={toasts} />
     </div>
   );
 }

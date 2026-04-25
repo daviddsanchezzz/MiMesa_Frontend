@@ -30,8 +30,7 @@ import PublicUnsubscribe from './pages/PublicUnsubscribe';
 import Sidebar from './components/Sidebar';
 import Modal from './components/Modal';
 import ReservationForm from './components/ReservationForm';
-import ToastStack from './components/ToastStack';
-import useTransientToasts from './hooks/useTransientToasts';
+import { Toaster, toast } from 'sonner';
 
 function LoadingScreen() {
   return (
@@ -109,11 +108,10 @@ function LayoutShell({ children, fullBleed = false, devMode = false }) {
     return window.matchMedia('(min-width: 1024px)').matches;
   });
   const [newRsvModal, setNewRsvModal] = useState(false);
-  const { toasts, pushToast } = useTransientToasts();
 
   const handleReservationCreated = () => {
     window.dispatchEvent(new CustomEvent('reservation:created'));
-    pushToast('Reserva creada', 'success');
+    toast.success('Reserva creada');
   };
 
   useEffect(() => {
@@ -121,14 +119,24 @@ function LayoutShell({ children, fullBleed = false, devMode = false }) {
       const detail = event?.detail;
       if (!detail) return;
       if (typeof detail === 'string') {
-        pushToast(detail);
+        toast.success(detail);
         return;
       }
-      pushToast(detail.message, detail.type || 'success');
+      const message = detail.message || '';
+      if (!message) return;
+      if (detail.type === 'error') {
+        toast.error(message);
+        return;
+      }
+      if (detail.type === 'warning') {
+        toast.warning(message);
+        return;
+      }
+      toast.success(message);
     };
     window.addEventListener('app:toast', onToast);
     return () => window.removeEventListener('app:toast', onToast);
-  }, [pushToast]);
+  }, []);
 
   useEffect(() => {
     const media = window.matchMedia('(min-width: 1024px)');
@@ -194,7 +202,12 @@ function LayoutShell({ children, fullBleed = false, devMode = false }) {
           />
         </Modal>
       )}
-      <ToastStack toasts={toasts} />
+      <Toaster
+        position="bottom-right"
+        richColors
+        closeButton
+        toastOptions={{ duration: 3200 }}
+      />
     </div>
     </MobileHeaderProvider>
   );

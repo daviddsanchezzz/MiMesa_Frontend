@@ -149,10 +149,10 @@ export default function Sidebar({
     <>
     <aside
       className={`
-        fixed lg:relative inset-y-0 left-0 z-50 lg:z-auto
-        w-64 ${collapsed ? 'lg:w-20' : 'lg:w-56'} bg-slate-900 flex flex-col shrink-0 select-none
+        fixed xl:relative inset-y-0 left-0 z-50 xl:z-auto
+        w-64 ${collapsed ? 'xl:w-20' : 'xl:w-56'} bg-slate-900 flex flex-col shrink-0 select-none
         transform transition-transform duration-200 ease-in-out
-        ${isOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+        ${isOpen ? 'translate-x-0' : '-translate-x-full xl:translate-x-0'}
       `}
     >
       <div className="px-4 py-5 border-b border-slate-700/50">
@@ -170,7 +170,7 @@ export default function Sidebar({
             <button
               type="button"
               onClick={onDesktopToggleCollapse}
-              className="hidden lg:flex w-8 h-8 items-center justify-center rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition-colors"
+              className="hidden xl:flex w-8 h-8 items-center justify-center rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition-colors"
               aria-label={collapsed ? 'Expandir menú lateral' : 'Colapsar menú lateral'}
             >
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">

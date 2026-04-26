@@ -46,7 +46,7 @@ function LoadingScreen() {
 function MobileHeader({ onMenuOpen, onNewReservation, showDefaultAction = true }) {
   const { title, actions } = useMobileHeader();
   return (
-    <div className="lg:hidden flex items-center gap-3 px-4 py-3 bg-white border-b border-gray-200 shrink-0 z-30">
+    <div className="xl:hidden flex items-center gap-3 px-4 py-3 bg-white border-b border-gray-200 shrink-0 z-30">
       <button
         onClick={onMenuOpen}
         className="w-9 h-9 flex items-center justify-center rounded-xl text-gray-600 hover:bg-gray-100 transition-colors"
@@ -105,7 +105,7 @@ function LayoutShell({ children, fullBleed = false, devMode = false }) {
   });
   const [isDesktop, setIsDesktop] = useState(() => {
     if (typeof window === 'undefined' || !window.matchMedia) return false;
-    return window.matchMedia('(min-width: 1024px)').matches;
+    return window.matchMedia('(min-width: 1280px)').matches;
   });
   const [newRsvModal, setNewRsvModal] = useState(false);
 
@@ -139,7 +139,7 @@ function LayoutShell({ children, fullBleed = false, devMode = false }) {
   }, []);
 
   useEffect(() => {
-    const media = window.matchMedia('(min-width: 1024px)');
+    const media = window.matchMedia('(min-width: 1280px)');
     const sync = () => setIsDesktop(media.matches);
     sync();
     media.addEventListener('change', sync);
@@ -168,7 +168,7 @@ function LayoutShell({ children, fullBleed = false, devMode = false }) {
         }}
       />
       {mobileSidebarOpen && !isDesktop && (
-        <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={() => setMobileSidebarOpen(false)} />
+        <div className="fixed inset-0 z-40 bg-black/50 xl:hidden" onClick={() => setMobileSidebarOpen(false)} />
       )}
       {sidebarVisible && (
         <Sidebar

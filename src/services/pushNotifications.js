@@ -75,6 +75,15 @@ export async function getCurrentSubscription() {
   return reg.pushManager.getSubscription();
 }
 
+export async function getServerSubscriptionStatus() {
+  try {
+    const { data } = await api.get('/push/status');
+    return !!data.subscribed;
+  } catch {
+    return false;
+  }
+}
+
 export function getNotificationPermission() {
   if (!('Notification' in window)) return 'unsupported';
   return Notification.permission;

@@ -4,7 +4,7 @@ import {
   isStandaloneMode,
   subscribeToPush,
   unsubscribeFromPush,
-  getCurrentSubscription,
+  getServerSubscriptionStatus,
   getNotificationPermission,
   registerServiceWorker,
 } from '../services/pushNotifications';
@@ -30,8 +30,8 @@ export default function PushNotificationToggle() {
     if (!supported) { setLoading(false); return; }
 
     registerServiceWorker().then(() =>
-      getCurrentSubscription().then((sub) => {
-        setSubscribed(!!sub);
+      getServerSubscriptionStatus().then((isSubscribed) => {
+        setSubscribed(isSubscribed);
         setPermission(getNotificationPermission());
         setLoading(false);
       })

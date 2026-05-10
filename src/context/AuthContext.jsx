@@ -59,10 +59,28 @@ export function AuthProvider({ children }) {
 
   // Login
   const login = async (email, password) => {
-    const { data, error } = await authClient.signIn.email({ email, password });
+    const normalizedEmail = String(email || '').trim().toLowerCase();
+    let result;
+    try {
+      result = await authClient.signIn.email({ email: normalizedEmail, password });
+    } catch (err) {
+      const msg = String(err?.message || '').toLowerCase();
+      if (
+        msg.includes('load failed') ||
+        msg.includes('failed to fetch') ||
+        msg.includes('networkerror')
+      ) {
+        throw new Error('Error de conexion con el servidor. Revisa la red y la configuracion del dominio.');
+      }
+      throw new Error(err?.message || 'Error al iniciar sesion');
+    }
+    const { data, error } = result;
     if (error) {
       if (error.code === 'EMAIL_NOT_VERIFIED') {
         throw new Error('Debes verificar tu email antes de iniciar sesión. Revisa tu bandeja de entrada.');
+      }
+      if (String(error.code || '').includes('TWO_FACTOR')) {
+        throw new Error('Esta cuenta requiere verificacion en dos pasos y esta pantalla aun no la gestiona.');
       }
       throw new Error(error.message || 'Credenciales incorrectas');
     }

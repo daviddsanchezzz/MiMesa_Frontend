@@ -24,6 +24,7 @@ import Publicidad from './pages/Publicidad';
 import Analytics from './pages/Analytics';
 import Personal from './pages/Personal';
 import Finanzas from './pages/Finanzas';
+import Compras from './pages/Compras';
 import PublicReservation from './pages/PublicReservation';
 import PublicCancel from './pages/PublicCancel';
 import PublicUnsubscribe from './pages/PublicUnsubscribe';
@@ -303,11 +304,11 @@ export default function App() {
           <Route path="/publicidad"   element={<RoleRoute minRole="manager"><PrivateLayout><Publicidad /></PrivateLayout></RoleRoute>} />
           <Route path="/personal"     element={<ModuleRoute moduleKey="staff"><RoleRoute minRole="manager"><PrivateLayout><Personal /></PrivateLayout></RoleRoute></ModuleRoute>} />
           <Route path="/finanzas"     element={<ModuleRoute moduleKey="expenses"><RoleRoute minRole="owner"><PrivateLayout><Finanzas /></PrivateLayout></RoleRoute></ModuleRoute>} />
+          <Route path="/compras"      element={<ModuleRoute moduleKey="purchases"><RoleRoute minRole="manager"><PrivateLayout><Compras /></PrivateLayout></RoleRoute></ModuleRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
     </AuthProvider>
   );
 }
-
 

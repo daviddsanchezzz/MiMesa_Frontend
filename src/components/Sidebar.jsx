@@ -60,6 +60,12 @@ const IconMegaphone = () => (
   </svg>
 );
 
+const IconCart = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 shrink-0">
+    <path d="M1.75 2.5a.75.75 0 0 0 0 1.5h1.31l1.56 7.022A2.25 2.25 0 0 0 6.816 12.75h6.736a2.25 2.25 0 0 0 2.196-1.728l1.064-4.255A1.75 1.75 0 0 0 15.114 4.5H4.842l-.152-.683A.75.75 0 0 0 3.958 3.25H1.75ZM7 16a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Zm8 0a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z" />
+  </svg>
+);
+
 const links = [
   { to: '/', label: 'Dashboard', icon: <IconHome /> },
   { to: '/reservations', label: 'Reservas', icon: <IconCalendar /> },
@@ -104,6 +110,9 @@ export default function Sidebar({
   const finanzasLink = (isModuleEnabled('expenses') && hasRole('owner'))
     ? [{ to: '/finanzas', label: 'Finanzas', icon: <IconCurrencyEuro /> }]
     : [];
+  const comprasLink = (isModuleEnabled('purchases') && hasRole('manager'))
+    ? [{ to: '/compras', label: 'Compras', icon: <IconCart /> }]
+    : [];
   const navLinks = [
     mainLinks[0],
     mainLinks[1],
@@ -111,6 +120,7 @@ export default function Sidebar({
     ...lowerLinks,
     ...personalLink,
     ...finanzasLink,
+    ...comprasLink,
   ].filter(Boolean).filter((link) => !(isSmallScreen && link.to === '/tables'));
 
   const userName = session?.user?.name || business?.userName || business?.name || 'Usuario';
@@ -391,4 +401,3 @@ export default function Sidebar({
     </>
   );
 }
-

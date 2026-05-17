@@ -17,6 +17,7 @@ const parseDecimalInput = (raw) => {
   const parsed = Number(sanitized);
   return Number.isFinite(parsed) ? parsed : 0;
 };
+const csvEscape = (value) => `"${String(value ?? '').replace(/"/g, '""')}"`;
 
 const STATUS_LABELS = {
   draft: 'Borrador',
@@ -171,6 +172,89 @@ export default function Compras() {
     } catch (err) {
       setError(err?.response?.data?.message || 'No se pudo eliminar el pedido');
     }
+  };
+
+  const exportSuppliersProductsCsv = () => {
+    const groups = [...productsBySupplier];
+    const rows = [];
+    rows.push(['Proveedor', 'Producto', 'Unidad', 'Orden', 'Activo']);
+    groups.forEach((group) => {
+      const supplierName = group.supplier?.name || 'Sin proveedor';
+      if (!group.products.length) {
+        rows.push([supplierName, '', '', '', '']);
+        return;
+      }
+      group.products.forEach((product) => {
+        rows.push([
+          supplierName,
+          product.name || '',
+          product.unit || '',
+          Number(product.sortOrder || 0),
+          product.isActive ? 'Sí' : 'No',
+        ]);
+      });
+      rows.push(['', '', '', '', '']);
+    });
+
+    const csv = rows
+      .map((row) => row.map((cell) => csvEscape(cell)).join(';'))
+      .join('\n');
+
+    const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const date = todayIso();
+    a.href = url;
+    a.download = `proveedores_productos_${date}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const exportSuppliersProductsPdf = async () => {
+    const { jsPDF } = await import('jspdf');
+    const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const margin = 40;
+    const lineHeight = 16;
+    let y = margin;
+
+    const printLine = (text, opts = {}) => {
+      const { bold = false, size = 10, color = [31, 41, 55] } = opts;
+      doc.setFont('helvetica', bold ? 'bold' : 'normal');
+      doc.setFontSize(size);
+      doc.setTextColor(...color);
+      const lines = doc.splitTextToSize(String(text || ''), pageWidth - margin * 2);
+      lines.forEach((line) => {
+        if (y > pageHeight - margin) {
+          doc.addPage();
+          y = margin;
+        }
+        doc.text(line, margin, y);
+        y += lineHeight;
+      });
+    };
+
+    printLine(`Proveedores y productos - ${todayIso()}`, { bold: true, size: 14, color: [17, 24, 39] });
+    y += 4;
+
+    productsBySupplier.forEach((group) => {
+      const supplierName = group.supplier?.name || 'Sin proveedor';
+      printLine(supplierName, { bold: true, size: 12, color: [79, 70, 229] });
+      if (!group.products.length) {
+        printLine('Sin productos', { size: 10, color: [107, 114, 128] });
+      } else {
+        group.products.forEach((product, index) => {
+          const unit = product.unit ? ` (${product.unit})` : '';
+          printLine(`${index + 1}. ${product.name}${unit}`, { size: 10 });
+        });
+      }
+      y += 6;
+    });
+
+    doc.save(`proveedores_productos_${todayIso()}.pdf`);
   };
 
   const handleMoveProduct = async (product, direction) => {
@@ -362,7 +446,11 @@ export default function Compras() {
         <section className="space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-lg font-semibold text-gray-900">Proveedores</h2>
-            <button onClick={() => setSupplierModal({})} className="px-3 py-2 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold">+ Proveedor</button>
+            <div className="flex items-center gap-2">
+              <button onClick={exportSuppliersProductsCsv} className="px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-semibold">Exportar Excel</button>
+              <button onClick={exportSuppliersProductsPdf} className="px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-semibold">Exportar PDF</button>
+              <button onClick={() => setSupplierModal({})} className="px-3 py-2 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold">+ Proveedor</button>
+            </div>
           </div>
 
           {suppliers.length === 0 ? (
@@ -546,21 +634,6 @@ function SupplierModal({ supplier, onClose, onSaved }) {
     }
   };
 
-  const remove = async () => {
-    if (!product?._id) return;
-    if (!window.confirm('¿Eliminar este producto?')) return;
-    setSaving(true);
-    setError('');
-    try {
-      await api.delete(`/purchases/products/${product._id}`);
-      onSaved();
-    } catch (err) {
-      setError(err?.response?.data?.message || 'No se pudo eliminar el producto');
-    } finally {
-      setSaving(false);
-    }
-  };
-
   return (
     <div className="fixed inset-0 z-50 bg-black/45 flex items-center justify-center p-4">
       <div className="w-full max-w-xl bg-white rounded-2xl border border-gray-200 shadow-2xl">
@@ -627,6 +700,21 @@ function ProductModal({ product, suppliers, onClose, onSaved }) {
     }
   };
 
+  const remove = async () => {
+    if (!product?._id) return;
+    if (!window.confirm('¿Eliminar este producto?')) return;
+    setSaving(true);
+    setError('');
+    try {
+      await api.delete(`/purchases/products/${product._id}`);
+      onSaved();
+    } catch (err) {
+      setError(err?.response?.data?.message || 'No se pudo eliminar el producto');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 bg-black/45 flex items-center justify-center p-4">
       <div className="w-full max-w-xl bg-white rounded-2xl border border-gray-200 shadow-2xl">
@@ -659,6 +747,9 @@ function ProductModal({ product, suppliers, onClose, onSaved }) {
             </label>
           )}
           <div className="flex justify-end gap-2 pt-2">
+            {product?._id && (
+              <button type="button" onClick={remove} disabled={saving} className="px-3 py-2 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 text-sm font-semibold disabled:opacity-50">Eliminar</button>
+            )}
             <button type="button" onClick={onClose} className="px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-sm">Cancelar</button>
             <button type="submit" disabled={saving} className="px-3 py-2 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold">{saving ? 'Guardando...' : 'Guardar'}</button>
           </div>

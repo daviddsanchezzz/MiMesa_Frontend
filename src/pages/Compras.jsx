@@ -49,26 +49,12 @@ function toWaPhone(e164) {
 }
 
 function generateWhatsAppOrderMessage(order, supplier) {
-  const supplierName = supplier?.name || order?.supplierName || 'equipo';
   const lines = Array.isArray(order?.items)
     ? order.items
         .filter((item) => Number(item?.quantity || 0) > 0)
         .map((item) => `- ${item.quantity} ${item.unit ? `${item.unit} ` : ''}${item.productName}`.trim())
     : [];
-
-  const blocks = [
-    `Hola ${supplierName}, te paso pedido:`,
-    '',
-    ...lines,
-    '',
-    `Entrega: ${order?.deliveryDate ? String(order.deliveryDate).slice(0, 10) : 'a confirmar'}.`,
-  ];
-
-  const notes = String(order?.notes || '').trim();
-  if (notes) blocks.push(`Observaciones: ${notes}`);
-  blocks.push('', 'Gracias.');
-
-  return blocks.join('\n').replace(/\n{3,}/g, '\n\n').trim();
+  return lines.join('\n').trim();
 }
 
 export default function Compras() {

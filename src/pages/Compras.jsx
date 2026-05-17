@@ -286,31 +286,56 @@ export default function Compras() {
           {suppliers.length === 0 ? (
             <div className="rounded-2xl border border-gray-200 bg-white p-8 text-center text-sm text-gray-500">Todavía no hay proveedores registrados</div>
           ) : (
-            <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-gray-100 text-gray-400 text-xs uppercase tracking-wide">
-                    <th className="px-4 py-3 text-left">Proveedor</th>
-                    <th className="px-4 py-3 text-left">Contacto</th>
-                    <th className="px-4 py-3 text-left">WhatsApp</th>
-                    <th className="px-4 py-3 text-left">Estado</th>
-                    <th className="px-4 py-3" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {suppliers.map((supplier) => (
-                    <tr key={supplier._id} className="border-b last:border-0 border-gray-50">
-                      <td className="px-4 py-3 text-gray-900 font-medium">{supplier.name}</td>
-                      <td className="px-4 py-3 text-gray-600">{supplier.contactName || '-'}</td>
-                      <td className="px-4 py-3 text-gray-700">{supplier.whatsappPhone || supplier.phone || '-'}</td>
-                      <td className="px-4 py-3 text-gray-600">{supplier.isActive ? 'Activo' : 'Inactivo'}</td>
-                      <td className="px-4 py-3 text-right">
-                        <button onClick={() => setSupplierModal(supplier)} className="text-violet-600 hover:text-violet-700 text-sm font-semibold">Editar</button>
-                      </td>
+            <div className="space-y-3">
+              <div className="md:hidden space-y-2">
+                {suppliers.map((supplier) => (
+                  <div key={supplier._id} className="rounded-2xl border border-gray-200 bg-white p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-gray-900 truncate">{supplier.name}</p>
+                        <p className="text-xs text-gray-500 mt-1">{supplier.contactName || 'Sin contacto'}</p>
+                      </div>
+                      <span className={`text-[11px] px-2 py-0.5 rounded-full font-semibold ${supplier.isActive ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-600'}`}>
+                        {supplier.isActive ? 'Activo' : 'Inactivo'}
+                      </span>
+                    </div>
+                    <div className="mt-3 space-y-1.5">
+                      <p className="text-xs text-gray-600"><span className="font-semibold text-gray-500">WhatsApp:</span> {supplier.whatsappPhone || supplier.phone || '-'}</p>
+                      <p className="text-xs text-gray-600"><span className="font-semibold text-gray-500">Email:</span> {supplier.email || '-'}</p>
+                    </div>
+                    <div className="mt-3 flex justify-end">
+                      <button onClick={() => setSupplierModal(supplier)} className="text-violet-600 hover:text-violet-700 text-sm font-semibold">Editar</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="hidden md:block rounded-2xl border border-gray-200 bg-white overflow-hidden">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-gray-100 text-gray-400 text-xs uppercase tracking-wide">
+                      <th className="px-4 py-3 text-left">Proveedor</th>
+                      <th className="px-4 py-3 text-left">Contacto</th>
+                      <th className="px-4 py-3 text-left">WhatsApp</th>
+                      <th className="px-4 py-3 text-left">Estado</th>
+                      <th className="px-4 py-3" />
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {suppliers.map((supplier) => (
+                      <tr key={supplier._id} className="border-b last:border-0 border-gray-50">
+                        <td className="px-4 py-3 text-gray-900 font-medium">{supplier.name}</td>
+                        <td className="px-4 py-3 text-gray-600">{supplier.contactName || '-'}</td>
+                        <td className="px-4 py-3 text-gray-700">{supplier.whatsappPhone || supplier.phone || '-'}</td>
+                        <td className="px-4 py-3 text-gray-600">{supplier.isActive ? 'Activo' : 'Inactivo'}</td>
+                        <td className="px-4 py-3 text-right">
+                          <button onClick={() => setSupplierModal(supplier)} className="text-violet-600 hover:text-violet-700 text-sm font-semibold">Editar</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </section>
@@ -489,11 +514,13 @@ function ProductModal({ product, suppliers, onClose, onSaved }) {
 }
 
 function OrderModal({ order, suppliers, products, onClose, onSaved }) {
+  const isEditing = !!order?._id;
+  const [step, setStep] = useState(isEditing ? 2 : 1);
   const [form, setForm] = useState({
     supplierId: order?.supplierId || '',
-    orderDate: String(order?.orderDate || '').slice(0, 10) || todayIso(),
+    orderDate: todayIso(),
     notes: order?.notes || '',
-    items: Array.isArray(order?.items) ? order.items.map((item) => ({ productId: String(item.productId), quantity: item.quantity, unitCost: item.unitCost })) : [],
+    items: Array.isArray(order?.items) ? order.items.map((item) => ({ productId: String(item.productId), quantity: item.quantity })) : [],
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -509,26 +536,25 @@ function OrderModal({ order, suppliers, products, onClose, onSaved }) {
     return map;
   }, [form.items]);
 
-  const total = useMemo(
-    () => form.items.reduce((acc, item) => acc + (Number(item.quantity || 0) * Number(item.unitCost || 0)), 0),
-    [form.items],
+  const selectedSupplier = useMemo(
+    () => suppliers.find((supplier) => String(supplier._id) === String(form.supplierId)),
+    [suppliers, form.supplierId],
   );
 
-  const setItem = (product, field, value) => {
+  const setItemQuantity = (product, value) => {
     setForm((prev) => {
       const key = String(product._id);
       const existing = prev.items.find((item) => String(item.productId) === key);
       if (!existing) {
         const created = {
           productId: key,
-          quantity: field === 'quantity' ? value : 0,
-          unitCost: field === 'unitCost' ? value : Number(product.defaultUnitCost || 0),
+          quantity: value,
         };
         return { ...prev, items: [...prev.items, created] };
       }
       return {
         ...prev,
-        items: prev.items.map((item) => (String(item.productId) === key ? { ...item, [field]: value } : item)),
+        items: prev.items.map((item) => (String(item.productId) === key ? { ...item, quantity: value } : item)),
       };
     });
   };
@@ -549,7 +575,7 @@ function OrderModal({ order, suppliers, products, onClose, onSaved }) {
         supplierId: form.supplierId,
         orderDate: form.orderDate,
         notes: form.notes,
-        items: form.items,
+        items: form.items.filter((item) => Number(item.quantity || 0) > 0),
       };
       if (order?._id) await api.put(`/purchases/orders/${order._id}`, payload);
       else await api.post('/purchases/orders', payload);
@@ -562,71 +588,106 @@ function OrderModal({ order, suppliers, products, onClose, onSaved }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/45 flex items-center justify-center p-4">
-      <div className="w-full max-w-4xl bg-white rounded-2xl border border-gray-200 shadow-2xl max-h-[92vh] flex flex-col">
+    <div className="fixed inset-0 z-50 bg-black/45 flex items-end sm:items-center justify-center p-0 sm:p-4">
+      <div className="w-full max-w-3xl bg-white rounded-t-3xl sm:rounded-2xl border border-gray-200 shadow-2xl max-h-[95vh] flex flex-col">
         <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-          <h3 className="text-base font-semibold text-gray-900">{order?._id ? 'Editar pedido' : 'Nuevo pedido'}</h3>
+          <div>
+            <h3 className="text-base font-semibold text-gray-900">{order?._id ? 'Editar pedido' : 'Nuevo pedido'}</h3>
+            <p className="text-xs text-gray-500 mt-0.5">Paso {step} de 2</p>
+          </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600">X</button>
         </div>
 
-        <form onSubmit={submit} className="flex-1 overflow-auto p-5 space-y-4">
+        <form onSubmit={submit} className="flex-1 overflow-auto p-4 sm:p-5 space-y-4">
           {error && <div className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</div>}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="sm:col-span-2">
-              <label className={labelCls}>Proveedor *</label>
-              <select className={inputCls} value={form.supplierId} onChange={(e) => setForm((prev) => ({ ...prev, supplierId: e.target.value }))} required>
-                <option value="">Seleccionar...</option>
-                {suppliers.map((supplier) => <option key={supplier._id} value={supplier._id}>{supplier.name}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className={labelCls}>Fecha *</label>
-              <input type="date" className={inputCls} value={form.orderDate} onChange={(e) => setForm((prev) => ({ ...prev, orderDate: e.target.value }))} required />
-            </div>
-          </div>
-
-          <div className="rounded-xl border border-gray-200 overflow-hidden">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-gray-50 border-b border-gray-200">
-                  <th className="px-3 py-2 text-left text-xs text-gray-500 uppercase">Producto</th>
-                  <th className="px-3 py-2 text-left text-xs text-gray-500 uppercase">Unidad</th>
-                  <th className="px-3 py-2 text-left text-xs text-gray-500 uppercase">Cantidad</th>
-                  <th className="px-3 py-2 text-left text-xs text-gray-500 uppercase">Precio unit.</th>
-                  <th className="px-3 py-2 text-left text-xs text-gray-500 uppercase">Subtotal</th>
-                </tr>
-              </thead>
-              <tbody>
-                {supplierProducts.length === 0 ? (
-                  <tr><td colSpan={5} className="px-3 py-6 text-center text-sm text-gray-400">Selecciona un proveedor con productos activos</td></tr>
-                ) : supplierProducts.map((product) => {
-                  const row = rowByProduct.get(String(product._id)) || { quantity: 0, unitCost: Number(product.defaultUnitCost || 0) };
-                  const subtotal = Number(row.quantity || 0) * Number(row.unitCost || 0);
+          {step === 1 && (
+            <div className="space-y-3">
+              <p className="text-sm text-gray-600">Selecciona proveedor (1 toque)</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {suppliers.filter((s) => s.isActive).map((supplier) => {
+                  const selected = String(form.supplierId) === String(supplier._id);
                   return (
-                    <tr key={product._id} className="border-b last:border-0 border-gray-100">
-                      <td className="px-3 py-2 text-gray-800 font-medium">{product.name}</td>
-                      <td className="px-3 py-2 text-gray-600">{product.unit || '-'}</td>
-                      <td className="px-3 py-2"><input type="number" min="0" step="0.01" className={inputCls} value={row.quantity} onChange={(e) => setItem(product, 'quantity', Number(e.target.value || 0))} /></td>
-                      <td className="px-3 py-2"><input type="number" min="0" step="0.01" className={inputCls} value={row.unitCost} onChange={(e) => setItem(product, 'unitCost', Number(e.target.value || 0))} /></td>
-                      <td className="px-3 py-2 text-gray-900 font-semibold">{money(subtotal)}</td>
-                    </tr>
+                    <button
+                      key={supplier._id}
+                      type="button"
+                      onClick={() => {
+                        setForm((prev) => ({ ...prev, supplierId: supplier._id }));
+                        setStep(2);
+                      }}
+                      className={`text-left rounded-xl border px-3 py-3 transition-colors ${selected ? 'border-violet-500 bg-violet-50' : 'border-gray-200 bg-white hover:bg-gray-50'}`}
+                    >
+                      <p className="text-sm font-semibold text-gray-900">{supplier.name}</p>
+                      <p className="text-xs text-gray-500 mt-1">{supplier.whatsappPhone || supplier.phone || 'Sin teléfono'}</p>
+                    </button>
                   );
                 })}
-              </tbody>
-            </table>
-          </div>
+              </div>
+            </div>
+          )}
 
-          <div>
-            <label className={labelCls}>Notas</label>
-            <textarea rows={2} className={inputCls} value={form.notes} onChange={(e) => setForm((prev) => ({ ...prev, notes: e.target.value }))} />
-          </div>
+          {step === 2 && (
+            <div className="space-y-4">
+              <div className="rounded-xl bg-gray-50 border border-gray-200 px-3 py-2">
+                <p className="text-xs text-gray-500">Proveedor</p>
+                <p className="text-sm font-semibold text-gray-900">{selectedSupplier?.name || 'Sin proveedor'}</p>
+                <p className="text-xs text-gray-500 mt-0.5">Fecha: {form.orderDate}</p>
+              </div>
+
+              <div className="space-y-2">
+                {supplierProducts.length === 0 ? (
+                  <div className="rounded-xl border border-gray-200 px-3 py-4 text-sm text-gray-500 text-center">Este proveedor no tiene productos activos</div>
+                ) : supplierProducts.map((product) => {
+                  const row = rowByProduct.get(String(product._id)) || { quantity: 0 };
+                  return (
+                    <div key={product._id} className="rounded-xl border border-gray-200 bg-white px-3 py-2.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <div>
+                          <p className="text-sm font-semibold text-gray-900">{product.name}</p>
+                          <p className="text-xs text-gray-500">{product.unit || 'unidad'}</p>
+                        </div>
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          className="w-24 border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-right"
+                          value={row.quantity}
+                          onChange={(e) => setItemQuantity(product, Number(e.target.value || 0))}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div>
+                <label className={labelCls}>Notas</label>
+                <textarea rows={2} className={inputCls} value={form.notes} onChange={(e) => setForm((prev) => ({ ...prev, notes: e.target.value }))} />
+              </div>
+            </div>
+          )}
         </form>
 
-        <div className="px-5 py-4 border-t border-gray-100 flex items-center justify-between">
-          <p className="text-sm text-gray-600">Total: <span className="font-bold text-gray-900">{money(total)}</span></p>
+        <div className="px-4 sm:px-5 py-4 border-t border-gray-100 flex items-center justify-between gap-2">
           <div className="flex gap-2">
+            {step === 2 && (
+              <button type="button" onClick={() => setStep(1)} className="px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-sm">Atrás</button>
+            )}
             <button type="button" onClick={onClose} className="px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-sm">Cancelar</button>
-            <button type="submit" disabled={saving} onClick={submit} className="px-3 py-2 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold">{saving ? 'Guardando...' : 'Guardar pedido'}</button>
+          </div>
+          <div className="flex gap-2">
+            {step === 1 && (
+              <button
+                type="button"
+                disabled={!form.supplierId}
+                onClick={() => setStep(2)}
+                className="px-3 py-2 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold disabled:opacity-50"
+              >
+                Siguiente
+              </button>
+            )}
+            {step === 2 && (
+              <button type="submit" disabled={saving} onClick={submit} className="px-3 py-2 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold">{saving ? 'Guardando...' : 'Guardar pedido'}</button>
+            )}
           </div>
         </div>
       </div>

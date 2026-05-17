@@ -76,6 +76,7 @@ export default function Compras() {
   const [productModal, setProductModal] = useState(null);
   const [orderModal, setOrderModal] = useState(null);
   const [supplierModal, setSupplierModal] = useState(null);
+  const [orderDetail, setOrderDetail] = useState(null);
   const [openSuppliers, setOpenSuppliers] = useState({});
 
   const loadAll = useCallback(async () => {
@@ -90,8 +91,14 @@ export default function Compras() {
       setSuppliers(suppliersRes.data || []);
       setProducts(productsRes.data || []);
       setOrders(ordersRes.data || []);
+      return {
+        suppliers: suppliersRes.data || [],
+        products: productsRes.data || [],
+        orders: ordersRes.data || [],
+      };
     } catch (err) {
       setError(err?.response?.data?.message || 'No se pudieron cargar los datos de compras');
+      return null;
     } finally {
       setLoading(false);
     }
@@ -150,6 +157,7 @@ export default function Compras() {
       window.open(url, '_blank');
       const { data } = await api.post(`/purchases/orders/${orderId}/mark-whatsapp-sent`, { message });
       markSentUI(data);
+      if (orderDetail?._id === data._id) setOrderDetail(data);
       window.dispatchEvent(new CustomEvent('app:toast', { detail: { type: 'success', message: 'Pedido marcado como enviado por WhatsApp' } }));
     } catch (err) {
       setError(err?.response?.data?.message || 'No se pudo marcar el pedido como enviado');
@@ -186,7 +194,27 @@ export default function Compras() {
           {orders.length === 0 ? (
             <div className="rounded-2xl border border-gray-200 bg-white p-8 text-center text-sm text-gray-500">Todavía no hay pedidos registrados</div>
           ) : (
-            <div className="rounded-2xl border border-gray-200 bg-white overflow-hidden">
+            <>
+            <div className="md:hidden space-y-2">
+              {orders.map((order) => (
+                <button
+                  key={order._id}
+                  onClick={() => setOrderDetail(order)}
+                  className="w-full text-left rounded-2xl border border-gray-200 bg-white p-4"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-gray-900 truncate">{order.supplierName}</p>
+                      <p className="text-xs text-gray-500 mt-1">{String(order.orderDate || '').slice(0, 10)}</p>
+                    </div>
+                    <span className="text-xs font-semibold text-gray-600">{STATUS_LABELS[order.status] || order.status || '-'}</span>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-2">{order.items?.length || 0} items</p>
+                </button>
+              ))}
+            </div>
+
+            <div className="hidden md:block rounded-2xl border border-gray-200 bg-white overflow-hidden">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-100 text-gray-400 text-xs uppercase tracking-wide">
@@ -228,6 +256,7 @@ export default function Compras() {
                 </tbody>
               </table>
             </div>
+            </>
           )}
         </section>
       )}
@@ -370,9 +399,11 @@ export default function Compras() {
           suppliers={activeSuppliers}
           products={products.filter((product) => product.isActive)}
           onClose={() => setOrderModal(null)}
-          onSaved={async () => {
+          onSaved={async (savedOrder) => {
             setOrderModal(null);
-            await loadAll();
+            const loaded = await loadAll();
+            const opened = loaded?.orders?.find((order) => String(order._id) === String(savedOrder?._id));
+            if (opened) setOrderDetail(opened);
           }}
         />
       )}
@@ -387,6 +418,57 @@ export default function Compras() {
           }}
         />
       )}
+
+      {orderDetail !== null && (
+        <OrderDetailModal
+          order={orderDetail}
+          onClose={() => setOrderDetail(null)}
+          onEdit={() => {
+            setOrderDetail(null);
+            setOrderModal(orderDetail);
+          }}
+          onSend={() => handleSendWhatsapp(orderDetail)}
+          sending={!!actionLoading[String(orderDetail._id)]}
+        />
+      )}
+    </div>
+  );
+}
+
+function OrderDetailModal({ order, onClose, onEdit, onSend, sending }) {
+  const canSend = order?.status !== 'sent' && Array.isArray(order?.items) && order.items.length > 0;
+  return (
+    <div className="fixed inset-0 z-50 bg-black/45 flex items-end sm:items-center justify-center p-0 sm:p-4">
+      <div className="w-full max-w-xl bg-white rounded-t-3xl sm:rounded-2xl border border-gray-200 shadow-2xl max-h-[90vh] flex flex-col">
+        <div className="px-4 py-4 border-b border-gray-100 flex items-center justify-between">
+          <div>
+            <h3 className="text-base font-semibold text-gray-900">{order.supplierName}</h3>
+            <p className="text-xs text-gray-500 mt-0.5">{String(order.orderDate || '').slice(0, 10)} · {STATUS_LABELS[order.status] || order.status}</p>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">X</button>
+        </div>
+        <div className="p-4 overflow-auto space-y-2">
+          {(order.items || []).map((item, idx) => (
+            <div key={`${item.productId}-${idx}`} className="rounded-xl border border-gray-200 px-3 py-2">
+              <p className="text-sm font-semibold text-gray-900">{item.productName}</p>
+              <p className="text-xs text-gray-600 mt-1">{item.quantity} {item.unit || ''}</p>
+            </div>
+          ))}
+          {!order.items?.length && <p className="text-sm text-gray-400">Sin productos</p>}
+        </div>
+        <div className="px-4 py-4 border-t border-gray-100 flex items-center justify-end gap-2">
+          <button onClick={onEdit} className="px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-sm">Editar</button>
+          {canSend && (
+            <button
+              onClick={onSend}
+              disabled={sending}
+              className="px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold disabled:opacity-50"
+            >
+              {sending ? 'Enviando...' : 'Enviar'}
+            </button>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -588,9 +670,10 @@ function OrderModal({ order, suppliers, products, onClose, onSaved }) {
         notes: form.notes,
         items: form.items.filter((item) => Number(item.quantity || 0) > 0),
       };
-      if (order?._id) await api.put(`/purchases/orders/${order._id}`, payload);
-      else await api.post('/purchases/orders', payload);
-      onSaved();
+      const response = order?._id
+        ? await api.put(`/purchases/orders/${order._id}`, payload)
+        : await api.post('/purchases/orders', payload);
+      onSaved(response?.data);
     } catch (err) {
       setError(err?.response?.data?.message || 'No se pudo guardar el pedido');
     } finally {

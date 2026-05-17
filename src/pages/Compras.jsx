@@ -318,7 +318,6 @@ export default function Compras() {
                           <tr className="border-b border-gray-100 text-gray-400 text-xs uppercase tracking-wide">
                             <th className="px-4 py-3 text-left">Producto</th>
                             <th className="px-4 py-3 text-left">Unidad</th>
-                            <th className="px-4 py-3 text-left">Coste base</th>
                             <th className="px-4 py-3" />
                           </tr>
                         </thead>
@@ -327,7 +326,6 @@ export default function Compras() {
                             <tr key={product._id} className="border-b last:border-0 border-gray-50">
                               <td className="px-4 py-3 text-gray-900 font-medium">{product.name}</td>
                               <td className="px-4 py-3 text-gray-600">{product.unit || '-'}</td>
-                              <td className="px-4 py-3 text-gray-900">{money(product.defaultUnitCost)}</td>
                               <td className="px-4 py-3 text-right">
                                 <div className="inline-flex items-center gap-2">
                                   <button
@@ -548,6 +546,21 @@ function SupplierModal({ supplier, onClose, onSaved }) {
     }
   };
 
+  const remove = async () => {
+    if (!product?._id) return;
+    if (!window.confirm('¿Eliminar este producto?')) return;
+    setSaving(true);
+    setError('');
+    try {
+      await api.delete(`/purchases/products/${product._id}`);
+      onSaved();
+    } catch (err) {
+      setError(err?.response?.data?.message || 'No se pudo eliminar el producto');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-50 bg-black/45 flex items-center justify-center p-4">
       <div className="w-full max-w-xl bg-white rounded-2xl border border-gray-200 shadow-2xl">
@@ -574,6 +587,9 @@ function SupplierModal({ supplier, onClose, onSaved }) {
             </label>
           )}
           <div className="flex justify-end gap-2 pt-2">
+            {product?._id && (
+              <button type="button" onClick={remove} disabled={saving} className="px-3 py-2 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 text-sm font-semibold disabled:opacity-50">Eliminar</button>
+            )}
             <button type="button" onClick={onClose} className="px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-sm">Cancelar</button>
             <button type="submit" disabled={saving} className="px-3 py-2 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold">{saving ? 'Guardando...' : 'Guardar'}</button>
           </div>

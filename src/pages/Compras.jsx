@@ -6,6 +6,17 @@ const labelCls = 'block text-xs font-semibold text-gray-600 mb-1';
 
 const money = (value) => `€${Number(value || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const todayIso = () => new Date().toISOString().slice(0, 10);
+const formatDecimalInput = (value) => {
+  const num = Number(value || 0);
+  if (!Number.isFinite(num) || num <= 0) return '';
+  return String(num).replace('.', ',');
+};
+const parseDecimalInput = (raw) => {
+  const sanitized = String(raw || '').replace(',', '.').replace(/[^0-9.]/g, '');
+  if (!sanitized) return 0;
+  const parsed = Number(sanitized);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
 
 const STATUS_LABELS = {
   draft: 'Borrador',
@@ -602,7 +613,7 @@ function OrderModal({ order, suppliers, products, onClose, onSaved }) {
           {error && <div className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</div>}
           {step === 1 && (
             <div className="space-y-3">
-              <p className="text-sm text-gray-600">Selecciona proveedor (1 toque)</p>
+              <p className="text-sm text-gray-600">Selecciona proveedorg</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                 {suppliers.filter((s) => s.isActive).map((supplier) => {
                   const selected = String(form.supplierId) === String(supplier._id);
@@ -646,12 +657,11 @@ function OrderModal({ order, suppliers, products, onClose, onSaved }) {
                           <p className="text-xs text-gray-500">{product.unit || 'unidad'}</p>
                         </div>
                         <input
-                          type="number"
-                          min="0"
-                          step="0.01"
+                          type="text"
+                          inputMode="decimal"
                           className="w-24 border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-right"
-                          value={row.quantity}
-                          onChange={(e) => setItemQuantity(product, Number(e.target.value || 0))}
+                          value={formatDecimalInput(row.quantity)}
+                          onChange={(e) => setItemQuantity(product, parseDecimalInput(e.target.value))}
                         />
                       </div>
                     </div>

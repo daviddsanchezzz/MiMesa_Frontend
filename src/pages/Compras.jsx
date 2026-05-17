@@ -159,6 +159,41 @@ export default function Compras() {
     }
   };
 
+  const handleDeleteOrder = async (order) => {
+    const orderId = String(order?._id || '');
+    if (!orderId) return;
+    if (!window.confirm('¿Eliminar este pedido?')) return;
+    try {
+      await api.delete(`/purchases/orders/${orderId}`);
+      setOrderDetail(null);
+      setOrders((prev) => prev.filter((item) => String(item._id) !== orderId));
+      window.dispatchEvent(new CustomEvent('app:toast', { detail: { type: 'success', message: 'Pedido eliminado' } }));
+    } catch (err) {
+      setError(err?.response?.data?.message || 'No se pudo eliminar el pedido');
+    }
+  };
+
+  const handleMoveProduct = async (product, direction) => {
+    const supplierProducts = products
+      .filter((p) => String(p.supplier?._id || p.supplierId) === String(product.supplier?._id || product.supplierId))
+      .sort((a, b) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0) || String(a.name).localeCompare(String(b.name)));
+    const currentIndex = supplierProducts.findIndex((p) => String(p._id) === String(product._id));
+    if (currentIndex < 0) return;
+    const swapIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+    if (swapIndex < 0 || swapIndex >= supplierProducts.length) return;
+    const other = supplierProducts[swapIndex];
+
+    try {
+      await Promise.all([
+        api.put(`/purchases/products/${product._id}`, { sortOrder: swapIndex + 1 }),
+        api.put(`/purchases/products/${other._id}`, { sortOrder: currentIndex + 1 }),
+      ]);
+      await loadAll();
+    } catch (err) {
+      setError(err?.response?.data?.message || 'No se pudo actualizar el orden de productos');
+    }
+  };
+
   return (
     <div className="max-w-6xl mx-auto space-y-6">
       <div>
@@ -288,13 +323,29 @@ export default function Compras() {
                           </tr>
                         </thead>
                         <tbody>
-                          {group.products.map((product) => (
+                          {group.products.map((product, idx) => (
                             <tr key={product._id} className="border-b last:border-0 border-gray-50">
                               <td className="px-4 py-3 text-gray-900 font-medium">{product.name}</td>
                               <td className="px-4 py-3 text-gray-600">{product.unit || '-'}</td>
                               <td className="px-4 py-3 text-gray-900">{money(product.defaultUnitCost)}</td>
                               <td className="px-4 py-3 text-right">
-                                <button onClick={() => setProductModal(product)} className="text-violet-600 hover:text-violet-700 text-sm font-semibold">Editar</button>
+                                <div className="inline-flex items-center gap-2">
+                                  <button
+                                    onClick={() => handleMoveProduct(product, 'up')}
+                                    disabled={idx === 0}
+                                    className="text-xs px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 disabled:opacity-40"
+                                  >
+                                    ↑
+                                  </button>
+                                  <button
+                                    onClick={() => handleMoveProduct(product, 'down')}
+                                    disabled={idx === group.products.length - 1}
+                                    className="text-xs px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 disabled:opacity-40"
+                                  >
+                                    ↓
+                                  </button>
+                                  <button onClick={() => setProductModal(product)} className="text-violet-600 hover:text-violet-700 text-sm font-semibold">Editar</button>
+                                </div>
                               </td>
                             </tr>
                           ))}
@@ -420,6 +471,7 @@ export default function Compras() {
             setOrderDetail(null);
             setOrderModal(orderDetail);
           }}
+          onDelete={() => handleDeleteOrder(orderDetail)}
           onSend={() => handleSendWhatsapp(orderDetail)}
           sending={!!actionLoading[String(orderDetail._id)]}
         />
@@ -428,7 +480,7 @@ export default function Compras() {
   );
 }
 
-function OrderDetailModal({ order, onClose, onEdit, onSend, sending }) {
+function OrderDetailModal({ order, onClose, onEdit, onDelete, onSend, sending }) {
   const canSend = order?.status !== 'sent' && Array.isArray(order?.items) && order.items.length > 0;
   return (
     <div className="fixed inset-0 z-50 bg-black/45 flex items-end sm:items-center justify-center p-0 sm:p-4">
@@ -450,6 +502,7 @@ function OrderDetailModal({ order, onClose, onEdit, onSend, sending }) {
           {!order.items?.length && <p className="text-sm text-gray-400">Sin productos</p>}
         </div>
         <div className="px-4 py-4 border-t border-gray-100 flex items-center justify-end gap-2">
+          <button onClick={onDelete} className="px-3 py-2 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 text-sm font-semibold">Eliminar</button>
           <button onClick={onEdit} className="px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-sm">Editar</button>
           {canSend && (
             <button
@@ -612,7 +665,9 @@ function OrderModal({ order, suppliers, products, onClose, onSaved }) {
   const [error, setError] = useState('');
 
   const supplierProducts = useMemo(
-    () => products.filter((product) => String(product.supplier?._id || product.supplierId) === String(form.supplierId)),
+    () => products
+      .filter((product) => String(product.supplier?._id || product.supplierId) === String(form.supplierId))
+      .sort((a, b) => Number(a.sortOrder || 0) - Number(b.sortOrder || 0) || String(a.name).localeCompare(String(b.name))),
     [products, form.supplierId],
   );
 

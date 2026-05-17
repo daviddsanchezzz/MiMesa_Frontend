@@ -660,9 +660,6 @@ function SupplierModal({ supplier, onClose, onSaved }) {
             </label>
           )}
           <div className="flex justify-end gap-2 pt-2">
-            {product?._id && (
-              <button type="button" onClick={remove} disabled={saving} className="px-3 py-2 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 text-sm font-semibold disabled:opacity-50">Eliminar</button>
-            )}
             <button type="button" onClick={onClose} className="px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-sm">Cancelar</button>
             <button type="submit" disabled={saving} className="px-3 py-2 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold">{saving ? 'Guardando...' : 'Guardar'}</button>
           </div>

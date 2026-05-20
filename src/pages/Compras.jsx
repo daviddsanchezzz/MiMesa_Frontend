@@ -50,12 +50,21 @@ function toWaPhone(e164) {
 }
 
 function generateWhatsAppOrderMessage(order, supplier) {
+  const note = String(order?.notes || '').trim();
   const lines = Array.isArray(order?.items)
     ? order.items
         .filter((item) => Number(item?.quantity || 0) > 0)
-        .map((item) => `- ${item.quantity} ${item.unit ? `${item.unit} ` : ''}${item.productName}`.trim())
+        .map((item) => {
+          const unit = String(item?.unit || '').trim();
+          const normalizedUnit = unit ? unit.charAt(0).toUpperCase() + unit.slice(1) : '';
+          const productName = String(item?.productName || '').trim();
+          return `- ${item.quantity} x ${`${normalizedUnit} ${productName}`.trim()}`.trim();
+        })
     : [];
-  return lines.join('\n').trim();
+  const messageParts = [];
+  if (note) messageParts.push(note);
+  if (lines.length > 0) messageParts.push(lines.join('\n'));
+  return messageParts.join('\n\n').trim();
 }
 
 export default function Compras() {

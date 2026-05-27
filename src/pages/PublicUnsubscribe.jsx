@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 
-const API = (import.meta.env.VITE_API_URL || 'https://api.vetra.app').replace(/\/api\/?$/, '');
+const API = (import.meta.env.VITE_API_URL || 'https://api.vetrareserve.com').replace(/\/api\/?$/, '');
 
 export default function PublicUnsubscribe() {
   const [params] = useSearchParams();
@@ -53,7 +53,7 @@ export default function PublicUnsubscribe() {
         )}
 
         <p className="text-xs text-gray-300 mt-6">
-          Powered by <a href={import.meta.env.VITE_LANDING_URL || 'https://vetra.app'} className="text-violet-400 font-medium">Vetra</a>
+          Powered by <a href={import.meta.env.VITE_LANDING_URL || 'https://vetrareserve.com'} className="text-violet-400 font-medium">Vetra</a>
         </p>
       </div>
     </div>

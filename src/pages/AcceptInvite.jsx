@@ -24,7 +24,7 @@ export default function AcceptInvite() {
   // Load invitation details
   useEffect(() => {
     if (!token) { setFetchError('Enlace de invitación inválido.'); return; }
-    const BASE = (import.meta.env.VITE_API_URL || 'https://api.vetra.app').replace(/\/api\/?$/, '');
+    const BASE = (import.meta.env.VITE_API_URL || 'https://api.vetrareserve.com').replace(/\/api\/?$/, '');
     fetch(`${BASE}/api/invitations/public/${token}`)
       .then(r => r.ok ? r.json() : r.json().then(d => Promise.reject(d.message)))
       .then(setInvite)

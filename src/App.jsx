@@ -51,7 +51,7 @@ function MobileHeader({ onMenuOpen, onNewReservation, showDefaultAction = true }
       <button
         onClick={onMenuOpen}
         className="w-9 h-9 flex items-center justify-center rounded-xl text-gray-600 hover:bg-gray-100 transition-colors"
-        aria-label="Abrir men�"
+        aria-label="Abrir menú"
       >
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
           <path fillRule="evenodd" d="M2 4.75A.75.75 0 0 1 2.75 4h14.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 4.75ZM2 10a.75.75 0 0 1 .75-.75h14.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 10Zm0 5.25a.75.75 0 0 1 .75-.75h14.5a.75.75 0 0 1 0 1.5H2.75a.75.75 0 0 1-.75-.75Z" clipRule="evenodd" />
@@ -278,10 +278,10 @@ export default function App() {
           <Route path="/public/:businessId/reserve" element={<PublicReservation />} />
           <Route path="/public/cancel"       element={<PublicCancel />} />
           <Route path="/public/unsubscribe"  element={<PublicUnsubscribe />} />
-          {/* Auth — public only (redirect to / if already logged in) */}
+          {/* Auth â€” public only (redirect to / if already logged in) */}
           <Route path="/login"           element={<PublicRoute><Login /></PublicRoute>} />
           <Route path="/register"        element={<PublicRoute><Register /></PublicRoute>} />
-          {/* Auth flows — always public */}
+          {/* Auth flows â€” always public */}
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password"  element={<ResetPassword />} />
           <Route path="/verify-email"    element={<VerifyEmail />} />

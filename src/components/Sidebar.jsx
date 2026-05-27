@@ -181,7 +181,7 @@ export default function Sidebar({
               type="button"
               onClick={onDesktopToggleCollapse}
               className="hidden xl:flex w-8 h-8 items-center justify-center rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition-colors"
-              aria-label={collapsed ? 'Expandir menú lateral' : 'Colapsar menú lateral'}
+              aria-label={collapsed ? 'Expandir menÃº lateral' : 'Colapsar menÃº lateral'}
             >
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
                 {collapsed ? (
@@ -262,10 +262,10 @@ export default function Sidebar({
                   isActive ? 'bg-violet-600 text-white shadow-sm' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100'
                 }`
               }
-              title={collapsed ? 'Estadísticas' : undefined}
+              title={collapsed ? 'EstadÃ­sticas' : undefined}
             >
               <IconChartBar />
-              {!collapsed && 'Estadísticas'}
+              {!collapsed && 'EstadÃ­sticas'}
             </NavLink>
           )}
 

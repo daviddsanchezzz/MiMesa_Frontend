@@ -77,7 +77,7 @@ export function AuthProvider({ children }) {
     const { data, error } = result;
     if (error) {
       if (error.code === 'EMAIL_NOT_VERIFIED') {
-        throw new Error('Debes verificar tu email antes de iniciar sesión. Revisa tu bandeja de entrada.');
+        throw new Error('Debes verificar tu email antes de iniciar sesiÃ³n. Revisa tu bandeja de entrada.');
       }
       if (String(error.code || '').includes('TWO_FACTOR')) {
         throw new Error('Esta cuenta requiere verificacion en dos pasos y esta pantalla aun no la gestiona.');

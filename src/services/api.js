@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const DEFAULT_API_ORIGIN = import.meta.env.DEV ? 'http://localhost:5000' : 'https://api.tableo.app';
+const DEFAULT_API_ORIGIN = import.meta.env.DEV ? 'http://localhost:5000' : 'https://api.vetra.app';
 const API_ORIGIN = (import.meta.env.VITE_API_URL || DEFAULT_API_ORIGIN).replace(/\/api\/?$/, '');
 const BASE_URL = `${API_ORIGIN}/api`;
 

@@ -1,4 +1,4 @@
-ï»¿import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import Modal from './Modal';
@@ -167,9 +167,9 @@ export default function Sidebar({
     >
       <div className="px-4 py-5 border-b border-slate-700/50">
         <div className="flex items-center gap-2.5">
-          <img src="/logo.svg" alt="Tableo" className="w-8 h-8 shrink-0" />
+          <img src="/logo.svg" alt="Vetra" className="w-8 h-8 shrink-0" />
           <div className={`min-w-0 flex-1 ${collapsed ? 'lg:hidden' : ''}`}>
-            <p className="text-white text-sm font-semibold leading-tight">Tableo</p>
+            <p className="text-white text-sm font-semibold leading-tight">Vetra</p>
             {devSidebar ? (
               <p className="text-slate-400 text-xs truncate leading-tight mt-0.5">Panel de desarrollo</p>
             ) : (
@@ -181,7 +181,7 @@ export default function Sidebar({
               type="button"
               onClick={onDesktopToggleCollapse}
               className="hidden xl:flex w-8 h-8 items-center justify-center rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition-colors"
-              aria-label={collapsed ? 'Expandir menÃº lateral' : 'Colapsar menÃº lateral'}
+              aria-label={collapsed ? 'Expandir menú lateral' : 'Colapsar menú lateral'}
             >
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
                 {collapsed ? (
@@ -262,10 +262,10 @@ export default function Sidebar({
                   isActive ? 'bg-violet-600 text-white shadow-sm' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100'
                 }`
               }
-              title={collapsed ? 'EstadÃ­sticas' : undefined}
+              title={collapsed ? 'Estadísticas' : undefined}
             >
               <IconChartBar />
-              {!collapsed && 'EstadÃ­sticas'}
+              {!collapsed && 'Estadísticas'}
             </NavLink>
           )}
 

@@ -32,7 +32,7 @@ export default function ForgotPassword() {
     <div className="min-h-screen flex items-center justify-center px-6 bg-gray-50">
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
-          <img src="/logo.svg" alt="Tableo" className="w-12 h-12 mx-auto mb-4" />
+          <img src="/logo.svg" alt="Vetra" className="w-12 h-12 mx-auto mb-4" />
           <h2 className="text-2xl font-bold text-gray-900">Recuperar contraseña</h2>
           <p className="text-gray-500 text-sm mt-1">Te enviamos un enlace a tu email</p>
         </div>

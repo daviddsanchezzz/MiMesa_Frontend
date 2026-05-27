@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { authClient } from '../lib/authClient';
@@ -45,8 +45,8 @@ export default function Register() {
         <div className="absolute -top-32 -left-32 w-96 h-96 bg-violet-600/20 rounded-full blur-3xl" />
         <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-violet-500/10 rounded-full blur-3xl" />
         <div className="relative z-10 text-center">
-          <img src="/logo.svg" alt="Tableo" className="w-16 h-16 mx-auto mb-8" />
-          <h1 className="text-4xl font-bold text-white mb-3">Tableo</h1>
+          <img src="/logo.svg" alt="Vetra" className="w-16 h-16 mx-auto mb-8" />
+          <h1 className="text-4xl font-bold text-white mb-3">Vetra</h1>
           <p className="text-violet-300 text-lg font-light leading-relaxed max-w-xs mx-auto">
             Empieza a gestionar tu restaurante en menos de 2 minutos
           </p>

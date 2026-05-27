@@ -1,4 +1,4 @@
-ï»¿import { useState } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { authClient } from '../lib/authClient';
@@ -33,7 +33,7 @@ export default function Login() {
         callbackURL: `${window.location.origin}/`,
       });
     } catch (err) {
-      setError(err.message || 'Error al iniciar sesiÃ³n con Google');
+      setError(err.message || 'Error al iniciar sesión con Google');
     }
   };
 
@@ -44,8 +44,8 @@ export default function Login() {
         <div className="absolute -top-32 -left-32 w-96 h-96 bg-violet-600/20 rounded-full blur-3xl" />
         <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-violet-500/10 rounded-full blur-3xl" />
         <div className="relative z-10 text-center">
-          <img src="/logo.svg" alt="Tableo" className="w-16 h-16 mx-auto mb-8" />
-          <h1 className="text-4xl font-bold text-white mb-3">Tableo</h1>
+          <img src="/logo.svg" alt="Vetra" className="w-16 h-16 mx-auto mb-8" />
+          <h1 className="text-4xl font-bold text-white mb-3">Vetra</h1>
           <p className="text-violet-300 text-lg font-light leading-relaxed max-w-xs mx-auto">
             Gestiona tu restaurante de forma sencilla y eficiente
           </p>
@@ -69,13 +69,13 @@ export default function Login() {
         <div className="w-full max-w-sm">
           {/* Mobile logo */}
           <div className="lg:hidden text-center mb-10">
-            <img src="/logo.svg" alt="Tableo" className="w-12 h-12 mx-auto mb-3" />
-            <h1 className="text-2xl font-bold text-gray-900">Tableo</h1>
+            <img src="/logo.svg" alt="Vetra" className="w-12 h-12 mx-auto mb-3" />
+            <h1 className="text-2xl font-bold text-gray-900">Vetra</h1>
           </div>
 
           <div className="mb-8">
             <h2 className="text-2xl font-bold text-gray-900">Bienvenido</h2>
-            <p className="text-gray-500 text-sm mt-1">Inicia sesiÃ³n en tu cuenta</p>
+            <p className="text-gray-500 text-sm mt-1">Inicia sesión en tu cuenta</p>
           </div>
 
           {error && (
@@ -119,29 +119,29 @@ export default function Login() {
             </div>
             <div>
               <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-sm font-medium text-gray-700">ContraseÃ±a</label>
+                <label className="block text-sm font-medium text-gray-700">Contraseña</label>
                 <Link to="/forgot-password" className="text-xs text-violet-600 hover:text-violet-700">
-                  Â¿Olvidaste la contraseÃ±a?
+                  ¿Olvidaste la contraseña?
                 </Link>
               </div>
               <PasswordInput
                 required
                 value={form.password}
                 onChange={e => setForm(f => ({ ...f, password: e.target.value }))}
-                placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
+                placeholder="••••••••"
               />
             </div>
             <button
               type="submit" disabled={loading}
               className="w-full bg-violet-600 hover:bg-violet-700 active:bg-violet-800 disabled:opacity-60 text-white py-2.5 rounded-xl text-sm font-semibold transition-colors shadow-sm shadow-violet-200 mt-2"
             >
-              {loading ? 'Iniciando sesiÃ³n...' : 'Iniciar sesiÃ³n'}
+              {loading ? 'Iniciando sesión...' : 'Iniciar sesión'}
             </button>
           </form>
 
           <p className="text-center text-sm text-gray-500 mt-6">
-            Â¿No tienes cuenta?{' '}
-            <Link to="/register" className="text-violet-600 hover:text-violet-700 font-semibold">RegÃ­strate gratis</Link>
+            ¿No tienes cuenta?{' '}
+            <Link to="/register" className="text-violet-600 hover:text-violet-700 font-semibold">Regístrate gratis</Link>
           </p>
 
         </div>

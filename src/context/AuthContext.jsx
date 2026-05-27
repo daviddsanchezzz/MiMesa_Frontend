@@ -1,4 +1,4 @@
-﻿import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { authClient } from '../lib/authClient';
 import {
   setStoredToken,
@@ -77,7 +77,7 @@ export function AuthProvider({ children }) {
     const { data, error } = result;
     if (error) {
       if (error.code === 'EMAIL_NOT_VERIFIED') {
-        throw new Error('Debes verificar tu email antes de iniciar sesión. Revisa tu bandeja de entrada.');
+        throw new Error('Debes verificar tu email antes de iniciar sesi�n. Revisa tu bandeja de entrada.');
       }
       if (String(error.code || '').includes('TWO_FACTOR')) {
         throw new Error('Esta cuenta requiere verificacion en dos pasos y esta pantalla aun no la gestiona.');
@@ -210,7 +210,7 @@ export function AuthProvider({ children }) {
     marketing:               false,
     promoCodes:              false,
     iframeEmbed:             false,
-    removeTableoBranding:    false,
+    removeVetraBranding:    false,
     pendingApprovalControl:  false,
     advancedAnalytics:       false,
     autoReminders:           false,
@@ -230,7 +230,7 @@ export function AuthProvider({ children }) {
     marketing:               false,
     promoCodes:              false,
     iframeEmbed:             true,
-    removeTableoBranding:    false,
+    removeVetraBranding:    false,
     pendingApprovalControl:  true,
     advancedAnalytics:       false,
     autoReminders:           false,

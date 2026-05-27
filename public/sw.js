@@ -5,20 +5,20 @@ self.addEventListener('push', (event) => {
   try {
     payload = event.data.json();
   } catch {
-    payload = { title: 'Tableo', body: event.data.text() };
+    payload = { title: 'Vetra', body: event.data.text() };
   }
 
   const options = {
     body:    payload.body   || '',
     icon:    payload.icon   || '/logo.svg',
     badge:   payload.badge  || '/logo.svg',
-    tag:     payload.tag    || 'tableo-notification',
+    tag:     payload.tag    || 'vetra-notification',
     data:    payload.data   || {},
     vibrate: [200, 100, 200],
     requireInteraction: false,
   };
 
-  event.waitUntil(self.registration.showNotification(payload.title || 'Tableo', options));
+  event.waitUntil(self.registration.showNotification(payload.title || 'Vetra', options));
 });
 
 self.addEventListener('notificationclick', (event) => {

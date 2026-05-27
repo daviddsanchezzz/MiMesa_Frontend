@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import axios from 'axios';
 
-const API = (import.meta.env.VITE_API_URL || 'https://api.tableo.app').replace(/\/api\/?$/, '');
+const API = (import.meta.env.VITE_API_URL || 'https://api.vetra.app').replace(/\/api\/?$/, '');
 
 export default function PublicUnsubscribe() {
   const [params] = useSearchParams();
@@ -20,7 +20,7 @@ export default function PublicUnsubscribe() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
       <div className="w-full max-w-sm text-center">
-        <img src="/logo.svg" alt="Tableo" className="w-12 h-12 mx-auto mb-6" />
+        <img src="/logo.svg" alt="Vetra" className="w-12 h-12 mx-auto mb-6" />
 
         {state === 'loading' && (
           <p className="text-gray-500 text-sm">Procesando...</p>
@@ -53,7 +53,7 @@ export default function PublicUnsubscribe() {
         )}
 
         <p className="text-xs text-gray-300 mt-6">
-          Powered by <a href={import.meta.env.VITE_LANDING_URL || 'https://tableo.app'} className="text-violet-400 font-medium">Tableo</a>
+          Powered by <a href={import.meta.env.VITE_LANDING_URL || 'https://vetra.app'} className="text-violet-400 font-medium">Vetra</a>
         </p>
       </div>
     </div>

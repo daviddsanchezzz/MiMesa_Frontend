@@ -411,7 +411,7 @@ export default function PublicReservation() {
   useEffect(() => {
     if (!isEmbed) return;
     const sendHeight = () => {
-      window.parent.postMessage({ type: 'TABLEO_HEIGHT', height: document.documentElement.scrollHeight }, '*');
+      window.parent.postMessage({ type: 'VETRA_HEIGHT', height: document.documentElement.scrollHeight }, '*');
     };
     sendHeight();
     window.addEventListener('resize', sendHeight);
@@ -829,16 +829,16 @@ export default function PublicReservation() {
         )}
 
         <div className="mt-6 flex items-center justify-center gap-1.5">
-          <img src={`${import.meta.env.VITE_LANDING_URL || 'https://tableo.app'}/logo.svg`} alt="" className="w-4 h-4 opacity-40" />
+          <img src={`${import.meta.env.VITE_LANDING_URL || 'https://vetra.app'}/logo.svg`} alt="" className="w-4 h-4 opacity-40" />
           <p className="text-xs text-gray-300">
             Powered by{' '}
             <a
-              href={import.meta.env.VITE_LANDING_URL || 'https://tableo.app'}
+              href={import.meta.env.VITE_LANDING_URL || 'https://vetra.app'}
               target="_blank"
               rel="noopener noreferrer"
               className="text-violet-400 hover:text-violet-500 font-medium transition-colors"
             >
-              Tableo
+              Vetra
             </a>
           </p>
         </div>

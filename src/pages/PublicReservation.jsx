@@ -2,7 +2,6 @@ import { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import publicApi from '../services/publicApi';
 import TRANSLATIONS from '../i18n';
-import { loadStripe } from '@stripe/stripe-js';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 
 const ALL_SHIFTS_KEY = '__all__';
@@ -238,11 +237,11 @@ export default function PublicReservation() {
         // Cargar Stripe solo si el negocio tiene pagos activos
         const pc = paymentRes.data;
         setPaymentConfig(pc);
-        if (pc.mode !== 'none' && pc.stripeConnectId && !stripeLoadedRef.current) {
+        if (pc.mode !== 'none' && !stripeLoadedRef.current) {
           stripeLoadedRef.current = true;
           const pubKey = import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY;
           if (pubKey) {
-            setStripePromise(loadStripe(pubKey, { stripeAccount: pc.stripeConnectId }));
+            setStripePromise(loadStripe(pubKey));
           }
         }
         setRooms(Array.isArray(roomsRes.data) ? roomsRes.data : roomsRes.data?.rooms || []);
@@ -387,17 +386,15 @@ export default function PublicReservation() {
     await submitReservation({});
   };
 
-  const submitReservation = async ({ paymentIntentId, setupIntentId, paymentMethodId } = {}) => {
+  const submitReservation = async ({ paymentIntentId } = {}) => {
     try {
       await publicApi.post('/reservations/public', {
         businessId, ...form,
         roomId: form.roomId || null,
         promoCode: promoStatus === 'valid' ? form.promoCode.trim().toUpperCase() : '',
-        marketingConsent:     form.marketing,
+        marketingConsent: form.marketing,
         marketingConsentText: form.marketing ? tr.consentMarketing : '',
         paymentIntentId,
-        setupIntentId,
-        paymentMethodId,
       });
       setSuccess(tr.successMsg);
     } catch (err) {
@@ -803,6 +800,7 @@ export default function PublicReservation() {
               )}
 
               {/* STEP 5: Payment */}
+              {/* STEP 5: Payment */}
               {step === 5 && stripePromise && (
                 <Elements stripe={stripePromise}>
                   <PaymentStep
@@ -846,3 +844,4 @@ export default function PublicReservation() {
     </div>
   );
 }
+

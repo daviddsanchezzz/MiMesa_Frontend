@@ -2473,16 +2473,27 @@ function PagosSection() {
   const [depositAmount, setDepositAmount] = useState('');
   const [depositPerPerson, setDepositPerPerson] = useState(false);
   const [freeCancelHours, setFreeCancelHours] = useState(24);
+  const [stripeConfig, setStripeConfig] = useState({
+    secretKeyConfigured: false,
+    webhookSecretConfigured: false,
+    currency: 'eur',
+  });
 
   useEffect(() => {
     (async () => {
       try {
         const { data } = await api.get('/stripe/payment-settings');
         const rp = data.reservationPayment || {};
+        const nextStripeConfig = data.stripeConfig || {};
         setMode(rp.mode || 'none');
         setDepositAmount(rp.depositAmount ? (rp.depositAmount / 100).toFixed(2) : '');
         setDepositPerPerson(rp.depositPerPerson ?? false);
         setFreeCancelHours(rp.freeCancellationHours ?? 24);
+        setStripeConfig({
+          secretKeyConfigured: Boolean(nextStripeConfig.secretKeyConfigured),
+          webhookSecretConfigured: Boolean(nextStripeConfig.webhookSecretConfigured),
+          currency: nextStripeConfig.currency || 'eur',
+        });
       } catch {
         setError('No se pudo cargar la configuracion de pagos');
       } finally {
@@ -2497,16 +2508,19 @@ function PagosSection() {
     setError('');
     setSuccess('');
     try {
+      if (mode === 'deposit' && !stripeReady) {
+        throw new Error('Faltan claves o webhook de Stripe. Completa la configuracion antes de activar depositos.');
+      }
       await api.put('/stripe/payment-settings', {
         mode,
         depositAmount: mode === 'deposit' ? parseFloat(depositAmount) || 0 : undefined,
         depositPerPerson: mode === 'deposit' ? depositPerPerson : undefined,
         freeCancellationHours: parseFloat(freeCancelHours) || 24,
-        currency: 'eur',
+        currency: stripeConfig.currency || 'eur',
       });
       setSuccess('Configuracion guardada');
     } catch (err) {
-      setError(err?.response?.data?.message || 'No se pudo guardar');
+      setError(err?.response?.data?.message || err?.message || 'No se pudo guardar');
     } finally {
       setSaving(false);
     }
@@ -2538,6 +2552,17 @@ function PagosSection() {
     { value: 'none', label: 'Sin pago', desc: 'Los clientes reservan sin pagar nada.' },
     { value: 'deposit', label: 'Deposito al reservar', desc: 'El cliente paga un importe al hacer la reserva y se confirma tras el cobro.' },
   ];
+  const publishableKeyConfigured = Boolean(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
+  const stripeReady = Boolean(
+    stripeConfig.secretKeyConfigured &&
+    stripeConfig.webhookSecretConfigured &&
+    publishableKeyConfigured
+  );
+  const missingConfig = [
+    !stripeConfig.secretKeyConfigured ? 'STRIPE_SECRET_KEY' : null,
+    !stripeConfig.webhookSecretConfigured ? 'STRIPE_WEBHOOK_SECRET' : null,
+    !publishableKeyConfigured ? 'VITE_STRIPE_PUBLISHABLE_KEY' : null,
+  ].filter(Boolean);
 
   return (
     <div className="space-y-5">
@@ -2545,14 +2570,34 @@ function PagosSection() {
         <div>
           <h3 className="text-sm font-semibold text-gray-900">Cuenta Stripe</h3>
           <p className="text-xs text-gray-500 mt-0.5">
-            Los cobros usan una unica cuenta Stripe configurada con STRIPE_SECRET_KEY y VITE_STRIPE_PUBLISHABLE_KEY.
+            La app usa una unica cuenta Stripe. Esta tarjeta muestra si la configuracion real esta completa.
           </p>
         </div>
         {error && <div className="bg-rose-50 border border-rose-200 text-rose-700 text-sm rounded-xl px-3 py-2">{error}</div>}
         {success && <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm rounded-xl px-3 py-2">{success}</div>}
-        <div className="p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl">
-          <p className="text-sm font-semibold text-emerald-900">Integracion directa activa</p>
-          <p className="text-xs text-emerald-700 mt-1">Stripe Connect y el onboarding por restaurante han sido retirados.</p>
+        <div className={`p-3.5 rounded-xl border ${stripeReady ? 'bg-emerald-50 border-emerald-200' : 'bg-amber-50 border-amber-200'}`}>
+          <p className={`text-sm font-semibold ${stripeReady ? 'text-emerald-900' : 'text-amber-900'}`}>
+            {stripeReady ? 'Stripe listo para cobrar' : 'Stripe pendiente de configurar'}
+          </p>
+          <p className={`text-xs mt-1 ${stripeReady ? 'text-emerald-700' : 'text-amber-800'}`}>
+            Stripe Connect y el onboarding por restaurante han sido retirados.
+          </p>
+          <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
+            <div className={`rounded-lg px-3 py-2 border ${stripeConfig.secretKeyConfigured ? 'bg-white/70 border-emerald-200 text-emerald-800' : 'bg-white/70 border-amber-200 text-amber-900'}`}>
+              `STRIPE_SECRET_KEY` {stripeConfig.secretKeyConfigured ? 'configurada' : 'faltante'}
+            </div>
+            <div className={`rounded-lg px-3 py-2 border ${stripeConfig.webhookSecretConfigured ? 'bg-white/70 border-emerald-200 text-emerald-800' : 'bg-white/70 border-amber-200 text-amber-900'}`}>
+              `STRIPE_WEBHOOK_SECRET` {stripeConfig.webhookSecretConfigured ? 'configurada' : 'faltante'}
+            </div>
+            <div className={`rounded-lg px-3 py-2 border ${publishableKeyConfigured ? 'bg-white/70 border-emerald-200 text-emerald-800' : 'bg-white/70 border-amber-200 text-amber-900'}`}>
+              `VITE_STRIPE_PUBLISHABLE_KEY` {publishableKeyConfigured ? 'configurada' : 'faltante'}
+            </div>
+          </div>
+          {!stripeReady && (
+            <p className="text-xs text-amber-900 mt-3">
+              Faltan variables para cobrar reservas con deposito: {missingConfig.join(', ')}.
+            </p>
+          )}
         </div>
       </div>
 
@@ -2564,11 +2609,22 @@ function PagosSection() {
 
         <div className="space-y-2">
           {paymentOptions.map((opt) => (
-            <label key={opt.value} className={`flex items-start gap-3 p-3.5 rounded-xl border cursor-pointer transition-colors ${mode === opt.value ? 'border-violet-400 bg-violet-50' : 'border-gray-200 hover:border-gray-300'}`}>
-              <input type="radio" name="paymentMode" value={opt.value} checked={mode === opt.value} onChange={() => setMode(opt.value)} className="mt-0.5 accent-violet-600" />
+            <label key={opt.value} className={`flex items-start gap-3 p-3.5 rounded-xl border transition-colors ${(opt.value === 'deposit' && !stripeReady) ? 'cursor-not-allowed border-amber-200 bg-amber-50/60' : mode === opt.value ? 'cursor-pointer border-violet-400 bg-violet-50' : 'cursor-pointer border-gray-200 hover:border-gray-300'}`}>
+              <input
+                type="radio"
+                name="paymentMode"
+                value={opt.value}
+                checked={mode === opt.value}
+                onChange={() => setMode(opt.value)}
+                className="mt-0.5 accent-violet-600"
+                disabled={opt.value === 'deposit' && !stripeReady}
+              />
               <div>
                 <p className="text-sm font-semibold text-gray-900">{opt.label}</p>
                 <p className="text-xs text-gray-500 mt-0.5">{opt.desc}</p>
+                {opt.value === 'deposit' && !stripeReady && (
+                  <p className="text-xs text-amber-700 mt-1">Completa las claves y el webhook para poder activarlo.</p>
+                )}
               </div>
             </label>
           ))}

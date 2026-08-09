@@ -56,6 +56,7 @@ const en = {
   errorNoSlots: 'No time slots for this day',
   errorNoTime: 'Please select a time',
   errorSave: 'Error saving',
+  errorMinNotice: (hours) => `This restaurant requires online bookings at least ${hours} ${hours === 1 ? 'hour' : 'hours'} in advance. Please call the restaurant directly for last-minute reservations.`,
   promoCode: 'Promo code',
   promoCodePlaceholder: 'SUMMER2024',
   promoCodeValid: (desc) => desc ? `Valid code: ${desc}` : 'Valid code',

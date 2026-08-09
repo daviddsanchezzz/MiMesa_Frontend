@@ -56,6 +56,7 @@ const es = {
   errorNoSlots: 'No hay turnos para este día',
   errorNoTime: 'Selecciona una hora',
   errorSave: 'Error al guardar',
+  errorMinNotice: (hours) => `Este restaurante requiere reservar online con al menos ${hours} ${hours === 1 ? 'hora' : 'horas'} de antelación. Llama directamente al restaurante para reservas de última hora.`,
   promoCode: 'Código promocional',
   promoCodePlaceholder: 'VERANO2024',
   promoCodeValid: (desc) => (desc ? `Código válido: ${desc}` : 'Código válido'),

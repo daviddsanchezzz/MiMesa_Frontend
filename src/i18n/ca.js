@@ -56,6 +56,7 @@ const ca = {
   errorNoSlots: 'No hi ha torns per a aquest dia',
   errorNoTime: 'Selecciona una hora',
   errorSave: 'Error en guardar',
+  errorMinNotice: (hours) => `Aquest restaurant requereix reservar en línia amb almenys ${hours} ${hours === 1 ? 'hora' : 'hores'} d'antelació. Truca directament al restaurant per a reserves d'última hora.`,
   promoCode: 'Codi promocional',
   promoCodePlaceholder: 'ESTIU2024',
   promoCodeValid: (desc) => (desc ? `Codi vàlid: ${desc}` : 'Codi vàlid'),

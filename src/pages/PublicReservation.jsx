@@ -335,6 +335,19 @@ export default function PublicReservation() {
     return acc;
   }, {}) || {}, [slots]);
 
+  // Antelacion minima: los slots ya fetchados pueden dejar de ser reservables
+  // mientras el usuario sigue en la pagina, sin necesidad de recargar.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 30000);
+    return () => clearInterval(id);
+  }, []);
+  const isSlotBookable = (time) => {
+    if (!business?.minBookingNoticeHours || !form.date) return true;
+    const cutoff = now + business.minBookingNoticeHours * 60 * 60 * 1000;
+    return new Date(`${form.date}T${time}:00`).getTime() >= cutoff;
+  };
+
   // Calendar helpers
   const calDays = useMemo(() => {
     const dim = new Date(calYear, calMonth + 1, 0).getDate();
@@ -398,7 +411,12 @@ export default function PublicReservation() {
       });
       setSuccess(tr.successMsg);
     } catch (err) {
-      setError(err.response?.data?.message || tr.errorSave);
+      const code = err.response?.data?.code;
+      if (code === 'MIN_NOTICE_NOT_MET') {
+        setError(tr.errorMinNotice(business?.minBookingNoticeHours));
+      } else {
+        setError(err.response?.data?.message || tr.errorSave);
+      }
     }
   };
 
@@ -602,15 +620,24 @@ export default function PublicReservation() {
                       <div key={shiftName} className="mb-5">
                         {multiShift && <p className="text-sm font-semibold text-gray-600 mb-3">{shiftName}</p>}
                         <div className="grid grid-cols-3 gap-2">
-                          {shiftSlots.map(s => (
-                            <button key={s.time} type="button" onClick={() => selectSlot(s)}
-                              className={`px-3 py-2 text-sm rounded-lg border transition-colors ${
-                                form.time === s.time ? 'text-white border-transparent' : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'
-                              }`}
-                              style={form.time === s.time ? bs : {}}>
-                              {s.label || s.time}
-                            </button>
-                          ))}
+                          {shiftSlots.map(s => {
+                            const bookable = isSlotBookable(s.time);
+                            return (
+                              <button key={s.time} type="button" disabled={!bookable}
+                                onClick={() => bookable && selectSlot(s)}
+                                title={bookable ? undefined : tr.errorMinNotice(business?.minBookingNoticeHours)}
+                                className={`px-3 py-2 text-sm rounded-lg border transition-colors ${
+                                  !bookable
+                                    ? 'bg-gray-50 text-gray-300 border-gray-200 cursor-not-allowed'
+                                    : form.time === s.time
+                                      ? 'text-white border-transparent'
+                                      : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'
+                                }`}
+                                style={bookable && form.time === s.time ? bs : {}}>
+                                {s.label || s.time}
+                              </button>
+                            );
+                          })}
                         </div>
                       </div>
                     ))

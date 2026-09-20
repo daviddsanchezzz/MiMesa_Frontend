@@ -195,61 +195,10 @@ export function AuthProvider({ children }) {
   const isSubscribed = subscriptionStatus === 'active' || subscriptionStatus === 'trialing';
 
   /**
-   * Returns true if the business currently has access to a feature.
-   * Mirrors the backend planCapabilities logic so the UI can gate without
-   * an extra API call on every render.
+   * Plan capabilities come from the backend (/auth/me) so there is a single source of truth.
+   * Numeric limits arrive as null when unlimited.
    */
-  const FREE_CAPS  = {
-    maxReservationsPerMonth: 30,
-    maxMembers:              1,
-    maxTables:               15,
-    maxShifts:               2,
-    maxVacations:            1,
-    autoEmails:              false,
-    staffNotifications:      false,
-    marketing:               false,
-    promoCodes:              false,
-    iframeEmbed:             false,
-    removeVetraBranding:    false,
-    pendingApprovalControl:  false,
-    advancedAnalytics:       false,
-    autoReminders:           false,
-    advancedReminders:       false,
-    noShowTracking:          false,
-    dataExport:              false,
-    reservationPayments:     false,
-  };
-  const BASIC_CAPS = {
-    maxReservationsPerMonth: Infinity,
-    maxMembers:              1,
-    maxTables:               Infinity,
-    maxShifts:               Infinity,
-    maxVacations:            Infinity,
-    autoEmails:              true,
-    staffNotifications:      true,
-    marketing:               false,
-    promoCodes:              false,
-    iframeEmbed:             true,
-    removeVetraBranding:    false,
-    pendingApprovalControl:  true,
-    advancedAnalytics:       false,
-    autoReminders:           false,
-    advancedReminders:       false,
-    noShowTracking:          true,
-    dataExport:              true,
-    reservationPayments:     false,
-  };
-  const PRO_CAPS = {
-    ...BASIC_CAPS,
-    maxMembers:           Infinity,
-    marketing:            true,
-    promoCodes:           true,
-    advancedAnalytics:    true,
-    autoReminders:        true,
-    advancedReminders:    true,
-    reservationPayments:  true,
-  };
-  const planCaps = !isSubscribed ? FREE_CAPS : plan === 'pro' ? PRO_CAPS : BASIC_CAPS;
+  const planCaps  = business?.capabilities ?? {};
   const canUse    = (feature) => !!planCaps[feature];
   const planLimit = (key) => planCaps[key] ?? Infinity;
   const moduleAccess = business?.modules ?? {};

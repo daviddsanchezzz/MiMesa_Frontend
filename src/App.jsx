@@ -1,33 +1,34 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { MobileHeaderProvider, useMobileHeader } from './context/MobileHeaderContext';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import ForgotPassword from './pages/ForgotPassword';
-import ResetPassword from './pages/ResetPassword';
-import VerifyEmail from './pages/VerifyEmail';
-import Dashboard from './pages/Dashboard';
-import Rooms from './pages/Rooms';
-import Tables from './pages/Tables';
-import Reservations from './pages/Reservations';
-import Customers from './pages/Customers';
-import CustomerDetail from './pages/CustomerDetail';
-import Settings from './pages/Settings';
-import Exceptions from './pages/Exceptions';
-import Team from './pages/Team';
-import Profile from './pages/Profile';
-import AcceptInvite from './pages/AcceptInvite';
-import DevDashboard from './pages/DevDashboard';
-import Onboarding from './pages/Onboarding';
-import Publicidad from './pages/Publicidad';
-import Analytics from './pages/Analytics';
-import Personal from './pages/Personal';
-import Finanzas from './pages/Finanzas';
-import Compras from './pages/Compras';
-import PublicReservation from './pages/PublicReservation';
-import PublicCancel from './pages/PublicCancel';
-import PublicUnsubscribe from './pages/PublicUnsubscribe';
+const Login = lazy(() => import('./pages/Login'));
+const Register = lazy(() => import('./pages/Register'));
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
+const ResetPassword = lazy(() => import('./pages/ResetPassword'));
+const VerifyEmail = lazy(() => import('./pages/VerifyEmail'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Rooms = lazy(() => import('./pages/Rooms'));
+const Tables = lazy(() => import('./pages/Tables'));
+const Reservations = lazy(() => import('./pages/Reservations'));
+const Customers = lazy(() => import('./pages/Customers'));
+const CustomerDetail = lazy(() => import('./pages/CustomerDetail'));
+const Settings = lazy(() => import('./pages/Settings'));
+const Exceptions = lazy(() => import('./pages/Exceptions'));
+const Team = lazy(() => import('./pages/Team'));
+const Profile = lazy(() => import('./pages/Profile'));
+const AcceptInvite = lazy(() => import('./pages/AcceptInvite'));
+const DevDashboard = lazy(() => import('./pages/DevDashboard'));
+const Onboarding = lazy(() => import('./pages/Onboarding'));
+const Publicidad = lazy(() => import('./pages/Publicidad'));
+const Analytics = lazy(() => import('./pages/Analytics'));
+const Personal = lazy(() => import('./pages/Personal'));
+const Finanzas = lazy(() => import('./pages/Finanzas'));
+const Compras = lazy(() => import('./pages/Compras'));
+const PublicReservation = lazy(() => import('./pages/PublicReservation'));
+const PublicCancel = lazy(() => import('./pages/PublicCancel'));
+const PublicUnsubscribe = lazy(() => import('./pages/PublicUnsubscribe'));
+import ErrorBoundary from './components/ErrorBoundary';
 import Sidebar from './components/Sidebar';
 import Modal from './components/Modal';
 import ReservationForm from './components/ReservationForm';
@@ -272,16 +273,18 @@ function ModuleRoute({ moduleKey, children }) {
 
 export default function App() {
   return (
+    <ErrorBoundary>
     <AuthProvider>
       <BrowserRouter>
+        <Suspense fallback={<LoadingScreen />}>
         <Routes>
           <Route path="/public/:businessId/reserve" element={<PublicReservation />} />
           <Route path="/public/cancel"       element={<PublicCancel />} />
           <Route path="/public/unsubscribe"  element={<PublicUnsubscribe />} />
-          {/* Auth â€” public only (redirect to / if already logged in) */}
+          {/* Auth — public only (redirect to / if already logged in) */}
           <Route path="/login"           element={<PublicRoute><Login /></PublicRoute>} />
           <Route path="/register"        element={<PublicRoute><Register /></PublicRoute>} />
-          {/* Auth flows â€” always public */}
+          {/* Auth flows — always public */}
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password"  element={<ResetPassword />} />
           <Route path="/verify-email"    element={<VerifyEmail />} />
@@ -307,8 +310,10 @@ export default function App() {
           <Route path="/compras"      element={<ModuleRoute moduleKey="purchases"><RoleRoute minRole="manager"><PrivateLayout><Compras /></PrivateLayout></RoleRoute></ModuleRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        </Suspense>
       </BrowserRouter>
     </AuthProvider>
+    </ErrorBoundary>
   );
 }
 

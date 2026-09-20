@@ -11,12 +11,13 @@ export default function PublicCancel() {
   const query = useQuery();
   const reservationId = query.get('reservationId');
   const email = query.get('email');
+  const token = query.get('token');
   const [status, setStatus] = useState('loading'); // loading, ready, cancelling, success, error
   const [message, setMessage] = useState('');
   const [reservation, setReservation] = useState(null);
 
   useEffect(() => {
-    if (!reservationId || !email) {
+    if (!reservationId || (!token && !email)) {
       setStatus('error');
       setMessage('Enlace inválido.');
       return;
@@ -24,7 +25,7 @@ export default function PublicCancel() {
 
     // First, get reservation details
     publicApi.get('/reservations/public/details', {
-      params: { reservationId, email }
+      params: token ? { reservationId, token } : { reservationId, email }
     })
       .then(res => {
         setReservation(res.data);
@@ -34,15 +35,13 @@ export default function PublicCancel() {
         setStatus('error');
         setMessage(err.response?.data?.message || 'No se pudo encontrar la reserva.');
       });
-  }, [reservationId, email]);
+  }, [reservationId, email, token]);
 
   const handleCancel = () => {
     setStatus('cancelling');
     setMessage('Cancelando reserva...');
 
-    publicApi.get('/reservations/public/cancel', {
-      params: { reservationId, email }
-    })
+    publicApi.post('/reservations/public/cancel', token ? { reservationId, token } : { reservationId, email })
       .then(res => {
         setStatus('success');
         setMessage(res.data.message || 'Reserva cancelada con éxito.');

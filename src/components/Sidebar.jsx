@@ -66,6 +66,12 @@ const IconCart = () => (
   </svg>
 );
 
+const IconClock = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 shrink-0">
+    <path fillRule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm.75-13a.75.75 0 0 0-1.5 0v5c0 .199.079.39.22.53l3 3a.75.75 0 1 0 1.06-1.06l-2.78-2.78V5Z" clipRule="evenodd" />
+  </svg>
+);
+
 const links = [
   { to: '/', label: 'Dashboard', icon: <IconHome /> },
   { to: '/reservations', label: 'Reservas', icon: <IconCalendar /> },
@@ -110,12 +116,16 @@ export default function Sidebar({
   const finanzasLink = (isModuleEnabled('expenses') && hasRole('owner'))
     ? [{ to: '/finanzas', label: 'Finanzas', icon: <IconCurrencyEuro /> }]
     : [];
+  const agendaLink = isModuleEnabled('bookings')
+    ? [{ to: '/agenda', label: 'Agenda', icon: <IconClock /> }]
+    : [];
   const comprasLink = (isModuleEnabled('purchases') && hasRole('manager'))
     ? [{ to: '/compras', label: 'Compras', icon: <IconCart /> }]
     : [];
   const navLinks = [
     mainLinks[0],
     mainLinks[1],
+    ...agendaLink,
     ...mainLinks.slice(2),
     ...lowerLinks,
     ...personalLink,

@@ -25,6 +25,7 @@ const Analytics = lazy(() => import('./pages/Analytics'));
 const Personal = lazy(() => import('./pages/Personal'));
 const Finanzas = lazy(() => import('./pages/Finanzas'));
 const Compras = lazy(() => import('./pages/Compras'));
+const Agenda = lazy(() => import('./pages/Agenda'));
 const PublicReservation = lazy(() => import('./pages/PublicReservation'));
 const PublicCancel = lazy(() => import('./pages/PublicCancel'));
 const PublicUnsubscribe = lazy(() => import('./pages/PublicUnsubscribe'));
@@ -308,6 +309,7 @@ export default function App() {
           <Route path="/personal"     element={<ModuleRoute moduleKey="staff"><RoleRoute minRole="manager"><PrivateLayout><Personal /></PrivateLayout></RoleRoute></ModuleRoute>} />
           <Route path="/finanzas"     element={<ModuleRoute moduleKey="expenses"><RoleRoute minRole="owner"><PrivateLayout><Finanzas /></PrivateLayout></RoleRoute></ModuleRoute>} />
           <Route path="/compras"      element={<ModuleRoute moduleKey="purchases"><RoleRoute minRole="manager"><PrivateLayout><Compras /></PrivateLayout></RoleRoute></ModuleRoute>} />
+          <Route path="/agenda"       element={<ModuleRoute moduleKey="bookings"><PrivateLayout><Agenda /></PrivateLayout></ModuleRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
         </Suspense>

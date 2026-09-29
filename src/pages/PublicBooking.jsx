@@ -332,7 +332,10 @@ export default function PublicBooking() {
             <p className="text-xs text-amber-700 bg-amber-50 rounded-lg px-3 py-2">El negocio la revisará y te confirmará.</p>
           )}
           <p className="text-xs text-gray-500">
-            Guarda este enlace por si necesitas cancelar:{' '}
+            Te hemos enviado los detalles a <span className="font-semibold">{form.guestEmail}</span>.
+          </p>
+          <p className="text-xs text-gray-500">
+            También puedes cancelar desde aquí:{' '}
             <a className="font-semibold whitespace-nowrap" style={{ color }}
               href={`/public/${businessId}/cita/cancelar?bookingId=${result.id}&token=${result.token}`}>
               cancelar mi cita

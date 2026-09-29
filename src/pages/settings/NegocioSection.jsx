@@ -47,7 +47,7 @@ export function NegocioSection() {
     <div className="space-y-4">
       <div className="bg-white rounded-2xl p-6 border border-gray-200">
         <h3 className="text-sm font-semibold text-gray-900 mb-2">Datos del negocio</h3>
-        <p className="text-sm text-gray-500 mb-4">Nombre, contacto y datos fiscales del restaurante.</p>
+        <p className="text-sm text-gray-500 mb-4">Nombre, contacto y datos fiscales del negocio.</p>
         <ErrorBanner msg={error} />
         <form onSubmit={onSubmit} className="space-y-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

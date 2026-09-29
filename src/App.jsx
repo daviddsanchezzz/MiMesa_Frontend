@@ -1,6 +1,6 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { MobileHeaderProvider, useMobileHeader } from './context/MobileHeaderContext';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 const Login = lazy(() => import('./pages/Login'));
 const Register = lazy(() => import('./pages/Register'));
@@ -26,6 +26,7 @@ const Personal = lazy(() => import('./pages/Personal'));
 const Finanzas = lazy(() => import('./pages/Finanzas'));
 const Compras = lazy(() => import('./pages/Compras'));
 const Agenda = lazy(() => import('./pages/Agenda'));
+const AppointmentsDashboard = lazy(() => import('./pages/AppointmentsDashboard'));
 const PublicReservation = lazy(() => import('./pages/PublicReservation'));
 const PublicCancel = lazy(() => import('./pages/PublicCancel'));
 const PublicUnsubscribe = lazy(() => import('./pages/PublicUnsubscribe'));
@@ -46,7 +47,7 @@ function LoadingScreen() {
   );
 }
 
-function MobileHeader({ onMenuOpen, onNewReservation, showDefaultAction = true }) {
+function MobileHeader({ onMenuOpen, onNewReservation, showDefaultAction = true, newLabel = 'Reserva' }) {
   const { title, actions } = useMobileHeader();
   return (
     <div className="xl:hidden flex items-center gap-3 px-4 py-3 bg-white border-b border-gray-200 shrink-0 z-30">
@@ -67,12 +68,12 @@ function MobileHeader({ onMenuOpen, onNewReservation, showDefaultAction = true }
         <button
           onClick={onNewReservation}
           className="flex items-center gap-1.5 bg-violet-600 hover:bg-violet-700 text-white px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors"
-          aria-label="Nueva reserva"
+          aria-label={`Nueva ${newLabel.toLowerCase()}`}
         >
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
             <path d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z" />
           </svg>
-          Reserva
+          {newLabel}
         </button>
       ) : null)}
     </div>
@@ -100,7 +101,8 @@ function ImpersonationBanner({ impersonation, onStop }) {
 }
 
 function LayoutShell({ children, fullBleed = false, devMode = false }) {
-  const { business, loading, impersonation, stopImpersonation } = useAuth();
+  const { business, loading, impersonation, stopImpersonation, isAppointments } = useAuth();
+  const navigate = useNavigate();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] = useState(() => {
     if (typeof window === 'undefined') return false;
@@ -187,7 +189,8 @@ function LayoutShell({ children, fullBleed = false, devMode = false }) {
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
         <MobileHeader
           onMenuOpen={() => setMobileSidebarOpen(true)}
-          onNewReservation={() => setNewRsvModal(true)}
+          onNewReservation={() => (isAppointments ? navigate('/agenda?new=1') : setNewRsvModal(true))}
+          newLabel={isAppointments ? 'Cita' : 'Reserva'}
           showDefaultAction={!devMode}
         />
         <main className={fullBleed ? 'flex-1 overflow-hidden flex flex-col' : `flex-1 overflow-auto p-4 lg:p-8 ${impersonation ? 'pt-16 lg:pt-20' : ''}`}>
@@ -265,6 +268,19 @@ function RoleRoute({ minRole, children }) {
   return children;
 }
 
+// Pages that only make sense for restaurants (tables, rooms, shifts...).
+function RestaurantRoute({ children }) {
+  const { loading, isAppointments } = useAuth();
+  if (loading) return <LoadingScreen />;
+  if (isAppointments) return <Navigate to="/" replace />;
+  return children;
+}
+
+function HomeDashboard() {
+  const { isAppointments } = useAuth();
+  return isAppointments ? <AppointmentsDashboard /> : <Dashboard />;
+}
+
 function ModuleRoute({ moduleKey, children }) {
   const { loading, isModuleEnabled } = useAuth();
   if (loading) return <LoadingScreen />;
@@ -292,18 +308,18 @@ export default function App() {
           <Route path="/invite"          element={<AcceptInvite />} />
           <Route path="/onboarding" element={<OnboardingRoute><Onboarding /></OnboardingRoute>} />
           <Route path="/dev"        element={<DevRoute><DevLayout><DevDashboard /></DevLayout></DevRoute>} />
-          <Route path="/"             element={<DevRedirect><PrivateLayout><Dashboard /></PrivateLayout></DevRedirect>} />
-          <Route path="/rooms"        element={<RoleRoute minRole="manager"><PrivateLayout><Rooms /></PrivateLayout></RoleRoute>} />
-          <Route path="/tables"       element={<RoleRoute minRole="manager"><FullBleedLayout><Tables /></FullBleedLayout></RoleRoute>} />
-          <Route path="/reservations" element={<PrivateLayout><Reservations /></PrivateLayout>} />
+          <Route path="/"             element={<DevRedirect><PrivateLayout><HomeDashboard /></PrivateLayout></DevRedirect>} />
+          <Route path="/rooms"        element={<RestaurantRoute><RoleRoute minRole="manager"><PrivateLayout><Rooms /></PrivateLayout></RoleRoute></RestaurantRoute>} />
+          <Route path="/tables"       element={<RestaurantRoute><RoleRoute minRole="manager"><FullBleedLayout><Tables /></FullBleedLayout></RoleRoute></RestaurantRoute>} />
+          <Route path="/reservations" element={<RestaurantRoute><PrivateLayout><Reservations /></PrivateLayout></RestaurantRoute>} />
           <Route path="/customers"    element={<RoleRoute minRole="manager"><PrivateLayout><Customers /></PrivateLayout></RoleRoute>} />
           <Route path="/customers/:id" element={<RoleRoute minRole="manager"><PrivateLayout><CustomerDetail /></PrivateLayout></RoleRoute>} />
-          <Route path="/exceptions"   element={<RoleRoute minRole="manager"><PrivateLayout><Exceptions /></PrivateLayout></RoleRoute>} />
+          <Route path="/exceptions"   element={<RestaurantRoute><RoleRoute minRole="manager"><PrivateLayout><Exceptions /></PrivateLayout></RoleRoute></RestaurantRoute>} />
           <Route path="/configuracion" element={<RoleRoute minRole="manager"><PrivateLayout><Settings /></PrivateLayout></RoleRoute>} />
           <Route path="/settings"      element={<Navigate to="/configuracion" replace />} />
           <Route path="/profile"       element={<PrivateLayout><Profile /></PrivateLayout>} />
           <Route path="/team"         element={<RoleRoute minRole="manager"><PrivateLayout><Team /></PrivateLayout></RoleRoute>} />
-          <Route path="/analytics"    element={<RoleRoute minRole="manager"><PrivateLayout><Analytics /></PrivateLayout></RoleRoute>} />
+          <Route path="/analytics"    element={<RestaurantRoute><RoleRoute minRole="manager"><PrivateLayout><Analytics /></PrivateLayout></RoleRoute></RestaurantRoute>} />
           <Route path="/calendario"   element={<Navigate to="/reservations?view=calendar" replace />} />
           <Route path="/publicidad"   element={<RoleRoute minRole="manager"><PrivateLayout><Publicidad /></PrivateLayout></RoleRoute>} />
           <Route path="/personal"     element={<ModuleRoute moduleKey="staff"><RoleRoute minRole="manager"><PrivateLayout><Personal /></PrivateLayout></RoleRoute></ModuleRoute>} />

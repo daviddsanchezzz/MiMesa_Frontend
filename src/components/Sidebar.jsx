@@ -91,7 +91,7 @@ export default function Sidebar({
   onDesktopToggleCollapse,
   onReservationCreated,
 }) {
-  const { business, memberships, logout, hasRole, switchBusiness, session, isSubscribed, isModuleEnabled } = useAuth();
+  const { business, memberships, logout, hasRole, switchBusiness, session, isSubscribed, isModuleEnabled, isAppointments } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -101,11 +101,15 @@ export default function Sidebar({
   const isStaff = business?.role === 'staff';
   const isFree = !isSubscribed;
 
+  // Appointment businesses use the agenda instead of restaurant reservations.
+  const baseLinks = isAppointments
+    ? links.map((link) => (link.to === '/reservations' ? { to: '/agenda', label: 'Agenda', icon: <IconClock /> } : link))
+    : links;
   const mainLinks = isStaff
-    ? links.filter((link) => link.to !== '/customers')
+    ? baseLinks.filter((link) => link.to !== '/customers')
     : isFree
-      ? links.filter((link) => link.to !== '/customers')
-      : links;
+      ? baseLinks.filter((link) => link.to !== '/customers')
+      : baseLinks;
   const lowerLinks = isStaff || isFree
     ? []
     : hasRole('manager') ? [{ to: '/team', label: 'Equipo', icon: <IconTeam /> }] : [];
@@ -116,7 +120,7 @@ export default function Sidebar({
   const finanzasLink = (isModuleEnabled('expenses') && hasRole('owner'))
     ? [{ to: '/finanzas', label: 'Finanzas', icon: <IconCurrencyEuro /> }]
     : [];
-  const agendaLink = isModuleEnabled('bookings')
+  const agendaLink = (isModuleEnabled('bookings') && !isAppointments)
     ? [{ to: '/agenda', label: 'Agenda', icon: <IconClock /> }]
     : [];
   const comprasLink = (isModuleEnabled('purchases') && hasRole('manager'))
@@ -208,14 +212,21 @@ export default function Sidebar({
       {!devSidebar && (
         <div className="px-3 pt-3 pb-1">
           <button
-            onClick={() => setNewRsvModal(true)}
+            onClick={() => {
+              if (isAppointments) {
+                navigate('/agenda?new=1');
+                if (closeOnNavigate) onClose?.();
+              } else {
+                setNewRsvModal(true);
+              }
+            }}
             className={`w-full flex items-center justify-center ${collapsed ? '' : 'gap-2'} px-3 py-2 rounded-lg border border-violet-400/60 text-violet-200 bg-transparent hover:bg-violet-500/10 hover:border-violet-300 hover:text-violet-100 text-sm font-semibold transition-colors`}
-            title={collapsed ? 'Nueva reserva' : undefined}
+            title={collapsed ? (isAppointments ? 'Nueva cita' : 'Nueva reserva') : undefined}
           >
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 shrink-0">
               <path d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z" />
             </svg>
-            {!collapsed && 'Nueva reserva'}
+            {!collapsed && (isAppointments ? 'Nueva cita' : 'Nueva reserva')}
           </button>
         </div>
       )}
@@ -263,7 +274,7 @@ export default function Sidebar({
             ))
           )}
 
-          {!devSidebar && !isStaff && !isFree && hasRole('manager') && (
+          {!devSidebar && !isStaff && !isFree && !isAppointments && hasRole('manager') && (
             <NavLink
               to="/analytics"
               onClick={handleNavClick}

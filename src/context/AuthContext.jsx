@@ -189,6 +189,9 @@ export function AuthProvider({ children }) {
   const trialEndsAt        = business?.trialEndsAt  ?? null;
   const currentPeriodEnd   = business?.currentPeriodEnd ?? null;
   const cancelAtPeriodEnd  = business?.cancelAtPeriodEnd ?? false;
+  // 'restaurant' (table reservations) or 'appointments' (salons, therapists...)
+  const businessType       = business?.businessType ?? 'restaurant';
+  const isAppointments     = businessType === 'appointments';
 
   const HIERARCHY = { owner: 3, manager: 2, staff: 1 };
   const hasRole   = (minRole) => (HIERARCHY[role] ?? 0) >= (HIERARCHY[minRole] ?? 0);
@@ -222,6 +225,7 @@ export function AuthProvider({ children }) {
       impersonation, startImpersonation, stopImpersonation,
       isDev, role, plan, subscriptionStatus,
       trialEndsAt, currentPeriodEnd, cancelAtPeriodEnd,
+      businessType, isAppointments,
       hasRole, isSubscribed, canUse, planLimit,
       moduleAccess, isModuleEnabled,
       session,

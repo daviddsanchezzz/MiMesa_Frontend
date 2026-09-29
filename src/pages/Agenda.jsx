@@ -5,19 +5,19 @@ import { bookingsApi, apiError } from '../services/bookingsApi';
 import DayView from './agenda/DayView';
 import NewBookingModal from './agenda/NewBookingModal';
 import BookingDetailModal from './agenda/BookingDetailModal';
-import SetupPanel from './agenda/SetupPanel';
+import { Link, useSearchParams } from 'react-router-dom';
 import { DEFAULT_TZ, addDays, btnPrimary, btnSecondary, longDate, todayIn } from './agenda/utils';
 
 /**
- * Generic agenda (bookings module): day view per professional, new bookings,
- * booking details, and the setup of professionals, services and hours.
+ * Generic agenda (bookings module): day view per professional, new bookings
+ * and booking details. Professionals, services and hours are set up in
+ * Configuración.
  */
 export default function Agenda() {
   const { business, hasRole } = useAuth();
   const tz = business?.timezone || DEFAULT_TZ;
   const isManager = hasRole('manager');
 
-  const [tab, setTab] = useState('agenda');
   const [date, setDate] = useState(() => todayIn(tz));
   const [resources, setResources] = useState([]);
   const [services, setServices] = useState([]);
@@ -28,6 +28,15 @@ export default function Agenda() {
   const [creating, setCreating] = useState(null);   // { resourceId, time } | null
   const [selected, setSelected] = useState(null);   // booking | null
   const [showCancelled, setShowCancelled] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+
+  // "Nueva cita" from the sidebar / mobile header opens /agenda?new=1
+  useEffect(() => {
+    if (searchParams.get('new')) {
+      setCreating({ resourceId: '', time: '' });
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, setSearchParams]);
 
   useSetMobileHeader({ title: 'Agenda' });
 
@@ -73,14 +82,7 @@ export default function Agenda() {
           <p className="text-sm text-gray-400 mt-0.5">Citas por profesional, servicios y horarios.</p>
         </div>
         {isManager && (
-          <div className="flex bg-gray-100 rounded-xl p-1">
-            {[['agenda', 'Agenda'], ['setup', 'Configuración']].map(([k, l]) => (
-              <button key={k} type="button" onClick={() => setTab(k)}
-                className={`px-4 py-1.5 rounded-lg text-sm font-semibold transition-colors ${tab === k ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}>
-                {l}
-              </button>
-            ))}
-          </div>
+          <Link to="/configuracion?tab=servicios" className={btnSecondary}>Servicios y horarios</Link>
         )}
       </div>
 
@@ -88,8 +90,24 @@ export default function Agenda() {
 
       {loading ? (
         <p className="text-sm text-gray-400">Cargando…</p>
-      ) : tab === 'setup' ? (
-        <SetupPanel resources={resources} services={services} reload={() => loadSetup().then(loadBookings)} />
+      ) : (!staff.length || !services.length) ? (
+        <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center space-y-3">
+          <p className="text-base font-semibold text-gray-900">Prepara tu agenda</p>
+          <p className="text-sm text-gray-500 max-w-md mx-auto">
+            Para empezar a dar citas necesitas {!staff.length ? 'añadir al menos un profesional' : ''}
+            {!staff.length && !services.length ? ' y ' : ''}{!services.length ? 'crear al menos un servicio' : ''}.
+            Revisa también tu horario de apertura.
+          </p>
+          {isManager ? (
+            <div className="flex flex-wrap justify-center gap-2 pt-1">
+              {!staff.length && <Link to="/configuracion?tab=profesionales" className={btnPrimary}>Añadir profesionales</Link>}
+              {!services.length && <Link to="/configuracion?tab=servicios" className={staff.length ? btnPrimary : btnSecondary}>Crear servicios</Link>}
+              <Link to="/configuracion?tab=horario" className={btnSecondary}>Horario</Link>
+            </div>
+          ) : (
+            <p className="text-xs text-gray-400">Pide a un encargado que lo configure.</p>
+          )}
+        </div>
       ) : (
         <>
           <div className="flex flex-wrap items-center gap-2">

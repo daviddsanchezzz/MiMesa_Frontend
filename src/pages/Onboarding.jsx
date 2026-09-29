@@ -2,15 +2,17 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
+import BusinessTypePicker from '../components/BusinessTypePicker';
 
 export default function Onboarding() {
   const navigate = useNavigate();
   const { refreshBusiness, session } = useAuth();
-  const [form, setForm] = useState({ name: '', email: '', phone: '', address: '', cif: '' });
+  const [form, setForm] = useState({ businessType: 'restaurant', name: '', email: '', phone: '', address: '', cif: '' });
   const [error, setError]   = useState('');
   const [loading, setLoading] = useState(false);
 
   const set = (field) => (e) => setForm(f => ({ ...f, [field]: e.target.value }));
+  const isRestaurant = form.businessType === 'restaurant';
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -19,7 +21,7 @@ export default function Onboarding() {
     try {
       await api.post('/businesses', form);
       await refreshBusiness();
-      navigate('/');
+      navigate(form.businessType === 'appointments' ? '/configuracion' : '/');
     } catch (err) {
       setError(err.response?.data?.message || err.message);
     } finally {
@@ -29,11 +31,11 @@ export default function Onboarding() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-6 py-12">
-      <div className="w-full max-w-sm">
+      <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
           <img src="/logo.svg" alt="Vetra" className="w-14 h-14 mx-auto mb-4" />
-          <h1 className="text-2xl font-bold text-gray-900">Crea tu restaurante</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Crea tu negocio</h1>
           {session?.user?.name && (
             <p className="text-sm text-gray-500 mt-1">
               Hola, <strong>{session.user.name}</strong>. Configura tu negocio para empezar.
@@ -49,27 +51,31 @@ export default function Onboarding() {
           )}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
+              <p className="block text-sm font-medium text-gray-700 mb-1.5">¿Qué tipo de negocio tienes?</p>
+              <BusinessTypePicker value={form.businessType} onChange={(businessType) => setForm((f) => ({ ...f, businessType }))} />
+            </div>
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Nombre del restaurante *
+                Nombre del negocio *
               </label>
               <input
                 required
                 value={form.name}
                 onChange={set('name')}
-                placeholder="Restaurante El Patio"
+                placeholder={isRestaurant ? 'Restaurante El Patio' : 'Peluquería Laura'}
                 className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white"
               />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Correo del restaurante *
+                Correo del negocio *
               </label>
               <input
                 required
                 type="email"
                 value={form.email}
                 onChange={set('email')}
-                placeholder="info@mirestaurante.com"
+                placeholder={isRestaurant ? 'info@mirestaurante.com' : 'hola@minegocio.com'}
                 className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white"
               />
             </div>
@@ -111,7 +117,7 @@ export default function Onboarding() {
               disabled={loading}
               className="w-full bg-violet-600 hover:bg-violet-700 disabled:opacity-60 text-white py-2.5 rounded-xl text-sm font-semibold transition-colors mt-2"
             >
-              {loading ? 'Creando...' : 'Crear restaurante'}
+              {loading ? 'Creando...' : 'Crear negocio'}
             </button>
           </form>
         </div>

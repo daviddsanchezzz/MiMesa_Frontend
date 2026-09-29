@@ -3,6 +3,7 @@ import api from '../services/api';
 import Modal from '../components/Modal';
 import { useAuth } from '../context/AuthContext';
 import PushNotificationToggle from '../components/PushNotificationToggle';
+import BusinessTypePicker from '../components/BusinessTypePicker';
 
 const inputCls = 'w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-white';
 const labelCls = 'block text-xs font-medium text-gray-600 mb-1.5';
@@ -90,7 +91,7 @@ export default function Profile() {
   const [profileForm, setProfileForm] = useState({ name: '' });
   const [passwordForm, setPasswordForm] = useState({ newPassword: '', confirmPassword: '' });
   const [showPasswordModal, setShowPasswordModal] = useState(false);
-  const [newBusiness, setNewBusiness] = useState({ name: '', email: '', phone: '', address: '', cif: '' });
+  const [newBusiness, setNewBusiness] = useState({ businessType: 'restaurant', name: '', email: '', phone: '', address: '', cif: '' });
   const [showCreateBusinessModal, setShowCreateBusinessModal] = useState(false);
 
   const summary = useMemo(() => ({
@@ -200,7 +201,7 @@ export default function Profile() {
     try {
       await api.post('/businesses', newBusiness);
       setShowCreateBusinessModal(false);
-      setNewBusiness({ name: '', email: '', phone: '', address: '', cif: '' });
+      setNewBusiness({ businessType: 'restaurant', name: '', email: '', phone: '', address: '', cif: '' });
       await refreshBusiness();
       await load();
     } catch (err) {
@@ -476,13 +477,18 @@ export default function Profile() {
       {showCreateBusinessModal && (
         <Modal
           title="Nuevo negocio"
-          subtitle="Crea un nuevo restaurante y te asignaremos como owner"
+          subtitle="Crea un nuevo negocio del que serás propietario"
+          size="md"
           onClose={() => {
             setShowCreateBusinessModal(false);
-            setNewBusiness({ name: '', email: '', phone: '', address: '', cif: '' });
+            setNewBusiness({ businessType: 'restaurant', name: '', email: '', phone: '', address: '', cif: '' });
           }}
         >
           <form onSubmit={handleCreateBusiness} className="space-y-4">
+            <div>
+              <p className={labelCls}>Tipo de negocio</p>
+              <BusinessTypePicker value={newBusiness.businessType} onChange={(businessType) => setNewBusiness((b) => ({ ...b, businessType }))} />
+            </div>
             <div>
               <label className={labelCls}>Nombre del negocio</label>
               <input

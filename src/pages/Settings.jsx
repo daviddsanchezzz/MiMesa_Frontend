@@ -9,6 +9,22 @@ import { LimitesSection } from './settings/LimitesSection';
 import { PublicoSection } from './settings/PublicoSection';
 import { BillingSection } from './settings/BillingSection';
 import { PagosSection } from './settings/PagosSection';
+import { ProfessionalsSettings, ServicesSettings, HoursSettings } from './agenda/AgendaSettings';
+
+const svg = (d) => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 shrink-0"><path fillRule="evenodd" d={d} clipRule="evenodd" /></svg>
+);
+
+// Tabs for appointment businesses (salons, therapists...). Restaurant tabs are in TABS.
+const APPOINTMENT_TABS = [
+  { key: 'profesionales', label: 'Profesionales', desc: 'Quién atiende y en qué horario',
+    icon: svg('M10 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6Zm-7 9a7 7 0 1 1 14 0H3Z') },
+  { key: 'servicios', label: 'Servicios', desc: 'Qué se reserva, duración y precio',
+    icon: svg('M4 3a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2H4Zm2 4.25a.75.75 0 0 1 .75-.75h6.5a.75.75 0 0 1 0 1.5h-6.5A.75.75 0 0 1 6 7.25Zm0 3a.75.75 0 0 1 .75-.75h6.5a.75.75 0 0 1 0 1.5h-6.5a.75.75 0 0 1-.75-.75Zm.75 2.25a.75.75 0 0 0 0 1.5h3.5a.75.75 0 0 0 0-1.5h-3.5Z') },
+  { key: 'horario', label: 'Horario y cierres', desc: 'Apertura, festivos y vacaciones',
+    icon: svg('M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm.75-13a.75.75 0 0 0-1.5 0v5c0 .199.079.39.22.53l3 3a.75.75 0 1 0 1.06-1.06l-2.78-2.78V5Z') },
+];
+const APPOINTMENT_KEEP = ['negocio', 'suscripcion'];
 
 const TABS = [
   { key: 'negocio',     label: 'Negocio',      desc: 'Nombre y datos del establecimiento',   icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 shrink-0"><path fillRule="evenodd" d="M4.5 1A2.5 2.5 0 0 0 2 3.5V5c0 .174.018.344.052.508A2 2 0 0 0 2 7v1a2 2 0 0 0 .052 1.492A2 2 0 0 0 2 11v1.5A2.5 2.5 0 0 0 4.5 15h7a2.5 2.5 0 0 0 2.5-2.5V11a2 2 0 0 0-.052-1.508A2 2 0 0 0 14 8V7a2 2 0 0 0-.052-1.492A2 2 0 0 0 14 4V3.5A2.5 2.5 0 0 0 11.5 1h-7Zm5 9.5H6.5a.5.5 0 0 0 0 1h3a.5.5 0 0 0 0-1Zm0-3H6.5a.5.5 0 0 0 0 1h3a.5.5 0 0 0 0-1Zm0-3H6.5a.5.5 0 0 0 0 1h3a.5.5 0 0 0 0-1Z" clipRule="evenodd"/></svg> },
@@ -25,9 +41,12 @@ const TABS = [
 const OWNER_ONLY_TABS = new Set(['suscripcion', 'pagos']);
 
 export default function Settings() {
-  const { hasRole } = useAuth();
+  const { hasRole, isAppointments } = useAuth();
   const isOwner = hasRole('owner');
-  const visibleTabs = TABS.filter(t => !OWNER_ONLY_TABS.has(t.key) || isOwner);
+  const tabsForType = isAppointments
+    ? [TABS.find((t) => t.key === 'negocio'), ...APPOINTMENT_TABS, ...TABS.filter((t) => APPOINTMENT_KEEP.includes(t.key) && t.key !== 'negocio')]
+    : TABS;
+  const visibleTabs = tabsForType.filter(t => !OWNER_ONLY_TABS.has(t.key) || isOwner);
 
   const searchParams = new URLSearchParams(window.location.search);
   const initialTab   = visibleTabs.find(t => t.key === searchParams.get('tab'))?.key ?? 'negocio';
@@ -93,6 +112,9 @@ export default function Settings() {
           {tab === 'publico'     && <PublicoSection />}
           {tab === 'suscripcion' && <BillingSection />}
           {tab === 'pagos'       && <PagosSection />}
+          {tab === 'profesionales' && <ProfessionalsSettings />}
+          {tab === 'servicios'   && <ServicesSettings />}
+          {tab === 'horario'     && <HoursSettings />}
         </div>
       </div>
     </div>

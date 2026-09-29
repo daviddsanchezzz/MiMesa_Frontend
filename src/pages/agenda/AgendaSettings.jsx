@@ -202,16 +202,36 @@ function Services({ services, staff, reload }) {
   );
 }
 
-export default function SetupPanel({ resources, services, reload }) {
-  const staff = resources.filter((r) => r.kind === 'staff');
-  return (
-    <div className="grid grid-cols-1 xl:grid-cols-2 gap-5 items-start">
-      <div className="space-y-5">
-        <Resources resources={resources} reload={reload} />
-        <Services services={services} staff={staff} reload={reload} />
-      </div>
-      <BusinessHours onSaved={reload} />
-    </div>
-  );
+// Self-loading sections used as tabs in Configuración (appointment businesses).
+function useSetupData() {
+  const [resources, setResources] = useState(null);
+  const [services, setServices] = useState(null);
+  const [error, setError] = useState('');
+  const reload = () => Promise.all([bookingsApi.resources(), bookingsApi.services()])
+    .then(([r, s]) => { setResources(r); setServices(s); })
+    .catch((err) => setError(apiError(err)));
+  useEffect(() => { reload(); }, []);
+  return { resources, services, reload, error };
 }
 
+function Loading({ error }) {
+  return error
+    ? <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</p>
+    : <p className="text-sm text-gray-400">Cargando…</p>;
+}
+
+export function ProfessionalsSettings() {
+  const { resources, reload, error } = useSetupData();
+  if (!resources) return <Loading error={error} />;
+  return <Resources resources={resources} reload={reload} />;
+}
+
+export function ServicesSettings() {
+  const { resources, services, reload, error } = useSetupData();
+  if (!resources || !services) return <Loading error={error} />;
+  return <Services services={services} staff={resources.filter((r) => r.kind === 'staff')} reload={reload} />;
+}
+
+export function HoursSettings() {
+  return <BusinessHours />;
+}

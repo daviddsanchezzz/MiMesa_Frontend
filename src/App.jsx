@@ -28,6 +28,8 @@ const Compras = lazy(() => import('./pages/Compras'));
 const Agenda = lazy(() => import('./pages/Agenda'));
 const AppointmentsDashboard = lazy(() => import('./pages/AppointmentsDashboard'));
 const PublicReservation = lazy(() => import('./pages/PublicReservation'));
+const PublicBooking = lazy(() => import('./pages/PublicBooking'));
+const PublicBookingCancel = lazy(() => import('./pages/PublicBookingCancel'));
 const PublicCancel = lazy(() => import('./pages/PublicCancel'));
 const PublicUnsubscribe = lazy(() => import('./pages/PublicUnsubscribe'));
 import ErrorBoundary from './components/ErrorBoundary';
@@ -296,6 +298,8 @@ export default function App() {
         <Suspense fallback={<LoadingScreen />}>
         <Routes>
           <Route path="/public/:businessId/reserve" element={<PublicReservation />} />
+          <Route path="/public/:businessId/cita" element={<PublicBooking />} />
+          <Route path="/public/:businessId/cita/cancelar" element={<PublicBookingCancel />} />
           <Route path="/public/cancel"       element={<PublicCancel />} />
           <Route path="/public/unsubscribe"  element={<PublicUnsubscribe />} />
           {/* Auth — public only (redirect to / if already logged in) */}

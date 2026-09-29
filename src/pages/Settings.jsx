@@ -10,6 +10,7 @@ import { PublicoSection } from './settings/PublicoSection';
 import { BillingSection } from './settings/BillingSection';
 import { PagosSection } from './settings/PagosSection';
 import { ProfessionalsSettings, ServicesSettings, HoursSettings } from './agenda/AgendaSettings';
+import { BookingLinkSettings } from './agenda/BookingLinkSettings';
 
 const svg = (d) => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 shrink-0"><path fillRule="evenodd" d={d} clipRule="evenodd" /></svg>
@@ -23,6 +24,8 @@ const APPOINTMENT_TABS = [
     icon: svg('M4 3a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2H4Zm2 4.25a.75.75 0 0 1 .75-.75h6.5a.75.75 0 0 1 0 1.5h-6.5A.75.75 0 0 1 6 7.25Zm0 3a.75.75 0 0 1 .75-.75h6.5a.75.75 0 0 1 0 1.5h-6.5a.75.75 0 0 1-.75-.75Zm.75 2.25a.75.75 0 0 0 0 1.5h3.5a.75.75 0 0 0 0-1.5h-3.5Z') },
   { key: 'horario', label: 'Horario y cierres', desc: 'Apertura, festivos y vacaciones',
     icon: svg('M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm.75-13a.75.75 0 0 0-1.5 0v5c0 .199.079.39.22.53l3 3a.75.75 0 1 0 1.06-1.06l-2.78-2.78V5Z') },
+  { key: 'enlace', label: 'Enlace de reservas', desc: 'Tu página para que los clientes reserven',
+    icon: svg('M12.232 4.232a2.5 2.5 0 0 1 3.536 3.536l-1.225 1.224a.75.75 0 0 0 1.061 1.06l1.224-1.224a4 4 0 0 0-5.656-5.656l-3 3a4 4 0 0 0 .225 5.865.75.75 0 0 0 .977-1.138 2.5 2.5 0 0 1-.142-3.667l3-3Zm-4.464 11.536a2.5 2.5 0 0 1-3.536-3.536l1.225-1.224a.75.75 0 0 0-1.061-1.06l-1.224 1.224a4 4 0 1 0 5.656 5.656l3-3a4 4 0 0 0-.225-5.865.75.75 0 0 0-.977 1.138 2.5 2.5 0 0 1 .142 3.667l-3 3Z') },
 ];
 const APPOINTMENT_KEEP = ['negocio', 'suscripcion'];
 
@@ -115,6 +118,7 @@ export default function Settings() {
           {tab === 'profesionales' && <ProfessionalsSettings />}
           {tab === 'servicios'   && <ServicesSettings />}
           {tab === 'horario'     && <HoursSettings />}
+          {tab === 'enlace'      && <BookingLinkSettings />}
         </div>
       </div>
     </div>

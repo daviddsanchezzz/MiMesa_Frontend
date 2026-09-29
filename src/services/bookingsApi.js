@@ -1,4 +1,5 @@
 import api from './api';
+import publicApi from './publicApi';
 
 // Thin wrappers over /api/bookings (generic agenda module).
 const unwrap = (p) => p.then((r) => r.data);
@@ -30,3 +31,13 @@ export const bookingsApi = {
 export function apiError(err, fallback = 'Algo ha fallado. Inténtalo de nuevo.') {
   return err?.response?.data?.message || fallback;
 }
+
+// Public (guest) side: no session, CORS-open endpoints.
+
+export const publicBookingsApi = {
+  catalog: (businessId) => unwrap(publicApi.get(`/bookings/public/${businessId}/catalog`)),
+  availability: (businessId, params) => unwrap(publicApi.get(`/bookings/public/${businessId}/availability`, { params })),
+  create: (businessId, data) => unwrap(publicApi.post(`/bookings/public/${businessId}/bookings`, data)),
+  details: (bookingId, token) => unwrap(publicApi.get('/bookings/public/cancel', { params: { bookingId, token } })),
+  cancel: (bookingId, token) => unwrap(publicApi.post('/bookings/public/cancel', { bookingId, token })),
+};

@@ -101,6 +101,13 @@ export default function AppointmentsDashboard() {
         </section>
       )}
 
+      {setupDone && isManager && (
+        <div className="bg-violet-50 border border-violet-200 rounded-2xl px-4 py-3 flex flex-wrap items-center justify-between gap-2">
+          <p className="text-sm text-violet-900">Tus clientes ya pueden reservar solos con tu enlace.</p>
+          <Link to="/configuracion?tab=enlace" className="text-sm font-semibold text-violet-700 hover:text-violet-900">Ver y compartir enlace →</Link>
+        </div>
+      )}
+
       {stats && (
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {[

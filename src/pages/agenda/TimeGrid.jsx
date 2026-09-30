@@ -24,6 +24,26 @@ function useNowMinute(tz, active) {
   return now;
 }
 
+// Time a professional is away: grey stripes, not bookable.
+export function AbsenceBlock({ absence, top, height, left = '4px', width = 'calc(100% - 8px)', dense = false, onClick }) {
+  return (
+    <button
+      type="button"
+      onClick={(e) => { e.stopPropagation(); onClick?.(absence); }}
+      title={absence.reason ? `Ausente · ${absence.reason}` : 'Ausente'}
+      className={`absolute z-10 rounded-lg text-left overflow-hidden border border-gray-300 text-gray-600 hover:border-gray-400 flex flex-col justify-start items-start ${dense ? 'px-1 py-0.5' : 'px-2 py-1'}`}
+      style={{
+        top, height, left, width,
+        backgroundColor: '#f3f4f6',
+        backgroundImage: 'repeating-linear-gradient(135deg, rgba(156,163,175,0.25) 0 6px, transparent 6px 12px)',
+      }}
+    >
+      <p className="text-[11px] font-semibold leading-tight truncate">{dense ? 'Fuera' : 'Ausente'}</p>
+      {!dense && absence.reason && height > 34 && <p className="text-[11px] leading-tight truncate">{absence.reason}</p>}
+    </button>
+  );
+}
+
 export function BookingBlock({ booking, segment, color, tz, top, height, left = '4px', width = 'calc(100% - 8px)', dense = false, onClick }) {
   const st = STATUS_STYLE[booking.status];
   const muted = st?.muted;

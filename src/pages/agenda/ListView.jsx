@@ -1,5 +1,5 @@
 import StaffAvatar from './StaffAvatar';
-import { timeInTz } from './utils';
+import { absenceSpan, absenceText, timeInTz, toHHMM } from './utils';
 
 // The colored line tells the state; no badges.
 const LINE = {
@@ -30,14 +30,44 @@ function Line({ kind }) {
 }
 
 /** The day as a list: what a phone needs (big touch targets, no tiny grid). */
-export default function ListView({ tz, bookings, staffById, colors, onBookingClick, onNew, isToday }) {
+export default function ListView({ tz, date, bookings, absences = [], staffById, colors, onBookingClick, onAbsenceClick, onNew, isToday }) {
   const now = Date.now();
   const sorted = [...bookings].sort((a, b) => new Date(a.start) - new Date(b.start));
+  const away = absences
+    .map((a) => ({ a, span: absenceSpan(a, date, tz) }))
+    .filter((x) => x.span)
+    .sort((x, y) => x.span[0] - y.span[0]);
+  const awayRows = away.length > 0 && (
+    <ul className="space-y-2">
+      {away.map(({ a, span }) => {
+        const person = staffById[a.resourceId];
+        return (
+          <li key={a._id}>
+            <button type="button" onClick={() => onAbsenceClick?.(a)}
+              className="w-full text-left rounded-2xl border border-gray-200 px-4 py-2.5 flex items-center gap-3 text-gray-600"
+              style={{ backgroundColor: '#f9fafb', backgroundImage: 'repeating-linear-gradient(135deg, rgba(156,163,175,0.18) 0 6px, transparent 6px 12px)' }}>
+              <div className="w-12 shrink-0 text-center text-xs font-semibold tabular-nums">
+                {a.allDay ? 'Día' : toHHMM(span[0])}
+              </div>
+              <div className="min-w-0 flex-1">
+                <p className="text-sm font-semibold text-gray-700 truncate">{person?.name || 'Profesional'} · ausente</p>
+                <p className="text-xs text-gray-500 truncate">{absenceText(a)}{a.reason ? ` · ${a.reason}` : ''}</p>
+              </div>
+              {person && <StaffAvatar name={person.name} photo={person.photo} color={colors[a.resourceId]} size={30} />}
+            </button>
+          </li>
+        );
+      })}
+    </ul>
+  );
   if (!sorted.length) {
     return (
-      <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center">
-        <p className="text-sm text-gray-500">No hay citas este día.</p>
-        <button type="button" onClick={onNew} className="mt-3 text-sm font-semibold text-violet-600">+ Dar una cita</button>
+      <div className="space-y-3">
+        {awayRows}
+        <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center">
+          <p className="text-sm text-gray-500">No hay citas este día.</p>
+          <button type="button" onClick={onNew} className="mt-3 text-sm font-semibold text-violet-600">+ Dar una cita</button>
+        </div>
       </div>
     );
   }
@@ -45,6 +75,7 @@ export default function ListView({ tz, bookings, staffById, colors, onBookingCli
   const shown = new Set(sorted.map((b) => lineFor(b, b._id === nextId)));
   return (
     <div className="space-y-3">
+    {awayRows}
     <ul className="space-y-2">
       {sorted.map((b) => {
         const staffIds = [...new Set(b.segments.flatMap((s) => s.resourceIds || []))].filter((id) => staffById[id]?.kind === 'staff');

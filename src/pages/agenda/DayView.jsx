@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
-import TimeGrid, { BookingBlock, PX_PER_MIN } from './TimeGrid';
+import TimeGrid, { AbsenceBlock, BookingBlock, PX_PER_MIN } from './TimeGrid';
 import StaffAvatar from './StaffAvatar';
-import { minutesInTz, toHHMM, windowsForDate, intersectWindows, layoutOverlaps } from './utils';
+import { minutesInTz, toHHMM, windowsForDate, intersectWindows, layoutOverlaps, absenceSpan } from './utils';
 
 const UNASSIGNED = '__none__';
 
@@ -21,7 +21,7 @@ export function visibleRange(windowsList, bookings, tz) {
  * One day: a column per professional with their photo or initials, their own
  * hours (inside the business hours) and their appointments in their colour.
  */
-export default function DayView({ date, tz, staff, bookings, businessSchedule, staffSchedules = {}, colors, isToday, onEmptyClick, onBookingClick, fill = false, compact = false }) {
+export default function DayView({ date, tz, staff, bookings, absences = [], onAbsenceClick, businessSchedule, staffSchedules = {}, colors, isToday, onEmptyClick, onBookingClick, fill = false, compact = false }) {
   const bizWindows = useMemo(() => windowsForDate(businessSchedule, date), [businessSchedule, date]);
   const windowsFor = (id) => (staffSchedules[id] ? intersectWindows(windowsForDate(staffSchedules[id], date), bizWindows) : bizWindows);
   const [startMin, endMin] = useMemo(() => visibleRange([bizWindows], bookings, tz), [bizWindows, bookings, tz]);
@@ -41,6 +41,12 @@ export default function DayView({ date, tz, staff, bookings, businessSchedule, s
         }
       }
     }
+    // Absences per professional for this day, clipped to what is on screen.
+    const awayBy = {};
+    for (const a of absences) {
+      const span = absenceSpan(a, date, tz);
+      if (span) (awayBy[a.resourceId] ||= []).push({ a, s: Math.max(span[0], startMin), e: Math.min(span[1], endMin), full: span[0] <= startMin && span[1] >= endMin });
+    }
     const make = (id, name, photo) => ({
       key: id,
       isToday,
@@ -50,12 +56,17 @@ export default function DayView({ date, tz, staff, bookings, businessSchedule, s
           {id !== UNASSIGNED && <StaffAvatar name={name} photo={photo} color={colors[id]} size={30} />}
           <div className="min-w-0 text-left">
             <p className="text-sm font-semibold text-gray-900 truncate leading-tight">{name}</p>
-            <p className="text-[11px] text-gray-500 leading-tight">{count[id] ? `${count[id]} ${count[id] === 1 ? 'cita' : 'citas'}` : 'Libre'}</p>
+            <p className="text-[11px] text-gray-500 leading-tight">
+              {(awayBy[id] || []).some((x) => x.full) ? 'Ausente' : count[id] ? `${count[id]} ${count[id] === 1 ? 'cita' : 'citas'}` : 'Libre'}
+            </p>
           </div>
         </div>
       ),
       onEmpty: id === UNASSIGNED ? undefined : (minute) => onEmptyClick?.(id, toHHMM(minute), date),
-      blocks: layoutOverlaps((byCol[id] || []).map(({ booking, segment }) => ({
+      blocks: [...(awayBy[id] || []).filter((x) => x.e > x.s).map(({ a, s: as, e: ae }) => ({
+        key: `away-${a._id}`,
+        render: <AbsenceBlock absence={a} top={(as - startMin) * PX_PER_MIN} height={Math.max(22, (ae - as) * PX_PER_MIN)} onClick={onAbsenceClick} />,
+      })), ...layoutOverlaps((byCol[id] || []).map(({ booking, segment }) => ({
         booking, segment, start: minutesInTz(segment.start, tz), end: minutesInTz(segment.start, tz) + (new Date(segment.end) - new Date(segment.start)) / 60000,
       }))).map(({ booking, segment, start, end, col, cols }) => {
         const top = (start - startMin) * PX_PER_MIN;
@@ -66,13 +77,13 @@ export default function DayView({ date, tz, staff, bookings, businessSchedule, s
           render: <BookingBlock booking={booking} segment={segment} tz={tz} top={top} height={height} color={colors[id] || '#9ca3af'}
             left={`calc(${col * w}% + 4px)`} width={`calc(${w}% - 8px)`} onClick={onBookingClick} />,
         };
-      }),
+      })],
     });
     const cols = staff.map((s) => make(s._id, s.name, s.photo));
     if (byCol[UNASSIGNED]) cols.push(make(UNASSIGNED, 'Sin profesional'));
     return cols;
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bookings, staff, startMin, tz, colors, bizWindows, staffSchedules, isToday, date]);
+  }, [bookings, absences, staff, startMin, endMin, tz, colors, bizWindows, staffSchedules, isToday, date]);
 
   if (!columns.length) {
     return (

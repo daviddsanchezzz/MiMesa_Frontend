@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
-import TimeGrid, { BookingBlock, PX_PER_MIN } from './TimeGrid';
+import TimeGrid, { AbsenceBlock, BookingBlock, PX_PER_MIN } from './TimeGrid';
 import { visibleRange } from './DayView';
-import { addDays, dateInTz, minutesInTz, toHHMM, windowsForDate, layoutOverlaps } from './utils';
+import { addDays, dateInTz, minutesInTz, toHHMM, windowsForDate, layoutOverlaps, absenceSpan } from './utils';
 
 const DOW = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
 
@@ -9,7 +9,7 @@ const DOW = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
  * Seven days side by side. Inside each day every professional has a thin lane
  * in their colour, so overlapping appointments never hide each other.
  */
-export default function WeekView({ from, today, tz, staff, bookings, businessSchedule, colors, onEmptyClick, onBookingClick, onDayClick, fill = false }) {
+export default function WeekView({ from, today, tz, staff, bookings, absences = [], onAbsenceClick, businessSchedule, colors, onEmptyClick, onBookingClick, onDayClick, fill = false }) {
   const dates = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(from, i)), [from]);
   const windowsByDate = useMemo(() => Object.fromEntries(dates.map((d) => [d, windowsForDate(businessSchedule, d)])), [dates, businessSchedule]);
   const [startMin, endMin] = useMemo(() => visibleRange(Object.values(windowsByDate), bookings, tz), [windowsByDate, bookings, tz]);
@@ -34,6 +34,20 @@ export default function WeekView({ from, today, tz, staff, bookings, businessSch
         }
       }
       const blocks = [];
+      for (const a of absences) {
+        if (!(a.resourceId in laneIndex)) continue;
+        const span = absenceSpan(a, d, tz);
+        if (!span) continue;
+        const s0 = Math.max(span[0], startMin);
+        const e0 = Math.min(span[1], endMin);
+        if (e0 <= s0) continue;
+        const laneW = 100 / n;
+        blocks.push({
+          key: `away-${a._id}-${d}`,
+          render: <AbsenceBlock absence={a} dense top={(s0 - startMin) * PX_PER_MIN} height={Math.max(20, (e0 - s0) * PX_PER_MIN)}
+            left={`calc(${laneIndex[a.resourceId] * laneW}% + 1px)`} width={`calc(${laneW}% - 2px)`} onClick={onAbsenceClick} />,
+        });
+      }
       for (const items of Object.values(byLane)) {
         for (const { b, seg, id, start, end, col, cols } of layoutOverlaps(items)) {
           const i = id ? laneIndex[id] : 0;
@@ -67,7 +81,7 @@ export default function WeekView({ from, today, tz, staff, bookings, businessSch
         blocks,
       };
     });
-  }, [dates, bookings, tz, staff, colors, startMin, windowsByDate, today, onBookingClick, onEmptyClick, onDayClick]);
+  }, [dates, bookings, absences, tz, staff, colors, startMin, endMin, windowsByDate, today, onBookingClick, onEmptyClick, onDayClick, onAbsenceClick]);
 
   return (
     <div className={fill ? 'h-full flex flex-col gap-2' : 'space-y-2'}>

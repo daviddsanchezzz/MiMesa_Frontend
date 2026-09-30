@@ -10,6 +10,7 @@ import DayStrip from './agenda/DayStrip';
 import StaffAvatar from './agenda/StaffAvatar';
 import NewBookingModal from './agenda/NewBookingModal';
 import BookingDetailModal from './agenda/BookingDetailModal';
+import AbsenceModal, { AbsenceDetailModal } from './agenda/AbsenceModal';
 import {
   DEFAULT_TZ, addDays, btnPrimary, btnSecondary, dateInTz, euros, longDate, staffColors, todayIn, weekStart,
   windowsForDate, pluralize,
@@ -55,6 +56,9 @@ export default function Agenda() {
   const [schedule, setSchedule] = useState(null);
   const [staffSchedules, setStaffSchedules] = useState({});
   const [bookings, setBookings] = useState([]);
+  const [absences, setAbsences] = useState([]);
+  const [blocking, setBlocking] = useState(false);
+  const [selectedAbsence, setSelectedAbsence] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [creating, setCreating] = useState(null);   // { resourceId, time, date } | null
@@ -93,7 +97,9 @@ export default function Agenda() {
   const from = weekStart(date);
   const to = addDays(from, 6);
   const loadBookings = useCallback(async () => {
-    setBookings(await bookingsApi.list({ from, to }));
+    const [b, a] = await Promise.all([bookingsApi.list({ from, to }), bookingsApi.absences(from, to).catch(() => [])]);
+    setBookings(b);
+    setAbsences(a);
   }, [from, to]);
 
   useEffect(() => {
@@ -120,6 +126,9 @@ export default function Agenda() {
   const shownStaff = useMemo(() => (scopeId ? staff.filter((r) => r._id === scopeId) : staff), [staff, scopeId]);
   const inScope = useCallback((b) => !scopeId || (b.segments || []).some((seg) => (seg.resourceIds || []).includes(scopeId)), [scopeId]);
   const byId = useMemo(() => Object.fromEntries(resources.map((r) => [r._id, r])), [resources]);
+  const shownAbsences = useMemo(() => absences.filter((a) => !scopeId || a.resourceId === scopeId), [absences, scopeId]);
+  // Anyone linked to a professional can block their own time; managers anybody's.
+  const canBlock = isManager || !!me;
   const colors = useMemo(() => staffColors(resources), [resources]);
   const visibleWeek = useMemo(() => bookings.filter((b) => (showCancelled || b.status !== 'cancelled') && inScope(b)), [bookings, showCancelled, inScope]);
   const dayBookings = useMemo(() => visibleWeek.filter((b) => dateInTz(b.start, tz) === date), [visibleWeek, date, tz]);
@@ -209,9 +218,9 @@ export default function Agenda() {
         </div>
       ) : (
         <>
-          {staff.length > 1 && (
+          {(staff.length > 1 || canBlock) && (
             <div className="shrink-0 flex gap-1.5 overflow-x-auto -mx-1 px-1 pb-0.5" role="tablist" aria-label="Qué agenda ver">
-              {[{ id: 'all', label: 'Todo el equipo' }, ...(me ? [{ id: me._id, label: 'Mi agenda', person: me }] : []),
+              {staff.length > 1 && [{ id: 'all', label: 'Todo el equipo' }, ...(me ? [{ id: me._id, label: 'Mi agenda', person: me }] : []),
                 ...staff.filter((r) => r._id !== me?._id).map((r) => ({ id: r._id, label: r.name, person: r }))].map((o) => {
                 const active = (o.id === 'all' && !scopeId) || o.id === scopeId;
                 return (
@@ -223,6 +232,13 @@ export default function Agenda() {
                   </button>
                 );
               })}
+              {canBlock && (
+                <button type="button" onClick={() => setBlocking(true)}
+                  className="shrink-0 ml-auto inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold border border-dashed border-gray-300 text-gray-600 hover:border-gray-400 hover:text-gray-800">
+                  <svg viewBox="0 0 20 20" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="10" cy="10" r="7" /><path d="M5 15 15 5" strokeLinecap="round" /></svg>
+                  Ausencia
+                </button>
+              )}
             </div>
           )}
           <div className="shrink-0">
@@ -242,18 +258,18 @@ export default function Agenda() {
           )}
 
           {activeView === 'week' && (
-            <div className="flex-1 min-h-0"><WeekView fill from={from} today={today} tz={tz} staff={shownStaff} bookings={visibleWeek} businessSchedule={schedule}
+            <div className="flex-1 min-h-0"><WeekView fill from={from} today={today} tz={tz} staff={shownStaff} bookings={visibleWeek} absences={shownAbsences} onAbsenceClick={setSelectedAbsence} businessSchedule={schedule}
               colors={colors} onBookingClick={setSelected}
               onEmptyClick={(resourceId, time, d) => openNew(resourceId, time, d)}
               onDayClick={(d) => { setDate(d); chooseView('day'); }} /></div>
           )}
           {activeView === 'day' && (
-            <div className="flex-1 min-h-0"><DayView fill compact={isMobile} date={date} tz={tz} staff={shownStaff} bookings={dayBookings} businessSchedule={schedule}
+            <div className="flex-1 min-h-0"><DayView fill compact={isMobile} date={date} tz={tz} staff={shownStaff} bookings={dayBookings} absences={shownAbsences} onAbsenceClick={setSelectedAbsence} businessSchedule={schedule}
               staffSchedules={staffSchedules} colors={colors} isToday={date === today}
               onEmptyClick={(resourceId, time) => openNew(resourceId, time, date)} onBookingClick={setSelected} /></div>
           )}
           {activeView === 'list' && (
-            <ListView tz={tz} bookings={dayBookings} staffById={byId} colors={colors} isToday={date === today}
+            <ListView tz={tz} date={date} bookings={dayBookings} absences={shownAbsences} onAbsenceClick={setSelectedAbsence} staffById={byId} colors={colors} isToday={date === today}
               onBookingClick={setSelected} onNew={() => openNew('', '', date)} />
           )}
         </>
@@ -270,6 +286,18 @@ export default function Agenda() {
           onClose={() => setCreating(null)}
           onCreated={() => { setCreating(null); loadBookings(); }}
         />
+      )}
+      {blocking && (
+        <AbsenceModal staff={staff} me={me} isManager={isManager} date={date} tz={tz} colors={colors}
+          onClose={() => setBlocking(false)}
+          onChanged={() => loadBookings().catch(() => {})}
+          onSaved={() => { setBlocking(false); loadBookings().catch(() => {}); }} />
+      )}
+      {selectedAbsence && (
+        <AbsenceDetailModal absence={selectedAbsence} person={byId[selectedAbsence.resourceId]}
+          canRemove={isManager || (me && me._id === selectedAbsence.resourceId)}
+          onClose={() => setSelectedAbsence(null)}
+          onRemoved={() => { setSelectedAbsence(null); loadBookings().catch(() => {}); }} />
       )}
       {selected && (
         <BookingDetailModal

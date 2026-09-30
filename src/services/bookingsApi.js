@@ -38,6 +38,12 @@ export const bookingsApi = {
   cashDay: (date) => unwrap(api.get('/bookings/cash', { params: date ? { date } : {} })),
   closeCash: (data) => unwrap(api.post('/bookings/cash/close', data)),
   reopenCash: (date) => unwrap(api.delete('/bookings/cash/close', { params: { date } })),
+  // absences and moving an appointment to someone else
+  absences: (from, to) => unwrap(api.get('/bookings/absences', { params: { from, to } })),
+  createAbsence: (data) => unwrap(api.post('/bookings/absences', data)),
+  deleteAbsence: (id) => unwrap(api.delete(`/bookings/absences/${id}`)),
+  reassignOptions: (id, from) => unwrap(api.get(`/bookings/${id}/reassign-options`, { params: { from } })),
+  reassign: (id, from, to) => unwrap(api.patch(`/bookings/${id}/reassign`, { from, to })),
 };
 
 export function apiError(err, fallback = 'Algo ha fallado. Inténtalo de nuevo.') {

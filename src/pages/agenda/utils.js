@@ -245,3 +245,22 @@ export const PAY_METHODS = [
   { key: 'other', label: 'Otro', icon: '•' },
 ];
 export const payMethodLabel = (k) => PAY_METHODS.find((m) => m.key === k)?.label || k;
+
+// Minutes [start, end) of an absence inside one local day, or null if it does not touch it.
+export function absenceSpan(a, date, tz = DEFAULT_TZ) {
+  const sDate = dateInTz(a.start, tz);
+  const eDate = dateInTz(new Date(new Date(a.end).getTime() - 1).toISOString(), tz);
+  if (date < sDate || date > eDate) return null;
+  const s = date === sDate ? minutesInTz(a.start, tz) : 0;
+  const e = date === eDate ? (minutesInTz(a.end, tz) || 1440) : 1440;
+  return e > s ? [s, e] : null;
+}
+
+// "Todo el día", "Hasta el 12 oct" or "10:00 – 12:00".
+export function absenceText(a) {
+  if (!a.allDay) return `${a.startTime} – ${a.endTime}`;
+  if (a.fromDate === a.toDate) return 'Todo el día';
+  const [, m, d] = a.toDate.split('-').map(Number);
+  const months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sept', 'oct', 'nov', 'dic'];
+  return `Hasta el ${d} ${months[m - 1]}`;
+}

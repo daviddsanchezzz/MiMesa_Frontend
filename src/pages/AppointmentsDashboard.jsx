@@ -30,10 +30,26 @@ function Kpi({ label, value, hint, tone = 'default' }) {
   );
 }
 
+// Neutral line icons (any sector: salon, clinic, studio…), tinted like their action.
+const ICON_PATHS = {
+  clock: 'M12 6v6l4 2m6-2a10 10 0 1 1-20 0 10 10 0 0 1 20 0Z',
+  slot: 'M8 2v4m8-4v4M3 10h18M12 14v4m-2-2h4M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z',
+  people: 'M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2m20 0v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75M13 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z',
+  calendar: 'M8 2v4m8-4v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z',
+};
+const ICON_TINT = {
+  clock: 'bg-amber-50 text-amber-600',
+  slot: 'bg-violet-50 text-violet-600',
+  people: 'bg-emerald-50 text-emerald-600',
+  calendar: 'bg-gray-100 text-gray-500',
+};
+
 function ActionRow({ icon, children, action }) {
   return (
     <li className="flex items-center gap-3 py-3 first:pt-0 last:pb-0">
-      <span className="w-9 h-9 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center text-base shrink-0" aria-hidden="true">{icon}</span>
+      <span className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${ICON_TINT[icon]}`} aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" className="w-[18px] h-[18px]"><path d={ICON_PATHS[icon]} /></svg>
+      </span>
       <div className="min-w-0 flex-1 text-sm text-gray-800">{children}</div>
       {action}
     </li>
@@ -99,22 +115,22 @@ export default function AppointmentsDashboard() {
     : today;
   const actions = s ? [
     s.actions.pendingRequests.count > 0 && {
-      key: 'pending', icon: '🕓',
+      key: 'pending', icon: 'clock',
       text: <><b>{pluralize(s.actions.pendingRequests.count, 'solicitud online', 'solicitudes online')}</b> por aprobar</>,
       action: <Link to={`/agenda?date=${pendingDate}`} className={`${pill} bg-amber-100 text-amber-800 hover:bg-amber-200`}>Revisar</Link>,
     },
     ...s.actions.freeGapsToday.slice(0, 2).map((g) => ({
-      key: `gap-${g.resourceId}-${g.startMin}`, icon: '✂️',
+      key: `gap-${g.resourceId}-${g.startMin}`, icon: 'slot',
       text: <>Hueco libre hoy <b>{toHHMM(g.startMin)}–{toHHMM(g.endMin)}</b> con {g.name}</>,
       action: <Link to={`/agenda?new=1&date=${today}&time=${toHHMM(g.startMin)}&staff=${g.resourceId}`} className={`${pill} bg-violet-50 text-violet-700 hover:bg-violet-100`}>Dar cita</Link>,
     })),
     s.actions.overdueCustomers.count > 0 && {
-      key: 'overdue', icon: '💬',
+      key: 'overdue', icon: 'people',
       text: <><b>{pluralize(s.actions.overdueCustomers.count, 'cliente debería', 'clientes deberían')}</b> haber vuelto ya</>,
       action: <button type="button" onClick={() => setShowOverdue((v) => !v)} className={`${pill} bg-emerald-50 text-emerald-700 hover:bg-emerald-100`}>{showOverdue ? 'Ocultar' : 'Ver quiénes'}</button>,
     },
     s.tomorrow.appointments > 0 && {
-      key: 'tomorrow', icon: '📅',
+      key: 'tomorrow', icon: 'calendar',
       text: <>Mañana tienes <b>{pluralize(s.tomorrow.appointments, 'cita', 'citas')}</b>, la primera a las {timeInTz(s.tomorrow.firstStart, tz)}</>,
       action: <Link to={`/agenda?date=${addDays(today, 1)}`} className={`${pill} bg-gray-100 text-gray-700 hover:bg-gray-200`}>Ver</Link>,
     },

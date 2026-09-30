@@ -151,10 +151,8 @@ export default function Sidebar({
   const activeBusinessId = business?.id || null;
   const initial = userName?.[0]?.toUpperCase() || 'U';
   const devSidebar = devMode || business?.isDev || false;
-  const currentDevTab = new URLSearchParams(location.search).get('tab') === 'users' ? 'users' : 'businesses';
   const devLinks = [
-    { tab: 'businesses', label: 'Negocios', icon: <IconBriefcase /> },
-    { tab: 'users', label: 'Usuarios', icon: <IconUsers /> },
+    { tab: 'clients', label: 'Clientes', icon: <IconBriefcase /> },
   ];
 
   const handleNavClick = () => {
@@ -254,12 +252,12 @@ export default function Sidebar({
           {!collapsed && <p className="text-slate-500 text-[10px] font-semibold uppercase tracking-widest px-2 pb-2">Menú</p>}
           {devSidebar ? (
             devLinks.map((link) => {
-              const active = location.pathname === '/dev' && currentDevTab === link.tab;
+              const active = location.pathname === '/dev';
               return (
                 <button
                   key={link.tab}
                   onClick={() => {
-                    navigate(`/dev?tab=${link.tab}`);
+                    navigate('/dev');
                     handleNavClick();
                   }}
                   className={`w-full flex items-center ${collapsed ? 'justify-center' : 'gap-3'} px-3 py-3 lg:py-2 rounded-lg text-sm font-medium transition-all duration-100 ${

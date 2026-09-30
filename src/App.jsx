@@ -175,7 +175,7 @@ function LayoutShell({ children, fullBleed = false, devMode = false }) {
         impersonation={impersonation}
         onStop={async () => {
           await stopImpersonation();
-          window.location.href = '/dev?tab=users';
+          window.location.href = '/dev';
         }}
       />
       {mobileSidebarOpen && !isDesktop && (

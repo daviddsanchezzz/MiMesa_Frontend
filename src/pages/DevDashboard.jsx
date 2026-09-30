@@ -1,722 +1,495 @@
-﻿import { useState, useEffect, useCallback } from 'react';
-import NewClientModal, { OwnerCell } from './dev/NewClientModal';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import Modal from '../components/Modal';
 import { useAuth } from '../context/AuthContext';
+import { useSetMobileHeader } from '../context/MobileHeaderContext';
+import NewClientModal, { InviteLink } from './dev/NewClientModal';
 
-function StatCard({ label, value, sub }) {
+/*
+ * Vetra panel: every client business in one list (owner, team, activity,
+ * plan) with a detail sheet for everything you can do with it. Accounts that
+ * belong to no business are listed at the end.
+ */
+
+const PLAN = {
+  free: ['Free', 'bg-gray-100 text-gray-600'],
+  basic: ['Basic', 'bg-violet-50 text-violet-700'],
+  pro: ['Pro', 'bg-emerald-50 text-emerald-700'],
+};
+const ROLE = { owner: 'Propietario', manager: 'Encargado', staff: 'Personal' };
+const TYPE = { appointments: 'Citas', restaurant: 'Restaurante' };
+
+const FILTERS = [
+  ['all', 'Todos'],
+  ['pending', 'Por activar'],
+  ['active', 'Activos'],
+  ['appointments', 'Citas'],
+  ['restaurant', 'Restaurantes'],
+  ['paid', 'De pago'],
+  ['idle', 'Sin actividad'],
+];
+
+function ago(date) {
+  if (!date) return 'nunca';
+  const mins = Math.round((Date.now() - new Date(date).getTime()) / 60000);
+  if (mins < 2) return 'ahora';
+  if (mins < 60) return `hace ${mins} min`;
+  const h = Math.round(mins / 60);
+  if (h < 24) return `hace ${h} h`;
+  const d = Math.round(h / 24);
+  if (d < 30) return `hace ${d} ${d === 1 ? 'día' : 'días'}`;
+  return new Date(date).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function shortDate(date) {
+  return date ? new Date(date).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }) : '';
+}
+
+function Pill({ className, children }) {
+  return <span className={`inline-flex items-center shrink-0 text-[11px] font-semibold px-2 py-0.5 rounded-full ${className}`}>{children}</span>;
+}
+
+function Stat({ label, value, sub, tone = 'text-gray-900' }) {
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm px-4 py-3">
-      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{label}</p>
-      <p className="text-2xl font-bold text-gray-900 leading-tight mt-1">{value}</p>
-      {sub && <p className="text-xs text-gray-500 mt-1">{sub}</p>}
+    <div className="bg-white rounded-2xl border border-gray-200 px-4 py-3">
+      <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">{label}</p>
+      <p className={`text-2xl font-bold leading-tight mt-0.5 tabular-nums ${tone}`}>{value}</p>
+      {sub && <p className="text-xs text-gray-500 mt-0.5">{sub}</p>}
     </div>
   );
 }
 
-function planPillClass(plan) {
-  if (plan === 'pro') return 'bg-emerald-50 text-emerald-700 border-emerald-200';
-  if (plan === 'basic') return 'bg-violet-50 text-violet-700 border-violet-200';
-  return 'bg-gray-50 text-gray-600 border-gray-200';
-}
-
-const IconBriefcase = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 shrink-0">
-    <path fillRule="evenodd" d="M6 5V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v1h2.25A1.75 1.75 0 0 1 18 6.75v8.5A1.75 1.75 0 0 1 16.25 17H3.75A1.75 1.75 0 0 1 2 15.25v-8.5A1.75 1.75 0 0 1 3.75 5H6Zm1.5 0h5V4a.5.5 0 0 0-.5-.5H8a.5.5 0 0 0-.5.5v1Z" clipRule="evenodd" />
-  </svg>
-);
-
-const IconCurrencyEuro = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 shrink-0">
-    <path d="M1 4.25a3.733 3.733 0 0 1 2.25-.75h13.5c.844 0 1.623.279 2.25.75A2.25 2.25 0 0 0 16.75 2H3.25A2.25 2.25 0 0 0 1 4.25ZM1 7.25a3.733 3.733 0 0 1 2.25-.75h13.5c.844 0 1.623.279 2.25.75A2.25 2.25 0 0 0 16.75 5H3.25A2.25 2.25 0 0 0 1 7.25ZM7 8a1 1 0 0 0 0 2h6a1 1 0 1 0 0-2H7ZM3.25 8A2.25 2.25 0 0 0 1 10.25v4.5A2.25 2.25 0 0 0 3.25 17h13.5A2.25 2.25 0 0 0 19 14.75v-4.5A2.25 2.25 0 0 0 16.75 8H3.25Z" />
-  </svg>
-);
-
-const IconBookmark = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 shrink-0">
-    <path d="M5 3.75A1.75 1.75 0 0 1 6.75 2h6.5A1.75 1.75 0 0 1 15 3.75v13.11a.75.75 0 0 1-1.149.634L10 15.032l-3.851 2.463A.75.75 0 0 1 5 16.861V3.75Z" />
-  </svg>
-);
-
-function ModuleIcon({ moduleKey }) {
-  if (moduleKey === 'staff') return <IconBriefcase />;
-  if (moduleKey === 'expenses') return <IconCurrencyEuro />;
-  if (moduleKey === 'thefork') return <IconBookmark />;
-  return null;
-}
-
-function MobileBusinessCard({ b, moduleCatalog, onEdit }) {
-  const activeModules = moduleCatalog.filter((m) => !!b.modules?.[m.key]?.enabled);
+function Initial({ name, type }) {
+  const bg = type === 'appointments' ? 'bg-pink-100 text-pink-700' : 'bg-amber-100 text-amber-800';
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 space-y-3">
-      <div>
-        <p className="font-semibold text-gray-900">{b.name}</p>
-        <p className="text-xs text-gray-400 mt-0.5 truncate">{b.email}</p>
-      </div>
+    <span className={`w-11 h-11 rounded-xl flex items-center justify-center text-base font-bold shrink-0 ${bg}`}>
+      {(name || '?').trim().charAt(0).toUpperCase()}
+    </span>
+  );
+}
 
-      <div className="flex items-center">
-        <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${planPillClass(b.plan)}`}>
-          {b.plan}
-        </span>
-      </div>
+function Dot({ className }) {
+  return <span className={`inline-block w-1.5 h-1.5 rounded-full mr-1.5 align-middle ${className}`} />;
+}
 
-      <div className="grid grid-cols-3 gap-2 text-center">
-        <div className="rounded-xl bg-gray-50 border border-gray-100 py-2">
-          <p className="text-[11px] text-gray-500">Miembros</p>
-          <p className="text-sm font-semibold text-gray-900">{b.memberCount}</p>
-        </div>
-        <div className="rounded-xl bg-gray-50 border border-gray-100 py-2">
-          <p className="text-[11px] text-gray-500">30d</p>
-          <p className="text-sm font-semibold text-gray-900">{b.reservationsLast30d}</p>
-        </div>
-        <div className="rounded-xl bg-gray-50 border border-gray-100 py-2">
-          <p className="text-[11px] text-gray-500">Total</p>
-          <p className="text-sm font-semibold text-gray-900">{b.totalReservations}</p>
-        </div>
-      </div>
+function OwnerLine({ owner }) {
+  if (owner.status === 'active') {
+    return <p className="text-xs text-gray-600 truncate"><Dot className="bg-emerald-500" />{owner.name || owner.email}</p>;
+  }
+  if (owner.status === 'invited') {
+    return <p className="text-xs text-amber-800 truncate"><Dot className="bg-amber-500" />Por activar · {owner.name || owner.email}</p>;
+  }
+  return <p className="text-xs text-gray-400 truncate"><Dot className="bg-gray-300" />Sin dueño</p>;
+}
 
-      {moduleCatalog.length > 0 && (
-        <div className="rounded-xl bg-gray-50 border border-gray-100 p-2 space-y-1">
-          <p className="text-[11px] text-gray-500">Modulos</p>
-          {activeModules.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
-              {activeModules.map((m) => (
-                <span
-                  key={m.key}
-                  title={m.name}
-                  className="inline-flex items-center justify-center w-7 h-7 rounded-lg border bg-emerald-50 border-emerald-200 text-emerald-700"
-                >
-                  <ModuleIcon moduleKey={m.key} />
-                </span>
-              ))}
-            </div>
-          )}
+function BusinessRow({ b, onOpen }) {
+  const [planLabel, planCls] = PLAN[b.plan] || PLAN.free;
+  return (
+    <li>
+      <button type="button" onClick={() => onOpen(b)}
+        className="w-full text-left bg-white rounded-2xl border border-gray-200 px-4 py-3.5 flex items-center gap-3 hover:border-gray-300 active:bg-gray-50">
+        <Initial name={b.name} type={b.businessType} />
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-semibold text-gray-900 truncate">{b.name}</p>
+          <p className="text-xs text-gray-500 flex items-center gap-1.5 mt-0.5">
+            <Pill className={planCls}>{planLabel}</Pill>
+            <span className="truncate">{TYPE[b.businessType] || 'Restaurante'} · {b.team.length} {b.team.length === 1 ? 'persona' : 'personas'}</span>
+          </p>
+          <OwnerLine owner={b.owner} />
+        </div>
+        <div className="text-right shrink-0">
+          <p className="text-sm font-bold text-gray-900 tabular-nums">{b.activity.last30d}</p>
+          <p className="text-[11px] text-gray-500">{b.activity.unit} 30 d</p>
+          <p className="text-[11px] text-gray-400 mt-0.5">{b.lastSeenAt ? ago(b.lastSeenAt) : 'sin entrar'}</p>
+        </div>
+      </button>
+    </li>
+  );
+}
+
+function Section({ title, children }) {
+  return (
+    <section className="space-y-2.5">
+      <h4 className="text-xs font-bold text-gray-500 uppercase tracking-wide">{title}</h4>
+      {children}
+    </section>
+  );
+}
+
+/** Start a session as that user (support). */
+async function impersonate(userId, startImpersonation) {
+  let token = '';
+  let user = { id: userId };
+  try {
+    const { data } = await api.post(`/dev/users/${userId}/impersonate`);
+    token = data?.token || '';
+    user = data?.user || user;
+  } catch (err) {
+    // Older backends lack /api/dev/users/:id/impersonate: use Better Auth's.
+    if (err?.response?.status !== 404) throw err;
+    const response = await api.post('/betterauth/admin/impersonate-user', { userId });
+    token = response?.headers?.['set-auth-token'] || '';
+    user = response?.data?.user || user;
+  }
+  if (!token) throw new Error('No se recibió token de suplantación');
+  await startImpersonation({ token, user });
+}
+
+function PersonRow({ p, onImpersonate, onDelete, busy }) {
+  return (
+    <li className="flex items-center gap-3 py-2.5">
+      <span className="w-8 h-8 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center text-xs font-bold shrink-0">
+        {(p.name || p.email || '?').charAt(0).toUpperCase()}
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-medium text-gray-900 truncate">
+          {p.name || p.email}
+          {p.role && <span className="ml-1.5 text-[11px] font-semibold text-gray-500">{ROLE[p.role] || p.role}</span>}
+          {p.isDev && <Pill className="ml-1.5 bg-violet-100 text-violet-700">Vetra</Pill>}
+        </p>
+        <p className="text-xs text-gray-500 truncate">
+          {p.email}{p.emailVerified === false ? ' · sin verificar' : ''}
+        </p>
+        <p className="text-[11px] text-gray-400">{p.lastSeenAt ? `Entró ${ago(p.lastSeenAt)}` : 'Nunca ha entrado'}</p>
+      </div>
+      <div className="flex gap-1 shrink-0">
+        {onImpersonate && (
+          <button type="button" disabled={busy} onClick={onImpersonate} title="Entrar como esta persona"
+            className="text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-50">Entrar</button>
+        )}
+        {onDelete && (
+          <button type="button" disabled={busy} onClick={onDelete} title="Eliminar usuario" aria-label="Eliminar usuario"
+            className="p-1.5 rounded-lg text-gray-400 hover:text-rose-600 hover:bg-rose-50 disabled:opacity-50">
+            <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4"><path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.44c-.8.08-1.58.18-2.36.3a.75.75 0 1 0 .22 1.49l.15-.03.85 10.6A2.75 2.75 0 0 0 7.6 19h4.8a2.75 2.75 0 0 0 2.74-2.46l.85-10.6.15.03a.75.75 0 1 0 .22-1.49c-.78-.12-1.57-.22-2.36-.3v-.44A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.67.03 2.5.08v-.33c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.33C8.33 4.03 9.16 4 10 4Z" clipRule="evenodd" /></svg>
+          </button>
+        )}
+      </div>
+    </li>
+  );
+}
+
+function BusinessSheet({ b, modules, onClose, onChanged }) {
+  const { startImpersonation } = useAuth();
+  const navigate = useNavigate();
+  const [plan, setPlan] = useState(b.plan);
+  const [mods, setMods] = useState(() => Object.fromEntries(modules.map((m) => [m.key, !!b.modules?.[m.key]?.enabled])));
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
+  const dirty = plan !== b.plan || modules.some((m) => mods[m.key] !== !!b.modules?.[m.key]?.enabled);
+
+  const run = async (fn, ok) => {
+    setBusy(true); setError(''); setNotice('');
+    try {
+      await fn();
+      if (ok) setNotice(ok);
+      await onChanged?.();
+    } catch (err) {
+      setError(err.response?.data?.message || err.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const save = () => run(async () => {
+    if (plan !== b.plan) await api.patch(`/dev/businesses/${b.id}/plan`, { plan });
+    for (const m of modules) {
+      if (mods[m.key] !== !!b.modules?.[m.key]?.enabled) {
+        await api.patch(`/dev/businesses/${b.id}/modules/${m.key}`, { enabled: mods[m.key] });
+      }
+    }
+  }, 'Cambios guardados.');
+
+  const enterAs = async (userId) => {
+    setBusy(true); setError('');
+    try {
+      await impersonate(userId, startImpersonation);
+      navigate('/', { replace: true });
+    } catch (err) {
+      setError(err.response?.data?.message || err.message);
+      setBusy(false);
+    }
+  };
+
+  const removeUser = (p) => {
+    if (!window.confirm(`¿Eliminar la cuenta de ${p.email}? No se puede deshacer.`)) return;
+    run(() => api.delete(`/dev/users/${p.userId}`), 'Usuario eliminado.');
+  };
+
+  const removeBusiness = async () => {
+    const typed = window.prompt(`Esto borra ${b.name} y todos sus datos. Escribe el nombre del negocio para confirmar:`);
+    if (typed === null) return;
+    if (typed.trim() !== b.name.trim()) { setError('El nombre no coincide. No se ha borrado nada.'); return; }
+    setBusy(true);
+    try {
+      await api.delete(`/dev/businesses/${b.id}`);
+      onClose();
+      onChanged?.();
+    } catch (err) {
+      setError(err.response?.data?.message || err.message);
+      setBusy(false);
+    }
+  };
+
+  return (
+    <Modal onClose={onClose} size="lg"
+      header={(
+        <div className="flex items-center gap-3 min-w-0">
+          <Initial name={b.name} type={b.businessType} />
+          <div className="min-w-0">
+            <h3 className="text-base font-semibold text-gray-900 truncate">{b.name}</h3>
+            <p className="text-xs text-gray-500">{TYPE[b.businessType]} · cliente desde {shortDate(b.createdAt)}</p>
+          </div>
         </div>
       )}
-
-      <div className="flex items-center justify-between">
-        <p className="text-xs text-gray-400">
-          Alta: {new Date(b.createdAt).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
-        </p>
-        <button
-          onClick={() => onEdit(b)}
-          className="text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors"
-        >
-          Editar
+      footer={dirty ? (
+        <button type="button" disabled={busy} onClick={save}
+          className="w-full bg-violet-600 hover:bg-violet-700 disabled:opacity-60 text-white py-2.5 rounded-xl text-sm font-semibold">
+          {busy ? 'Guardando…' : 'Guardar cambios'}
         </button>
-      </div>
-    </div>
-  );
-}
+      ) : null}>
+      <div className="space-y-6">
+        {notice && <p className="text-sm text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2">{notice}</p>}
+        {error && <p className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</p>}
 
-function rolePillClass(role) {
-  if (role === 'owner') return 'bg-amber-50 text-amber-700 border-amber-200';
-  if (role === 'manager') return 'bg-blue-50 text-blue-700 border-blue-200';
-  return 'bg-gray-50 text-gray-600 border-gray-200';
+        <div className="grid grid-cols-3 gap-2 text-center">
+          <div className="rounded-xl bg-gray-50 py-2.5">
+            <p className="text-lg font-bold text-gray-900 tabular-nums">{b.activity.last30d}</p>
+            <p className="text-[11px] text-gray-500">{b.activity.unit} 30 días</p>
+          </div>
+          <div className="rounded-xl bg-gray-50 py-2.5">
+            <p className="text-lg font-bold text-gray-900 tabular-nums">{b.activity.total}</p>
+            <p className="text-[11px] text-gray-500">{b.activity.unit} en total</p>
+          </div>
+          <div className="rounded-xl bg-gray-50 py-2.5">
+            <p className="text-sm font-bold text-gray-900 pt-1">{b.lastSeenAt ? ago(b.lastSeenAt) : '—'}</p>
+            <p className="text-[11px] text-gray-500 mt-0.5">última entrada</p>
+          </div>
+        </div>
+
+        {b.owner.status === 'invited' && (
+          <Section title="Invitación del dueño">
+            <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-3 space-y-3">
+              <p className="text-sm text-amber-900">
+                <strong>{b.owner.name}</strong> ({b.owner.email}) aún no ha activado su cuenta.
+                {b.owner.expiresAt && ` El enlace caduca el ${shortDate(b.owner.expiresAt)}.`}
+              </p>
+              {b.owner.inviteLink && <InviteLink link={b.owner.inviteLink} businessName={b.name} ownerName={b.owner.name} />}
+              <button type="button" disabled={busy}
+                onClick={() => run(() => api.post(`/dev/businesses/${b.id}/resend-owner-invite`, {}), 'Invitación reenviada con un enlace nuevo.')}
+                className="text-sm font-semibold text-amber-900 hover:underline disabled:opacity-50">
+                Reenviar por email con un enlace nuevo
+              </button>
+            </div>
+          </Section>
+        )}
+        {b.owner.status === 'none' && (
+          <p className="text-sm text-gray-600 bg-gray-50 rounded-xl px-3 py-2">Este negocio no tiene dueño activo ni invitación pendiente.</p>
+        )}
+
+        <Section title={`Equipo · ${b.team.length}`}>
+          {b.team.length ? (
+            <ul className="divide-y divide-gray-100 border border-gray-200 rounded-xl px-3">
+              {b.team.map((p) => (
+                <PersonRow key={p.userId} p={p} busy={busy}
+                  onImpersonate={p.exists ? () => enterAs(p.userId) : null}
+                  onDelete={p.exists ? () => removeUser(p) : null} />
+              ))}
+            </ul>
+          ) : <p className="text-sm text-gray-500">Todavía no ha entrado nadie.</p>}
+          {b.pendingInvites.length > 0 && (
+            <p className="text-xs text-gray-500">
+              Invitados sin aceptar: {b.pendingInvites.map((i) => `${i.name || i.email} (${ROLE[i.role] || i.role})`).join(', ')}
+            </p>
+          )}
+        </Section>
+
+        <Section title="Plan">
+          <div className="inline-flex p-1 rounded-xl bg-gray-100">
+            {['free', 'basic', 'pro'].map((k) => (
+              <button key={k} type="button" onClick={() => setPlan(k)}
+                className={`px-4 py-1.5 rounded-lg text-sm font-semibold ${plan === k ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'}`}>
+                {PLAN[k][0]}
+              </button>
+            ))}
+          </div>
+        </Section>
+
+        <Section title="Módulos">
+          <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {modules.map((m) => (
+              <li key={m.key}>
+                <label className="flex items-start gap-3 rounded-xl border border-gray-200 px-3 py-2.5 cursor-pointer hover:bg-gray-50 h-full">
+                  <input type="checkbox" className="mt-0.5 w-4 h-4 accent-violet-600 shrink-0" checked={!!mods[m.key]}
+                    onChange={(e) => setMods((x) => ({ ...x, [m.key]: e.target.checked }))} />
+                  <span className="min-w-0">
+                    <span className="block text-sm font-medium text-gray-900">{m.name}</span>
+                    <span className="block text-xs text-gray-500">{m.description}</span>
+                  </span>
+                </label>
+              </li>
+            ))}
+          </ul>
+        </Section>
+
+        <Section title="Datos del negocio">
+          <dl className="grid grid-cols-[auto,1fr] gap-x-4 gap-y-1.5 text-sm">
+            <dt className="text-gray-500">Email</dt><dd className="text-gray-900 truncate">{b.email || '—'}</dd>
+            <dt className="text-gray-500">Teléfono</dt><dd className="text-gray-900">{b.phone || '—'}</dd>
+            <dt className="text-gray-500">Dirección</dt><dd className="text-gray-900">{b.address || '—'}</dd>
+          </dl>
+        </Section>
+
+        <div className="pt-3 border-t border-gray-100">
+          <button type="button" disabled={busy} onClick={removeBusiness}
+            className="text-sm font-semibold text-rose-600 hover:text-rose-700 disabled:opacity-50">
+            Eliminar negocio…
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
 }
 
 export default function DevDashboard() {
-  const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
   const { startImpersonation } = useAuth();
+  const navigate = useNavigate();
+  const [data, setData] = useState(null);
+  const [error, setError] = useState('');
+  const [q, setQ] = useState('');
+  const [filter, setFilter] = useState('all');
+  const [openId, setOpenId] = useState(null);
+  const [creating, setCreating] = useState(false);
+  const [busy, setBusy] = useState(false);
 
-  const tab = searchParams.get('tab') === 'users' ? 'users' : 'businesses';
-
-  const [businesses, setBusinesses] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
-  const [planFilter, setPlanFilter] = useState('all');
-
-  const [showModal, setShowModal] = useState(false);
-
-  const [editingBusiness, setEditingBusiness] = useState(null);
-  const [editPlan, setEditPlan] = useState('free');
-  const [editModules, setEditModules] = useState({});
-  const [editSaving, setEditSaving] = useState(false);
-  const [editError, setEditError] = useState('');
-
-  const [users, setUsers] = useState([]);
-  const [moduleCatalog, setModuleCatalog] = useState([]);
-  const [usersLoading, setUsersLoading] = useState(false);
-  const [userSearch, setUserSearch] = useState('');
-  const [selectedUser, setSelectedUser] = useState(null);
-  const [userActionError, setUserActionError] = useState('');
-  const [userActionLoading, setUserActionLoading] = useState(false);
+  useSetMobileHeader({ title: 'Clientes', action: { label: 'Cliente', onClick: () => setCreating(true) } });
 
   const load = useCallback(async () => {
-    setLoading(true);
     try {
-      const [{ data }, { data: modules }] = await Promise.all([
-        api.get('/dev/businesses'),
-        api.get('/dev/modules/catalog'),
-      ]);
-      setBusinesses(data);
-      setModuleCatalog(modules || []);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    load();
-  }, [load]);
-
-  const loadUsers = useCallback(async () => {
-    setUsersLoading(true);
-    try {
-      const { data } = await api.get('/dev/users');
-      setUsers(data || []);
-    } finally {
-      setUsersLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (tab !== 'users') return;
-    loadUsers();
-  }, [tab, loadUsers]);
-
-  const filtered = businesses.filter((b) => {
-    const q = search.toLowerCase();
-    const matchQ = !q || b.name.toLowerCase().includes(q) || b.email.toLowerCase().includes(q);
-    const matchP = planFilter === 'all' || b.plan === planFilter;
-    return matchQ && matchP;
-  });
-
-  const totalReservations30d = businesses.reduce((s, b) => s + b.reservationsLast30d, 0);
-  const paidCount = businesses.filter((b) => b.plan !== 'free').length;
-  const filteredUsers = users.filter((u) => {
-    const q = userSearch.trim().toLowerCase();
-    if (!q) return true;
-  return (u.name || '').toLowerCase().includes(q) || (u.email || '').toLowerCase().includes(q);
-  });
-
-  const openBusinessEditor = (business) => {
-    setEditingBusiness(business);
-    setEditPlan(business.plan || 'free');
-    const modulesState = {};
-    moduleCatalog.forEach((m) => {
-      modulesState[m.key] = !!business.modules?.[m.key]?.enabled;
-    });
-    setEditModules(modulesState);
-    setEditError('');
-  };
-
-  const closeBusinessEditor = () => {
-    if (editSaving) return;
-    setEditingBusiness(null);
-    setEditError('');
-  };
-
-  const handleEditModuleToggle = (moduleKey) => {
-    setEditModules((prev) => ({ ...prev, [moduleKey]: !prev[moduleKey] }));
-  };
-
-  const saveBusinessChanges = async () => {
-    if (!editingBusiness) return;
-    setEditSaving(true);
-    setEditError('');
-    try {
-      if (editPlan !== editingBusiness.plan) {
-        await api.patch(`/dev/businesses/${editingBusiness.id}/plan`, { plan: editPlan });
-      }
-
-      const moduleChanges = moduleCatalog.filter((m) => {
-        const currentEnabled = !!editingBusiness.modules?.[m.key]?.enabled;
-        const nextEnabled = !!editModules[m.key];
-        return currentEnabled !== nextEnabled;
-      });
-
-      for (const m of moduleChanges) {
-        await api.patch(`/dev/businesses/${editingBusiness.id}/modules/${m.key}`, {
-          enabled: !!editModules[m.key],
-        });
-      }
-
-      setBusinesses((prev) => prev.map((b) => {
-        if (b.id !== editingBusiness.id) return b;
-        return {
-          ...b,
-          plan: editPlan,
-          modules: {
-            ...(b.modules || {}),
-            ...Object.fromEntries(moduleCatalog.map((m) => [
-              m.key,
-              {
-                ...(b.modules?.[m.key] || {}),
-                enabled: !!editModules[m.key],
-              },
-            ])),
-          },
-        };
-      }));
-
-      setEditingBusiness(null);
+      const { data: d } = await api.get('/dev/overview');
+      setData(d);
+      setError('');
     } catch (err) {
-      setEditError(err.response?.data?.message || err.message || 'No se pudo guardar');
-    } finally {
-      setEditSaving(false);
+      setError(err.response?.data?.message || err.message);
     }
-  };
+  }, []);
+  useEffect(() => { load(); }, [load]);
 
-  const openUserActions = (user) => {
-    setSelectedUser(user);
-    setUserActionError('');
-  };
+  const term = q.trim().toLowerCase();
 
-  const closeUserActions = () => {
-    if (userActionLoading) return;
-    setSelectedUser(null);
-    setUserActionError('');
-  };
+  const list = useMemo(() => {
+    if (!data) return [];
+    return data.businesses.filter((b) => {
+      if (term) {
+        const text = [b.name, b.email, b.phone, b.owner.name, b.owner.email, ...b.team.map((t) => `${t.name} ${t.email}`)]
+          .join(' ').toLowerCase();
+        if (!text.includes(term)) return false;
+      }
+      if (filter === 'pending') return b.owner.status === 'invited';
+      if (filter === 'active') return b.owner.status === 'active';
+      if (filter === 'appointments' || filter === 'restaurant') return b.businessType === filter;
+      if (filter === 'paid') return b.plan !== 'free';
+      if (filter === 'idle') return b.activity.last30d === 0;
+      return true;
+    });
+  }, [data, term, filter]);
 
-  const handleImpersonate = async () => {
-    if (!selectedUser) return;
-    setUserActionLoading(true);
-    setUserActionError('');
+  const orphans = useMemo(() => {
+    if (!data) return [];
+    return data.orphans.filter((o) => !term || `${o.name} ${o.email}`.toLowerCase().includes(term));
+  }, [data, term]);
+
+  const open = data?.businesses.find((b) => b.id === openId) || null;
+  const s = data?.stats;
+
+  const enterAsOrphan = async (id) => {
+    setBusy(true);
     try {
-      let token = '';
-      let userPayload = selectedUser;
-
-      try {
-        const { data } = await api.post(`/dev/users/${selectedUser.id}/impersonate`);
-        token = data?.token || '';
-        userPayload = data?.user || selectedUser;
-      } catch (err) {
-        // Backends antiguos no tienen /api/dev/users/:id/impersonate (404).
-        // Fallback al endpoint oficial de Better Auth.
-        if (err?.response?.status !== 404) throw err;
-        const response = await api.post('/betterauth/admin/impersonate-user', {
-          userId: selectedUser.id,
-        });
-        token = response?.headers?.['set-auth-token'] || '';
-        userPayload = response?.data?.user || selectedUser;
-      }
-
-      if (!token) {
-        throw new Error('No se recibió token de suplantación');
-      }
-
-      await startImpersonation({ token, user: userPayload });
-      closeUserActions();
+      await impersonate(id, startImpersonation);
       navigate('/', { replace: true });
     } catch (err) {
-      setUserActionError(err.response?.data?.message || err.message || 'No se pudo iniciar la suplantación');
-    } finally {
-      setUserActionLoading(false);
+      setError(err.response?.data?.message || err.message);
+      setBusy(false);
     }
   };
 
-  const handleDeleteUser = async () => {
-    if (!selectedUser) return;
-    const ok = window.confirm(`Vas a eliminar al usuario ${selectedUser.email}. Esta acción no se puede deshacer.`);
-    if (!ok) return;
-    setUserActionLoading(true);
-    setUserActionError('');
-    try {
-      await api.delete(`/dev/users/${selectedUser.id}`);
-      setUsers((prev) => prev.filter((u) => u.id !== selectedUser.id));
-      closeUserActions();
-    } catch (err) {
-      setUserActionError(err.response?.data?.message || err.message || 'No se pudo eliminar el usuario');
-    } finally {
-      setUserActionLoading(false);
-    }
+  const deleteOrphan = async (o) => {
+    if (!window.confirm(`¿Eliminar la cuenta de ${o.email}? No se puede deshacer.`)) return;
+    setBusy(true);
+    try { await api.delete(`/dev/users/${o.id}`); await load(); } catch (err) { setError(err.response?.data?.message || err.message); } finally { setBusy(false); }
   };
 
   return (
-    <div className="space-y-4 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
-      {tab === 'businesses' && (
+    <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 py-4 space-y-4">
+      <div className="hidden xl:flex items-end justify-between gap-3">
+        <div>
+          <h2 className="text-xl font-bold text-gray-900">Clientes</h2>
+          <p className="text-sm text-gray-500 mt-0.5">Negocios que usan Vetra, su equipo y su actividad.</p>
+        </div>
+        <button type="button" onClick={() => setCreating(true)}
+          className="bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl">+ Nuevo cliente</button>
+      </div>
+
+      {error && <p className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</p>}
+      {!data && !error && <p className="text-sm text-gray-400">Cargando…</p>}
+
+      {data && (
         <>
-          <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
-            <StatCard label="Negocios" value={businesses.length} />
-            <StatCard label="De pago" value={paidCount} sub={`${businesses.length - paidCount} en free`} />
-            <StatCard label="Reservas 30d" value={totalReservations30d} />
-            <StatCard label="Reservas totales" value={businesses.reduce((s, b) => s + b.totalReservations, 0)} />
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <Stat label="Activos" value={s.active} sub={`de ${s.businesses} negocios`} />
+            <Stat label="Por activar" value={s.pending} sub="invitación pendiente" tone={s.pending ? 'text-amber-600' : 'text-gray-900'} />
+            <Stat label="De pago" value={s.paid} sub={`${s.businesses - s.paid} en Free`} />
+            <Stat label="Actividad 30 d" value={s.activity30d} sub={`${s.activeLast7d} entraron esta semana`} />
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-2">
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar por nombre o email..."
-              className="flex-1 border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white"
-            />
-            <select
-              value={planFilter}
-              onChange={(e) => setPlanFilter(e.target.value)}
-              className="border border-gray-300 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-violet-500"
-            >
-              <option value="all">Todos los planes</option>
-              <option value="free">Free</option>
-              <option value="basic">Basic</option>
-              <option value="pro">Pro</option>
-            </select>
-            <button
-              onClick={() => setShowModal(true)}
-              className="bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors"
-            >
-              Nuevo cliente
-            </button>
+          <div className="space-y-2">
+            <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar negocio, persona o email"
+              className="w-full border border-gray-300 rounded-xl px-4 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-violet-500" />
+            <div className="flex gap-1.5 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 pb-0.5 [scrollbar-width:none]">
+              {FILTERS.map(([k, label]) => (
+                <button key={k} type="button" onClick={() => setFilter(k)}
+                  className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold border ${filter === k ? 'bg-gray-900 border-gray-900 text-white' : 'bg-white border-gray-200 text-gray-700'}`}>
+                  {label}
+                </button>
+              ))}
+            </div>
           </div>
 
-          <div className="sm:hidden space-y-3">
-            {loading ? (
-              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm py-12 text-center text-sm text-gray-400">Cargando...</div>
-            ) : filtered.length === 0 ? (
-              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm py-12 text-center text-sm text-gray-400">Sin resultados</div>
-            ) : (
-              filtered.map((b) => (
-                <div key={b.id} className="space-y-1.5">
-                  <MobileBusinessCard
-                    b={b}
-                    moduleCatalog={moduleCatalog}
-                    onEdit={openBusinessEditor}
-                  />
-                  <div className="bg-white rounded-xl border border-gray-200 px-4 py-3"><OwnerCell b={b} onChanged={load} /></div>
-                </div>
-              ))
-            )}
-          </div>
+          {list.length ? (
+            <ul className="grid grid-cols-1 lg:grid-cols-2 gap-2">
+              {list.map((b) => <BusinessRow key={b.id} b={b} onOpen={(x) => setOpenId(x.id)} />)}
+            </ul>
+          ) : (
+            <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center text-sm text-gray-500">
+              {data.businesses.length ? 'Ningún cliente coincide.' : 'Aún no hay clientes.'}
+              {!data.businesses.length && (
+                <div><button type="button" onClick={() => setCreating(true)} className="mt-2 text-sm font-semibold text-violet-600">+ Crear el primero</button></div>
+              )}
+            </div>
+          )}
 
-          <div className="hidden sm:block bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-            {loading ? (
-              <div className="py-14 text-center text-sm text-gray-400">Cargando...</div>
-            ) : filtered.length === 0 ? (
-              <div className="py-14 text-center text-sm text-gray-400">Sin resultados</div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[1260px] text-sm">
-                  <thead>
-                    <tr className="border-b border-gray-200 bg-slate-50/80">
-                      <th className="text-left px-6 py-3.5 text-[11px] font-bold text-gray-500 uppercase tracking-wide">Negocio</th>
-                      <th className="text-left px-4 py-3.5 text-[11px] font-bold text-gray-500 uppercase tracking-wide">Dueño</th>
-                      <th className="text-left px-4 py-3.5 text-[11px] font-bold text-gray-500 uppercase tracking-wide">Plan</th>
-                      <th className="text-left px-4 py-3.5 text-[11px] font-bold text-gray-500 uppercase tracking-wide">Modulos</th>
-                      <th className="text-center px-4 py-3.5 text-[11px] font-bold text-gray-500 uppercase tracking-wide">Miembros</th>
-                      <th className="text-center px-4 py-3.5 text-[11px] font-bold text-gray-500 uppercase tracking-wide">Reservas 30d</th>
-                      <th className="text-center px-4 py-3.5 text-[11px] font-bold text-gray-500 uppercase tracking-wide">Total</th>
-                      <th className="text-left px-4 py-3.5 text-[11px] font-bold text-gray-500 uppercase tracking-wide">Alta</th>
-                      <th className="px-4 py-3" />
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {filtered.map((b) => (
-                      <tr key={b.id} className="hover:bg-slate-50/80 transition-colors">
-                        <td className="px-6 py-4 align-middle">
-                          <p className="font-semibold text-gray-900 truncate max-w-[200px]">{b.name}</p>
-                          <p className="text-xs text-gray-400 truncate max-w-[200px]">{b.businessType === 'appointments' ? 'Citas' : 'Restaurante'} · {b.email}</p>
-                        </td>
-                        <td className="px-4 py-4 align-middle"><OwnerCell b={b} onChanged={load} /></td>
-                        <td className="px-4 py-4 align-middle">
-                          <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${planPillClass(b.plan)}`}>
-                            {b.plan}
-                          </span>
-                        </td>
-                        <td className="px-4 py-4 align-middle">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            {moduleCatalog
-                              .filter((m) => !!b.modules?.[m.key]?.enabled)
-                              .map((m) => (
-                                <span
-                                  key={m.key}
-                                  title={m.name}
-                                  className="inline-flex items-center justify-center w-7 h-7 rounded-lg border bg-emerald-50 border-emerald-200 text-emerald-700"
-                                >
-                                  <ModuleIcon moduleKey={m.key} />
-                                </span>
-                              ))}
-                          </div>
-                        </td>
-                        <td className="px-4 py-4 text-center text-gray-800 font-medium tabular-nums align-middle">{b.memberCount}</td>
-                        <td className="px-4 py-4 text-center text-gray-800 font-medium tabular-nums align-middle">{b.reservationsLast30d}</td>
-                        <td className="px-4 py-4 text-center text-gray-600 tabular-nums align-middle">{b.totalReservations}</td>
-                        <td className="px-4 py-4 text-xs text-gray-500 whitespace-nowrap align-middle">
-                          {new Date(b.createdAt).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
-                        </td>
-                        <td className="px-4 py-4 text-right align-middle">
-                          <button
-                            onClick={() => openBusinessEditor(b)}
-                            className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors"
-                          >
-                            Editar
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-          <p className="text-xs text-gray-400 text-right">{filtered.length} de {businesses.length} negocios</p>
+          {orphans.length > 0 && (
+            <details className="bg-white rounded-2xl border border-gray-200 px-4 py-3 group">
+              <summary className="cursor-pointer text-sm font-semibold text-gray-700 list-none flex items-center justify-between">
+                <span>Cuentas sin negocio · {orphans.length}</span>
+                <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 text-gray-400 group-open:rotate-180 transition-transform"><path fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" /></svg>
+              </summary>
+              <p className="text-xs text-gray-500 mt-1">Personas registradas que no pertenecen a ningún negocio (incluida la cuenta de Vetra).</p>
+              <ul className="divide-y divide-gray-100 mt-1">
+                {orphans.map((o) => (
+                  <PersonRow key={o.id} p={o} busy={busy}
+                    onImpersonate={o.isDev ? null : () => enterAsOrphan(o.id)}
+                    onDelete={o.isDev ? null : () => deleteOrphan(o)} />
+                ))}
+              </ul>
+            </details>
+          )}
         </>
       )}
 
-      {tab === 'users' && (
-        <div className="space-y-3">
-          <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-4">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-              <div>
-                <h3 className="text-base font-semibold text-gray-900">Listado de usuarios</h3>
-                <p className="text-xs text-gray-500 mt-0.5">{filteredUsers.length} de {users.length} resultados</p>
-              </div>
-              <input
-                value={userSearch}
-                onChange={(e) => setUserSearch(e.target.value)}
-                placeholder="Buscar por nombre o email..."
-                className="w-full sm:w-72 border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
-              />
-            </div>
-          </div>
-
-          <div className="sm:hidden space-y-2">
-            {usersLoading ? (
-              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm py-12 text-center text-sm text-gray-400">Cargando usuarios...</div>
-            ) : filteredUsers.length === 0 ? (
-              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm py-12 text-center text-sm text-gray-400">Sin usuarios</div>
-            ) : (
-              filteredUsers.map((u) => (
-                <div key={u.id} className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 space-y-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="font-semibold text-gray-900">{u.name || 'Sin nombre'}</p>
-                      <p className="text-xs text-gray-400">{u.email}</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => openUserActions(u)}
-                      className="w-8 h-8 inline-flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-colors"
-                      aria-label="Acciones de usuario"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
-                        <path d="M10 6a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM10 11.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM11.5 15.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z" />
-                      </svg>
-                    </button>
-                  </div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${rolePillClass(u.role)}`}>
-                      {u.role}
-                    </span>
-                    <span className="text-[11px] text-gray-500">
-                      {u.businessCount} negocio{u.businessCount === 1 ? '' : 's'}
-                    </span>
-                  </div>
-                  <div className="text-xs text-gray-500 space-y-1">
-                    {u.businesses.slice(0, 3).map((biz) => (
-                      <p key={`${u.id}-${biz.businessId}`}>{biz.businessName} · {biz.role}</p>
-                    ))}
-                    {u.businesses.length > 3 && <p>+{u.businesses.length - 3} mas</p>}
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-
-          <div className="hidden sm:block bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-            {usersLoading ? (
-              <div className="py-14 text-center text-sm text-gray-400">Cargando usuarios...</div>
-            ) : filteredUsers.length === 0 ? (
-              <div className="py-14 text-center text-sm text-gray-400">Sin usuarios</div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[860px] text-sm">
-                  <thead>
-                    <tr className="border-b border-gray-200 bg-slate-50/80">
-                      <th className="text-left px-6 py-3.5 text-[11px] font-bold text-gray-500 uppercase tracking-wide">Usuario</th>
-                      <th className="text-left px-4 py-3.5 text-[11px] font-bold text-gray-500 uppercase tracking-wide">Rol global</th>
-                      <th className="text-left px-4 py-3.5 text-[11px] font-bold text-gray-500 uppercase tracking-wide">Negocios</th>
-                      <th className="text-left px-4 py-3.5 text-[11px] font-bold text-gray-500 uppercase tracking-wide">Alta</th>
-                      <th className="px-4 py-3" />
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {filteredUsers.map((u) => (
-                      <tr key={u.id} className="hover:bg-slate-50/80 transition-colors">
-                        <td className="px-6 py-4 align-middle">
-                          <p className="font-semibold text-gray-900">{u.name || 'Sin nombre'}</p>
-                          <p className="text-xs text-gray-400">{u.email}</p>
-                        </td>
-                        <td className="px-4 py-4 align-middle">
-                          <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${rolePillClass(u.role)}`}>
-                            {u.role}
-                          </span>
-                        </td>
-                        <td className="px-4 py-4 text-xs text-gray-600 align-middle">
-                          {u.businessCount === 0 ? (
-                            <span className="text-gray-400">Sin membresia</span>
-                          ) : (
-                            <div className="space-y-1">
-                              {u.businesses.slice(0, 2).map((biz) => (
-                                <p key={`${u.id}-${biz.businessId}`} className="text-gray-700">
-                                  {biz.businessName} <span className="text-gray-400">·</span> <span className="text-gray-500">{biz.role}</span>
-                                </p>
-                              ))}
-                              {u.businesses.length > 2 && <p className="text-gray-400">+{u.businesses.length - 2} mas</p>}
-                            </div>
-                          )}
-                        </td>
-                        <td className="px-4 py-4 text-xs text-gray-500 whitespace-nowrap align-middle">
-                          {u.createdAt
-                            ? new Date(u.createdAt).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })
-                            : '-'}
-                        </td>
-                        <td className="px-4 py-4 text-right align-middle">
-                          <button
-                            type="button"
-                            onClick={() => openUserActions(u)}
-                            className="w-8 h-8 inline-flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-colors"
-                            aria-label="Acciones de usuario"
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
-                              <path d="M10 6a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM10 11.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM11.5 15.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z" />
-                            </svg>
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {editingBusiness && (
-        <Modal
-          title={`Editar negocio: ${editingBusiness.name}`}
-          subtitle="Ajusta plan y modulos. Fuera de este modal la vista es solo informativa."
-          onClose={closeBusinessEditor}
-          size="md"
-        >
-          {editError && (
-            <div className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-4 py-3 mb-4">
-              {editError}
-            </div>
-          )}
-
-          <div className="space-y-4">
-            <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Plan</label>
-              <select
-                value={editPlan}
-                onChange={(e) => setEditPlan(e.target.value)}
-                disabled={editSaving}
-                className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white disabled:opacity-60"
-              >
-                <option value="free">Free</option>
-                <option value="basic">Basic</option>
-                <option value="pro">Pro</option>
-              </select>
-            </div>
-
-            {moduleCatalog.length > 0 && (
-              <div>
-                <p className="text-xs font-medium text-gray-500 mb-2">Modulos</p>
-                <div className="space-y-2">
-                  {moduleCatalog.map((m) => {
-                    const enabled = !!editModules[m.key];
-  return (
-                      <button
-                        key={m.key}
-                        type="button"
-                        disabled={editSaving}
-                        onClick={() => handleEditModuleToggle(m.key)}
-                        className={`w-full flex items-center justify-between text-sm px-3 py-2.5 rounded-xl border transition-colors disabled:opacity-60 ${
-                          enabled
-                            ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
-                            : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
-                        }`}
-                      >
-                        <span>{m.name}</span>
-                        <span className="text-xs font-semibold">{enabled ? 'ON' : 'OFF'}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            <div className="flex gap-2 pt-1">
-              <button
-                type="button"
-                onClick={closeBusinessEditor}
-                disabled={editSaving}
-                className="flex-1 border border-gray-200 text-gray-600 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors disabled:opacity-60"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={saveBusinessChanges}
-                disabled={editSaving}
-                className="flex-1 bg-violet-600 hover:bg-violet-700 text-white py-2.5 rounded-xl text-sm font-semibold transition-colors disabled:opacity-60"
-              >
-                {editSaving ? 'Guardando...' : 'Guardar cambios'}
-              </button>
-            </div>
-          </div>
-        </Modal>
-      )}
-
-      {showModal && (
-        <NewClientModal onClose={() => setShowModal(false)} onCreated={() => load()} />
-      )}
-
-      {selectedUser && (
-        <Modal
-          title={selectedUser.name || selectedUser.email}
-          subtitle="Acciones de usuario"
-          onClose={closeUserActions}
-          size="sm"
-        >
-          {userActionError && (
-            <div className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-4 py-3 mb-4">
-              {userActionError}
-            </div>
-          )}
-
-          <div className="space-y-2">
-            <button
-              type="button"
-              disabled={userActionLoading}
-              onClick={handleImpersonate}
-              className="w-full text-left px-4 py-3 rounded-xl border border-violet-200 bg-violet-50 text-violet-800 hover:bg-violet-100 transition-colors disabled:opacity-60"
-            >
-              Impersonalizar
-            </button>
-            <button
-              type="button"
-              disabled={userActionLoading}
-              onClick={handleDeleteUser}
-              className="w-full text-left px-4 py-3 rounded-xl border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 transition-colors disabled:opacity-60"
-            >
-              Eliminar
-            </button>
-            <button
-              type="button"
-              disabled={userActionLoading}
-              onClick={closeUserActions}
-              className="w-full text-left px-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-60"
-            >
-              Cancelar
-            </button>
-          </div>
-        </Modal>
-      )}
+      {open && <BusinessSheet key={open.id} b={open} modules={data.modules} onClose={() => setOpenId(null)} onChanged={load} />}
+      {creating && <NewClientModal onClose={() => setCreating(false)} onCreated={load} />}
     </div>
   );
 }
-
-
-
-
-
-
-
-
-
-
-

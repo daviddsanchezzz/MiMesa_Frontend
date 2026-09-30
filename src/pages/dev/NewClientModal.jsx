@@ -40,7 +40,7 @@ export function InviteLink({ link, businessName, ownerName }) {
 export default function NewClientModal({ onClose, onCreated }) {
   const [templates, setTemplates] = useState([]);
   const [form, setForm] = useState({
-    name: '', businessType: 'appointments', template: 'peluqueria', phone: '', address: '', plan: 'basic',
+    name: '', businessType: 'appointments', template: 'peluqueria', phone: '', address: '', plan: 'trial',
     ownerName: '', ownerEmail: '',
   });
   const [saving, setSaving] = useState(false);
@@ -123,7 +123,7 @@ export default function NewClientModal({ onClose, onCreated }) {
           <div>
             <label className={label}>Plan</label>
             <select className={input} value={form.plan} onChange={set('plan')}>
-              <option value="free">Free</option><option value="basic">Basic</option><option value="pro">Pro</option>
+              <option value="trial">Prueba 14 días</option><option value="basic">Basic (regalado)</option><option value="pro">Pro (regalado)</option><option value="free">Gratis (cortesía)</option>
             </select>
           </div>
         </div>

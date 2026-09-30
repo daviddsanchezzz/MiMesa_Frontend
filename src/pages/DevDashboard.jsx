@@ -12,11 +12,23 @@ import NewClientModal, { InviteLink } from './dev/NewClientModal';
  * belong to no business are listed at the end.
  */
 
+// No free plan: new businesses try Pro 14 days, then read-only ('expired') until they pay.
+// 'free' is only courtesy access (businesses from before trials, or given by Vetra).
 const PLAN = {
-  free: ['Free', 'bg-gray-100 text-gray-600'],
+  trial: ['Prueba', 'bg-sky-50 text-sky-700'],
+  expired: ['Sin plan', 'bg-rose-50 text-rose-700'],
+  free: ['Gratis (cortesía)', 'bg-gray-100 text-gray-600'],
   basic: ['Basic', 'bg-violet-50 text-violet-700'],
   pro: ['Pro', 'bg-emerald-50 text-emerald-700'],
 };
+const PLAN_CHOICES = ['trial', 'basic', 'pro', 'free'];
+
+function planState(b) {
+  if (b.effectivePlan === 'expired') return 'expired';
+  if (b.subscriptionStatus === 'trialing' && !b.hasSubscription) return 'trial';
+  if (b.effectivePlan === 'free') return 'free';
+  return b.plan;
+}
 const ROLE = { owner: 'Propietario', manager: 'Encargado', staff: 'Personal' };
 const TYPE = { appointments: 'Citas', restaurant: 'Restaurante' };
 
@@ -84,7 +96,7 @@ function OwnerLine({ owner }) {
 }
 
 function BusinessRow({ b, onOpen }) {
-  const [planLabel, planCls] = PLAN[b.plan] || PLAN.free;
+  const [planLabel, planCls] = PLAN[planState(b)] || PLAN.free;
   return (
     <li>
       <button type="button" onClick={() => onOpen(b)}
@@ -172,12 +184,12 @@ function PersonRow({ p, onImpersonate, onDelete, busy }) {
 function BusinessSheet({ b, modules, onClose, onChanged }) {
   const { startImpersonation } = useAuth();
   const navigate = useNavigate();
-  const [plan, setPlan] = useState(b.plan);
+  const [plan, setPlan] = useState(planState(b));
   const [mods, setMods] = useState(() => Object.fromEntries(modules.map((m) => [m.key, !!b.modules?.[m.key]?.enabled])));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
-  const dirty = plan !== b.plan || modules.some((m) => mods[m.key] !== !!b.modules?.[m.key]?.enabled);
+  const dirty = plan !== planState(b) || modules.some((m) => mods[m.key] !== !!b.modules?.[m.key]?.enabled);
 
   const run = async (fn, ok) => {
     setBusy(true); setError(''); setNotice('');
@@ -193,7 +205,7 @@ function BusinessSheet({ b, modules, onClose, onChanged }) {
   };
 
   const save = () => run(async () => {
-    if (plan !== b.plan) await api.patch(`/dev/businesses/${b.id}/plan`, { plan });
+    if (plan !== planState(b)) await api.patch(`/dev/businesses/${b.id}/plan`, { plan });
     for (const m of modules) {
       if (mods[m.key] !== !!b.modules?.[m.key]?.enabled) {
         await api.patch(`/dev/businesses/${b.id}/modules/${m.key}`, { enabled: mods[m.key] });
@@ -307,13 +319,18 @@ function BusinessSheet({ b, modules, onClose, onChanged }) {
 
         <Section title="Plan">
           <div className="inline-flex p-1 rounded-xl bg-gray-100">
-            {['free', 'basic', 'pro'].map((k) => (
+            {PLAN_CHOICES.map((k) => (
               <button key={k} type="button" onClick={() => setPlan(k)}
                 className={`px-4 py-1.5 rounded-lg text-sm font-semibold ${plan === k ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'}`}>
                 {PLAN[k][0]}
               </button>
             ))}
           </div>
+          <p className="text-xs text-gray-500 mt-2">
+            {planState(b) === 'trial' && b.trialEndsAt && `En prueba hasta el ${new Date(b.trialEndsAt).toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })}. `}
+            {planState(b) === 'expired' && 'Prueba terminada: en solo lectura hasta que pague. '}
+            «Prueba» da 14 días de Pro desde hoy; «Basic» y «Pro» se regalan sin Stripe; «Gratis» es acceso de cortesía sin límite de tiempo.
+          </p>
         </Section>
 
         <Section title="Módulos">
@@ -393,7 +410,7 @@ export default function DevDashboard() {
       if (filter === 'pending') return b.owner.status === 'invited';
       if (filter === 'active') return b.owner.status === 'active';
       if (filter === 'appointments' || filter === 'restaurant') return b.businessType === filter;
-      if (filter === 'paid') return b.plan !== 'free';
+      if (filter === 'paid') return ['basic', 'pro'].includes(planState(b));
       if (filter === 'idle') return b.activity.last30d === 0;
       return true;
     });
@@ -443,7 +460,7 @@ export default function DevDashboard() {
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
             <Stat label="Activos" value={s.active} sub={`de ${s.businesses} negocios`} />
             <Stat label="Por activar" value={s.pending} sub="invitación pendiente" tone={s.pending ? 'text-amber-600' : 'text-gray-900'} />
-            <Stat label="De pago" value={s.paid} sub={`${s.businesses - s.paid} en Free`} />
+            <Stat label="De pago" value={s.paid} sub={`${s.trialing || 0} en prueba · ${s.expired || 0} sin plan`} />
             <Stat label="Actividad 30 d" value={s.activity30d} sub={`${s.activeLast7d} entraron esta semana`} />
           </div>
 

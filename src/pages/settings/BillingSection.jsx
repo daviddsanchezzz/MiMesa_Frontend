@@ -23,8 +23,15 @@ export function BillingSection() {
   const isActive   = subscriptionStatus === 'active' || subscriptionStatus === 'trialing' || Boolean(graceUntil);
   const isTrialing = subscriptionStatus === 'trialing';
   const isPastDue  = subscriptionStatus === 'past_due';
-  const isFree     = !isActive || plan === 'free';
-  const isPro      = isActive && plan === 'pro';
+  // No free plan: new businesses try Pro for 14 days without a card (no Stripe
+  // subscription yet), then read-only until they choose a plan. Businesses from
+  // before trials keep their free access (legacy).
+  const localTrial = isTrialing && !business?.hasSubscription && business?.effectivePlan !== 'expired';
+  const expired    = business?.effectivePlan === 'expired';
+  const legacyFree = business?.effectivePlan === 'free';
+  const trialDaysLeft = localTrial && trialEndsAt ? Math.max(0, Math.ceil((new Date(trialEndsAt) - Date.now()) / 86400000)) : 0;
+  const isFree     = localTrial || expired || legacyFree || !isActive || plan === 'free';
+  const isPro      = !isFree && isActive && plan === 'pro';
   const isBasic    = !isFree && !isPro;
 
   const load = async () => {
@@ -141,19 +148,41 @@ export function BillingSection() {
       {/* ── FREE ── */}
       {isFree && (
         <>
-          {/* Current plan */}
-          <div className="bg-white rounded-2xl p-6 border border-gray-200">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Plan actual</p>
+          {/* Current state */}
+          <div className={`bg-white rounded-2xl p-6 border ${expired ? 'border-rose-200' : 'border-gray-200'}`}>
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Tu plan</p>
             <div className="flex items-center justify-between gap-4 flex-wrap">
               <div>
-                <p className="text-2xl font-bold text-gray-800">Free</p>
-                <p className="text-sm text-gray-500 mt-0.5">{isAppointments ? '1 profesional · hasta 30 citas al mes · sin recordatorios' : `Hasta ${limit} reservas al mes · 2 turnos · 15 mesas`}</p>
+                {localTrial && (
+                  <>
+                    <p className="text-2xl font-bold text-gray-800">Prueba gratuita de Pro</p>
+                    <p className="text-sm text-gray-500 mt-0.5">
+                      {trialDaysLeft === 1 ? 'Te queda 1 día' : `Te quedan ${trialDaysLeft} días`} (hasta el {fmt(trialEndsAt)}). Elige tu plan cuando quieras: no se cobra nada hasta que termine la prueba.
+                    </p>
+                  </>
+                )}
+                {expired && (
+                  <>
+                    <p className="text-2xl font-bold text-gray-800">Tu prueba ha terminado</p>
+                    <p className="text-sm text-gray-500 mt-0.5">
+                      Tu cuenta está en solo lectura: puedes ver tus datos, pero no crear {isAppointments ? 'citas' : 'reservas'} ni recibirlas online. Elige un plan para seguir; todo sigue como lo dejaste.
+                    </p>
+                  </>
+                )}
+                {legacyFree && (
+                  <>
+                    <p className="text-2xl font-bold text-gray-800">Acceso gratuito</p>
+                    <p className="text-sm text-gray-500 mt-0.5">{isAppointments ? 'Tu acceso de lanzamiento sin coste.' : `Hasta ${limit} reservas al mes · 2 turnos · 15 mesas`}</p>
+                  </>
+                )}
               </div>
-              <span className="text-xs font-semibold bg-gray-100 text-gray-500 px-3 py-1.5 rounded-full">Gratuito</span>
+              <span className={`text-xs font-semibold px-3 py-1.5 rounded-full ${expired ? 'bg-rose-100 text-rose-700' : localTrial ? 'bg-violet-100 text-violet-700' : 'bg-gray-100 text-gray-500'}`}>
+                {expired ? 'Solo lectura' : localTrial ? 'En prueba' : 'Gratuito'}
+              </span>
             </div>
 
             {/* Usage bar (restaurant reservations only) */}
-            {!isAppointments && <div className="mt-5">
+            {!isAppointments && legacyFree && <div className="mt-5">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-xs font-medium text-gray-600">Reservas este mes</p>
                 <span className={`text-xs font-bold ${nearLimit ? 'text-amber-600' : 'text-gray-600'}`}>
@@ -206,7 +235,7 @@ export function BillingSection() {
                     disabled={working}
                     className="w-full bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white font-semibold py-2.5 rounded-xl text-sm transition-colors"
                   >
-                    {working ? 'Redirigiendo…' : 'Probar Basic gratis 14 días'}
+                    {working ? 'Redirigiendo…' : legacyFree ? 'Probar Basic gratis 14 días' : 'Elegir Basic'}
                   </button>
                 </div>
               </div>
@@ -243,7 +272,7 @@ export function BillingSection() {
                     disabled={working}
                     className="w-full bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white font-semibold py-2.5 rounded-xl text-sm transition-colors"
                   >
-                    {working ? 'Redirigiendo…' : 'Probar Pro gratis 14 días'}
+                    {working ? 'Redirigiendo…' : legacyFree ? 'Probar Pro gratis 14 días' : 'Elegir Pro'}
                   </button>
                 </div>
               </div>
@@ -252,7 +281,9 @@ export function BillingSection() {
           )}
           {isOwner && (
             <p className="text-center text-xs text-gray-400">
-              Sin cargo durante 14 días · Cancela cuando quieras
+              {localTrial ? `No se cobra hasta el ${fmt(trialEndsAt)} · Cancela cuando quieras`
+                : legacyFree ? 'Sin cargo durante 14 días · Cancela cuando quieras'
+                  : 'Pago mensual · Cancela cuando quieras'}
             </p>
           )}
         </>
@@ -283,7 +314,7 @@ export function BillingSection() {
               <div className="flex-1">
                 <p className="text-sm font-semibold text-amber-800">Suscripción cancelada</p>
                 <p className="text-xs text-amber-700 mt-0.5">
-                  Tienes acceso hasta el <strong>{fmt(currentPeriodEnd || trialEndsAt)}</strong>. Después pasarás al plan Free.
+                  Tienes acceso hasta el <strong>{fmt(currentPeriodEnd || trialEndsAt)}</strong>. Después {business?.legacyAccess ? 'volverás a tu acceso gratuito' : 'tu cuenta pasará a solo lectura'}.
                 </p>
               </div>
               {isOwner && (
@@ -447,7 +478,7 @@ export function BillingSection() {
               <div className="flex-1">
                 <p className="text-sm font-semibold text-amber-800">Suscripción cancelada</p>
                 <p className="text-xs text-amber-700 mt-0.5">
-                  Tienes acceso hasta el <strong>{fmt(currentPeriodEnd || trialEndsAt)}</strong>. Después pasarás al plan Free.
+                  Tienes acceso hasta el <strong>{fmt(currentPeriodEnd || trialEndsAt)}</strong>. Después {business?.legacyAccess ? 'volverás a tu acceso gratuito' : 'tu cuenta pasará a solo lectura'}.
                 </p>
               </div>
               {isOwner && (

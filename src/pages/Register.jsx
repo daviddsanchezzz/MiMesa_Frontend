@@ -64,7 +64,7 @@ export default function Register() {
           {mode === 'loading' ? <div className="h-40" /> : mode === 'invite' ? <RequestAccess /> : (<>
           <div className="mb-8">
             <h2 className="text-2xl font-bold text-gray-900">Crear cuenta</h2>
-            <p className="text-gray-500 text-sm mt-1">Registra tu negocio gratis</p>
+            <p className="text-gray-500 text-sm mt-1">Prueba Vetra 14 días gratis, sin tarjeta</p>
           </div>
 
           {error && (

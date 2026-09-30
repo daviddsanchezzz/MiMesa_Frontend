@@ -170,7 +170,7 @@ export default function Login() {
 
           <p className="text-center text-sm text-gray-500 mt-6">
             {signupMode === 'open' ? '¿No tienes cuenta?' : '¿Quieres usar Vetra?'}{' '}
-            <Link to="/register" className="text-violet-600 hover:text-violet-700 font-semibold">{signupMode === 'open' ? 'Regístrate gratis' : 'Solicita acceso'}</Link>
+            <Link to="/register" className="text-violet-600 hover:text-violet-700 font-semibold">{signupMode === 'open' ? 'Pruébalo 14 días gratis' : 'Solicita acceso'}</Link>
           </p>
 
         </div>

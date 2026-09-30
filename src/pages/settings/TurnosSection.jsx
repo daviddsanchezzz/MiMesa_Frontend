@@ -101,7 +101,7 @@ export function TurnosSection() {
             <path fillRule="evenodd" d="M8 1a3.5 3.5 0 0 0-3.5 3.5V7A1.5 1.5 0 0 0 3 8.5v5A1.5 1.5 0 0 0 4.5 15h7a1.5 1.5 0 0 0 1.5-1.5v-5A1.5 1.5 0 0 0 11.5 7V4.5A3.5 3.5 0 0 0 8 1Zm-2 6V4.5a2 2 0 1 1 4 0V7H6Z" clipRule="evenodd" />
           </svg>
           <p className="text-sm text-amber-800 flex-1">
-            <strong>{lockedShifts.length} turno{lockedShifts.length !== 1 ? 's' : ''} bloqueado{lockedShifts.length !== 1 ? 's' : ''}</strong> — el plan Free solo permite {limit}.
+            <strong>{lockedShifts.length} turno{lockedShifts.length !== 1 ? 's' : ''} bloqueado{lockedShifts.length !== 1 ? 's' : ''}</strong> — tu plan actual solo permite {limit}.
             Los clientes solo verán los {limit} primeros.
           </p>
           <a href="/configuracion?tab=suscripcion" className="text-xs font-semibold text-amber-700 underline hover:no-underline shrink-0">

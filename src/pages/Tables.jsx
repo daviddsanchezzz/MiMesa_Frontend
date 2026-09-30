@@ -206,7 +206,7 @@ export default function Tables() {
             <path fillRule="evenodd" d="M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14Zm-.75-9.5a.75.75 0 0 1 1.5 0v3.5a.75.75 0 0 1-1.5 0V5.5Zm.75 6.5a.875.875 0 1 1 0-1.75.875.875 0 0 1 0 1.75Z" clipRule="evenodd" />
           </svg>
           <p className="text-sm text-amber-800 flex-1">
-            Has llegado al límite de <strong>{limit} mesas</strong> del plan Free.
+            Has llegado al límite de <strong>{limit} mesas</strong> de tu plan actual.
             {lockedTables.length > 0 && <> {lockedTables.length} mesa{lockedTables.length !== 1 ? 's' : ''} están bloqueadas y no se usan en las reservas.</>}
           </p>
           <Link to="/configuracion?tab=suscripcion" className="text-xs font-semibold text-amber-700 underline hover:no-underline shrink-0">
@@ -234,7 +234,7 @@ export default function Tables() {
               <path fillRule="evenodd" d="M8 1a3.5 3.5 0 0 0-3.5 3.5V7A1.5 1.5 0 0 0 3 8.5v5A1.5 1.5 0 0 0 4.5 15h7a1.5 1.5 0 0 0 1.5-1.5v-5A1.5 1.5 0 0 0 11.5 7V4.5A3.5 3.5 0 0 0 8 1Zm-2 6V4.5a2 2 0 1 1 4 0V7H6Z" clipRule="evenodd" />
             </svg>
             <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-              Mesas bloqueadas ({lockedTables.length}) — plan Free
+              Mesas bloqueadas ({lockedTables.length}) — plan actual
             </p>
           </div>
           <div className="flex flex-wrap gap-2">

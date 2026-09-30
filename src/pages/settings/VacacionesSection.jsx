@@ -46,7 +46,7 @@ export function VacacionesSection() {
       {/* Add form */}
       {upcoming.length >= planLimit('maxVacations') ? (
         <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 text-sm text-amber-700">
-          Has alcanzado el límite de {planLimit('maxVacations')} período{planLimit('maxVacations') !== 1 ? 's' : ''} de cierre del plan Free. Elimina uno existente para añadir otro.
+          Has alcanzado el límite de {planLimit('maxVacations')} período{planLimit('maxVacations') !== 1 ? 's' : ''} de cierre de tu plan actual. Elimina uno existente para añadir otro.
         </div>
       ) : (
         <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">

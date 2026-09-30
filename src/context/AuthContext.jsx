@@ -195,7 +195,11 @@ export function AuthProvider({ children }) {
 
   const HIERARCHY = { owner: 3, manager: 2, staff: 1 };
   const hasRole   = (minRole) => (HIERARCHY[role] ?? 0) >= (HIERARCHY[minRole] ?? 0);
-  const isSubscribed = subscriptionStatus === 'active' || subscriptionStatus === 'trialing';
+  // Has a paid plan or a running trial right now (the backend decides: effectivePlan)
+  const isSubscribed = business?.effectivePlan
+    ? ['basic', 'pro'].includes(business.effectivePlan)
+    : subscriptionStatus === 'active' || subscriptionStatus === 'trialing';
+  const isReadOnly = business?.effectivePlan === 'expired';
 
   /**
    * Plan capabilities come from the backend (/auth/me) so there is a single source of truth.
@@ -226,7 +230,7 @@ export function AuthProvider({ children }) {
       isDev, role, plan, subscriptionStatus,
       trialEndsAt, currentPeriodEnd, cancelAtPeriodEnd,
       businessType, isAppointments,
-      hasRole, isSubscribed, canUse, planLimit,
+      hasRole, isSubscribed, isReadOnly, canUse, planLimit,
       moduleAccess, isModuleEnabled,
       session,
     }}>

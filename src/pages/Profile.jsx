@@ -31,6 +31,46 @@ function Avatar({ name, email }) {
   );
 }
 
+function Switch({ checked, disabled, onChange }) {
+  return (
+    <span className="relative inline-flex h-6 w-11 shrink-0 items-center">
+      <input type="checkbox" className="peer sr-only" checked={!!checked} disabled={disabled} onChange={(e) => onChange(e.target.checked)} />
+      <span className="absolute inset-0 rounded-full bg-gray-300 peer-checked:bg-violet-500 transition-colors" />
+      <span className="absolute left-0.5 h-5 w-5 rounded-full bg-white shadow-sm peer-checked:translate-x-5 transition-transform" />
+    </span>
+  );
+}
+
+// Email alerts for the business team, worded for the kind of business.
+function NotificationToggles({ prefs = {}, businessType, disabled = false, onToggle }) {
+  const appt = businessType === 'appointments';
+  const rows = [
+    {
+      key: 'newReservationEmail',
+      title: appt ? 'Cuando un cliente reserva una cita' : 'Cuando entra una reserva nueva',
+      hint: appt ? 'Te llega un email con el cliente, el servicio y la hora.' : 'Te llega un email con el nombre, el día y los comensales.',
+    },
+    {
+      key: 'cancelledReservationEmail',
+      title: appt ? 'Cuando un cliente cancela su cita' : 'Cuando se cancela una reserva',
+      hint: appt ? 'Así sabes al momento que tienes un hueco libre.' : 'Así puedes ofrecer la mesa a otra persona.',
+    },
+  ];
+  return (
+    <div className="space-y-2">
+      {rows.map((r) => (
+        <label key={r.key} className={`flex items-center justify-between gap-3 p-3 rounded-xl border border-gray-200 bg-gray-50/50 ${disabled ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'}`}>
+          <span className="min-w-0">
+            <span className="block text-sm font-medium text-gray-800">{r.title}</span>
+            <span className="block text-xs text-gray-500 mt-0.5">{r.hint}</span>
+          </span>
+          <Switch checked={prefs[r.key]} disabled={disabled} onChange={(v) => onToggle({ [r.key]: v })} />
+        </label>
+      ))}
+    </div>
+  );
+}
+
 function MembershipCard({ membership, onToggle, disabled = false }) {
   const prefs = membership.notificationPreferences || {};
   const roleLabel = ROLE_LABELS[membership.role] || membership.role;
@@ -45,36 +85,7 @@ function MembershipCard({ membership, onToggle, disabled = false }) {
         <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-gray-100 text-gray-600">Notificaciones</span>
       </div>
 
-      <div className="space-y-2">
-        <label className={`flex items-start justify-between gap-3 p-3 rounded-xl border border-gray-200 bg-gray-50/50 ${disabled ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'}`}>
-          <span className="text-sm text-gray-700">Avisarme por email cuando se crea una reserva</span>
-          <span className="relative inline-flex h-6 w-11 shrink-0 items-center">
-            <input
-              type="checkbox"
-              className="peer sr-only"
-              checked={!!prefs.newReservationEmail}
-              disabled={disabled}
-              onChange={(e) => onToggle({ newReservationEmail: e.target.checked })}
-            />
-            <span className="absolute inset-0 rounded-full bg-gray-300 peer-checked:bg-violet-500 transition-colors" />
-            <span className="absolute left-0.5 h-5 w-5 rounded-full bg-white shadow-sm peer-checked:translate-x-5 transition-transform" />
-          </span>
-        </label>
-        <label className={`flex items-start justify-between gap-3 p-3 rounded-xl border border-gray-200 bg-gray-50/50 ${disabled ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'}`}>
-          <span className="text-sm text-gray-700">Avisarme por email cuando se cancela una reserva</span>
-          <span className="relative inline-flex h-6 w-11 shrink-0 items-center">
-            <input
-              type="checkbox"
-              className="peer sr-only"
-              checked={!!prefs.cancelledReservationEmail}
-              disabled={disabled}
-              onChange={(e) => onToggle({ cancelledReservationEmail: e.target.checked })}
-            />
-            <span className="absolute inset-0 rounded-full bg-gray-300 peer-checked:bg-violet-500 transition-colors" />
-            <span className="absolute left-0.5 h-5 w-5 rounded-full bg-white shadow-sm peer-checked:translate-x-5 transition-transform" />
-          </span>
-        </label>
-      </div>
+      <NotificationToggles prefs={prefs} businessType={membership.businessType} disabled={disabled} onToggle={onToggle} />
     </div>
   );
 }
@@ -144,7 +155,7 @@ export default function Profile() {
   const savePassword = async (e) => {
     e.preventDefault();
     if (!passwordForm.newPassword || passwordForm.newPassword.length < 8) {
-      setPageError('La nueva contrasena debe tener al menos 8 caracteres');
+      setPageError('La nueva contraseña debe tener al menos 8 caracteres');
       return;
     }
     if (passwordForm.newPassword !== passwordForm.confirmPassword) {
@@ -159,7 +170,7 @@ export default function Profile() {
       setPasswordForm({ newPassword: '', confirmPassword: '' });
       setShowPasswordModal(false);
     } catch (err) {
-      setPageError(err.response?.data?.message || 'No se pudo actualizar la contrasena');
+      setPageError(err.response?.data?.message || 'No se pudo actualizar la contraseña');
     } finally {
       setSavingPassword(false);
     }
@@ -212,7 +223,7 @@ export default function Profile() {
   };
 
   const handleDeleteBusiness = async (businessId, businessName) => {
-    if (!window.confirm(`¿Eliminar "${businessName}"? Esta accion borra reservas, clientes y configuracion del negocio.`)) return;
+    if (!window.confirm(`¿Eliminar "${businessName}"? Esta acción borra reservas, clientes y configuración del negocio.`)) return;
     setSavingBusiness(true);
     setPageError('');
     try {
@@ -252,14 +263,13 @@ export default function Profile() {
           <p className="text-xs text-gray-400 truncate mt-0.5">{user.email || '-'}</p>
         </div>
         <div className="hidden sm:flex items-center gap-2 text-xs text-gray-500">
-          <span className="px-2.5 py-1 rounded-full bg-gray-100">{summary.businesses} negocios</span>
-          <span className="px-2.5 py-1 rounded-full bg-gray-100">{summary.notificationsEnabled} alertas activas</span>
+          <span className="px-2.5 py-1 rounded-full bg-gray-100">{summary.businesses === 1 ? '1 negocio' : `${summary.businesses} negocios`}</span>
         </div>
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
         <section className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
-          <h2 className="text-sm font-semibold text-gray-900 mb-4">Informacion personal</h2>
+          <h2 className="text-sm font-semibold text-gray-900 mb-4">Información personal</h2>
           <form onSubmit={saveProfile} className="space-y-4">
             <div>
               <label className={labelCls}>Nombre</label>
@@ -297,8 +307,8 @@ export default function Profile() {
                   </svg>
                 </div>
                 <div className="min-w-0">
-                  <p className="text-sm font-semibold text-gray-900">Contrasena</p>
-                  <p className="text-xs text-gray-500 mt-0.5">Recomendado cambiarla periodicamente y usar una clave unica.</p>
+                  <p className="text-sm font-semibold text-gray-900">Contraseña</p>
+                  <p className="text-xs text-gray-500 mt-0.5">Recomendado cambiarla periódicamente y usar una clave única.</p>
                 </div>
               </div>
               <button
@@ -310,7 +320,7 @@ export default function Profile() {
               </button>
             </div>
             <div className="px-4 pb-4">
-              <p className="text-xs text-gray-400">Tu sesion actual permanecera activa tras el cambio.</p>
+              <p className="text-xs text-gray-400">Tu sesión actual permanecerá activa tras el cambio.</p>
             </div>
           </div>
         </section>
@@ -318,53 +328,27 @@ export default function Profile() {
 
       <section className="bg-white rounded-2xl border border-gray-200 shadow-sm p-6">
         <h2 className="text-sm font-semibold text-gray-900 mb-4">
-          {memberships.length <= 1 ? 'Notificaciones' : 'Notificaciones por negocio'}
+          {memberships.length <= 1 ? 'Avisos por email' : 'Avisos por email, por negocio'}
         </h2>
         {isStaff && (
           <p className="text-xs text-gray-500 mb-4">
-            Tu rol de staff no permite activar notificaciones de reserva.
+            Con tu rol no puedes cambiar estos avisos. Pídeselo al responsable del negocio.
           </p>
         )}
 
         {memberships.length === 0 ? (
           <div className="text-center py-12 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
-            <p className="text-sm text-gray-500">No tienes membresias activas.</p>
+            <p className="text-sm text-gray-500">Todavía no perteneces a ningún negocio.</p>
           </div>
         ) : (
           <div className="space-y-3">
             {memberships.length === 1 ? (
-              <div className="border border-gray-200 rounded-2xl p-4 bg-white">
-                <div className="space-y-2">
-                  <label className={`flex items-start justify-between gap-3 p-3 rounded-xl border border-gray-200 bg-gray-50/50 ${isStaff ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'}`}>
-                    <span className="text-sm text-gray-700">Avisarme por email cuando se crea una reserva</span>
-                    <span className="relative inline-flex h-6 w-11 shrink-0 items-center">
-                      <input
-                        type="checkbox"
-                        className="peer sr-only"
-                        checked={!!memberships[0].notificationPreferences?.newReservationEmail}
-                        disabled={isStaff}
-                        onChange={(e) => updateMembershipPreference(memberships[0].id, { newReservationEmail: e.target.checked })}
-                      />
-                      <span className="absolute inset-0 rounded-full bg-gray-300 peer-checked:bg-violet-500 transition-colors" />
-                      <span className="absolute left-0.5 h-5 w-5 rounded-full bg-white shadow-sm peer-checked:translate-x-5 transition-transform" />
-                    </span>
-                  </label>
-                  <label className={`flex items-start justify-between gap-3 p-3 rounded-xl border border-gray-200 bg-gray-50/50 ${isStaff ? 'cursor-not-allowed opacity-70' : 'cursor-pointer'}`}>
-                    <span className="text-sm text-gray-700">Avisarme por email cuando se cancela una reserva</span>
-                    <span className="relative inline-flex h-6 w-11 shrink-0 items-center">
-                      <input
-                        type="checkbox"
-                        className="peer sr-only"
-                        checked={!!memberships[0].notificationPreferences?.cancelledReservationEmail}
-                        disabled={isStaff}
-                        onChange={(e) => updateMembershipPreference(memberships[0].id, { cancelledReservationEmail: e.target.checked })}
-                      />
-                      <span className="absolute inset-0 rounded-full bg-gray-300 peer-checked:bg-violet-500 transition-colors" />
-                      <span className="absolute left-0.5 h-5 w-5 rounded-full bg-white shadow-sm peer-checked:translate-x-5 transition-transform" />
-                    </span>
-                  </label>
-                </div>
-              </div>
+              <NotificationToggles
+                prefs={memberships[0].notificationPreferences}
+                businessType={memberships[0].businessType}
+                disabled={isStaff}
+                onToggle={(patch) => updateMembershipPreference(memberships[0].id, patch)}
+              />
             ) : (
               memberships.map((m) => (
                 <MembershipCard
@@ -378,7 +362,7 @@ export default function Profile() {
           </div>
         )}
 
-        <PushNotificationToggle />
+        <PushNotificationToggle businessType={business?.businessType} />
       </section>
 
       {isOwnerAnyBusiness && (
@@ -437,8 +421,8 @@ export default function Profile() {
 
       {showPasswordModal && (
         <Modal
-          title="Cambiar contrasena"
-          subtitle="Introduce tu nueva contrasena"
+          title="Cambiar contraseña"
+          subtitle="Introduce tu nueva contraseña"
           onClose={() => {
             setShowPasswordModal(false);
             setPasswordForm({ newPassword: '', confirmPassword: '' });
@@ -446,7 +430,7 @@ export default function Profile() {
         >
           <form onSubmit={savePassword} className="space-y-4">
             <div>
-              <label className={labelCls}>Nueva contrasena</label>
+              <label className={labelCls}>Nueva contraseña</label>
               <input
                 type="password"
                 className={inputCls}
@@ -455,7 +439,7 @@ export default function Profile() {
               />
             </div>
             <div>
-              <label className={labelCls}>Confirmar nueva contrasena</label>
+              <label className={labelCls}>Confirmar nueva contraseña</label>
               <input
                 type="password"
                 className={inputCls}
@@ -468,7 +452,7 @@ export default function Profile() {
               disabled={savingPassword}
               className="w-full px-4 py-2.5 rounded-xl bg-violet-600 text-white text-sm font-semibold hover:bg-violet-700 disabled:opacity-50"
             >
-              {savingPassword ? 'Actualizando...' : 'Guardar nueva contrasena'}
+              {savingPassword ? 'Actualizando...' : 'Guardar nueva contraseña'}
             </button>
           </form>
         </Modal>
@@ -510,7 +494,7 @@ export default function Profile() {
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <div>
-                <label className={labelCls}>Telefono</label>
+                <label className={labelCls}>Teléfono</label>
                 <input
                   className={inputCls}
                   value={newBusiness.phone}
@@ -518,7 +502,7 @@ export default function Profile() {
                 />
               </div>
               <div>
-                <label className={labelCls}>Direccion</label>
+                <label className={labelCls}>Dirección</label>
                 <input
                   className={inputCls}
                   value={newBusiness.address}

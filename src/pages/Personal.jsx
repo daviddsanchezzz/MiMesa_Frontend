@@ -15,7 +15,7 @@ import { EmployeeAssignmentsModal } from './personal/EmployeeAssignmentsModal';
 
 const tabs = [
   {
-    key: 'planner', label: 'Planificacion',
+    key: 'planner', label: 'Planificación',
     icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4"><path fillRule="evenodd" d="M4 1.75a.75.75 0 0 1 1.5 0V3h5V1.75a.75.75 0 0 1 1.5 0V3h.25A2.75 2.75 0 0 1 15 5.75v7.5A2.75 2.75 0 0 1 12.25 16H3.75A2.75 2.75 0 0 1 1 13.25v-7.5A2.75 2.75 0 0 1 3.75 3H4V1.75ZM3.75 4.5c-.69 0-1.25.56-1.25 1.25V7h11V5.75c0-.69-.56-1.25-1.25-1.25H3.75ZM2.5 8.5v4.75c0 .69.56 1.25 1.25 1.25h8.5c.69 0 1.25-.56 1.25-1.25V8.5h-11Z" clipRule="evenodd" /></svg>,
   },
   {
@@ -598,7 +598,7 @@ export default function Personal() {
       <div className="hidden lg:flex items-center justify-between gap-3">
         <div>
           <h2 className="text-xl font-bold text-gray-900">Personal</h2>
-          <p className="text-sm text-gray-500">Gestion de empleados, planificacion semanal y costes estimados.</p>
+          <p className="text-sm text-gray-500">Gestión de empleados, planificación semanal y costes estimados.</p>
         </div>
         {allowedTabs.length > 1 && (
           <div className="flex items-center gap-1.5">

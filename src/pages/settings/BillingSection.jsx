@@ -2,10 +2,13 @@ import { useState, useEffect } from 'react';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import Modal from '../../components/Modal';
-import { BASIC_FEATURES, CheckIcon, PRO_EXTRAS } from './shared';
+import { BASIC_FEATURES as R_BASIC, CheckIcon, PRO_EXTRAS as R_PRO, APPT_BASIC_FEATURES, APPT_PRO_EXTRAS } from './shared';
 
 export function BillingSection() {
-  const { plan, subscriptionStatus, trialEndsAt, currentPeriodEnd, cancelAtPeriodEnd, hasRole, refreshBusiness } = useAuth();
+  const { plan, subscriptionStatus, trialEndsAt, currentPeriodEnd, cancelAtPeriodEnd, hasRole, refreshBusiness, isAppointments } = useAuth();
+  const BASIC_FEATURES = isAppointments ? APPT_BASIC_FEATURES : R_BASIC;
+  const PRO_EXTRAS = isAppointments ? APPT_PRO_EXTRAS : R_PRO;
+  const audience = isAppointments ? 'negocios' : 'restaurantes';
   const [status, setStatus]   = useState(null);
   const [loading, setLoading] = useState(true);
   const [working, setWorking]           = useState(false);
@@ -141,13 +144,13 @@ export function BillingSection() {
             <div className="flex items-center justify-between gap-4 flex-wrap">
               <div>
                 <p className="text-2xl font-bold text-gray-800">Free</p>
-                <p className="text-sm text-gray-500 mt-0.5">Hasta {limit} reservas al mes · 2 turnos · 15 mesas</p>
+                <p className="text-sm text-gray-500 mt-0.5">{isAppointments ? 'Para empezar a probar la agenda' : `Hasta ${limit} reservas al mes · 2 turnos · 15 mesas`}</p>
               </div>
               <span className="text-xs font-semibold bg-gray-100 text-gray-500 px-3 py-1.5 rounded-full">Gratuito</span>
             </div>
 
-            {/* Usage bar */}
-            <div className="mt-5">
+            {/* Usage bar (restaurant reservations only) */}
+            {!isAppointments && <div className="mt-5">
               <div className="flex items-center justify-between mb-2">
                 <p className="text-xs font-medium text-gray-600">Reservas este mes</p>
                 <span className={`text-xs font-bold ${nearLimit ? 'text-amber-600' : 'text-gray-600'}`}>
@@ -167,7 +170,7 @@ export function BillingSection() {
                     : `Te quedan ${limit - used} reservas este mes.`}
                 </p>
               )}
-            </div>
+            </div>}
           </div>
 
           {/* Trial plan cards */}
@@ -213,7 +216,7 @@ export function BillingSection() {
                       <p className="text-white font-bold text-lg">Pro</p>
                       <span className="text-xs font-semibold bg-white/20 text-white px-2 py-0.5 rounded-full">Recomendado</span>
                     </div>
-                    <p className="text-amber-100 text-xs">Para restaurantes que quieren más</p>
+                    <p className="text-amber-100 text-xs">Para {audience} que quieren más</p>
                   </div>
                   <div className="text-right">
                     <p className="text-white font-bold text-2xl">39€</p>
@@ -388,7 +391,7 @@ export function BillingSection() {
                   <p className="text-xs text-amber-600">
                     {isTrialing
                       ? 'Cambia a Pro ahora — tu prueba de 14 días continúa'
-                      : 'Para restaurantes que quieren más control'}
+                      : `Para ${audience} que quieren más control`}
                   </p>
                 </div>
                 <button

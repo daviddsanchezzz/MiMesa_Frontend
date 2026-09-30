@@ -92,7 +92,7 @@ export default function Onboarding() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Direccion <span className="text-gray-400 font-normal">(opcional)</span>
+                Dirección <span className="text-gray-400 font-normal">(opcional)</span>
               </label>
               <input
                 value={form.address}

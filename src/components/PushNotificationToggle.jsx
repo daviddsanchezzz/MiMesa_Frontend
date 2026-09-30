@@ -13,7 +13,7 @@ function isIos() {
   return /iphone|ipad|ipod/i.test(navigator.userAgent);
 }
 
-export default function PushNotificationToggle() {
+export default function PushNotificationToggle({ businessType } = {}) {
   const [supported, setSupported]   = useState(false);
   const [subscribed, setSubscribed] = useState(false);
   const [permission, setPermission] = useState('default');
@@ -91,11 +91,11 @@ export default function PushNotificationToggle() {
     <div className="border border-gray-200 rounded-2xl p-4 bg-white">
       <div className="flex items-start justify-between gap-3 mb-1">
         <div>
-          <p className="text-sm font-semibold text-gray-900">Notificaciones push</p>
+          <p className="text-sm font-semibold text-gray-900">Avisos en este dispositivo</p>
           <p className="text-xs text-gray-400 mt-0.5">
             {subscribed
               ? 'Recibirás alertas en este dispositivo'
-              : 'Actívalas para recibir alertas instantáneas'}
+              : 'Avisos al momento, sin abrir el email'}
           </p>
         </div>
         <span className="text-xs px-2 py-0.5 rounded-full font-medium bg-gray-100 text-gray-600 shrink-0">
@@ -106,7 +106,7 @@ export default function PushNotificationToggle() {
       {error && <p className="text-xs text-red-600 mb-2">{error}</p>}
 
       <label className={`mt-3 flex items-start justify-between gap-3 p-3 rounded-xl border border-gray-200 bg-gray-50/50 ${loading ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}`}>
-        <span className="text-sm text-gray-700">Avisarme cuando hay una reserva nueva o cancelada</span>
+        <span className="text-sm text-gray-700">{businessType === 'appointments' ? 'Avisarme en este móvil u ordenador cuando reservan o cancelan una cita' : 'Avisarme en este móvil u ordenador cuando hay una reserva nueva o cancelada'}</span>
         <span className="relative inline-flex h-6 w-11 shrink-0 items-center">
           <input
             type="checkbox"

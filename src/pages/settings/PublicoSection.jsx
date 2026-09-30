@@ -43,7 +43,7 @@ export function PublicoSection() {
       <div className="bg-white rounded-2xl p-6 border border-gray-200">
         <h3 className="text-sm font-semibold text-gray-900 mb-2">Color Corporativo</h3>
         <p className="text-sm text-gray-600 mb-4">
-          Personaliza el color principal que se mostrara en la pagina de reservas publicas.
+          Personaliza el color principal que se mostrará en la página de reservas publicas.
         </p>
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-3">
@@ -102,7 +102,7 @@ export function PublicoSection() {
         <div className="bg-white rounded-2xl p-6 border border-gray-200">
           <h3 className="text-sm font-semibold text-gray-900 mb-2">Integrar en tu web (iframe)</h3>
           <p className="text-sm text-gray-600 mb-4">
-            Copia este codigo y pegalo en la web de tu restaurante para que los clientes puedan reservar sin salir de tu pagina.
+            Copia este código y pégalo en la web de tu restaurante para que los clientes puedan reservar sin salir de tu página.
           </p>
           <pre className="bg-gray-50 border border-gray-200 rounded-xl px-4 py-3 text-xs text-gray-700 font-mono overflow-x-auto whitespace-pre-wrap break-all leading-relaxed mb-3">
 {embedCode}
@@ -111,7 +111,7 @@ export function PublicoSection() {
             onClick={() => copyToClipboard(embedCode, 'embed')}
             className="px-4 py-2.5 bg-violet-600 text-white text-sm font-medium rounded-xl hover:bg-violet-700 transition-colors"
           >
-            {copied === 'embed' ? 'Copiado' : 'Copiar codigo'}
+            {copied === 'embed' ? 'Copiado' : 'Copiar código'}
           </button>
         </div>
       </PlanGate>

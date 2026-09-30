@@ -39,7 +39,7 @@ export function PagosSection() {
           currency: nextStripeConfig.currency || 'eur',
         });
       } catch {
-        setError('No se pudo cargar la configuracion de pagos');
+        setError('No se pudo cargar la configuración de pagos');
       } finally {
         setLoading(false);
       }
@@ -53,7 +53,7 @@ export function PagosSection() {
     setSuccess('');
     try {
       if (mode === 'deposit' && !stripeReady) {
-        throw new Error('Faltan claves o webhook de Stripe. Completa la configuracion antes de activar depositos.');
+        throw new Error('Faltan claves o webhook de Stripe. Completa la configuración antes de activar depósitos.');
       }
       await api.put('/stripe/payment-settings', {
         mode,
@@ -62,7 +62,7 @@ export function PagosSection() {
         freeCancellationHours: parseFloat(freeCancelHours) || 24,
         currency: stripeConfig.currency || 'eur',
       });
-      setSuccess('Configuracion guardada');
+      setSuccess('Configuración guardada');
     } catch (err) {
       setError(err?.response?.data?.message || err?.message || 'No se pudo guardar');
     } finally {
@@ -79,7 +79,7 @@ export function PagosSection() {
       </div>
       <div>
         <p className="text-sm font-semibold text-gray-900">Disponible en el plan Basic</p>
-        <p className="text-xs text-gray-500 mt-1">Los depositos en reservas requieren el plan Basic.</p>
+        <p className="text-xs text-gray-500 mt-1">Los depósitos en reservas requieren el plan Basic.</p>
       </div>
       <button
         onClick={() => window.location.search = '?tab=suscripcion'}
@@ -94,7 +94,7 @@ export function PagosSection() {
 
   const paymentOptions = [
     { value: 'none', label: 'Sin pago', desc: 'Los clientes reservan sin pagar nada.' },
-    { value: 'deposit', label: 'Deposito al reservar', desc: 'El cliente paga un importe al hacer la reserva y se confirma tras el cobro.' },
+    { value: 'deposit', label: 'Depósito al reservar', desc: 'El cliente paga un importe al hacer la reserva y se confirma tras el cobro.' },
   ];
   const publishableKeyConfigured = Boolean(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
   const stripeReady = Boolean(
@@ -114,7 +114,7 @@ export function PagosSection() {
         <div>
           <h3 className="text-sm font-semibold text-gray-900">Cuenta Stripe</h3>
           <p className="text-xs text-gray-500 mt-0.5">
-            La app usa una unica cuenta Stripe. Esta tarjeta muestra si la configuracion real esta completa.
+            La app usa una única cuenta Stripe. Esta tarjeta muestra si la configuración real esta completa.
           </p>
         </div>
         {error && <div className="bg-rose-50 border border-rose-200 text-rose-700 text-sm rounded-xl px-3 py-2">{error}</div>}
@@ -139,7 +139,7 @@ export function PagosSection() {
           </div>
           {!stripeReady && (
             <p className="text-xs text-amber-900 mt-3">
-              Faltan variables para cobrar reservas con deposito: {missingConfig.join(', ')}.
+              Faltan variables para cobrar reservas con depósito: {missingConfig.join(', ')}.
             </p>
           )}
         </div>
@@ -148,7 +148,7 @@ export function PagosSection() {
       <form onSubmit={handleSave} className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 space-y-5">
         <div>
           <h3 className="text-sm font-semibold text-gray-900">Pagos en reservas</h3>
-          <p className="text-xs text-gray-500 mt-0.5">Elige si tus clientes deben pagar un deposito antes de confirmar la reserva.</p>
+          <p className="text-xs text-gray-500 mt-0.5">Elige si tus clientes deben pagar un depósito antes de confirmar la reserva.</p>
         </div>
 
         <div className="space-y-2">
@@ -176,9 +176,9 @@ export function PagosSection() {
 
         {mode === 'deposit' && (
           <div className="space-y-3 p-4 bg-gray-50 rounded-xl border border-gray-200">
-            <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Configuracion del deposito</h4>
+            <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Configuración del depósito</h4>
             <div>
-              <label className={labelCls}>Importe del deposito (EUR)</label>
+              <label className={labelCls}>Importe del depósito (EUR)</label>
               <input type="number" min="0.50" step="0.50" value={depositAmount} onChange={(e) => setDepositAmount(e.target.value)} placeholder="5.00" className={inputCls} required />
             </div>
             <label className="flex items-center gap-2.5 cursor-pointer">
@@ -195,8 +195,8 @@ export function PagosSection() {
 
         {mode !== 'none' && (
           <div className="p-4 bg-gray-50 rounded-xl border border-gray-200">
-            <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-3">Politica de cancelacion</h4>
-            <label className={labelCls}>Cancelacion gratuita hasta (horas antes)</label>
+            <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-3">Política de cancelación</h4>
+            <label className={labelCls}>Cancelación gratuita hasta (horas antes)</label>
             <div className="flex items-center gap-3">
               <input type="number" min="1" max="168" value={freeCancelHours} onChange={(e) => setFreeCancelHours(e.target.value)} className={`${inputCls} w-32`} />
               <span className="text-sm text-gray-500">horas antes de la reserva</span>
@@ -206,7 +206,7 @@ export function PagosSection() {
 
         <div className="flex justify-end">
           <button type="submit" disabled={saving} className="px-5 py-2.5 bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold rounded-xl transition-colors disabled:opacity-60">
-            {saving ? 'Guardando...' : 'Guardar configuracion'}
+            {saving ? 'Guardando...' : 'Guardar configuración'}
           </button>
         </div>
       </form>

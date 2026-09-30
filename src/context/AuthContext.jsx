@@ -70,9 +70,9 @@ export function AuthProvider({ children }) {
         msg.includes('failed to fetch') ||
         msg.includes('networkerror')
       ) {
-        throw new Error('Error de conexion con el servidor. Revisa la red y la configuracion del dominio.');
+        throw new Error('Error de conexión con el servidor. Revisa la red y la configuración del dominio.');
       }
-      throw new Error(err?.message || 'Error al iniciar sesion');
+      throw new Error(err?.message || 'Error al iniciar sesión');
     }
     const { data, error } = result;
     if (error) {
@@ -80,7 +80,7 @@ export function AuthProvider({ children }) {
         throw new Error('Debes verificar tu email antes de iniciar sesión. Revisa tu bandeja de entrada.');
       }
       if (String(error.code || '').includes('TWO_FACTOR')) {
-        throw new Error('Esta cuenta requiere verificacion en dos pasos y esta pantalla aun no la gestiona.');
+        throw new Error('Esta cuenta requiere verificación en dos pasos y esta pantalla aún no la gestiona.');
       }
       throw new Error(error.message || 'Credenciales incorrectas');
     }
@@ -113,8 +113,8 @@ export function AuthProvider({ children }) {
 
   const startImpersonation = async ({ token, user }) => {
     const currentToken = getStoredToken();
-    if (!currentToken) throw new Error('No hay sesion activa para iniciar impersonacion');
-    if (!token) throw new Error('Token de impersonacion no valido');
+    if (!currentToken) throw new Error('No hay sesión activa para iniciar suplantación');
+    if (!token) throw new Error('Token de suplantación no válido');
 
     if (!getImpersonationOriginalToken()) {
       setImpersonationOriginalToken(currentToken);

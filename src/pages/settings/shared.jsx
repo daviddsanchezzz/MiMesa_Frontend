@@ -152,6 +152,24 @@ export const BASIC_FEATURES = [
   'Historial completo de clientes',
 ];
 
+// Appointment businesses (salons, clinics…): same plans, worded for them.
+export const APPT_BASIC_FEATURES = [
+  'Citas ilimitadas',
+  'Enlace de reservas con tu marca',
+  'Emails de confirmación y cancelación',
+  'Recordatorio automático el día antes',
+  'Agenda por profesional',
+  'Hasta 5 usuarios de equipo',
+  'Historial de clientes',
+];
+
+export const APPT_PRO_EXTRAS = [
+  'Equipo y roles ilimitados',
+  'Módulo de finanzas y caja diaria',
+  'Gestión del personal y sus horarios',
+  'Soporte prioritario',
+];
+
 export const PRO_EXTRAS = [
   'Equipo y roles ilimitados',
   'Marketing y campañas de email',

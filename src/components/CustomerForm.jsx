@@ -35,7 +35,7 @@ export default function CustomerForm({ customer, onSave, onCancel }) {
 
   const handleDelete = async () => {
     if (!customer?._id || saving || deleting) return;
-    const ok = window.confirm(`Vas a eliminar al cliente "${customer.name}". Esta accion no se puede deshacer.`);
+    const ok = window.confirm(`Vas a eliminar al cliente "${customer.name}". Esta acción no se puede deshacer.`);
     if (!ok) return;
     setError('');
     setDeleting(true);

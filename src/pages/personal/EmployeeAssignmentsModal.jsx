@@ -92,7 +92,7 @@ export function EmployeeAssignmentsModal({ employee, onClose, onDeleted }) {
     if (raw !== '') {
       const parsed = Number(raw.replace(',', '.'));
       if (!Number.isFinite(parsed) || parsed < 0) {
-        setErrorMsg('El precio debe ser un numero mayor o igual a 0');
+        setErrorMsg('El precio debe ser un número mayor o igual a 0');
         return;
       }
       customPrice = Number(parsed.toFixed(2));

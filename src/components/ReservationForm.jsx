@@ -285,7 +285,7 @@ export default function ReservationForm({ reservation, onSave, onCancel, initial
       return;
     }
     if (!isEdit && !guestPhone) {
-      setError('El telefono es obligatorio');
+      setError('El teléfono es obligatorio');
       return;
     }
     setSaving(true);
@@ -365,7 +365,7 @@ export default function ReservationForm({ reservation, onSave, onCancel, initial
           ) : vacation?.closed ? (
             <div className="bg-rose-50 border border-rose-200 rounded-xl px-4 py-3 text-sm text-rose-700">Restaurante cerrado en esta fecha.</div>
           ) : slots.length === 0 ? (
-            <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-700">No hay turnos para este dia.</div>
+            <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-700">No hay turnos para este día.</div>
           ) : (
             Object.entries(slotsByShift).map(([shiftName, shiftSlots]) => (
               <div key={shiftName} className="mb-4 last:mb-0">
@@ -421,7 +421,7 @@ export default function ReservationForm({ reservation, onSave, onCancel, initial
           </div>
           {customPeopleOpen && (
             <div className="mt-3">
-              <label className={`${labelCls} mb-1`}>Numero personalizado</label>
+              <label className={`${labelCls} mb-1`}>Número personalizado</label>
               <input
                 type="number"
                 min={1}
@@ -494,7 +494,7 @@ export default function ReservationForm({ reservation, onSave, onCancel, initial
                 autoFocus
                 value={customerQuery}
                 onChange={(e) => handleCustomerQueryChange(e.target.value)}
-                placeholder="Buscar por nombre o telefono"
+                placeholder="Buscar por nombre o teléfono"
                 className={inputCls}
               />
               {customersLoading && (
@@ -546,7 +546,7 @@ export default function ReservationForm({ reservation, onSave, onCancel, initial
               )}
               {!customersLoading && showInlineCreateFields && (
                 <p className="mt-2 text-xs text-gray-500">
-                  Completa telefono y email para crear el cliente nuevo al guardar la reserva.
+                  Completa teléfono y email para crear el cliente nuevo al guardar la reserva.
                 </p>
               )}
             </div>
@@ -556,7 +556,7 @@ export default function ReservationForm({ reservation, onSave, onCancel, initial
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className={labelCls}>
-                  Telefono {!isEdit && <span className="text-rose-500">*</span>}
+                  Teléfono {!isEdit && <span className="text-rose-500">*</span>}
                 </label>
                 <input
                   required={!isEdit}

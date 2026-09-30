@@ -21,7 +21,7 @@ export function CompensationModal({ employee, onClose, onSaved }) {
       await api.post(`/staff/employees/${employee._id}/compensations`, { ...form, baseAmount: Number(form.baseAmount || 0) });
       onSaved();
     } catch (err) {
-      setError(err?.response?.data?.message || 'No se pudo guardar la condicion de pago');
+      setError(err?.response?.data?.message || 'No se pudo guardar la condición de pago');
     } finally {
       setSaving(false);
     }

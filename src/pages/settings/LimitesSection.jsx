@@ -42,9 +42,9 @@ export function LimitesSection() {
   return (
     <div className="space-y-6">
       <div className="bg-white rounded-2xl p-6 border border-gray-200">
-        <h3 className="text-sm font-semibold text-gray-900 mb-2">Antelacion Minima de Reserva</h3>
+        <h3 className="text-sm font-semibold text-gray-900 mb-2">Antelación Mínima de Reserva</h3>
         <p className="text-sm text-gray-600 mb-4">
-          Los clientes no podran reservar online con menos de esta antelacion respecto a la hora del turno. Deja en 0 para no aplicar limite. El personal siempre puede crear reservas manuales desde el panel sin esta restriccion.
+          Los clientes no podran reservar online con menos de esta antelación respecto a la hora del turno. Deja en 0 para no aplicar limite. El personal siempre puede crear reservas manuales desde el panel sin esta restricción.
         </p>
         <div className="flex items-center gap-3">
           <input
@@ -57,16 +57,16 @@ export function LimitesSection() {
             disabled={saving}
           />
           <div>
-            <p className="text-sm font-medium text-gray-900">horas minimo</p>
+            <p className="text-sm font-medium text-gray-900">horas mínimo</p>
             <p className="text-xs text-gray-500">Antes de la hora de la reserva</p>
           </div>
         </div>
       </div>
 
       <div className="bg-white rounded-2xl p-6 border border-gray-200">
-        <h3 className="text-sm font-semibold text-gray-900 mb-2">Maximo de Personas por Reserva</h3>
+        <h3 className="text-sm font-semibold text-gray-900 mb-2">Máximo de Personas por Reserva</h3>
         <p className="text-sm text-gray-600 mb-4">
-          Establece el numero maximo de personas que pueden hacer una reserva en una sola solicitud.
+          Establece el número máximo de personas que pueden hacer una reserva en una sola solicitud.
         </p>
         <div className="flex items-center gap-3">
           <input
@@ -78,7 +78,7 @@ export function LimitesSection() {
             disabled={saving}
           />
           <div>
-            <p className="text-sm font-medium text-gray-900">personas maximo</p>
+            <p className="text-sm font-medium text-gray-900">personas máximo</p>
             <p className="text-xs text-gray-500">Por reserva individual</p>
           </div>
         </div>
@@ -87,7 +87,7 @@ export function LimitesSection() {
       <PlanGate paid>
         <div className="bg-white rounded-2xl p-6 border border-gray-200">
           <div className="flex items-center gap-2 mb-2">
-            <h3 className="text-sm font-semibold text-gray-900">Maximo de Personas por Turno</h3>
+            <h3 className="text-sm font-semibold text-gray-900">Máximo de Personas por Turno</h3>
           </div>
           <p className="text-sm text-gray-600 mb-4">
             Deja vacio para no establecer limite por turno.
@@ -103,7 +103,7 @@ export function LimitesSection() {
               disabled={saving}
             />
             <div>
-              <p className="text-sm font-medium text-gray-900">personas maximo</p>
+              <p className="text-sm font-medium text-gray-900">personas máximo</p>
               <p className="text-xs text-gray-500">Por franja horaria simultanea</p>
             </div>
           </div>
@@ -111,7 +111,7 @@ export function LimitesSection() {
 
         <div className="bg-white rounded-2xl p-6 border border-gray-200">
           <div className="flex items-center gap-2 mb-2">
-            <h3 className="text-sm font-semibold text-gray-900">Duracion por Mesa</h3>
+            <h3 className="text-sm font-semibold text-gray-900">Duración por Mesa</h3>
           </div>
           <p className="text-sm text-gray-600 mb-4">
             Deja vacio para no bloquear franjas posteriores.

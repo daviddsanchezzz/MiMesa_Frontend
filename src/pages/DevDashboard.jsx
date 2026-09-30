@@ -313,14 +313,14 @@ export default function DevDashboard() {
       }
 
       if (!token) {
-        throw new Error('No se recibio token de suplantacion');
+        throw new Error('No se recibió token de suplantación');
       }
 
       await startImpersonation({ token, user: userPayload });
       closeUserActions();
       navigate('/', { replace: true });
     } catch (err) {
-      setUserActionError(err.response?.data?.message || err.message || 'No se pudo iniciar la suplantacion');
+      setUserActionError(err.response?.data?.message || err.message || 'No se pudo iniciar la suplantación');
     } finally {
       setUserActionLoading(false);
     }
@@ -328,7 +328,7 @@ export default function DevDashboard() {
 
   const handleDeleteUser = async () => {
     if (!selectedUser) return;
-    const ok = window.confirm(`Vas a eliminar al usuario ${selectedUser.email}. Esta accion no se puede deshacer.`);
+    const ok = window.confirm(`Vas a eliminar al usuario ${selectedUser.email}. Esta acción no se puede deshacer.`);
     if (!ok) return;
     setUserActionLoading(true);
     setUserActionError('');
@@ -715,7 +715,7 @@ export default function DevDashboard() {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Telefono</label>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Teléfono</label>
               <input
                 value={form.phone}
                 onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
@@ -724,7 +724,7 @@ export default function DevDashboard() {
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Direccion</label>
+              <label className="block text-xs font-medium text-gray-500 mb-1">Dirección</label>
               <input
                 value={form.address}
                 onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))}

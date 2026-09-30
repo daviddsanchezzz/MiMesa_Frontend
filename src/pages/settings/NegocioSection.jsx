@@ -60,11 +60,11 @@ export function NegocioSection() {
               <input type="email" className={inputCls} value={form.email} disabled={!canEdit || saving} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
             </div>
             <div>
-              <label className={labelCls}>Telefono</label>
+              <label className={labelCls}>Teléfono</label>
               <input className={inputCls} value={form.phone} disabled={!canEdit || saving} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} />
             </div>
             <div>
-              <label className={labelCls}>Direccion</label>
+              <label className={labelCls}>Dirección</label>
               <input className={inputCls} value={form.address} disabled={!canEdit || saving} onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))} />
             </div>
             <div>

@@ -71,7 +71,7 @@ export default function Register() {
 
           {verificationSent && (
             <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm rounded-xl px-4 py-3 mb-6">
-              Te hemos enviado un correo de verificacion a <strong>{form.email}</strong>. Verifica tu cuenta antes de iniciar sesion.
+              Te hemos enviado un correo de verificación a <strong>{form.email}</strong>. Verifica tu cuenta antes de iniciar sesión.
             </div>
           )}
 
@@ -120,14 +120,14 @@ export default function Register() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Contrasena *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Contraseña *</label>
               <PasswordInput
                 required
                 minLength={8}
                 value={form.password}
                 onChange={field('password')}
                 disabled={verificationSent}
-                placeholder="Minimo 8 caracteres"
+                placeholder="Mínimo 8 caracteres"
               />
             </div>
             <button
@@ -141,11 +141,11 @@ export default function Register() {
 
           <p className="text-center text-sm text-gray-500 mt-6">
             Ya tienes cuenta?{' '}
-            <Link to="/login" className="text-violet-600 hover:text-violet-700 font-semibold">Inicia sesion</Link>
+            <Link to="/login" className="text-violet-600 hover:text-violet-700 font-semibold">Inicia sesión</Link>
           </p>
           {verificationSent && (
             <p className="text-center text-xs text-gray-400 mt-3">
-              Cuando verifiques el email, podras iniciar sesion y continuar con el onboarding.
+              Cuando verifiques el email, podrás iniciar sesión y continuar con el onboarding.
             </p>
           )}
         </div>

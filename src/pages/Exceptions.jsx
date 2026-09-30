@@ -8,7 +8,7 @@ const ALL_SHIFTS_KEY = '__all__';
 const typeOptions = [
   { value: 'closed', label: 'Restaurante cerrado (turno bloqueado)' },
   { value: 'full', label: 'Turno lleno (bloquear reservas)' },
-  { value: 'call', label: 'Reserva solo por telefono' },
+  { value: 'call', label: 'Reserva solo por teléfono' },
   { value: 'close_room', label: 'Cerrar una sala en ese turno' },
 ];
 
@@ -31,9 +31,9 @@ function shiftLabel(shiftName) {
 function defaultMessageForType(type) {
   if (type === 'closed') return 'Restaurante cerrado en este turno';
   if (type === 'full') return 'Turno completo';
-  if (type === 'call') return 'Por favor, llama por telefono';
+  if (type === 'call') return 'Por favor, llama por teléfono';
   if (type === 'close_room') return 'Sala cerrada para este turno';
-  return 'Excepcion activa en este turno';
+  return 'Excepción activa en este turno';
 }
 
 export default function Exceptions() {
@@ -142,19 +142,19 @@ export default function Exceptions() {
       setEditing(null);
       await load();
     } catch (err) {
-      setError(err?.response?.data?.message || 'No se pudo guardar la excepcion');
+      setError(err?.response?.data?.message || 'No se pudo guardar la excepción');
     } finally {
       setSaving(false);
     }
   };
 
   const removeRow = async (id) => {
-    if (!window.confirm('¿Eliminar esta excepcion?')) return;
+    if (!window.confirm('¿Eliminar esta excepción?')) return;
     try {
       await api.delete(`/exceptions/${id}`);
       await load();
     } catch (err) {
-      setError(err?.response?.data?.message || 'No se pudo eliminar la excepcion');
+      setError(err?.response?.data?.message || 'No se pudo eliminar la excepción');
     }
   };
 
@@ -169,7 +169,7 @@ export default function Exceptions() {
           onClick={openCreate}
           className="flex items-center gap-2 bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors shadow-sm"
         >
-          Nueva excepcion
+          Nueva excepción
         </button>
       </div>
 
@@ -288,7 +288,7 @@ export default function Exceptions() {
             <div className="flex items-start justify-between gap-3 mb-4">
               <div>
                 <h3 className="text-lg font-bold text-gray-900">
-                  {editing ? 'Editar excepcion' : 'Nueva excepcion'}
+                  {editing ? 'Editar excepción' : 'Nueva excepción'}
                 </h3>
                 <p className="text-sm text-gray-400 mt-0.5">Define bloqueos por turno y fecha</p>
               </div>
@@ -327,7 +327,7 @@ export default function Exceptions() {
                 </select>
               </div>
               <div>
-                <label className={labelCls}>Tipo de excepcion</label>
+                <label className={labelCls}>Tipo de excepción</label>
                 <select
                   value={form.type}
                   onChange={(e) => setForm((f) => {
@@ -389,7 +389,7 @@ export default function Exceptions() {
                   disabled={saving}
                   className="px-3 py-2 text-xs font-semibold rounded-lg bg-violet-600 text-white hover:bg-violet-700 transition-colors disabled:opacity-60"
                 >
-                  {saving ? 'Guardando...' : (editing ? 'Guardar cambios' : 'Crear excepcion')}
+                  {saving ? 'Guardando...' : (editing ? 'Guardar cambios' : 'Crear excepción')}
                 </button>
               </div>
             </form>

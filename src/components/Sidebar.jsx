@@ -79,7 +79,7 @@ const links = [
 ];
 
 const configLinks = [
-  { to: '/configuracion', label: 'Configuracion', icon: <IconSettings /> },
+  { to: '/configuracion', label: 'Configuración', icon: <IconSettings /> },
 ];
 
 export default function Sidebar({
@@ -233,7 +233,7 @@ export default function Sidebar({
 
       <nav className="flex-1 px-3 py-4 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <div className="space-y-0.5">
-          {!collapsed && <p className="text-slate-500 text-[10px] font-semibold uppercase tracking-widest px-2 pb-2">Menu</p>}
+          {!collapsed && <p className="text-slate-500 text-[10px] font-semibold uppercase tracking-widest px-2 pb-2">Menú</p>}
           {devSidebar ? (
             devLinks.map((link) => {
               const active = location.pathname === '/dev' && currentDevTab === link.tab;
@@ -395,7 +395,7 @@ export default function Sidebar({
                 onClick={() => { logout(); if (onClose) onClose(); }}
                 className="w-full text-left px-3 py-2 rounded-md text-sm text-red-300 hover:bg-red-500/10 transition-colors"
               >
-                Cerrar sesion
+                Cerrar sesión
               </button>
             </div>
           )}

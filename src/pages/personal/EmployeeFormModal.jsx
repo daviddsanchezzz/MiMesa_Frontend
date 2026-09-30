@@ -62,7 +62,7 @@ export function EmployeeFormModal({ employee, positions, onClose, onSaved }) {
           <div><label className={labelCls}>Apellidos</label><input className={inputCls} value={form.lastName} onChange={(e) => setForm((f) => ({ ...f, lastName: e.target.value }))} /></div>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div><label className={labelCls}>Telefono</label><input className={inputCls} value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} /></div>
+          <div><label className={labelCls}>Teléfono</label><input className={inputCls} value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} /></div>
           <div><label className={labelCls}>Email</label><input className={inputCls} type="email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} /></div>
         </div>
         <div className="space-y-2">

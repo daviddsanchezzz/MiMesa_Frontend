@@ -605,7 +605,7 @@ export default function PublicReservation() {
                         <div className="space-y-1.5">
                           {(publicExceptions.blockedShifts || []).map((b, idx) => (
                             <p key={`${b.shiftName}-${idx}`} className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5">
-                              <strong>{b?.allShifts || b?.shiftName === ALL_SHIFTS_KEY ? 'Todos los turnos' : b.shiftName}:</strong> {b.message || 'No disponible por excepcion'}
+                              <strong>{b?.allShifts || b?.shiftName === ALL_SHIFTS_KEY ? 'Todos los turnos' : b.shiftName}:</strong> {b.message || 'No disponible por excepción'}
                             </p>
                           ))}
                         </div>

@@ -12,10 +12,26 @@ const api = axios.create({
 // ── Active business context ───────────────────────────────────────────────────
 // Set by AuthContext when the user switches between businesses.
 // Sent as X-Business-Id header so the backend knows which business to operate on.
-let _activeBusinessId = null;
+// Remembered in the browser so a reload stays in the same business (the backend
+// checks membership and falls back to the first business if it no longer applies).
+const ACTIVE_BUSINESS_KEY = 'vetra:activeBusinessId';
+
+function readStoredBusinessId() {
+  try { return localStorage.getItem(ACTIVE_BUSINESS_KEY) || null; } catch { return null; }
+}
+
+let _activeBusinessId = readStoredBusinessId();
 
 export function setActiveBusinessId(id) {
-  _activeBusinessId = id || null;
+  _activeBusinessId = id ? String(id) : null;
+  try {
+    if (_activeBusinessId) localStorage.setItem(ACTIVE_BUSINESS_KEY, _activeBusinessId);
+    else localStorage.removeItem(ACTIVE_BUSINESS_KEY);
+  } catch { /* storage unavailable: keep it in memory only */ }
+}
+
+export function getActiveBusinessId() {
+  return _activeBusinessId;
 }
 
 api.interceptors.request.use(config => {

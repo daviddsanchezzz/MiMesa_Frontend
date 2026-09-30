@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
+import { publicBookingUrl } from '../../lib/publicUrl';
 import QRCode from 'qrcode';
 import { useAuth } from '../../context/AuthContext';
 
 export function bookingUrl(business) {
-  return `${window.location.origin}/public/${business?.id}/cita`;
+  return publicBookingUrl(business);
 }
 
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));

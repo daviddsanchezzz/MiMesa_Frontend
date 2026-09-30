@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { publicBookingUrl } from '../lib/publicUrl';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useSetMobileHeader } from '../context/MobileHeaderContext';
@@ -210,7 +211,7 @@ export default function AppointmentsDashboard() {
               {showOverdue && s.actions.overdueCustomers.top.length > 0 && (
                 <ul className="mt-3 rounded-xl bg-gray-50 border border-gray-100 divide-y divide-gray-100">
                   {s.actions.overdueCustomers.top.map((c) => {
-                    const wa = waLink(c.phone, `¡Hola ${c.name.split(' ')[0]}! Hace tiempo que no te vemos por ${business?.name}. ¿Te reservo cita? Puedes elegir hora aquí: ${window.location.origin}/public/${business?.id}/cita`);
+                    const wa = waLink(c.phone, `¡Hola ${c.name.split(' ')[0]}! Hace tiempo que no te vemos por ${business?.name}. ¿Te reservo cita? Puedes elegir hora aquí: ${publicBookingUrl(business)}`);
                     return (
                       <li key={`${c.name}-${c.lastVisit}`} className="flex items-center gap-3 px-3 py-2.5">
                         <div className="min-w-0 flex-1">

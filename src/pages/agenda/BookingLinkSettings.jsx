@@ -1,4 +1,6 @@
 import { useState } from 'react';
+import { publicBookingUrl } from '../../lib/publicUrl';
+import PublicAddressEditor from '../../components/PublicAddressEditor';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { btnSecondary } from './utils';
@@ -11,7 +13,7 @@ export function BookingLinkSettings() {
   const { business } = useAuth();
   const [copied, setCopied] = useState('');
 
-  const url = `${window.location.origin}/public/${business?.id}/cita`;
+  const url = publicBookingUrl(business);
   const embed = `<iframe id="vetra-citas" src="${url}?embed=1" style="width:100%;border:none;min-height:560px"></iframe>
 <script>
   window.addEventListener("message", function (e) {
@@ -36,6 +38,7 @@ export function BookingLinkSettings() {
           </p>
         </div>
         <ShareLink />
+        <div className="pt-3 border-t border-gray-100"><PublicAddressEditor /></div>
       </section>
 
       <p className="text-xs text-gray-500 px-1">

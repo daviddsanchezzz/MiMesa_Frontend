@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react';
+import { slugPath } from '../lib/publicUrl';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { publicBookingsApi, apiError } from '../services/bookingsApi';
 
 // Guest cancels an appointment with the secret link shown after booking.
-export default function PublicBookingCancel() {
-  const { businessId } = useParams();
+export default function PublicBookingCancel({ businessId: businessIdProp, slug = null } = {}) {
+  const routeParams = useParams();
+  // From the slug page (vetrareserve.com/{slug}) or the old /public/{businessId}/… route
+  const businessId = businessIdProp || routeParams.businessId;
   const [params] = useSearchParams();
   const bookingId = params.get('bookingId');
   const token = params.get('token');
@@ -56,7 +59,7 @@ export default function PublicBookingCancel() {
               </button>
             )}
             {booking.status === 'cancelled' && <p className="text-xs text-gray-500">El hueco ha quedado libre. ¡Gracias por avisar!</p>}
-            <a href={`/public/${businessId}/cita`} className="inline-block text-sm font-semibold text-violet-600">Reservar otra cita</a>
+            <a href={slug ? slugPath(slug) : `/public/${businessId}/cita`} className="inline-block text-sm font-semibold text-violet-600">Reservar otra cita</a>
           </>
         )}
       </div>

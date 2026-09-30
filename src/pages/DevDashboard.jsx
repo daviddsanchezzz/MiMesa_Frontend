@@ -338,6 +338,10 @@ function BusinessSheet({ b, modules, onClose, onChanged }) {
             <dt className="text-gray-500">Email</dt><dd className="text-gray-900 truncate">{b.email || '—'}</dd>
             <dt className="text-gray-500">Teléfono</dt><dd className="text-gray-900">{b.phone || '—'}</dd>
             <dt className="text-gray-500">Dirección</dt><dd className="text-gray-900">{b.address || '—'}</dd>
+            <dt className="text-gray-500">Página</dt>
+            <dd className="min-w-0">{b.publicUrl
+              ? <a href={b.publicUrl} target="_blank" rel="noreferrer" className="text-violet-700 font-medium break-all hover:underline">{b.publicUrl.replace(/^https?:\/\//, '')}</a>
+              : '—'}</dd>
           </dl>
         </Section>
 

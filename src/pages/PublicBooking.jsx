@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { slugPath } from '../lib/publicUrl';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { publicBookingsApi, apiError } from '../services/bookingsApi';
 import { addDays, euros, timeInTz, todayIn } from './agenda/utils';
@@ -35,8 +36,10 @@ function priceLabel(price) {
   return `${price.from ? 'desde ' : ''}${euros(price.amount)}`;
 }
 
-export default function PublicBooking() {
-  const { businessId } = useParams();
+export default function PublicBooking({ businessId: businessIdProp, slug = null } = {}) {
+  const params = useParams();
+  // From the slug page (vetrareserve.com/{slug}) or the old /public/{businessId}/… route
+  const businessId = businessIdProp || params.businessId;
   const [searchParams] = useSearchParams();
   const isEmbed = searchParams.get('embed') === '1';
 
@@ -354,7 +357,7 @@ export default function PublicBooking() {
           <p className="text-xs text-gray-500">
             También puedes cancelar desde aquí:{' '}
             <a className="font-semibold whitespace-nowrap" style={{ color }}
-              href={`/public/${businessId}/cita/cancelar?bookingId=${result.id}&token=${result.token}`}>
+              href={`${slug ? `${slugPath(slug)}/cancelar` : `/public/${businessId}/cita/cancelar`}?bookingId=${result.id}&token=${result.token}`}>
               cancelar mi cita
             </a>
           </p>

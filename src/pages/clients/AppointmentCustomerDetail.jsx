@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { publicBookingUrl } from '../../lib/publicUrl';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import api from '../../services/api';
 import { bookingsApi, apiError } from '../../services/bookingsApi';
@@ -93,7 +94,7 @@ export default function AppointmentCustomerDetail() {
   const bookUrl = `/agenda?new=1&name=${encodeURIComponent(customer.name)}&phone=${encodeURIComponent(customer.phone || '')}&email=${encodeURIComponent(customer.email || '')}${s.favouriteStaffId ? `&staff=${s.favouriteStaffId}` : ''}`;
   const first = customer.name.split(' ')[0];
   const wa = waLink(customer.phone, s.dueBack
-    ? `¡Hola ${first}! Hace tiempo que no te vemos por ${business?.name}. ¿Te reservo cita? Puedes elegir hora aquí: ${window.location.origin}/public/${business?.id}/cita`
+    ? `¡Hola ${first}! Hace tiempo que no te vemos por ${business?.name}. ¿Te reservo cita? Puedes elegir hora aquí: ${publicBookingUrl(business)}`
     : `¡Hola ${first}! `);
   const fav = s.favouriteStaffId && staffById[s.favouriteStaffId];
   const avatarColor = STAFF_COLORS[(customer.name?.charCodeAt(0) || 0) % STAFF_COLORS.length];

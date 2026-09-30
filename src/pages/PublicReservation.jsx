@@ -185,8 +185,10 @@ function PaymentStep({ paymentConfig, form, brandColor, onBack, onPaid, error, s
   );
 }
 
-export default function PublicReservation() {
-  const { businessId } = useParams();
+export default function PublicReservation({ businessId: businessIdProp } = {}) {
+  const params = useParams();
+  // From the slug page (vetrareserve.com/{slug}) or the old /public/{businessId}/… route
+  const businessId = businessIdProp || params.businessId;
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const isEmbed = searchParams.get('embed') === '1';
@@ -798,7 +800,7 @@ export default function PublicReservation() {
                       <span className="text-sm text-gray-600 leading-snug">
                         {tr.consentPrivacyPre}{' '}
                         <a
-                          href={`${import.meta.env.VITE_LANDING_URL || ''}/privacy.html`}
+                          href={`${import.meta.env.VITE_LANDING_URL || 'https://www.vetrareserve.com'}/privacy`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="underline underline-offset-2 font-medium"

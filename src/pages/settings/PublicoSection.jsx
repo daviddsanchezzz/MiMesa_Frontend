@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react';
+import { publicBookingUrl } from '../../lib/publicUrl';
+import PublicAddressEditor from '../../components/PublicAddressEditor';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import PlanGate from '../../components/PlanGate';
@@ -11,7 +13,7 @@ export function PublicoSection() {
   const [brandColor, setBrandColor] = useState(business?.brandColor || '#3B82F6');
   const [saving, setSaving] = useState(false);
   const [copied, setCopied] = useState(null); // 'url' | 'embed'
-  const publicUrl = `${window.location.origin}/public/${business?.id}/reserve`;
+  const publicUrl = publicBookingUrl(business);
   const embedCode = `<iframe\n  id="vetra-frame"\n  src="${publicUrl}?embed=1"\n  style="width:100%; border:none; min-height:500px;"\n></iframe>\n<script>\n  window.addEventListener("message", function(e) {\n    if (e.data.type === "VETRA_HEIGHT")\n      document.getElementById("vetra-frame").style.height = e.data.height + "px";\n  });\n<\/script>`;
 
   useEffect(() => {
@@ -78,7 +80,7 @@ export function PublicoSection() {
       </div>
 
       <div className="bg-white rounded-2xl p-6 border border-gray-200">
-        <h3 className="text-sm font-semibold text-gray-900 mb-2">URL Publica para Reservas</h3>
+        <h3 className="text-sm font-semibold text-gray-900 mb-2">Tu página de reservas</h3>
         <p className="text-sm text-gray-600 mb-4">
           Comparte esta URL con tus clientes para que puedan hacer reservas online directamente.
         </p>
@@ -96,6 +98,7 @@ export function PublicoSection() {
             {copied === 'url' ? 'Copiado' : 'Copiar'}
           </button>
         </div>
+        <div className="mt-4 pt-4 border-t border-gray-100"><PublicAddressEditor /></div>
       </div>
 
       <PlanGate paid>

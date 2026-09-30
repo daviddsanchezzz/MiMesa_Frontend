@@ -29,6 +29,8 @@ const Agenda = lazy(() => import('./pages/Agenda'));
 const AppointmentsDashboard = lazy(() => import('./pages/AppointmentsDashboard'));
 const PublicReservation = lazy(() => import('./pages/PublicReservation'));
 const PublicBooking = lazy(() => import('./pages/PublicBooking'));
+const PublicSlugPage = lazy(() => import('./pages/PublicSlugPage'));
+const LegacyPublicPage = lazy(() => import('./pages/LegacyPublicPage'));
 const PublicBookingCancel = lazy(() => import('./pages/PublicBookingCancel'));
 const PublicCancel = lazy(() => import('./pages/PublicCancel'));
 const PublicUnsubscribe = lazy(() => import('./pages/PublicUnsubscribe'));
@@ -322,8 +324,12 @@ export default function App() {
       <BrowserRouter>
         <Suspense fallback={<LoadingScreen />}>
         <Routes>
-          <Route path="/public/:businessId/reserve" element={<PublicReservation />} />
-          <Route path="/public/:businessId/cita" element={<PublicBooking />} />
+          {/* Public booking page: vetrareserve.com/{slug}; inside the app, /r/{slug} */}
+          <Route path="/r/:slug" element={<PublicSlugPage />} />
+          <Route path="/r/:slug/cancelar" element={<PublicSlugPage cancel />} />
+          {/* Old addresses: move to the slug address, or work as before */}
+          <Route path="/public/:businessId/reserve" element={<LegacyPublicPage><PublicReservation /></LegacyPublicPage>} />
+          <Route path="/public/:businessId/cita" element={<LegacyPublicPage><PublicBooking /></LegacyPublicPage>} />
           <Route path="/public/:businessId/cita/cancelar" element={<PublicBookingCancel />} />
           <Route path="/public/cancel"       element={<PublicCancel />} />
           <Route path="/public/unsubscribe"  element={<PublicUnsubscribe />} />

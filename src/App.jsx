@@ -19,6 +19,7 @@ const Team = lazy(() => import('./pages/Team'));
 const Profile = lazy(() => import('./pages/Profile'));
 const AcceptInvite = lazy(() => import('./pages/AcceptInvite'));
 const DevDashboard = lazy(() => import('./pages/DevDashboard'));
+import PaymentIssueBanner from './components/PaymentIssueBanner';
 const Onboarding = lazy(() => import('./pages/Onboarding'));
 const SetupWizard = lazy(() => import('./pages/SetupWizard'));
 const Publicidad = lazy(() => import('./pages/Publicidad'));
@@ -203,6 +204,7 @@ function LayoutShell({ children, fullBleed = false, devMode = false }) {
           showDefaultAction={!devMode}
         />
         <main className={fullBleed ? 'flex-1 overflow-hidden flex flex-col' : `flex-1 overflow-auto p-4 lg:p-8 ${impersonation ? 'pt-16 lg:pt-20' : ''}`}>
+          {!devMode && !fullBleed && <PaymentIssueBanner />}
           {children}
         </main>
       </div>

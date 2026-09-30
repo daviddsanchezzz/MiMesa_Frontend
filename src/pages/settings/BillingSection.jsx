@@ -2,10 +2,12 @@ import { useState, useEffect } from 'react';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import Modal from '../../components/Modal';
+import { paymentGraceUntil } from '../../lib/billing';
 import { BASIC_FEATURES as R_BASIC, CheckIcon, PRO_EXTRAS as R_PRO, APPT_BASIC_FEATURES, APPT_PRO_EXTRAS } from './shared';
 
 export function BillingSection() {
-  const { plan, subscriptionStatus, trialEndsAt, currentPeriodEnd, cancelAtPeriodEnd, hasRole, refreshBusiness, isAppointments } = useAuth();
+  const { plan, subscriptionStatus, trialEndsAt, currentPeriodEnd, cancelAtPeriodEnd, hasRole, refreshBusiness, isAppointments, business } = useAuth();
+  const graceUntil = paymentGraceUntil(business);
   const BASIC_FEATURES = isAppointments ? APPT_BASIC_FEATURES : R_BASIC;
   const PRO_EXTRAS = isAppointments ? APPT_PRO_EXTRAS : R_PRO;
   const audience = isAppointments ? 'negocios' : 'restaurantes';
@@ -17,7 +19,8 @@ export function BillingSection() {
   const [showDowngradeModal, setShowDowngradeModal] = useState(false);
 
   const isOwner    = hasRole('owner');
-  const isActive   = subscriptionStatus === 'active' || subscriptionStatus === 'trialing';
+  // A failed charge keeps the plan during the grace period (see lib/billing)
+  const isActive   = subscriptionStatus === 'active' || subscriptionStatus === 'trialing' || Boolean(graceUntil);
   const isTrialing = subscriptionStatus === 'trialing';
   const isPastDue  = subscriptionStatus === 'past_due';
   const isFree     = !isActive || plan === 'free';
@@ -264,7 +267,7 @@ export function BillingSection() {
               <svg className="w-4 h-4 text-red-500 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 16 16"><path fillRule="evenodd" d="M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14Zm-.75-9.5a.75.75 0 0 1 1.5 0v3.5a.75.75 0 0 1-1.5 0V5.5Zm.75 6.5a.875.875 0 1 1 0-1.75.875.875 0 0 1 0 1.75Z" clipRule="evenodd"/></svg>
               <div className="flex-1">
                 <p className="text-sm font-semibold text-red-700">Pago fallido</p>
-                <p className="text-xs text-red-600 mt-0.5">Actualiza tu método de pago para no perder el acceso.</p>
+                <p className="text-xs text-red-600 mt-0.5">Actualiza tu método de pago para no perder el acceso{graceUntil ? ` (lo mantienes hasta el ${graceUntil.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })})` : ''}.</p>
               </div>
               {isOwner && (
                 <button onClick={handlePortal} disabled={working} className="text-xs font-semibold text-red-700 underline hover:no-underline shrink-0">
@@ -428,7 +431,7 @@ export function BillingSection() {
               <svg className="w-4 h-4 text-red-500 shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 16 16"><path fillRule="evenodd" d="M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14Zm-.75-9.5a.75.75 0 0 1 1.5 0v3.5a.75.75 0 0 1-1.5 0V5.5Zm.75 6.5a.875.875 0 1 1 0-1.75.875.875 0 0 1 0 1.75Z" clipRule="evenodd"/></svg>
               <div className="flex-1">
                 <p className="text-sm font-semibold text-red-700">Pago fallido</p>
-                <p className="text-xs text-red-600 mt-0.5">Actualiza tu método de pago para no perder el acceso.</p>
+                <p className="text-xs text-red-600 mt-0.5">Actualiza tu método de pago para no perder el acceso{graceUntil ? ` (lo mantienes hasta el ${graceUntil.toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })})` : ''}.</p>
               </div>
               {isOwner && (
                 <button onClick={handlePortal} disabled={working} className="text-xs font-semibold text-red-700 underline hover:no-underline shrink-0">

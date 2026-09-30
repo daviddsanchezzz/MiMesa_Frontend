@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { confirmLeave } from '../lib/unsavedChanges';
 import { useAuth } from '../context/AuthContext';
 import { NegocioSection } from './settings/NegocioSection';
 import { SalasSection } from './settings/SalasSection';
@@ -51,9 +53,12 @@ export default function Settings() {
     : TABS;
   const visibleTabs = tabsForType.filter(t => !OWNER_ONLY_TABS.has(t.key) || isOwner);
 
-  const searchParams = new URLSearchParams(window.location.search);
-  const initialTab   = visibleTabs.find(t => t.key === searchParams.get('tab'))?.key ?? 'negocio';
-  const [tab, setTab] = useState(initialTab);
+  const [searchParams] = useSearchParams();
+  const urlTab = visibleTabs.find(t => t.key === searchParams.get('tab'))?.key;
+  const [tab, setTabRaw] = useState(urlTab ?? 'negocio');
+  const setTab = (key) => { if (key !== tab && confirmLeave()) setTabRaw(key); };
+  // Links such as /configuracion?tab=negocio from inside Configuración
+  useEffect(() => { if (urlTab) setTabRaw(urlTab); }, [urlTab]);
   const current = visibleTabs.find(t => t.key === tab);
 
   return (

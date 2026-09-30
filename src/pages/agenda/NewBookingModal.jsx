@@ -14,7 +14,11 @@ export function staffForService(service, staff) {
 export default function NewBookingModal({ date: initialDate, time: initialTime, resourceId: initialResource, services, staff, onClose, onCreated }) {
   const bookable = services.filter((s) => s.bookingMode !== 'quote');
   const [date, setDate] = useState(initialDate);
-  const [items, setItems] = useState([{ serviceId: bookable[0]?._id || '' }]);
+  // Opened from a professional's empty slot: start with a service they do.
+  const [items, setItems] = useState(() => {
+    const first = (initialResource && bookable.find((s) => staffForService(s, staff).some((x) => x._id === initialResource))) || bookable[0];
+    return [{ serviceId: first?._id || '' }];
+  });
   const [resourceId, setResourceId] = useState(initialResource || '');
   const [time, setTime] = useState(initialTime || '');
   const [slots, setSlots] = useState(null);

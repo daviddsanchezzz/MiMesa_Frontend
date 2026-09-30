@@ -181,13 +181,22 @@ export default function Sidebar({
     >
       <div className="px-4 py-5 border-b border-slate-700/50">
         <div className="flex items-center gap-2.5">
-          <img src="/logo.svg" alt="Vetra" className="w-8 h-8 shrink-0" />
+          {!devSidebar && business?.logoUrl ? (
+            <img src={business.logoUrl} alt="" className="w-8 h-8 shrink-0 rounded-lg bg-white object-contain p-0.5" />
+          ) : (
+            <img src="/logo.svg" alt="Vetra" className="w-8 h-8 shrink-0" />
+          )}
           <div className={`min-w-0 flex-1 ${collapsed ? 'lg:hidden' : ''}`}>
-            <p className="text-white text-sm font-semibold leading-tight">Vetra</p>
             {devSidebar ? (
-              <p className="text-slate-400 text-xs truncate leading-tight mt-0.5">Panel de desarrollo</p>
+              <>
+                <p className="text-white text-sm font-semibold leading-tight">Vetra</p>
+                <p className="text-slate-400 text-xs truncate leading-tight mt-0.5">Panel de desarrollo</p>
+              </>
             ) : (
-              <p className="text-slate-400 text-xs truncate leading-tight mt-0.5">{business?.name}</p>
+              <>
+                <p className="text-white text-sm font-semibold leading-tight line-clamp-2 break-words">{business?.name || 'Vetra'}</p>
+                <p className="text-slate-400 text-xs truncate leading-tight mt-0.5">con Vetra</p>
+              </>
             )}
           </div>
           {onDesktopToggleCollapse && (

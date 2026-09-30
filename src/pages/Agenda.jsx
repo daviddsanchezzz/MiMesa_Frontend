@@ -1,41 +1,76 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useSetMobileHeader } from '../context/MobileHeaderContext';
 import { bookingsApi, apiError } from '../services/bookingsApi';
 import DayView from './agenda/DayView';
+import WeekView from './agenda/WeekView';
+import ListView from './agenda/ListView';
+import DayStrip from './agenda/DayStrip';
 import NewBookingModal from './agenda/NewBookingModal';
 import BookingDetailModal from './agenda/BookingDetailModal';
-import { Link, useSearchParams } from 'react-router-dom';
-import { DEFAULT_TZ, addDays, btnPrimary, btnSecondary, longDate, todayIn } from './agenda/utils';
+import {
+  DEFAULT_TZ, addDays, btnPrimary, btnSecondary, dateInTz, euros, longDate, staffColors, todayIn, weekStart,
+  windowsForDate, pluralize,
+} from './agenda/utils';
+
+const VIEW_KEY = 'vetra.agenda.view';
+const isDate = (s) => /^\d{4}-\d{2}-\d{2}$/.test(s || '');
+
+function useIsMobile() {
+  const query = '(max-width: 639px)';
+  const [mobile, setMobile] = useState(() => typeof window !== 'undefined' && window.matchMedia(query).matches);
+  useEffect(() => {
+    const mq = window.matchMedia(query);
+    const on = () => setMobile(mq.matches);
+    mq.addEventListener?.('change', on);
+    return () => mq.removeEventListener?.('change', on);
+  }, []);
+  return mobile;
+}
+
+function readView() {
+  try { return localStorage.getItem(VIEW_KEY); } catch { return null; }
+}
 
 /**
- * Generic agenda (bookings module): day view per professional, new bookings
- * and booking details. Professionals, services and hours are set up in
- * Configuración.
+ * Generic agenda (bookings module). Day view per professional, week view and,
+ * on phones, a list. Tap an empty slot to book it; professionals, services
+ * and hours are set up in Configuración.
  */
 export default function Agenda() {
   const { business, hasRole } = useAuth();
   const tz = business?.timezone || DEFAULT_TZ;
   const isManager = hasRole('manager');
+  const isMobile = useIsMobile();
+  const today = todayIn(tz);
+  const [searchParams, setSearchParams] = useSearchParams();
 
-  const [date, setDate] = useState(() => todayIn(tz));
+  const [date, setDate] = useState(() => (isDate(searchParams.get('date')) ? searchParams.get('date') : today));
+  const [view, setView] = useState(() => readView() || (window.matchMedia('(max-width: 639px)').matches ? 'list' : 'day'));
   const [resources, setResources] = useState([]);
   const [services, setServices] = useState([]);
   const [schedule, setSchedule] = useState(null);
+  const [staffSchedules, setStaffSchedules] = useState({});
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [creating, setCreating] = useState(null);   // { resourceId, time } | null
-  const [selected, setSelected] = useState(null);   // booking | null
+  const [creating, setCreating] = useState(null);   // { resourceId, time, date } | null
+  const [selected, setSelected] = useState(null);
   const [showCancelled, setShowCancelled] = useState(false);
-  const [searchParams, setSearchParams] = useSearchParams();
 
-  // "Nueva cita" from the sidebar / mobile header opens /agenda?new=1
+  // Phones get the list instead of the grid; desktop keeps day/week.
+  const activeView = isMobile ? (view === 'day' ? 'day' : 'list') : (view === 'list' ? 'day' : view);
+  const chooseView = (v) => { setView(v); try { localStorage.setItem(VIEW_KEY, v); } catch { /* ignore */ } };
+
+  // Links from the dashboard / sidebar: ?date=…, ?new=1&date=…&time=…&staff=…
   useEffect(() => {
+    const d = searchParams.get('date');
+    if (isDate(d)) setDate(d);
     if (searchParams.get('new')) {
-      setCreating({ resourceId: '', time: '' });
-      setSearchParams({}, { replace: true });
+      setCreating({ resourceId: searchParams.get('staff') || '', time: searchParams.get('time') || '', date: isDate(d) ? d : null });
     }
+    if (d || searchParams.get('new')) setSearchParams({}, { replace: true });
   }, [searchParams, setSearchParams]);
 
   useSetMobileHeader({ title: 'Agenda' });
@@ -45,11 +80,16 @@ export default function Agenda() {
     setResources(r);
     setServices(s);
     setSchedule(sch);
+    const staff = r.filter((x) => x.kind === 'staff');
+    const own = await Promise.all(staff.map((x) => bookingsApi.schedule({ ownerType: 'resource', ownerId: x._id }).catch(() => null)));
+    setStaffSchedules(Object.fromEntries(staff.map((x, i) => [x._id, own[i]?._id ? own[i] : null]).filter(([, v]) => v)));
   }, []);
 
+  const from = weekStart(date);
+  const to = addDays(from, 6);
   const loadBookings = useCallback(async () => {
-    setBookings(await bookingsApi.list({ from: date, to: date }));
-  }, [date]);
+    setBookings(await bookingsApi.list({ from, to }));
+  }, [from, to]);
 
   useEffect(() => {
     setLoading(true);
@@ -59,31 +99,57 @@ export default function Agenda() {
 
   useEffect(() => {
     loadBookings().catch((err) => setError(apiError(err)));
+    const t = setInterval(() => loadBookings().catch(() => {}), 2 * 60000);
+    return () => clearInterval(t);
   }, [loadBookings]);
 
   const staff = useMemo(() => resources.filter((r) => r.kind === 'staff'), [resources]);
   const byId = useMemo(() => Object.fromEntries(resources.map((r) => [r._id, r])), [resources]);
-  const visible = useMemo(
-    () => bookings.filter((b) => showCancelled || b.status !== 'cancelled'),
-    [bookings, showCancelled],
-  );
+  const colors = useMemo(() => staffColors(resources), [resources]);
+  const visibleWeek = useMemo(() => bookings.filter((b) => showCancelled || b.status !== 'cancelled'), [bookings, showCancelled]);
+  const dayBookings = useMemo(() => visibleWeek.filter((b) => dateInTz(b.start, tz) === date), [visibleWeek, date, tz]);
   const counts = useMemo(() => {
-    const active = bookings.filter((b) => !['cancelled', 'no_show'].includes(b.status));
-    return { total: active.length, revenue: active.reduce((s, b) => s + (b.totalPrice || 0), 0) };
-  }, [bookings]);
+    const out = {};
+    for (const b of bookings) {
+      if (['cancelled', 'no_show'].includes(b.status)) continue;
+      const d = dateInTz(b.start, tz);
+      out[d] = (out[d] || 0) + 1;
+    }
+    return out;
+  }, [bookings, tz]);
+  const closedDays = useMemo(() => new Set(
+    Array.from({ length: 7 }, (_, i) => addDays(from, i)).filter((d) => !windowsForDate(schedule, d).length),
+  ), [from, schedule]);
+  const dayTotal = useMemo(() => {
+    const live = dayBookings.filter((b) => !['cancelled', 'no_show'].includes(b.status));
+    return { n: live.length, revenue: live.reduce((s, b) => s + (b.totalPrice || 0), 0) };
+  }, [dayBookings]);
 
-  const today = todayIn(tz);
+  const openNew = (resourceId = '', time = '', d = null) => setCreating({ resourceId, time, date: d });
+
+  const views = isMobile ? [['list', 'Lista'], ['day', 'Día']] : [['day', 'Día'], ['week', 'Semana']];
 
   return (
-    <div className="space-y-5">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="min-w-0">
           <h2 className="text-xl font-bold text-gray-900">Agenda</h2>
-          <p className="text-sm text-gray-400 mt-0.5">Citas por profesional, servicios y horarios.</p>
+          <p className="text-sm text-gray-500 mt-0.5">
+            {activeView === 'week' ? `Semana del ${Number(from.slice(8))} al ${Number(to.slice(8))}` : longDate(date)}
+            {activeView !== 'week' && dayTotal.n > 0 && <> · {pluralize(dayTotal.n, 'cita', 'citas')} · {euros(dayTotal.revenue)}</>}
+          </p>
         </div>
-        {isManager && (
-          <Link to="/configuracion?tab=servicios" className={btnSecondary}>Servicios y horarios</Link>
-        )}
+        <div className="flex items-center gap-2">
+          <div className="inline-flex p-1 rounded-xl bg-gray-100" role="tablist" aria-label="Vista">
+            {views.map(([key, label]) => (
+              <button key={key} type="button" role="tab" aria-selected={activeView === key} onClick={() => chooseView(key)}
+                className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors ${activeView === key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}>
+                {label}
+              </button>
+            ))}
+          </div>
+          <button type="button" className={`${btnPrimary} hidden sm:inline-flex`} onClick={() => openNew('', '', date)}>Nueva cita</button>
+        </div>
       </div>
 
       {error && <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</p>}
@@ -110,36 +176,39 @@ export default function Agenda() {
         </div>
       ) : (
         <>
-          <div className="flex flex-wrap items-center gap-2">
-            <button type="button" className={btnSecondary} onClick={() => setDate(addDays(date, -1))} aria-label="Día anterior">‹</button>
-            <button type="button" className={btnSecondary} onClick={() => setDate(today)} disabled={date === today}>Hoy</button>
-            <button type="button" className={btnSecondary} onClick={() => setDate(addDays(date, 1))} aria-label="Día siguiente">›</button>
-            <input type="date" className="border border-gray-300 rounded-xl px-3 py-2 text-sm" value={date} onChange={(e) => e.target.value && setDate(e.target.value)} />
-            <span className="text-sm font-semibold text-gray-800">{longDate(date)}</span>
-            <span className="text-xs text-gray-400">{counts.total} {counts.total === 1 ? 'cita' : 'citas'}</span>
-            <label className="flex items-center gap-1.5 text-xs text-gray-500 ml-auto">
+          <DayStrip date={date} today={today} counts={counts} closedDays={closedDays} onChange={setDate} />
+
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-xs text-gray-500">
+              {activeView === 'list' ? 'Toca una cita para ver sus datos.' : 'Toca un hueco libre para dar una cita.'}
+            </p>
+            <label className="flex items-center gap-1.5 text-xs text-gray-500">
               <input type="checkbox" checked={showCancelled} onChange={(e) => setShowCancelled(e.target.checked)} />
               Ver canceladas
             </label>
-            <button type="button" className={btnPrimary} onClick={() => setCreating({ resourceId: '', time: '' })}>Nueva cita</button>
           </div>
 
-          <DayView
-            date={date}
-            tz={tz}
-            staff={staff}
-            bookings={visible}
-            businessSchedule={schedule}
-            isToday={date === today}
-            onEmptyClick={(resourceId, time) => setCreating({ resourceId, time })}
-            onBookingClick={setSelected}
-          />
+          {activeView === 'week' && (
+            <WeekView from={from} today={today} tz={tz} staff={staff} bookings={visibleWeek} businessSchedule={schedule}
+              colors={colors} onBookingClick={setSelected}
+              onEmptyClick={(resourceId, time, d) => openNew(resourceId, time, d)}
+              onDayClick={(d) => { setDate(d); chooseView('day'); }} />
+          )}
+          {activeView === 'day' && (
+            <DayView date={date} tz={tz} staff={staff} bookings={dayBookings} businessSchedule={schedule}
+              staffSchedules={staffSchedules} colors={colors} isToday={date === today}
+              onEmptyClick={(resourceId, time) => openNew(resourceId, time, date)} onBookingClick={setSelected} />
+          )}
+          {activeView === 'list' && (
+            <ListView tz={tz} bookings={dayBookings} staffById={byId} colors={colors} isToday={date === today}
+              onBookingClick={setSelected} onNew={() => openNew('', '', date)} />
+          )}
         </>
       )}
 
-      {creating && (
+      {creating && !loading && (
         <NewBookingModal
-          date={date}
+          date={creating.date || date}
           time={creating.time}
           resourceId={creating.resourceId}
           services={services}

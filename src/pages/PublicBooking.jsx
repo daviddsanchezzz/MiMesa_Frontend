@@ -160,11 +160,20 @@ export default function PublicBooking() {
     <div className="space-y-4">
       {!isEmbed && (
         <header className="text-center space-y-1">
-          <div className="w-12 h-12 rounded-2xl mx-auto flex items-center justify-center text-white text-lg font-bold" style={{ backgroundColor: color }}>
-            {biz.name?.[0]?.toUpperCase()}
-          </div>
+          {biz.logoUrl ? (
+            <img src={biz.logoUrl} alt={biz.name} className="h-14 max-w-[180px] mx-auto object-contain" />
+          ) : (
+            <div className="w-12 h-12 rounded-2xl mx-auto flex items-center justify-center text-white text-lg font-bold" style={{ backgroundColor: color }}>
+              {biz.name?.[0]?.toUpperCase()}
+            </div>
+          )}
           <h1 className="text-xl font-bold text-gray-900">{biz.name}</h1>
-          {biz.address && <p className="text-sm text-gray-500">{biz.address}</p>}
+          {(biz.address || biz.phone) && (
+            <p className="text-sm text-gray-500">
+              {biz.address}{biz.address && biz.phone && ' · '}
+              {biz.phone && <a href={`tel:${biz.phone.replace(/\s/g, '')}`} className="hover:underline">{biz.phone}</a>}
+            </p>
+          )}
         </header>
       )}
 
@@ -225,10 +234,14 @@ export default function PublicBooking() {
           {[{ id: '', name: 'Me da igual', hint: 'Te asignamos a quien esté libre' }, ...choosableStaff].map((s) => (
             <button key={s.id || 'any'} type="button" onClick={() => { setStaffId(String(s.id)); setStep('time'); }}
               className="w-full text-left bg-white border border-gray-200 rounded-2xl px-4 py-3.5 flex items-center gap-3 hover:border-gray-300 hover:shadow-sm transition">
-              <span className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0"
-                style={{ backgroundColor: s.id ? color : '#9ca3af' }}>
-                {s.id ? s.name[0].toUpperCase() : '★'}
-              </span>
+              {s.photo ? (
+                <img src={s.photo} alt="" className="w-10 h-10 rounded-full object-cover shrink-0" />
+              ) : (
+                <span className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0"
+                  style={{ backgroundColor: s.id ? (s.color || color) : '#9ca3af' }}>
+                  {s.id ? s.name[0].toUpperCase() : '★'}
+                </span>
+              )}
               <span>
                 <span className="block text-sm font-semibold text-gray-900">{s.name}</span>
                 {s.hint && <span className="block text-xs text-gray-500">{s.hint}</span>}

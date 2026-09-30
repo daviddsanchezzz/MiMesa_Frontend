@@ -10,6 +10,7 @@ export const bookingsApi = {
   createResource: (data) => unwrap(api.post('/bookings/resources', data)),
   updateResource: (id, data) => unwrap(api.put(`/bookings/resources/${id}`, data)),
   deleteResource: (id) => unwrap(api.delete(`/bookings/resources/${id}`)),
+  setResourceServices: (id, serviceIds) => unwrap(api.put(`/bookings/resources/${id}/services`, { serviceIds })),
 
   services: (includeInactive = false) => unwrap(api.get('/bookings/services', { params: { includeInactive } })),
   createService: (data) => unwrap(api.post('/bookings/services', data)),
@@ -21,6 +22,7 @@ export const bookingsApi = {
   clearResourceSchedule: (ownerId) => unwrap(api.delete('/bookings/schedule', { params: { ownerType: 'resource', ownerId } })),
 
   // day to day
+  stats: () => unwrap(api.get('/bookings/stats')),
   availability: (params) => unwrap(api.get('/bookings/availability', { params })),
   list: (params) => unwrap(api.get('/bookings', { params })),
   create: (data) => unwrap(api.post('/bookings', data)),

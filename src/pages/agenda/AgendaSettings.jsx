@@ -3,7 +3,9 @@ import Modal from '../../components/Modal';
 import { bookingsApi, apiError } from '../../services/bookingsApi';
 import ScheduleEditor, { scheduleForApi } from './ScheduleEditor';
 import ServiceFormModal from './ServiceFormModal';
-import { btnPrimary, btnSecondary, euros, inputCls } from './utils';
+import { btnPrimary, btnSecondary, euros, inputCls, resizeImage, staffColors, STAFF_COLORS, summarizeRules } from './utils';
+import StaffAvatar from './StaffAvatar';
+import { useUnsavedChanges } from '../../lib/unsavedChanges';
 
 const KIND_LABEL = { staff: 'Profesional', space: 'Sala o espacio', equipment: 'Equipo' };
 
@@ -24,17 +26,28 @@ function Card({ title, subtitle, children, action }) {
 
 function BusinessHours({ onSaved }) {
   const [value, setValue] = useState(null);
+  const [saved, setSaved] = useState(null);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState('');
 
-  useEffect(() => { bookingsApi.schedule().then(setValue).catch(() => setValue({ rules: [], overrides: [] })); }, []);
+  useEffect(() => {
+    bookingsApi.schedule()
+      .then((v) => { setValue(v); setSaved(v); })
+      .catch(() => { const empty = { rules: [], overrides: [] }; setValue(empty); setSaved(empty); });
+  }, []);
+
+  const dirty = !!value && !!saved && JSON.stringify(scheduleForApi(value)) !== JSON.stringify(scheduleForApi(saved));
+  useUnsavedChanges('horario', dirty);
 
   async function save() {
     setSaving(true);
     setMsg('');
     try {
-      setValue(await bookingsApi.saveSchedule(scheduleForApi(value)));
+      const next = await bookingsApi.saveSchedule(scheduleForApi(value));
+      setValue(next);
+      setSaved(next);
       setMsg('Guardado');
+      setTimeout(() => setMsg(''), 2500);
       onSaved?.();
     } catch (err) {
       setMsg(apiError(err));
@@ -45,10 +58,22 @@ function BusinessHours({ onSaved }) {
 
   return (
     <Card title="Horario del negocio" subtitle="Cuándo se puede reservar. Los profesionales siguen este horario salvo que tengan uno propio.">
+      {value && (
+        <div className="rounded-xl bg-gray-50 border border-gray-100 px-4 py-3">
+          <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Tu horario</p>
+          <p className="text-sm font-medium text-gray-900 mt-0.5">{summarizeRules(scheduleForApi(value).rules)}</p>
+        </div>
+      )}
       {value ? <ScheduleEditor value={value} onChange={setValue} /> : <p className="text-sm text-gray-400">Cargando…</p>}
-      <div className="flex items-center gap-3">
-        <button type="button" className={btnPrimary} onClick={save} disabled={saving || !value}>{saving ? 'Guardando…' : 'Guardar horario'}</button>
-        {msg && <span className={`text-sm ${msg === 'Guardado' ? 'text-emerald-600' : 'text-rose-600'}`}>{msg}</span>}
+      <div className={`flex flex-wrap items-center gap-3 ${dirty ? 'sticky bottom-3 z-10 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 shadow-sm' : ''}`}>
+        <button type="button" className={btnPrimary} onClick={save} disabled={saving || !value || !dirty}>{saving ? 'Guardando…' : 'Guardar horario'}</button>
+        {dirty && !saving && (
+          <>
+            <span className="text-sm text-amber-800">Tienes cambios sin guardar</span>
+            <button type="button" className="text-sm text-gray-500 hover:text-gray-800 ml-auto" onClick={() => setValue(saved)}>Descartar</button>
+          </>
+        )}
+        {msg && <span className={`text-sm ${msg === 'Guardado' ? 'text-emerald-600' : 'text-rose-600'}`}>{msg === 'Guardado' ? 'Guardado ✓' : msg}</span>}
       </div>
     </Card>
   );
@@ -101,12 +126,118 @@ function ResourceScheduleModal({ resource, onClose }) {
   );
 }
 
-function Resources({ resources, reload }) {
+function Toggle({ checked, onChange, label }) {
+  return (
+    <label className="inline-flex items-center gap-2 cursor-pointer select-none">
+      <span className="relative inline-flex h-5 w-9 shrink-0 items-center">
+        <input type="checkbox" className="peer sr-only" checked={checked} onChange={(e) => onChange(e.target.checked)} />
+        <span className="absolute inset-0 rounded-full bg-gray-300 peer-checked:bg-emerald-500 transition-colors" />
+        <span className="absolute left-0.5 h-4 w-4 rounded-full bg-white shadow-sm peer-checked:translate-x-4 transition-transform" />
+      </span>
+      <span className="text-xs text-gray-700">{label}</span>
+    </label>
+  );
+}
+
+function ColorPicker({ value, onChange }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="relative">
+      <button type="button" onClick={() => setOpen((o) => !o)} aria-label="Cambiar color"
+        className="w-6 h-6 rounded-full border-2 border-white shadow ring-1 ring-gray-200" style={{ backgroundColor: value }} />
+      {open && (
+        <>
+          <div className="fixed inset-0 z-20" onClick={() => setOpen(false)} />
+          <div className="absolute z-30 top-8 left-0 bg-white border border-gray-200 rounded-xl shadow-lg p-2 grid grid-cols-4 gap-1.5 w-max">
+            {STAFF_COLORS.map((c) => (
+              <button key={c} type="button" aria-label={c} onClick={() => { onChange(c); setOpen(false); }}
+                className={`w-7 h-7 rounded-full border-2 ${c === value ? 'border-gray-900' : 'border-white'}`} style={{ backgroundColor: c }} />
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function RowMenu({ items }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="relative">
+      <button type="button" onClick={() => setOpen((o) => !o)} aria-label="Más opciones"
+        className="w-8 h-8 rounded-lg text-gray-500 hover:bg-gray-100 flex items-center justify-center text-lg leading-none">⋯</button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-20" onClick={() => setOpen(false)} />
+          <div className="absolute z-30 right-0 top-9 bg-white border border-gray-200 rounded-xl shadow-lg py-1 w-48">
+            {items.filter(Boolean).map((it) => (
+              <button key={it.label} type="button" onClick={() => { setOpen(false); it.onClick(); }}
+                className={`w-full text-left px-3.5 py-2 text-sm hover:bg-gray-50 ${it.danger ? 'text-rose-600' : 'text-gray-700'}`}>
+                {it.label}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function StaffServicesModal({ resource, services, staff, onClose, onSaved }) {
+  const does = (s) => {
+    const req = (s.requirements || []).find((r) => r.kind === 'staff');
+    if (!req) return false;
+    return !(req.resourceIds || []).length || req.resourceIds.map(String).includes(resource._id);
+  };
+  const [selected, setSelected] = useState(() => new Set(services.filter(does).map((s) => s._id)));
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const toggle = (id) => setSelected((prev) => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+
+  async function save() {
+    setSaving(true);
+    setError('');
+    try {
+      await bookingsApi.setResourceServices(resource._id, [...selected]);
+      onSaved();
+    } catch (err) {
+      setError(apiError(err));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Modal title={`Servicios de ${resource.name}`} subtitle="Marca lo que hace. Solo se le podrán reservar estos servicios." onClose={onClose}>
+      <div className="space-y-2">
+        {services.length === 0 && <p className="text-sm text-gray-500">Todavía no hay servicios.</p>}
+        {services.map((s) => (
+          <label key={s._id} className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl border cursor-pointer ${selected.has(s._id) ? 'border-violet-300 bg-violet-50/50' : 'border-gray-200'}`}>
+            <input type="checkbox" checked={selected.has(s._id)} onChange={() => toggle(s._id)} className="w-4 h-4 accent-violet-600" />
+            <span className="flex-1 text-sm font-medium text-gray-900">{s.name}</span>
+            <span className="text-xs text-gray-500">{s.durationMin} min · {euros(s.price?.amount)}</span>
+          </label>
+        ))}
+        {error && <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</p>}
+        <div className="flex justify-end gap-2 pt-2">
+          <button type="button" className={btnSecondary} onClick={onClose}>Cancelar</button>
+          <button type="button" className={btnPrimary} onClick={save} disabled={saving}>{saving ? 'Guardando…' : 'Guardar'}</button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
+function Resources({ resources, services, reload }) {
   const [name, setName] = useState('');
   const [kind, setKind] = useState('staff');
   const [error, setError] = useState('');
   const [editingSchedule, setEditingSchedule] = useState(null);
+  const [editingServices, setEditingServices] = useState(null);
   const [renaming, setRenaming] = useState(null);
+  const [uploading, setUploading] = useState(null);
+  const colors = staffColors(resources);
+  const staff = resources.filter((r) => r.kind === 'staff');
 
   async function add(e) {
     e.preventDefault();
@@ -119,46 +250,92 @@ function Resources({ resources, reload }) {
   }
 
   async function update(r, data) {
+    setError('');
     try { await bookingsApi.updateResource(r._id, data); reload(); } catch (err) { setError(apiError(err)); }
   }
 
+  async function uploadPhoto(r, file) {
+    setError('');
+    setUploading(r._id);
+    try {
+      const photo = await resizeImage(file, { max: 160, square: true });
+      await bookingsApi.updateResource(r._id, { photo });
+      reload();
+    } catch (err) { setError(apiError(err, err.message)); } finally { setUploading(null); }
+  }
+
   async function remove(r) {
-    if (!window.confirm(`¿Desactivar ${r.name}? Sus citas pasadas se conservan.`)) return;
+    if (!window.confirm(`¿Desactivar a ${r.name}? Deja de aparecer en la agenda y en tu página; sus citas pasadas se conservan.`)) return;
     try { await bookingsApi.deleteResource(r._id); reload(); } catch (err) { setError(apiError(err)); }
   }
 
+  const servicesOf = (r) => services.filter((s) => {
+    const req = (s.requirements || []).find((x) => x.kind === r.kind);
+    return req && (!(req.resourceIds || []).length || req.resourceIds.map(String).includes(r._id));
+  });
+
   return (
     <Card title="Profesionales y espacios" subtitle="Quién o qué se reserva: personas, salas, cabinas, equipos.">
-      <ul className="divide-y divide-gray-100 border border-gray-100 rounded-xl">
+      <ul className="space-y-2">
         {resources.length === 0 && <li className="px-3 py-3 text-sm text-gray-400">Todavía no hay ninguno.</li>}
-        {resources.map((r) => (
-          <li key={r._id} className="px-3 py-2.5 flex flex-wrap items-center gap-2">
-            {renaming === r._id ? (
-              <input autoFocus className={`${inputCls} !w-48 !py-1.5`} defaultValue={r.name}
-                onBlur={(e) => { setRenaming(null); if (e.target.value.trim() && e.target.value !== r.name) update(r, { name: e.target.value.trim() }); }}
-                onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); if (e.key === 'Escape') setRenaming(null); }} />
-            ) : (
-              <button type="button" className="text-sm font-medium text-gray-900 hover:text-violet-700" onClick={() => setRenaming(r._id)}>{r.name}</button>
-            )}
-            <span className="text-xs text-gray-400">{KIND_LABEL[r.kind]}</span>
-            <label className="flex items-center gap-1.5 text-xs text-gray-600 ml-auto">
-              <input type="checkbox" checked={r.bookableOnline !== false} onChange={(e) => update(r, { bookableOnline: e.target.checked })} />
-              Online
-            </label>
-            <button type="button" className="text-xs font-semibold text-violet-600 hover:text-violet-800" onClick={() => setEditingSchedule(r)}>Horario</button>
-            <button type="button" className="text-xs text-gray-400 hover:text-rose-600" onClick={() => remove(r)}>Desactivar</button>
-          </li>
-        ))}
+        {resources.map((r) => {
+          const theirs = servicesOf(r);
+          const isStaff = r.kind === 'staff';
+          return (
+            <li key={r._id} className="border border-gray-200 rounded-2xl px-4 py-3 flex flex-wrap items-center gap-x-4 gap-y-3">
+              <label className="relative cursor-pointer shrink-0 group" title="Cambiar foto">
+                <StaffAvatar name={r.name} photo={r.photo} color={colors[r._id] || '#9ca3af'} size={44} />
+                <span className="absolute inset-0 rounded-full bg-black/40 text-white text-[10px] font-semibold items-center justify-center hidden group-hover:flex">
+                  {uploading === r._id ? '…' : 'Foto'}
+                </span>
+                <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && uploadPhoto(r, e.target.files[0])} />
+              </label>
+              <div className="min-w-0 flex-1 basis-40">
+                <div className="flex items-center gap-2">
+                  {renaming === r._id ? (
+                    <input autoFocus className={`${inputCls} !w-48 !py-1.5`} defaultValue={r.name}
+                      onBlur={(e) => { setRenaming(null); if (e.target.value.trim() && e.target.value !== r.name) update(r, { name: e.target.value.trim() }); }}
+                      onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); if (e.key === 'Escape') setRenaming(null); }} />
+                  ) : (
+                    <p className="text-sm font-semibold text-gray-900 truncate">{r.name}</p>
+                  )}
+                  {isStaff && <ColorPicker value={colors[r._id]} onChange={(c) => update(r, { color: c })} />}
+                  {!isStaff && <span className="text-[11px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">{KIND_LABEL[r.kind]}</span>}
+                </div>
+                <button type="button" onClick={() => isStaff && setEditingServices(r)}
+                  className={`mt-0.5 text-xs text-left ${isStaff ? 'text-gray-500 hover:text-violet-700' : 'text-gray-400 cursor-default'}`}>
+                  {theirs.length === 0
+                    ? (isStaff ? 'No hace ningún servicio · Asignar' : 'No se usa en ningún servicio')
+                    : `${theirs.length === services.length && services.length > 1 ? 'Todos los servicios' : theirs.map((s) => s.name).join(', ')}${isStaff ? ' · Editar' : ''}`}
+                </button>
+              </div>
+              <div className="flex items-center gap-3 ml-auto">
+                <Toggle checked={r.bookableOnline !== false} onChange={(v) => update(r, { bookableOnline: v })} label="Se puede reservar online" />
+                <button type="button" className="text-xs font-semibold text-violet-700 hover:text-violet-900 px-2.5 py-1.5 rounded-lg bg-violet-50" onClick={() => setEditingSchedule(r)}>Horario</button>
+                <RowMenu items={[
+                  { label: 'Cambiar nombre', onClick: () => setRenaming(r._id) },
+                  isStaff && { label: 'Servicios que hace', onClick: () => setEditingServices(r) },
+                  r.photo && { label: 'Quitar foto', onClick: () => update(r, { photo: null }) },
+                  { label: 'Desactivar', danger: true, onClick: () => remove(r) },
+                ]} />
+              </div>
+            </li>
+          );
+        })}
       </ul>
-      <form onSubmit={add} className="flex flex-wrap gap-2">
+      <form onSubmit={add} className="flex flex-wrap gap-2 pt-1">
         <input className={`${inputCls} !w-auto flex-1 min-w-[10rem]`} placeholder="Nombre (Ana, Sala 1…)" value={name} onChange={(e) => setName(e.target.value)} required maxLength={100} />
         <select className={`${inputCls} !w-auto`} value={kind} onChange={(e) => setKind(e.target.value)}>
           {Object.entries(KIND_LABEL).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
         </select>
         <button type="submit" className={btnPrimary}>Añadir</button>
       </form>
-      {error && <p className="text-sm text-rose-600">{error}</p>}
+      {error && <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</p>}
       {editingSchedule && <ResourceScheduleModal resource={editingSchedule} onClose={() => setEditingSchedule(null)} />}
+      {editingServices && (
+        <StaffServicesModal resource={editingServices} services={services} staff={staff}
+          onClose={() => setEditingServices(null)} onSaved={() => { setEditingServices(null); reload(); }} />
+      )}
     </Card>
   );
 }
@@ -221,9 +398,9 @@ function Loading({ error }) {
 }
 
 export function ProfessionalsSettings() {
-  const { resources, reload, error } = useSetupData();
-  if (!resources) return <Loading error={error} />;
-  return <Resources resources={resources} reload={reload} />;
+  const { resources, services, reload, error } = useSetupData();
+  if (!resources || !services) return <Loading error={error} />;
+  return <Resources resources={resources} services={services} reload={reload} />;
 }
 
 export function ServicesSettings() {

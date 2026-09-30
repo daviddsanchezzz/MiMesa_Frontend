@@ -184,7 +184,7 @@ export const PRO_EXTRAS = [
   'Personal, turnos y finanzas',
   'Equipo con roles',
   'Soporte prioritario',
-]
+];
 
 export function CheckIcon() {
   return (

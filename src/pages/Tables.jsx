@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { useSetMobileHeader } from '../context/MobileHeaderContext';
 import FloorPlan from '../components/FloorPlan';
 import Modal from '../components/Modal';
 
@@ -52,6 +53,7 @@ function buildPreview(ranges) {
 }
 
 export default function Tables() {
+  useSetMobileHeader({ title: 'Mesas' });
   const { planLimit } = useAuth();
   const limit = planLimit('maxTables'); // Infinity on Basic/Pro, 15 on Free
 
@@ -164,8 +166,8 @@ export default function Tables() {
       {/* Header */}
       <div className="flex items-center justify-between px-6 py-3 bg-white border-b border-gray-200 shrink-0">
         <div>
-          <h2 className="text-lg font-bold text-gray-900">Mesas</h2>
-          <p className="text-xs text-gray-400 mt-0.5">
+          <h2 className="hidden xl:block text-lg font-bold text-gray-900">Mesas</h2>
+          <p className="text-xs text-gray-400 xl:mt-0.5">
             {activeTables.length}{limit !== Infinity ? ` / ${limit}` : ''} mesa{activeTables.length !== 1 ? 's' : ''} activa{activeTables.length !== 1 ? 's' : ''}
             {lockedTables.length > 0 && <span className="text-amber-500 ml-1">· {lockedTables.length} bloqueada{lockedTables.length !== 1 ? 's' : ''}</span>}
             {' · '}{rooms.length} sala{rooms.length !== 1 ? 's' : ''}

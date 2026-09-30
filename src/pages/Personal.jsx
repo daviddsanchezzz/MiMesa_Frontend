@@ -45,9 +45,8 @@ export default function Personal() {
 
   const [tab, setTab] = useState('planner');
 
-  useSetMobileHeader({
-    title: 'Personal',
-    actions: allowedTabs.length > 1 ? (
+  // Memoized: a new element on every render would make the header update in a loop.
+  const headerTabs = useMemo(() => (allowedTabs.length > 1 ? (
       <div className="flex items-center gap-1">
         {tabs.filter((item) => allowedTabs.includes(item.key)).map((item) => (
           <button
@@ -60,8 +59,8 @@ export default function Personal() {
           </button>
         ))}
       </div>
-    ) : null,
-  });
+    ) : null), [allowedTabs, tab]);
+  useSetMobileHeader({ title: 'Personal', actions: headerTabs });
   
   
 

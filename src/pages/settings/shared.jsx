@@ -142,14 +142,15 @@ export function fmtDate(d) {
 // ═══════════════════════════════════════════════════════════════════════════
 // BILLING / SUBSCRIPTION SECTION
 // ═══════════════════════════════════════════════════════════════════════════
+// Restaurants: same prices, features per plan (no per-professional count). Keep in sync with the landing.
 export const BASIC_FEATURES = [
   'Reservas ilimitadas',
-  'Emails automáticos de confirmación y cancelación',
-  'Página pública de reservas con tu marca',
-  'Integración en tu web (iframe)',
-  'Mesas, salas y turnos ilimitados',
-  'Hasta 5 usuarios de equipo',
-  'Historial completo de clientes',
+  'Salas, mesas y turnos ilimitados',
+  'Página de reservas online con tu marca',
+  'Reserva dentro de tu web',
+  'Emails de confirmación y cancelación',
+  'Aprobación manual de solicitudes',
+  'Ficha de clientes y control de no presentados',
 ];
 
 // Appointment businesses (salons, clinics…): same plans, worded for them.
@@ -176,16 +177,14 @@ export const APPT_PRO_EXTRAS = [
 ];
 
 export const PRO_EXTRAS = [
-  'Equipo y roles',
-  'Marketing y campañas de email',
-  'Códigos promocionales',
+  'Recordatorios automáticos antes de la reserva',
+  'Señal o garantía con tarjeta contra los que no se presentan',
+  'Campañas de email y códigos promocionales',
   'Estadísticas avanzadas',
-  'Recordatorios automáticos 24h antes',
-  'Cobros automáticos por cancelación',
-  'Módulo de finanzas y caja diaria',
-  'Gestión de turnos del personal',
+  'Personal, turnos y finanzas',
+  'Equipo con roles',
   'Soporte prioritario',
-];
+]
 
 export function CheckIcon() {
   return (

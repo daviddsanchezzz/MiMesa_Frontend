@@ -107,7 +107,7 @@ export default function AppointmentsDashboard() {
     hours: (data.schedule?.rules || []).length > 0,
   };
   const setupDone = setup && setup.staff && setup.services && setup.hours;
-  const revenueDelta = s && s.money.previousRevenue > 0
+  const revenueDelta = s?.money && s.money.previousRevenue > 0
     ? Math.round(((s.money.revenue - s.money.previousRevenue) / s.money.previousRevenue) * 100)
     : null;
   const pendingNext = s?.actions.pendingRequests.next;
@@ -187,11 +187,19 @@ export default function AppointmentsDashboard() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <Kpi label="Citas hoy" value={s.today.appointments}
             hint={s.today.appointments ? (s.today.remaining ? `${pluralize(s.today.remaining, 'queda', 'quedan')} por delante` : 'Todas atendidas') : (s.tomorrow.appointments ? `Mañana: ${s.tomorrow.appointments}` : 'Día tranquilo')} />
-          <Kpi label="Previsto hoy" value={euros(s.today.expectedRevenue)} hint={s.week.expectedRevenue ? `${euros(s.week.expectedRevenue)} en 7 días` : null} />
+          {s.restricted ? (
+            <Kpi label="Mañana" value={s.tomorrow.appointments} hint={s.tomorrow.firstStart ? `La primera a las ${timeInTz(s.tomorrow.firstStart, tz)}` : 'Sin citas todavía'} />
+          ) : (
+            <Kpi label="Previsto hoy" value={euros(s.today.expectedRevenue)} hint={s.week.expectedRevenue ? `${euros(s.week.expectedRevenue)} en 7 días` : null} />
+          )}
           <Kpi label="Ocupación 7 días" value={s.week.occupancy == null ? '—' : `${s.week.occupancy}%`}
             hint={s.week.occupancy == null ? 'Define tu horario' : `${pluralize(s.week.freeHours, 'hora libre', 'horas libres')}`} />
-          <Kpi label="Reservado online este mes" value={euros(s.money.onlineBookings.amount)} tone={s.money.onlineBookings.count ? 'good' : 'default'}
-            hint={s.money.onlineBookings.count ? `${pluralize(s.money.onlineBookings.count, 'cita', 'citas')} sin coger el teléfono` : 'Comparte tu enlace'} />
+          {s.restricted ? (
+            <Kpi label="Esta semana" value={s.week.appointments} hint="citas en los próximos 7 días" />
+          ) : (
+            <Kpi label="Reservado online este mes" value={euros(s.money.onlineBookings.amount)} tone={s.money.onlineBookings.count ? 'good' : 'default'}
+              hint={s.money.onlineBookings.count ? `${pluralize(s.money.onlineBookings.count, 'cita', 'citas')} sin coger el teléfono` : 'Comparte tu enlace'} />
+          )}
         </div>
       )}
 
@@ -267,6 +275,7 @@ export default function AppointmentsDashboard() {
 
           {/* Right: money, team, customers */}
           <div className="lg:col-span-2 space-y-5">
+            {s.money && (
             <section className={`${card} p-5`}>
               <div className="flex items-baseline justify-between gap-2">
                 <h3 className="text-sm font-semibold text-gray-900">Este mes</h3>
@@ -302,6 +311,7 @@ export default function AppointmentsDashboard() {
                 </div>
               </dl>
             </section>
+            )}
 
             {s.team.length > 0 && (
               <section className={`${card} p-5`}>
@@ -313,7 +323,7 @@ export default function AppointmentsDashboard() {
                       <div className="min-w-0 flex-1">
                         <div className="flex justify-between gap-2 text-sm">
                           <span className="font-medium text-gray-900 truncate">{t.name}</span>
-                          <span className="text-gray-500 tabular-nums whitespace-nowrap">{euros(t.revenue)} este mes</span>
+                          {t.revenue !== undefined && <span className="text-gray-500 tabular-nums whitespace-nowrap">{euros(t.revenue)} este mes</span>}
                         </div>
                         <div className="mt-1.5 flex items-center gap-2">
                           <div className="h-1.5 flex-1 rounded-full bg-gray-100 overflow-hidden">
@@ -329,6 +339,7 @@ export default function AppointmentsDashboard() {
               </section>
             )}
 
+            {s.customers && (
             <section className={`${card} p-5`}>
               <h3 className="text-sm font-semibold text-gray-900 mb-3">Clientes este mes</h3>
               <div className="grid grid-cols-3 gap-2 text-center">
@@ -340,6 +351,7 @@ export default function AppointmentsDashboard() {
                 <p className="text-xs text-gray-500 mt-3">Servicio estrella: <b className="text-gray-800">{s.topServices[0].name}</b> ({s.topServices[0].share}% de lo facturado)</p>
               )}
             </section>
+            )}
           </div>
         </div>
       )}

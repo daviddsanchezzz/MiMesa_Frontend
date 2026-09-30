@@ -279,6 +279,13 @@ function RestaurantRoute({ children }) {
 }
 
 const Caja = lazy(() => import('./pages/Caja'));
+const AppointmentTeam = lazy(() => import('./pages/team/AppointmentTeam'));
+
+// Personal: appointment businesses see pay and results per professional.
+function PersonalPage() {
+  const { isAppointments } = useAuth();
+  return isAppointments ? <AppointmentTeam /> : <Personal />;
+}
 const AppointmentCustomers = lazy(() => import('./pages/clients/AppointmentCustomers'));
 const AppointmentCustomerDetail = lazy(() => import('./pages/clients/AppointmentCustomerDetail'));
 
@@ -340,7 +347,7 @@ export default function App() {
           <Route path="/analytics"    element={<RestaurantRoute><RoleRoute minRole="manager"><PrivateLayout><Analytics /></PrivateLayout></RoleRoute></RestaurantRoute>} />
           <Route path="/calendario"   element={<Navigate to="/reservations?view=calendar" replace />} />
           <Route path="/publicidad"   element={<RoleRoute minRole="manager"><PrivateLayout><Publicidad /></PrivateLayout></RoleRoute>} />
-          <Route path="/personal"     element={<ModuleRoute moduleKey="staff"><RoleRoute minRole="manager"><PrivateLayout><Personal /></PrivateLayout></RoleRoute></ModuleRoute>} />
+          <Route path="/personal"     element={<ModuleRoute moduleKey="staff"><RoleRoute minRole="manager"><PrivateLayout><PersonalPage /></PrivateLayout></RoleRoute></ModuleRoute>} />
           <Route path="/finanzas"     element={<ModuleRoute moduleKey="expenses"><RoleRoute minRole="owner"><PrivateLayout><Finanzas /></PrivateLayout></RoleRoute></ModuleRoute>} />
           <Route path="/compras"      element={<ModuleRoute moduleKey="purchases"><RoleRoute minRole="manager"><PrivateLayout><Compras /></PrivateLayout></RoleRoute></ModuleRoute>} />
           <Route path="/caja"         element={<ModuleRoute moduleKey="bookings"><PrivateLayout><Caja /></PrivateLayout></ModuleRoute>} />

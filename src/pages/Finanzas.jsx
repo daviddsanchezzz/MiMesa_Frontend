@@ -497,7 +497,7 @@ function DashboardTab({ dateRange, categories, refreshTrigger }) {
       {appt && data.byStaff?.length > 0 && (
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
           <h3 className="text-sm font-semibold text-gray-700 mb-1">Por profesional</h3>
-          <p className="text-xs text-gray-400 mb-4">Lo que ha facturado cada una en citas atendidas y su comisión (según el % de cada servicio).</p>
+          <p className="text-xs text-gray-400 mb-4">Facturado en citas atendidas y productos, menos su sueldo y comisión. Se configura en Personal.</p>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -505,6 +505,7 @@ function DashboardTab({ dateRange, categories, refreshTrigger }) {
                   <th className="pb-2 font-medium">Profesional</th>
                   <th className="pb-2 font-medium text-right">Citas</th>
                   <th className="pb-2 font-medium text-right">Facturado</th>
+                  <th className="pb-2 font-medium text-right">Sueldo</th>
                   <th className="pb-2 font-medium text-right">Comisión</th>
                   <th className="pb-2 font-medium text-right">Queda al negocio</th>
                 </tr>
@@ -514,9 +515,10 @@ function DashboardTab({ dateRange, categories, refreshTrigger }) {
                   <tr key={p.id}>
                     <td className="py-2 text-gray-800 font-medium">{p.name}</td>
                     <td className="py-2 text-right text-gray-500 tabular-nums">{p.appointments || '—'}</td>
-                    <td className="py-2 text-right text-gray-800 tabular-nums">{fmtEur(p.billed)}</td>
+                    <td className="py-2 text-right text-gray-800 tabular-nums">{fmtEur(p.billed + (p.products || 0))}</td>
+                    <td className="py-2 text-right text-gray-500 tabular-nums">{p.salary ? fmtEur(p.salary) : '—'}</td>
                     <td className="py-2 text-right text-gray-500 tabular-nums">{p.commission ? fmtEur(p.commission) : '—'}</td>
-                    <td className="py-2 text-right font-semibold text-gray-900 tabular-nums">{fmtEur(p.billed - p.commission)}</td>
+                    <td className={`py-2 text-right font-semibold tabular-nums ${(p.leaves ?? 0) >= 0 ? 'text-gray-900' : 'text-rose-600'}`}>{fmtEur(p.leaves ?? (p.billed - p.commission))}</td>
                   </tr>
                 ))}
               </tbody>

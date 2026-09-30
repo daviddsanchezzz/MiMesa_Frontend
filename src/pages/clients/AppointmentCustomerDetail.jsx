@@ -99,7 +99,7 @@ export default function AppointmentCustomerDetail() {
   const avatarColor = STAFF_COLORS[(customer.name?.charCodeAt(0) || 0) % STAFF_COLORS.length];
 
   return (
-    <div className="space-y-5 max-w-5xl">
+    <div className="space-y-5">
       <Link to="/customers" className="text-sm text-violet-700 font-semibold hover:text-violet-900">‹ Clientes</Link>
 
       {/* Header */}

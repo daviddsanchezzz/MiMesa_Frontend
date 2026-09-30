@@ -121,7 +121,7 @@ export default function AppointmentsDashboard() {
   ].filter(Boolean) : [];
 
   return (
-    <div className="space-y-5 max-w-6xl">
+    <div className="space-y-5">
       {/* Header */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3 min-w-0">

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useSetMobileHeader } from '../context/MobileHeaderContext';
@@ -132,9 +132,27 @@ export default function Agenda() {
 
   const views = isMobile ? [['list', 'Lista'], ['day', 'Día']] : [['day', 'Día'], ['week', 'Semana']];
 
+  // Day/week: the page fits the screen and only the grid scrolls.
+  const ready = !loading && staff.length > 0 && services.length > 0;
+  const fill = ready && activeView !== 'list';
+  const rootRef = useRef(null);
+  const [fitHeight, setFitHeight] = useState(null);
+  useLayoutEffect(() => {
+    if (!fill) { setFitHeight(null); return undefined; }
+    const measure = () => {
+      const main = rootRef.current?.closest('main');
+      if (!main) return;
+      const cs = getComputedStyle(main);
+      setFitHeight(Math.max(420, main.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom)));
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [fill]);
+
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <div ref={rootRef} className={fill ? 'flex flex-col gap-3' : 'space-y-4'} style={fill && fitHeight ? { height: fitHeight } : undefined}>
+      <div className="flex flex-wrap items-center justify-between gap-3 shrink-0">
         <div className="min-w-0">
           <h2 className="text-xl font-bold text-gray-900">Agenda</h2>
           <p className="text-sm text-gray-500 mt-0.5">
@@ -179,28 +197,32 @@ export default function Agenda() {
         </div>
       ) : (
         <>
-          <DayStrip date={date} today={today} counts={counts} closedDays={closedDays} onChange={setDate} />
-
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-xs text-gray-500">
-              {activeView === 'list' ? 'Toca una cita para ver sus datos.' : 'Toca un hueco libre para dar una cita.'}
-            </p>
-            <label className="flex items-center gap-1.5 text-xs text-gray-500">
+          <div className="shrink-0">
+            <DayStrip date={date} today={today} counts={counts} closedDays={closedDays} onChange={setDate}
+              extra={(
+                <label className="hidden md:flex items-center gap-1.5 text-xs text-gray-500 whitespace-nowrap">
+                  <input type="checkbox" checked={showCancelled} onChange={(e) => setShowCancelled(e.target.checked)} />
+                  Canceladas
+                </label>
+              )} />
+          </div>
+          {activeView === 'list' && (
+            <label className="md:hidden flex items-center justify-end gap-1.5 text-xs text-gray-500">
               <input type="checkbox" checked={showCancelled} onChange={(e) => setShowCancelled(e.target.checked)} />
               Ver canceladas
             </label>
-          </div>
+          )}
 
           {activeView === 'week' && (
-            <WeekView from={from} today={today} tz={tz} staff={staff} bookings={visibleWeek} businessSchedule={schedule}
+            <div className="flex-1 min-h-0"><WeekView fill from={from} today={today} tz={tz} staff={staff} bookings={visibleWeek} businessSchedule={schedule}
               colors={colors} onBookingClick={setSelected}
               onEmptyClick={(resourceId, time, d) => openNew(resourceId, time, d)}
-              onDayClick={(d) => { setDate(d); chooseView('day'); }} />
+              onDayClick={(d) => { setDate(d); chooseView('day'); }} /></div>
           )}
           {activeView === 'day' && (
-            <DayView date={date} tz={tz} staff={staff} bookings={dayBookings} businessSchedule={schedule}
+            <div className="flex-1 min-h-0"><DayView fill date={date} tz={tz} staff={staff} bookings={dayBookings} businessSchedule={schedule}
               staffSchedules={staffSchedules} colors={colors} isToday={date === today}
-              onEmptyClick={(resourceId, time) => openNew(resourceId, time, date)} onBookingClick={setSelected} />
+              onEmptyClick={(resourceId, time) => openNew(resourceId, time, date)} onBookingClick={setSelected} /></div>
           )}
           {activeView === 'list' && (
             <ListView tz={tz} bookings={dayBookings} staffById={byId} colors={colors} isToday={date === today}

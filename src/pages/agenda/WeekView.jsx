@@ -9,7 +9,7 @@ const DOW = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
  * Seven days side by side. Inside each day every professional has a thin lane
  * in their colour, so overlapping appointments never hide each other.
  */
-export default function WeekView({ from, today, tz, staff, bookings, businessSchedule, colors, onEmptyClick, onBookingClick, onDayClick }) {
+export default function WeekView({ from, today, tz, staff, bookings, businessSchedule, colors, onEmptyClick, onBookingClick, onDayClick, fill = false }) {
   const dates = useMemo(() => Array.from({ length: 7 }, (_, i) => addDays(from, i)), [from]);
   const windowsByDate = useMemo(() => Object.fromEntries(dates.map((d) => [d, windowsForDate(businessSchedule, d)])), [dates, businessSchedule]);
   const [startMin, endMin] = useMemo(() => visibleRange(Object.values(windowsByDate), bookings, tz), [windowsByDate, bookings, tz]);
@@ -70,7 +70,7 @@ export default function WeekView({ from, today, tz, staff, bookings, businessSch
   }, [dates, bookings, tz, staff, colors, startMin, windowsByDate, today, onBookingClick, onEmptyClick, onDayClick]);
 
   return (
-    <div className="space-y-2">
+    <div className={fill ? 'h-full flex flex-col gap-2' : 'space-y-2'}>
       {staff.length > 1 && (
         <div className="flex flex-wrap gap-3 text-xs text-gray-600">
           {staff.map((s) => (
@@ -80,7 +80,7 @@ export default function WeekView({ from, today, tz, staff, bookings, businessSch
           ))}
         </div>
       )}
-      <TimeGrid columns={columns} startMin={startMin} endMin={endMin} tz={tz} minColWidth="7.5rem" headerHeight="h-16" />
+      <div className={fill ? 'flex-1 min-h-0' : ''}><TimeGrid columns={columns} startMin={startMin} endMin={endMin} tz={tz} minColWidth="7.5rem" headerHeight="h-16" fill={fill} /></div>
     </div>
   );
 }

@@ -106,7 +106,7 @@ export default function AppointmentCustomers() {
   }, [summary]);
 
   return (
-    <div className="space-y-5 max-w-6xl">
+    <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="text-xl font-bold text-gray-900">Clientes</h2>

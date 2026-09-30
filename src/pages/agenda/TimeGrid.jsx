@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { closedGaps, minutesInTz, timeInTz, tint, toHHMM } from './utils';
 
 export const PX_PER_MIN = 1.4;
@@ -62,11 +62,22 @@ export function BookingBlock({ booking, segment, color, tz, top, height, left = 
  * columns: [{ key, header, windows: [[s,e]], isToday, blocks: [{ key, top, height, left, width, render }],
  *             lanes: [{ key, left, width }] | undefined, onEmpty(minute, laneKey) | undefined }]
  */
-export default function TimeGrid({ columns, startMin, endMin, tz, minColWidth = '11rem', headerHeight = 'h-14' }) {
+export default function TimeGrid({ columns, startMin, endMin, tz, minColWidth = '11rem', headerHeight = 'h-14', fill = false }) {
+  const scrollRef = useRef(null);
+  const scrolledFor = useRef(null);
   const [ghost, setGhost] = useState(null); // { col, lane, minute }
   const anyToday = columns.some((c) => c.isToday);
   const nowMin = useNowMinute(tz, anyToday);
   const height = (endMin - startMin) * PX_PER_MIN;
+  const columnsKey = columns.map((c) => c.key).join('|');
+  // Open scrolled to the current time (today) or the start of the day.
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el || scrolledFor.current === columnsKey) return;
+    scrolledFor.current = columnsKey;
+    const target = anyToday && nowMin !== null ? (nowMin - startMin) * PX_PER_MIN - 120 : 0;
+    el.scrollTop = Math.max(0, target);
+  }, [columnsKey, anyToday, nowMin, startMin]);
   const hours = [];
   for (let m = startMin; m <= endMin; m += 60) hours.push(m);
   const y = (m) => (m - startMin) * PX_PER_MIN;
@@ -85,12 +96,12 @@ export default function TimeGrid({ columns, startMin, endMin, tz, minColWidth = 
   const inClosed = (col, minute) => !col.windows.some(([s, e]) => minute >= s && minute < e);
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
-      <div className="overflow-x-auto">
+    <div className={`bg-white rounded-2xl border border-gray-200 overflow-hidden ${fill ? 'h-full flex flex-col' : ''}`}>
+      <div ref={scrollRef} className={fill ? 'flex-1 min-h-0 overflow-auto overscroll-contain' : 'overflow-x-auto'}>
         <div className="flex min-w-full w-max">
           {/* Hour labels */}
           <div className="sticky left-0 z-30 bg-white border-r border-gray-100 w-14 shrink-0">
-            <div className={`${headerHeight} border-b border-gray-100`} />
+            <div className={`${headerHeight} border-b border-gray-100 sticky top-0 z-10 bg-white`} />
             <div className="relative" style={{ height: height + TOP_PAD }}>
               {hours.map((m) => (
                 <div key={m} className="absolute right-2 text-[11px] text-gray-400 tabular-nums leading-none"
@@ -112,7 +123,7 @@ export default function TimeGrid({ columns, startMin, endMin, tz, minColWidth = 
             const showGhost = ghost && ghost.col === col.key && col.onEmpty;
             return (
               <div key={col.key} className="flex-1 border-r border-gray-100 last:border-r-0" style={{ minWidth: minColWidth }}>
-                <div className={`${headerHeight} border-b border-gray-100 flex items-center justify-center px-2 ${col.isToday ? 'bg-violet-50/60' : ''}`}>
+                <div className={`${headerHeight} border-b border-gray-100 flex items-center justify-center px-2 sticky top-0 z-[25] ${col.isToday ? 'bg-violet-50' : 'bg-white'}`}>
                   {col.header}
                 </div>
                 <div className="relative" style={{ height: height + TOP_PAD, paddingTop: TOP_PAD }}>

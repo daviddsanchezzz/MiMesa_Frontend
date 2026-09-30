@@ -35,7 +35,8 @@ export default function PublicUnsubscribe() {
             </div>
             <h1 className="text-lg font-bold text-gray-900 mb-2">Baja procesada</h1>
             <p className="text-sm text-gray-500 leading-relaxed">
-              {name ? `${name}, ya` : 'Ya'} no recibirás más comunicaciones de marketing de este establecimiento.
+              {name ? `${name}, ya` : 'Ya'} no recibirás más avisos ni comunicaciones comerciales de este establecimiento.
+              Seguirás recibiendo la confirmación y el recordatorio de las citas que reserves.
             </p>
           </div>
         )}

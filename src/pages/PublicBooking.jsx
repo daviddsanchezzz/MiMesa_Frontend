@@ -321,7 +321,11 @@ export default function PublicBooking() {
           </label>
           <label className="flex items-start gap-2 text-xs text-gray-600">
             <input type="checkbox" className="mt-0.5" checked={form.consent} onChange={(e) => setForm({ ...form, consent: e.target.checked })} />
-            <span>Acepto que {biz.name} use mis datos para gestionar esta cita y contactarme sobre ella.</span>
+            <span>
+              Acepto que {biz.name} use mis datos para gestionar esta cita y contactarme sobre ella. Como cliente, también podrá
+              avisarme de cuándo me toca volver o pedirme mi opinión; puedo darme de baja de esos avisos en cualquier momento
+              desde el enlace de cada email.
+            </span>
           </label>
           <button type="submit" disabled={sending}
             className="w-full rounded-xl py-3 text-sm font-semibold text-white disabled:opacity-60" style={{ backgroundColor: color }}>

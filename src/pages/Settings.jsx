@@ -13,6 +13,7 @@ import { BillingSection } from './settings/BillingSection';
 import { PagosSection } from './settings/PagosSection';
 import { ProfessionalsSettings, ServicesSettings, HoursSettings } from './agenda/AgendaSettings';
 import { BookingLinkSettings } from './agenda/BookingLinkSettings';
+import FollowUpSettings from './agenda/FollowUpSettings';
 import { useSetMobileHeader } from '../context/MobileHeaderContext';
 
 const svg = (d) => (
@@ -29,6 +30,8 @@ const APPOINTMENT_TABS = [
     icon: svg('M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm.75-13a.75.75 0 0 0-1.5 0v5c0 .199.079.39.22.53l3 3a.75.75 0 1 0 1.06-1.06l-2.78-2.78V5Z') },
   { key: 'enlace', label: 'Enlace de reservas', desc: 'Tu página para que los clientes reserven',
     icon: svg('M12.232 4.232a2.5 2.5 0 0 1 3.536 3.536l-1.225 1.224a.75.75 0 0 0 1.061 1.06l1.224-1.224a4 4 0 0 0-5.656-5.656l-3 3a4 4 0 0 0 .225 5.865.75.75 0 0 0 .977-1.138 2.5 2.5 0 0 1-.142-3.667l3-3Zm-4.464 11.536a2.5 2.5 0 0 1-3.536-3.536l1.225-1.224a.75.75 0 0 0-1.061-1.06l-1.224 1.224a4 4 0 1 0 5.656 5.656l3-3a4 4 0 0 0-.225-5.865.75.75 0 0 0-.977 1.138 2.5 2.5 0 0 1 .142 3.667l-3 3Z') },
+  { key: 'avisos', label: 'Avisos a clientes', desc: 'Recordatorios, te toca volver y opiniones',
+    icon: svg('M10 2a6 6 0 0 0-6 6v3.586l-.707.707A1 1 0 0 0 4 14h12a1 1 0 0 0 .707-1.707L16 11.586V8a6 6 0 0 0-6-6Zm0 16a3 3 0 0 1-2.83-2h5.66A3 3 0 0 1 10 18Z') },
 ];
 const APPOINTMENT_KEEP = ['negocio', 'suscripcion'];
 
@@ -126,6 +129,7 @@ export default function Settings() {
           {tab === 'servicios'   && <ServicesSettings />}
           {tab === 'horario'     && <HoursSettings />}
           {tab === 'enlace'      && <BookingLinkSettings />}
+          {tab === 'avisos'      && <FollowUpSettings />}
         </div>
       </div>
     </div>

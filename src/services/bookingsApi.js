@@ -38,6 +38,9 @@ export const bookingsApi = {
   cashDay: (date) => unwrap(api.get('/bookings/cash', { params: date ? { date } : {} })),
   closeCash: (data) => unwrap(api.post('/bookings/cash/close', data)),
   reopenCash: (date) => unwrap(api.delete('/bookings/cash/close', { params: { date } })),
+  // follow-up emails (te toca volver, pedir opinión)
+  followUps: () => unwrap(api.get('/bookings/follow-ups')),
+  saveFollowUps: (data) => unwrap(api.put('/bookings/follow-ups', data)),
   // absences and moving an appointment to someone else
   absences: (from, to) => unwrap(api.get('/bookings/absences', { params: { from, to } })),
   createAbsence: (data) => unwrap(api.post('/bookings/absences', data)),

@@ -122,7 +122,7 @@ export default function Register() {
                 value={form.email}
                 onChange={field('email')}
                 disabled={verificationSent}
-                placeholder="info@restaurante.com"
+                placeholder="tu@email.com"
                 className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-white"
               />
             </div>

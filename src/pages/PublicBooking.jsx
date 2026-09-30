@@ -322,6 +322,14 @@ export default function PublicBooking({ businessId: businessIdProp, slug = null 
               className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:border-transparent"
               style={{ '--tw-ring-color': color }} />
           </label>
+          {(catalog?.policy?.note || catalog?.policy?.changeMinHours > 0) && (
+            <div className="rounded-xl bg-gray-50 border border-gray-200 px-3.5 py-2.5 text-xs text-gray-600 space-y-1">
+              {catalog.policy.changeMinHours > 0 && (
+                <p><span className="font-semibold text-gray-800">Cambios y cancelaciones:</span> online hasta {catalog.policy.changeMinHours} h antes de la cita.</p>
+              )}
+              {catalog.policy.note && <p className="whitespace-pre-line">{catalog.policy.note}</p>}
+            </div>
+          )}
           <label className="flex items-start gap-2 text-xs text-gray-600">
             <input type="checkbox" className="mt-0.5" checked={form.consent} onChange={(e) => setForm({ ...form, consent: e.target.checked })} />
             <span>
@@ -355,11 +363,12 @@ export default function PublicBooking({ businessId: businessIdProp, slug = null 
             Te hemos enviado los detalles a <span className="font-semibold">{form.guestEmail}</span>.
           </p>
           <p className="text-xs text-gray-500">
-            También puedes cancelar desde aquí:{' '}
+            ¿Te surge algo? Puedes{' '}
             <a className="font-semibold whitespace-nowrap" style={{ color }}
               href={`${slug ? `${slugPath(slug)}/cancelar` : `/public/${businessId}/cita/cancelar`}?bookingId=${result.id}&token=${result.token}`}>
-              cancelar mi cita
+              cambiarla o cancelarla aquí
             </a>
+            {catalog?.policy?.changeMinHours > 0 && ` (hasta ${catalog.policy.changeMinHours} h antes)`}.
           </p>
           <button type="button" className="text-sm font-semibold" style={{ color }}
             onClick={() => { setStep('service'); setService(null); setTime(''); setDay(''); setResult(null); }}>

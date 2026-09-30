@@ -47,6 +47,12 @@ export const bookingsApi = {
   deleteAbsence: (id) => unwrap(api.delete(`/bookings/absences/${id}`)),
   reassignOptions: (id, from) => unwrap(api.get(`/bookings/${id}/reassign-options`, { params: { from } })),
   reassign: (id, from, to) => unwrap(api.patch(`/bookings/${id}/reassign`, { from, to })),
+  // change day, time, services or professional of an appointment
+  rescheduleSlots: (id, data) => unwrap(api.post(`/bookings/${id}/reschedule-slots`, data)),
+  reschedule: (id, data) => unwrap(api.patch(`/bookings/${id}/reschedule`, data)),
+  // what customers can do from their link
+  policy: () => unwrap(api.get('/bookings/policy')),
+  savePolicy: (data) => unwrap(api.put('/bookings/policy', data)),
 };
 
 export function apiError(err, fallback = 'Algo ha fallado. Inténtalo de nuevo.') {
@@ -61,4 +67,6 @@ export const publicBookingsApi = {
   create: (businessId, data) => unwrap(publicApi.post(`/bookings/public/${businessId}/bookings`, data)),
   details: (bookingId, token) => unwrap(publicApi.get('/bookings/public/cancel', { params: { bookingId, token } })),
   cancel: (bookingId, token) => unwrap(publicApi.post('/bookings/public/cancel', { bookingId, token })),
+  rescheduleSlots: (bookingId, token, from, to) => unwrap(publicApi.post('/bookings/public/reschedule/slots', { bookingId, token, from, to })),
+  reschedule: (bookingId, token, date, time) => unwrap(publicApi.post('/bookings/public/reschedule', { bookingId, token, date, time })),
 };

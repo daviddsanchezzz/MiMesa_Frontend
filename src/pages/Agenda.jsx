@@ -303,6 +303,8 @@ export default function Agenda() {
         <BookingDetailModal
           booking={selected}
           staffById={byId}
+          services={services}
+          staff={staff}
           colors={colors}
           tz={tz}
           onClose={() => setSelected(null)}

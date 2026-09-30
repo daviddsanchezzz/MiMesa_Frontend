@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import CheckoutModal from './CheckoutModal';
+import RescheduleModal from './RescheduleModal';
 import Modal from '../../components/Modal';
 import StaffAvatar from './StaffAvatar';
 import { bookingsApi, apiError } from '../../services/bookingsApi';
@@ -40,13 +41,15 @@ const Icon = {
   mail: <svg viewBox="0 0 20 20" className="w-4 h-4" fill="currentColor"><path d="M3 4a2 2 0 0 0-2 2v.4l9 5 9-5V6a2 2 0 0 0-2-2H3Zm16 4.7-8.5 4.7a1 1 0 0 1-1 0L1 8.7V14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8.7Z" /></svg>,
 };
 
-export default function BookingDetailModal({ booking, staffById, colors = {}, tz = DEFAULT_TZ, onClose, onChanged }) {
+export default function BookingDetailModal({ booking, staffById, services = [], staff = [], colors = {}, tz = DEFAULT_TZ, onClose, onChanged }) {
   const [notes, setNotes] = useState(booking.notes || '');
   const [internalNotes, setInternalNotes] = useState(booking.internalNotes || '');
   const [editingNotes, setEditingNotes] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [charging, setCharging] = useState(false);
+  const [moving, setMoving] = useState(false);
+  const canMove = !booking.payment && ['pending', 'confirmed', 'checked_in'].includes(booking.status);
   const { hasRole } = useAuth();
   const canCharge = !booking.payment && ['confirmed', 'checked_in', 'completed'].includes(booking.status);
   const st = STATUS[booking.status] || STATUS.confirmed;
@@ -95,7 +98,7 @@ export default function BookingDetailModal({ booking, staffById, colors = {}, tz
     </div>
   );
 
-  const hasFooter = canCharge || actions.main.length > 0 || actions.more.length > 0;
+  const hasFooter = canCharge || canMove || actions.main.length > 0 || actions.more.length > 0;
   const footer = hasFooter ? (
     <div className="space-y-2">
       {canCharge && (
@@ -114,8 +117,14 @@ export default function BookingDetailModal({ booking, staffById, colors = {}, tz
           ))}
         </div>
       )}
-      {actions.more.length > 0 && (
+      {(actions.more.length > 0 || canMove) && (
         <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1 pt-1">
+          {canMove && (
+            <button type="button" disabled={busy} onClick={() => setMoving(true)}
+              className="text-sm font-semibold py-1 text-violet-700 hover:text-violet-900">
+              Cambiar día u hora
+            </button>
+          )}
           {actions.more.map(([status, label]) => (
             <button key={status} type="button" disabled={busy} onClick={() => changeStatus(status)}
               className={`text-sm font-medium py-1 ${status === 'cancelled' ? 'text-rose-600 hover:text-rose-700' : 'text-gray-500 hover:text-gray-800'}`}>
@@ -174,6 +183,11 @@ export default function BookingDetailModal({ booking, staffById, colors = {}, tz
           </div>
         )}
 
+        {booking.rescheduledAt && booking.previousStart && (
+          <p className="text-xs text-gray-500">
+            Cambiada · antes era {dayText(booking.previousStart, tz).toLowerCase()} a las {timeInTz(booking.previousStart, tz)}
+          </p>
+        )}
         <p className="text-xs text-gray-400 flex flex-wrap gap-x-2">
           {booking.guestPhone && <span className="text-gray-500">{booking.guestPhone} ·</span>}
           <span>{SOURCE[booking.source] || booking.source}</span>
@@ -236,6 +250,10 @@ export default function BookingDetailModal({ booking, staffById, colors = {}, tz
 
         {error && <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</p>}
       </div>
+      {moving && (
+        <RescheduleModal booking={booking} services={services} staff={staff} tz={tz} onClose={() => setMoving(false)}
+          onMoved={(updated) => { setMoving(false); onChanged?.(updated); }} />
+      )}
       {charging && (
         <CheckoutModal booking={booking} tz={tz} onClose={() => setCharging(false)}
           onPaid={(updated) => { setCharging(false); onChanged?.(updated); }} />

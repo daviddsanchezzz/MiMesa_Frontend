@@ -278,6 +278,19 @@ function RestaurantRoute({ children }) {
   return children;
 }
 
+const AppointmentCustomers = lazy(() => import('./pages/clients/AppointmentCustomers'));
+const AppointmentCustomerDetail = lazy(() => import('./pages/clients/AppointmentCustomerDetail'));
+
+// Customers: appointment businesses see visits and appointments; restaurants, reservations.
+function CustomersPage() {
+  const { isAppointments } = useAuth();
+  return isAppointments ? <AppointmentCustomers /> : <Customers />;
+}
+function CustomerDetailPage() {
+  const { isAppointments } = useAuth();
+  return isAppointments ? <AppointmentCustomerDetail /> : <CustomerDetail />;
+}
+
 function HomeDashboard() {
   const { isAppointments } = useAuth();
   return isAppointments ? <AppointmentsDashboard /> : <Dashboard />;
@@ -316,8 +329,8 @@ export default function App() {
           <Route path="/rooms"        element={<RestaurantRoute><RoleRoute minRole="manager"><PrivateLayout><Rooms /></PrivateLayout></RoleRoute></RestaurantRoute>} />
           <Route path="/tables"       element={<RestaurantRoute><RoleRoute minRole="manager"><FullBleedLayout><Tables /></FullBleedLayout></RoleRoute></RestaurantRoute>} />
           <Route path="/reservations" element={<RestaurantRoute><PrivateLayout><Reservations /></PrivateLayout></RestaurantRoute>} />
-          <Route path="/customers"    element={<RoleRoute minRole="manager"><PrivateLayout><Customers /></PrivateLayout></RoleRoute>} />
-          <Route path="/customers/:id" element={<RoleRoute minRole="manager"><PrivateLayout><CustomerDetail /></PrivateLayout></RoleRoute>} />
+          <Route path="/customers"    element={<RoleRoute minRole="manager"><PrivateLayout><CustomersPage /></PrivateLayout></RoleRoute>} />
+          <Route path="/customers/:id" element={<RoleRoute minRole="manager"><PrivateLayout><CustomerDetailPage /></PrivateLayout></RoleRoute>} />
           <Route path="/exceptions"   element={<RestaurantRoute><RoleRoute minRole="manager"><PrivateLayout><Exceptions /></PrivateLayout></RoleRoute></RestaurantRoute>} />
           <Route path="/configuracion" element={<RoleRoute minRole="manager"><PrivateLayout><Settings /></PrivateLayout></RoleRoute>} />
           <Route path="/settings"      element={<Navigate to="/configuracion" replace />} />

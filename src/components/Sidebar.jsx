@@ -105,12 +105,13 @@ export default function Sidebar({
   const baseLinks = isAppointments
     ? links.map((link) => (link.to === '/reservations' ? { to: '/agenda', label: 'Agenda', icon: <IconClock /> } : link))
     : links;
-  const mainLinks = isStaff
+  // Appointment businesses get Clientes and Equipo on every plan: an agenda
+  // without customers or without the rest of the team is not usable.
+  const lockedByPlan = isFree && !isAppointments;
+  const mainLinks = isStaff || lockedByPlan
     ? baseLinks.filter((link) => link.to !== '/customers')
-    : isFree
-      ? baseLinks.filter((link) => link.to !== '/customers')
-      : baseLinks;
-  const lowerLinks = isStaff || isFree
+    : baseLinks;
+  const lowerLinks = isStaff || lockedByPlan
     ? []
     : hasRole('manager') ? [{ to: '/team', label: 'Equipo', icon: <IconTeam /> }] : [];
   const visibleConfigLinks = hasRole('manager') ? configLinks : [];

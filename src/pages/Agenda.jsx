@@ -68,7 +68,10 @@ export default function Agenda() {
     const d = searchParams.get('date');
     if (isDate(d)) setDate(d);
     if (searchParams.get('new')) {
-      setCreating({ resourceId: searchParams.get('staff') || '', time: searchParams.get('time') || '', date: isDate(d) ? d : null });
+      setCreating({
+        resourceId: searchParams.get('staff') || '', time: searchParams.get('time') || '', date: isDate(d) ? d : null,
+        guest: { guestName: searchParams.get('name') || '', guestPhone: searchParams.get('phone') || '', guestEmail: searchParams.get('email') || '' },
+      });
     }
     if (d || searchParams.get('new')) setSearchParams({}, { replace: true });
   }, [searchParams, setSearchParams]);
@@ -211,6 +214,7 @@ export default function Agenda() {
           date={creating.date || date}
           time={creating.time}
           resourceId={creating.resourceId}
+          guest={creating.guest}
           services={services}
           staff={staff}
           onClose={() => setCreating(null)}

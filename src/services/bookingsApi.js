@@ -23,6 +23,8 @@ export const bookingsApi = {
 
   // day to day
   stats: () => unwrap(api.get('/bookings/stats')),
+  customersSummary: () => unwrap(api.get('/bookings/customers/summary')),
+  customerHistory: (customerId) => unwrap(api.get(`/bookings/customers/${customerId}`)),
   availability: (params) => unwrap(api.get('/bookings/availability', { params })),
   list: (params) => unwrap(api.get('/bookings', { params })),
   create: (data) => unwrap(api.post('/bookings', data)),

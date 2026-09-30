@@ -11,7 +11,7 @@ export function staffForService(service, staff) {
   return allowed.length ? staff.filter((s) => allowed.includes(s._id)) : staff;
 }
 
-export default function NewBookingModal({ date: initialDate, time: initialTime, resourceId: initialResource, services, staff, onClose, onCreated }) {
+export default function NewBookingModal({ date: initialDate, time: initialTime, resourceId: initialResource, guest: initialGuest, services, staff, onClose, onCreated }) {
   const bookable = services.filter((s) => s.bookingMode !== 'quote');
   const [date, setDate] = useState(initialDate);
   // Opened from a professional's empty slot: start with a service they do.
@@ -22,7 +22,7 @@ export default function NewBookingModal({ date: initialDate, time: initialTime, 
   const [resourceId, setResourceId] = useState(initialResource || '');
   const [time, setTime] = useState(initialTime || '');
   const [slots, setSlots] = useState(null);
-  const [guest, setGuest] = useState({ guestName: '', guestPhone: '', guestEmail: '', notes: '', internalNotes: '' });
+  const [guest, setGuest] = useState({ guestName: '', guestPhone: '', guestEmail: '', ...(initialGuest || {}), notes: '', internalNotes: '' });
   const [partySize, setPartySize] = useState(1);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');

@@ -4,7 +4,7 @@ import api from '../services/api';
 const inputCls = 'w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-white';
 const labelCls = 'block text-sm font-medium text-gray-700 mb-1.5';
 
-export default function CustomerForm({ customer, onSave, onCancel }) {
+export default function CustomerForm({ customer, onSave, onCancel, onDeleted }) {
   const [form, setForm] = useState({
     name:  customer?.name  || '',
     phone: customer?.phone || '',
@@ -41,7 +41,7 @@ export default function CustomerForm({ customer, onSave, onCancel }) {
     setDeleting(true);
     try {
       await api.delete(`/customers/${customer._id}`);
-      onSave();
+      (onDeleted || onSave)();
     } catch (err) {
       setError(err.response?.data?.message || 'Error al eliminar');
       setDeleting(false);

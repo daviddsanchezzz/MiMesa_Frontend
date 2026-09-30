@@ -1,5 +1,6 @@
-﻿import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import api from '../services/api';
+import { bookingsApi } from '../services/bookingsApi';
 import { useAuth } from '../context/AuthContext';
 import { useSetMobileHeader } from '../context/MobileHeaderContext';
 
@@ -67,12 +68,14 @@ export default function Team() {
 
   const [members,     setMembers]     = useState([]);
   const [invitations, setInvitations] = useState([]);
+  // Appointment businesses: professionals in the agenda, to link a new member to
+  const [pros,        setPros]        = useState([]);
   const [loading,     setLoading]     = useState(true);
   const [pageError,   setPageError]   = useState('');
 
   // Invite modal
   const [showModal,   setShowModal]   = useState(false);
-  const [invForm,     setInvForm]     = useState({ name: '', email: '', role: 'staff' });
+  const [invForm,     setInvForm]     = useState({ name: '', email: '', role: 'staff', resourceId: '' });
   const [invError,    setInvError]    = useState('');
   const [invLoading,  setInvLoading]  = useState(false);
   const [invSent,     setInvSent]     = useState(false);
@@ -89,14 +92,30 @@ export default function Team() {
       ]);
       setMembers(mRes.data);
       setInvitations(iRes.data);
+      if (isAppointments) {
+        const res = await bookingsApi.resources().catch(() => []);
+        setPros((res || []).filter((r) => r.kind === 'staff'));
+      }
     } catch {
       setPageError('No se pudo cargar el equipo');
     } finally {
       setLoading(false);
     }
-  }, [isManager]);
+  }, [isManager, isAppointments]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
+
+  const proOfUser = (userId) => pros.find((r) => r.userId && r.userId === userId) || null;
+  const proById = (id) => pros.find((r) => String(r._id) === String(id)) || null;
+  // Why a professional can't be picked for a new invitation (already someone's, or already invited)
+  const proBusy = (r) => {
+    if (r.userId) {
+      const m = members.find((x) => x.userId === r.userId);
+      return `ya es ${m?.userName || 'otra cuenta'}`;
+    }
+    const inv = invitations.find((i) => i.links?.resourceId === String(r._id) && i.email !== invForm.email.trim().toLowerCase());
+    return inv ? `invitación pendiente a ${inv.name}` : '';
+  };
 
   /* Send invitation */
   const handleInvite = async (e) => {
@@ -104,7 +123,8 @@ export default function Team() {
     setInvError('');
     setInvLoading(true);
     try {
-      await api.post('/invitations', invForm);
+      const { resourceId, ...rest } = invForm;
+      await api.post('/invitations', { ...rest, links: resourceId ? { resourceId } : {} });
       setInvSent(true);
       fetchAll();
     } catch (err) {
@@ -117,7 +137,7 @@ export default function Team() {
   const closeModal = () => {
     setShowModal(false);
     setInvSent(false);
-    setInvForm({ name: '', email: '', role: 'staff' });
+    setInvForm({ name: '', email: '', role: 'staff', resourceId: '' });
     setInvError('');
   };
 
@@ -207,7 +227,7 @@ export default function Team() {
                 const canEdit   = isOwner && !isMe && !isOwnerRow;
 
                 return (
-                  <li key={member._id} className="flex items-center gap-4 px-5 py-4 hover:bg-gray-50/50 transition-colors">
+                  <li key={member._id} className="flex flex-wrap sm:flex-nowrap items-center gap-x-4 gap-y-2 px-5 py-4 hover:bg-gray-50/50 transition-colors">
                     <Avatar name={member.userName} email={member.userEmail} />
 
                     <div className="flex-1 min-w-0">
@@ -220,9 +240,14 @@ export default function Team() {
                         )}
                       </div>
                       <p className="text-xs text-gray-400 truncate mt-0.5">{member.userEmail || '-'}</p>
+                      {isAppointments && pros.length > 0 && (
+                        proOfUser(member.userId)
+                          ? <p className="text-xs text-violet-700 mt-0.5 truncate">Agenda de {proOfUser(member.userId).name}</p>
+                          : <p className="text-xs text-gray-400 mt-0.5">Sin agenda propia</p>
+                      )}
                     </div>
 
-                    <div className="flex items-center gap-2 shrink-0">
+                    <div className={`flex items-center gap-2 shrink-0 ${canEdit ? 'w-full sm:w-auto pl-14 sm:pl-0' : ''}`}>
                       {canEdit ? (
                         <select
                           value={member.role}
@@ -263,7 +288,7 @@ export default function Team() {
             </div>
             <ul className="divide-y divide-gray-50">
               {invitations.map((inv) => (
-                <li key={inv._id} className="flex items-center gap-4 px-5 py-4">
+                <li key={inv._id} className="flex flex-wrap sm:flex-nowrap items-center gap-x-4 gap-y-2 px-5 py-4">
                   <div className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center shrink-0">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 text-gray-400">
                       <path d="M3 4a2 2 0 0 0-2 2v1.161l8.441 4.221a1.25 1.25 0 0 0 1.118 0L19 7.162V6a2 2 0 0 0-2-2H3Z"/>
@@ -273,8 +298,11 @@ export default function Team() {
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-gray-900 truncate">{inv.name}</p>
                     <p className="text-xs text-gray-400 truncate">{inv.email}</p>
+                    {inv.links?.resourceId && proById(inv.links.resourceId) && (
+                      <p className="text-xs text-violet-700 truncate">Será {proById(inv.links.resourceId).name} en la agenda</p>
+                    )}
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto pl-[52px] sm:pl-0">
                     <RolePill role={inv.role} />
                     <span className="text-[11px] text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full font-medium">Pendiente</span>
                     {isOwner && (
@@ -396,6 +424,36 @@ export default function Team() {
                       ))}
                     </div>
                   </div>
+
+                  {isAppointments && pros.length > 0 && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1.5">¿Es uno de tus profesionales?</label>
+                      <select
+                        value={invForm.resourceId}
+                        onChange={(e) => {
+                          const id = e.target.value;
+                          const pro = proById(id);
+                          setInvForm((f) => ({ ...f, resourceId: id, name: f.name.trim() ? f.name : (pro?.name || '') }));
+                        }}
+                        className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white"
+                      >
+                        <option value="">No, no atiende citas</option>
+                        {pros.map((r) => {
+                          const busy = proBusy(r);
+                          return (
+                            <option key={r._id} value={r._id} disabled={!!busy}>
+                              {r.name}{busy ? ` (${busy})` : ''}
+                            </option>
+                          );
+                        })}
+                      </select>
+                      <p className="text-xs text-gray-400 mt-1.5">
+                        {invForm.resourceId
+                          ? `Al entrar verá la agenda de ${proById(invForm.resourceId)?.name || 'ese profesional'} y podrá bloquear su tiempo.`
+                          : 'Si ya lo has creado en la agenda, elígelo para que al entrar vea sus citas.'}
+                      </p>
+                    </div>
+                  )}
 
                   <p className="text-xs text-gray-400 leading-relaxed">
                     Recibirá un email con un enlace para crear su cuenta y unirse al negocio. El enlace caduca en 7 días.

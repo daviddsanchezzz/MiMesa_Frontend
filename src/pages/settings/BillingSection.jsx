@@ -2,12 +2,13 @@ import { useState, useEffect } from 'react';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import Modal from '../../components/Modal';
-import { paymentGraceUntil, PRICES } from '../../lib/billing';
+import { paymentGraceUntil, pricesFor } from '../../lib/billing';
 import { BASIC_FEATURES as R_BASIC, CheckIcon, PRO_EXTRAS as R_PRO, APPT_BASIC_FEATURES, APPT_PRO_EXTRAS } from './shared';
 
 export function BillingSection() {
   const { plan, subscriptionStatus, trialEndsAt, currentPeriodEnd, cancelAtPeriodEnd, hasRole, refreshBusiness, isAppointments, business } = useAuth();
   const graceUntil = paymentGraceUntil(business);
+  const PRICES = pricesFor(isAppointments);
   const BASIC_FEATURES = isAppointments ? APPT_BASIC_FEATURES : R_BASIC;
   const PRO_EXTRAS = isAppointments ? APPT_PRO_EXTRAS : R_PRO;
   const audience = isAppointments ? 'negocios' : 'restaurantes';

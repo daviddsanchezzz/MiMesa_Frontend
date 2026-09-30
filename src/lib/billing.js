@@ -15,3 +15,11 @@ export const PRICES = {
   proIncluded: 3,          // professionals included in Pro
   proExtra: '5 €',         // per professional beyond that, per month
 };
+
+// Restaurants: own prices, no per-professional count
+export const RESTAURANT_PRICES = {
+  basic: '39,99 €',
+  pro: '69,99 €',
+};
+
+export const pricesFor = (isAppointments) => (isAppointments ? PRICES : { ...PRICES, ...RESTAURANT_PRICES });

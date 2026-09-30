@@ -1,23 +1,6 @@
 import StaffAvatar from './StaffAvatar';
 import { absenceSpan, absenceText, timeInTz, toHHMM } from './utils';
-
-// The colored line tells the state; no badges.
-const LINE = {
-  next:     { color: '#7c3aed', label: 'Siguiente / en curso' },
-  paid:     { color: '#10b981', label: 'Cobrada' },
-  unpaid:   { color: '#f59e0b', label: 'Atendida sin cobrar' },
-  lost:     { color: '#f43f5e', label: 'No vino o cancelada' },
-  pending:  { color: '#d1d5db', label: 'Por confirmar', dashed: true },
-  other:    { color: '#d1d5db', label: 'Resto' },
-};
-
-function lineFor(b, isNext) {
-  if (['cancelled', 'no_show'].includes(b.status)) return 'lost';
-  if (b.status === 'completed' || b.payment) return b.payment ? 'paid' : 'unpaid';
-  if (isNext || b.status === 'checked_in') return 'next';
-  if (b.status === 'pending') return 'pending';
-  return 'other';
-}
+import { LINE, lineFor, nextBookingId, LineLegend } from './lineColors';
 
 function Line({ kind }) {
   const l = LINE[kind];
@@ -71,7 +54,7 @@ export default function ListView({ tz, date, bookings, absences = [], staffById,
       </div>
     );
   }
-  const nextId = isToday ? sorted.find((b) => new Date(b.end) > now && !['cancelled', 'no_show'].includes(b.status))?._id : null;
+  const nextId = nextBookingId(sorted, isToday, now);
   const shown = new Set(sorted.map((b) => lineFor(b, b._id === nextId)));
   return (
     <div className="space-y-3">
@@ -104,15 +87,7 @@ export default function ListView({ tz, date, bookings, absences = [], staffById,
         );
       })}
     </ul>
-      {/* Legend: only the colors that appear today */}
-      <div className="flex flex-wrap gap-x-4 gap-y-1.5 px-1 text-[11px] text-gray-500">
-        {Object.entries(LINE).filter(([k]) => k !== 'other' && shown.has(k)).map(([k, l]) => (
-          <span key={k} className="inline-flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full" style={l.dashed ? { border: `2px dashed ${l.color}` } : { backgroundColor: l.color }} />
-            {l.label}
-          </span>
-        ))}
-      </div>
+      <LineLegend kinds={shown} />
     </div>
   );
 }

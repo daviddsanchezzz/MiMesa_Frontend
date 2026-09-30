@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { closedGaps, minutesInTz, timeInTz, tint, toHHMM } from './utils';
+import { LINE } from './lineColors';
 
 export const PX_PER_MIN = 1.4;
 const SNAP_MIN = 15;
@@ -44,7 +45,10 @@ export function AbsenceBlock({ absence, top, height, left = '4px', width = 'calc
   );
 }
 
-export function BookingBlock({ booking, segment, color, tz, top, height, left = '4px', width = 'calc(100% - 8px)', dense = false, onClick }) {
+// kind (day view): the colour tells the state, like the list (see lineColors).
+// Without it (week view) the block takes the professional's colour.
+export function BookingBlock({ booking, segment, color, kind = null, tz, top, height, left = '4px', width = 'calc(100% - 8px)', dense = false, onClick }) {
+  if (kind) return <StateBlock {...{ booking, segment, kind, tz, top, height, left, width, dense, onClick }} />;
   const st = STATUS_STYLE[booking.status];
   const muted = st?.muted;
   return (
@@ -70,6 +74,39 @@ export function BookingBlock({ booking, segment, color, tz, top, height, left = 
       {st && height > 52 && !dense && (
         <span className={`inline-block mt-1 text-[10px] font-semibold px-1.5 py-px rounded ${st.chip}`}>{st.label}</span>
       )}
+    </button>
+  );
+}
+
+const STATE_BG = { next: 0.14, paid: 0.12, unpaid: 0.14, lost: 0, pending: 0, other: 0 };
+
+function StateBlock({ booking, segment, kind, tz, top, height, left, width, dense, onClick }) {
+  const l = LINE[kind];
+  const lost = kind === 'lost';
+  const bg = STATE_BG[kind] ? tint(l.color, STATE_BG[kind]) : lost ? '#fff7f8' : '#f9fafb';
+  return (
+    <button
+      type="button"
+      onClick={(e) => { e.stopPropagation(); onClick?.(booking); }}
+      title={`${timeInTz(segment.start, tz)}–${timeInTz(segment.end, tz)} · ${booking.guestName} · ${segment.serviceName} · ${l.label}`}
+      className={`absolute z-10 rounded-lg text-left overflow-hidden transition-shadow hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-gray-400 ${dense ? 'px-1.5 py-0.5' : 'px-2 py-1'} ${kind === 'next' ? 'ring-1 ring-violet-300' : ''}`}
+      style={{
+        top, height, left, width,
+        backgroundColor: bg,
+        borderLeft: l.dashed ? 'none' : `3px solid ${l.color}`,
+        backgroundImage: l.dashed ? `repeating-linear-gradient(to bottom, ${l.color} 0 5px, transparent 5px 9px)` : 'none',
+        backgroundSize: l.dashed ? '3px 100%' : undefined,
+        backgroundRepeat: 'no-repeat',
+        paddingLeft: l.dashed ? (dense ? 9 : 11) : undefined,
+      }}
+    >
+      <p className={`text-[11px] font-semibold leading-tight truncate ${lost ? 'text-gray-400 line-through' : 'text-gray-900'}`}>
+        {!dense && <span className="tabular-nums">{timeInTz(segment.start, tz)} · </span>}{dense ? booking.guestName.split(' ')[0] : booking.guestName}
+      </p>
+      {height > 34 && !dense && (
+        <p className={`text-[11px] leading-tight truncate ${lost ? 'text-gray-400' : 'text-gray-600'}`}>{segment.serviceName}</p>
+      )}
+      <span className="sr-only">{l.label}</span>
     </button>
   );
 }

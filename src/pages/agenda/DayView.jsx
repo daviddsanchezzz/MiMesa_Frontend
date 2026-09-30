@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import TimeGrid, { AbsenceBlock, BookingBlock, PX_PER_MIN } from './TimeGrid';
 import StaffAvatar from './StaffAvatar';
+import { lineFor, nextBookingId, LineLegend } from './lineColors';
 import { minutesInTz, toHHMM, windowsForDate, intersectWindows, layoutOverlaps, absenceSpan } from './utils';
 
 const UNASSIGNED = '__none__';
@@ -19,12 +20,17 @@ export function visibleRange(windowsList, bookings, tz) {
 
 /**
  * One day: a column per professional with their photo or initials, their own
- * hours (inside the business hours) and their appointments in their colour.
+ * hours (inside the business hours) and their appointments, coloured by state
+ * like the list (lila next, green charged, amber unpaid, red cancelled, grey rest).
  */
 export default function DayView({ date, tz, staff, bookings, absences = [], onAbsenceClick, businessSchedule, staffSchedules = {}, colors, isToday, onEmptyClick, onBookingClick, fill = false, compact = false }) {
   const bizWindows = useMemo(() => windowsForDate(businessSchedule, date), [businessSchedule, date]);
   const windowsFor = (id) => (staffSchedules[id] ? intersectWindows(windowsForDate(staffSchedules[id], date), bizWindows) : bizWindows);
   const [startMin, endMin] = useMemo(() => visibleRange([bizWindows], bookings, tz), [bizWindows, bookings, tz]);
+
+  // Same colour rule as the list: the colour tells the state, the column tells who
+  const nextId = nextBookingId(bookings, isToday);
+  const kinds = new Set(bookings.map((b) => lineFor(b, b._id === nextId)));
 
   const columns = useMemo(() => {
     const staffIds = new Set(staff.map((s) => s._id));
@@ -74,7 +80,7 @@ export default function DayView({ date, tz, staff, bookings, absences = [], onAb
         const w = 100 / cols;
         return {
           key: `${booking._id}-${segment._id}-${id}`,
-          render: <BookingBlock booking={booking} segment={segment} tz={tz} top={top} height={height} color={colors[id] || '#9ca3af'}
+          render: <BookingBlock booking={booking} segment={segment} tz={tz} top={top} height={height} color={colors[id] || '#9ca3af'} kind={lineFor(booking, booking._id === nextId)}
             left={`calc(${col * w}% + 4px)`} width={`calc(${w}% - 8px)`} onClick={onBookingClick} />,
         };
       })],
@@ -83,7 +89,7 @@ export default function DayView({ date, tz, staff, bookings, absences = [], onAb
     if (byCol[UNASSIGNED]) cols.push(make(UNASSIGNED, 'Sin profesional'));
     return cols;
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bookings, absences, staff, startMin, endMin, tz, colors, bizWindows, staffSchedules, isToday, date]);
+  }, [bookings, absences, staff, startMin, endMin, tz, colors, bizWindows, staffSchedules, isToday, date, nextId]);
 
   if (!columns.length) {
     return (
@@ -94,5 +100,12 @@ export default function DayView({ date, tz, staff, bookings, absences = [], onAb
   }
   // Phones: one or two people fit the screen; more scroll sideways
   const minColWidth = compact ? (columns.length <= 2 ? '0px' : '8.5rem') : '11rem';
-  return <TimeGrid columns={columns} startMin={startMin} endMin={endMin} tz={tz} fill={fill} minColWidth={minColWidth} />;
+  return (
+    <div className={fill ? 'h-full flex flex-col gap-2' : 'space-y-2'}>
+      <div className={fill ? 'flex-1 min-h-0' : ''}>
+        <TimeGrid columns={columns} startMin={startMin} endMin={endMin} tz={tz} fill={fill} minColWidth={minColWidth} />
+      </div>
+      <div className="shrink-0"><LineLegend kinds={kinds} /></div>
+    </div>
+  );
 }

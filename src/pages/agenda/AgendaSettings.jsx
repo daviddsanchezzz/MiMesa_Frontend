@@ -420,9 +420,23 @@ function Services({ services, staff, reload }) {
   const [editing, setEditing] = useState(undefined); // undefined = closed, null = new
   const [error, setError] = useState('');
 
+  const [inactive, setInactive] = useState(null); // deactivated services, loaded on demand
+
   async function remove(s) {
-    if (!window.confirm(`¿Desactivar el servicio ${s.name}?`)) return;
-    try { await bookingsApi.deleteService(s._id); reload(); } catch (err) { setError(apiError(err)); }
+    if (!window.confirm(`¿Desactivar el servicio ${s.name}? Deja de poder reservarse; lo puedes recuperar cuando quieras.`)) return;
+    try { await bookingsApi.deleteService(s._id); reload(); setInactive(null); } catch (err) { setError(apiError(err)); }
+  }
+
+  async function showInactive() {
+    try { setInactive((await bookingsApi.services(true)).filter((s) => s.active === false)); } catch (err) { setError(apiError(err)); }
+  }
+
+  async function restore(s) {
+    try {
+      await bookingsApi.updateService(s._id, { active: true });
+      setInactive((list) => (list || []).filter((x) => x._id !== s._id));
+      reload();
+    } catch (err) { setError(apiError(err)); }
   }
 
   return (
@@ -446,6 +460,24 @@ function Services({ services, staff, reload }) {
           );
         })}
       </ul>
+      {inactive === null ? (
+        <button type="button" className="text-xs font-medium text-gray-500 hover:text-gray-800" onClick={showInactive}>Ver servicios desactivados</button>
+      ) : inactive.length === 0 ? (
+        <p className="text-xs text-gray-400">No hay servicios desactivados.</p>
+      ) : (
+        <div className="space-y-1.5">
+          <p className="text-xs font-semibold text-gray-500">Desactivados</p>
+          <ul className="divide-y divide-gray-100 border border-gray-100 rounded-xl bg-gray-50">
+            {inactive.map((s) => (
+              <li key={s._id} className="px-3 py-2 flex items-center gap-3">
+                <span className="text-sm text-gray-500">{s.name}</span>
+                <span className="text-xs text-gray-400">{s.durationMin} min · {euros(s.price?.amount)}</span>
+                <button type="button" className="ml-auto text-xs font-semibold text-violet-700 hover:text-violet-900" onClick={() => restore(s)}>Recuperar</button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       {error && <p className="text-sm text-rose-600">{error}</p>}
       {editing !== undefined && (
         <ServiceFormModal service={editing} staff={staff} onClose={() => setEditing(undefined)}

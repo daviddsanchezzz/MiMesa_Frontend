@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import CustomerForm from '../components/CustomerForm';
 import Modal from '../components/Modal';
+import CustomerListTools from '../components/CustomerListTools';
 import { useSetMobileHeader } from '../context/MobileHeaderContext';
 
 function Avatar({ name, size = 'md' }) {
@@ -237,6 +238,7 @@ export default function Customers() {
           <h2 className="hidden xl:block text-xl font-bold text-gray-900">Clientes</h2>
           <p className="text-sm text-gray-400 mt-0.5">{customers.length} cliente{customers.length !== 1 ? 's' : ''} registrados</p>
         </div>
+        <CustomerListTools onImported={load} />
         <button
           onClick={() => setModal({ mode: 'create' })}
           className="hidden xl:flex items-center gap-2 bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors shadow-sm"

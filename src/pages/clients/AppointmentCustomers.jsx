@@ -6,6 +6,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useSetMobileHeader } from '../../context/MobileHeaderContext';
 import CustomerForm from '../../components/CustomerForm';
 import Modal from '../../components/Modal';
+import CustomerListTools from '../../components/CustomerListTools';
 import { DEFAULT_TZ, btnPrimary, euros, initials, pluralize, staffColors, STAFF_COLORS } from '../agenda/utils';
 
 const FILTERS = [
@@ -115,7 +116,10 @@ export default function AppointmentCustomers() {
             {counts.due > 0 && <> · <button type="button" className="font-semibold text-emerald-700 hover:underline" onClick={() => setFilter('due')}>{pluralize(counts.due, 'le toca volver', 'les toca volver')}</button></>}
           </p>
         </div>
-        <button type="button" className={`${btnPrimary} hidden xl:inline-flex`} onClick={() => setCreating(true)}>Nuevo cliente</button>
+        <div className="flex items-center gap-2">
+          <CustomerListTools onImported={load} />
+          <button type="button" className={`${btnPrimary} hidden xl:inline-flex`} onClick={() => setCreating(true)}>Nuevo cliente</button>
+        </div>
       </div>
 
       {error && <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</p>}

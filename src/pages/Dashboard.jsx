@@ -6,6 +6,7 @@ import Modal from '../components/Modal';
 import ReservationForm from '../components/ReservationForm';
 import { ReservationCard, TableCell, Avatar, statusConfig } from '../components/ReservationCard';
 import { toast } from 'sonner';
+import { useSetMobileHeader } from '../context/MobileHeaderContext';
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 function getToday() {
@@ -110,6 +111,7 @@ function getActiveShiftInfo(slots, shiftOrder) {
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 export default function Dashboard() {
+  useSetMobileHeader({ title: 'Inicio' });
   const navigate = useNavigate();
   const { business, hasRole } = useAuth();
   const canModeratePending = hasRole('manager');
@@ -492,7 +494,7 @@ export default function Dashboard() {
       {/* Header */}
       <div className="flex items-center justify-between gap-3">
         <div>
-          <h2 className="text-xl font-bold text-gray-900">{business?.name}</h2>
+          <h2 className="hidden xl:block text-xl font-bold text-gray-900">{business?.name}</h2>
           <p className="text-sm text-gray-400 capitalize">{todayLabel}</p>
         </div>
         {canModeratePending && (

@@ -128,10 +128,10 @@ export default function AppointmentsDashboard() {
           {business?.logoUrl && <img src={business.logoUrl} alt="" className="w-11 h-11 rounded-xl object-contain bg-white border border-gray-200 p-1 shrink-0" />}
           <div className="min-w-0">
             <h2 className="text-xl font-bold text-gray-900 truncate">{greeting(session?.user?.name)}</h2>
-            <p className="text-sm text-gray-500 mt-0.5">{longDate(today)} · {business?.name}</p>
+            <p className="text-sm text-gray-500 mt-0.5">{longDate(today)}<span className="hidden xl:inline"> · {business?.name}</span></p>
           </div>
         </div>
-        <div className="hidden sm:flex gap-2">
+        <div className="hidden xl:flex gap-2">
           <Link to="/agenda" className={btnSecondary}>Ver agenda</Link>
           <Link to="/agenda?new=1" className={btnPrimary}>Nueva cita</Link>
         </div>

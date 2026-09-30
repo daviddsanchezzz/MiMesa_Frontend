@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import api from '../services/api';
+import { useSetMobileHeader } from '../context/MobileHeaderContext';
 
 const inputCls = 'w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent';
 const labelCls = 'block text-xs font-medium text-gray-600 mb-1.5';
 
 export default function Marketing() {
+  useSetMobileHeader({ title: 'Email marketing' });
   const [subscribers,  setSubscribers]  = useState([]);
   const [campaigns,    setCampaigns]    = useState([]);
   const [subject,      setSubject]      = useState('');
@@ -50,7 +52,7 @@ export default function Marketing() {
   return (
     <div className="space-y-5 max-w-3xl">
       <div>
-        <h2 className="text-xl font-bold text-gray-900">Email marketing</h2>
+        <h2 className="hidden xl:block text-xl font-bold text-gray-900">Email marketing</h2>
         <p className="text-sm text-gray-400 mt-0.5">
           {subscribers.length} suscriptor{subscribers.length !== 1 ? 'es' : ''} activo{subscribers.length !== 1 ? 's' : ''} · {remaining}/3 envíos disponibles este mes
         </p>

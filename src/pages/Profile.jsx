@@ -4,6 +4,7 @@ import Modal from '../components/Modal';
 import { useAuth } from '../context/AuthContext';
 import PushNotificationToggle from '../components/PushNotificationToggle';
 import BusinessTypePicker from '../components/BusinessTypePicker';
+import { useSetMobileHeader } from '../context/MobileHeaderContext';
 
 const inputCls = 'w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-white';
 const labelCls = 'block text-xs font-medium text-gray-600 mb-1.5';
@@ -91,6 +92,7 @@ function MembershipCard({ membership, onToggle, disabled = false }) {
 }
 
 export default function Profile() {
+  useSetMobileHeader({ title: 'Perfil', action: false });
   const { business, switchBusiness, refreshBusiness, role } = useAuth();
   const [loading, setLoading] = useState(true);
   const [pageError, setPageError] = useState('');
@@ -249,7 +251,7 @@ export default function Profile() {
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Perfil</h1>
+          <h1 className="hidden xl:block text-xl font-bold text-gray-900">Perfil</h1>
           <p className="text-sm text-gray-500 mt-0.5">Gestiona tus datos personales, seguridad y notificaciones.</p>
         </div>
       </div>

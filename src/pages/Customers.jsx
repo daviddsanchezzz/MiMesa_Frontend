@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import CustomerForm from '../components/CustomerForm';
 import Modal from '../components/Modal';
+import { useSetMobileHeader } from '../context/MobileHeaderContext';
 
 function Avatar({ name, size = 'md' }) {
   const colors = ['bg-violet-500','bg-violet-500','bg-rose-500','bg-amber-500','bg-emerald-500','bg-cyan-500'];
@@ -158,6 +159,7 @@ function MobileCustomerRow({ c, onEdit, onOpen }) {
 }
 
 export default function Customers() {
+  useSetMobileHeader({ title: 'Clientes', action: { label: 'Cliente', onClick: () => setModal({ mode: 'create' }) } });
   const navigate = useNavigate();
   const [customers, setCustomers] = useState([]);
   const [modal, setModal] = useState(null);
@@ -191,12 +193,11 @@ export default function Customers() {
       <div className="sm:hidden space-y-3">
         <div className="flex items-center gap-2">
           <div className="flex-1">
-            <h2 className="text-xl font-bold text-gray-900">Clientes</h2>
-            <p className="text-sm text-gray-400 mt-0.5">{customers.length} registrados</p>
+            <p className="text-sm text-gray-400">{customers.length} registrados</p>
           </div>
           <button
             onClick={() => setModal({ mode: 'create' })}
-            className="w-10 h-10 flex items-center justify-center rounded-xl bg-violet-600 text-white active:bg-violet-700 shrink-0 shadow-sm"
+            className="hidden w-10 h-10 flex items-center justify-center rounded-xl bg-violet-600 text-white active:bg-violet-700 shrink-0 shadow-sm"
             aria-label="Nuevo cliente"
           >
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-5 h-5">
@@ -233,12 +234,12 @@ export default function Customers() {
       {/* Header */}
       <div className="hidden sm:flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-xl font-bold text-gray-900">Clientes</h2>
+          <h2 className="hidden xl:block text-xl font-bold text-gray-900">Clientes</h2>
           <p className="text-sm text-gray-400 mt-0.5">{customers.length} cliente{customers.length !== 1 ? 's' : ''} registrados</p>
         </div>
         <button
           onClick={() => setModal({ mode: 'create' })}
-          className="flex items-center gap-2 bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors shadow-sm"
+          className="hidden xl:flex items-center gap-2 bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors shadow-sm"
         >
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
             <path d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z" />

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../services/api';
+import { useSetMobileHeader } from '../context/MobileHeaderContext';
 
 function StatCard({ label, value, tone = 'gray' }) {
   const tones = {
@@ -37,6 +38,7 @@ function statusLabel(status) {
 }
 
 export default function CustomerDetail() {
+  useSetMobileHeader({ title: 'Ficha de cliente' });
   const { id } = useParams();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
@@ -101,7 +103,7 @@ export default function CustomerDetail() {
         >
           Volver
         </button>
-        <h2 className="text-xl font-bold text-gray-900">Ficha de cliente</h2>
+        <h2 className="hidden xl:block text-xl font-bold text-gray-900">Ficha de cliente</h2>
       </div>
 
       {loading && (

@@ -6,6 +6,7 @@ import Modal from '../components/Modal';
 import { useAuth } from '../context/AuthContext';
 import { statusConfig, Avatar, TableCell } from '../components/ReservationCard';
 import Calendar from './Calendar';
+import { useSetMobileHeader } from '../context/MobileHeaderContext';
 
 const MAP_WORLD_W = 2400;
 const MAP_CHAIR_W = 18;
@@ -230,6 +231,7 @@ function MobileRow({ r, tables, onEdit, onCancel, onDelete, onAssign, onQuickSta
 }
 
 export default function Reservations() {
+  useSetMobileHeader({ title: 'Reservas' });
   const { hasRole } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const initialView = (() => {
@@ -1101,7 +1103,7 @@ export default function Reservations() {
 
       {/* DESKTOP HEADER */}      <div className="hidden sm:flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-xl font-bold text-gray-900">Reservas</h2>
+          <h2 className="hidden xl:block text-xl font-bold text-gray-900">Reservas</h2>
           <p className="text-sm text-gray-400 mt-0.5">
             {reservations.length} reserva{reservations.length !== 1 ? 's' : ''}
             {(filterMode === 'today' || filterMode === 'day') ? `  ${labelDate}` : ''}

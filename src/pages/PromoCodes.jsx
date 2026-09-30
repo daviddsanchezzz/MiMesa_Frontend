@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import api from '../services/api';
 import Modal from '../components/Modal';
+import { useSetMobileHeader } from '../context/MobileHeaderContext';
 
 const inputCls = 'w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent';
 const labelCls = 'block text-xs font-medium text-gray-600 mb-1.5';
@@ -12,6 +13,7 @@ const IconPlus = () => (
 );
 
 export default function PromoCodes() {
+  useSetMobileHeader({ title: 'Códigos promocionales', action: { label: 'Código', onClick: () => setCreating(true) } });
   const [promos,   setPromos]   = useState([]);
   const [loading,  setLoading]  = useState(true);
   const [error,    setError]    = useState('');
@@ -75,12 +77,12 @@ export default function PromoCodes() {
     <div className="space-y-5 max-w-3xl">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-xl font-bold text-gray-900">Códigos promocionales</h2>
+          <h2 className="hidden xl:block text-xl font-bold text-gray-900">Códigos promocionales</h2>
           <p className="text-sm text-gray-400 mt-0.5">Los clientes pueden usarlos al reservar online.</p>
         </div>
         <button
           onClick={() => setCreating(true)}
-          className="flex items-center gap-1.5 px-3 py-2 bg-violet-600 text-white text-sm font-medium rounded-xl hover:bg-violet-700 transition-colors shrink-0"
+          className="hidden xl:flex items-center gap-1.5 px-3 py-2 bg-violet-600 text-white text-sm font-medium rounded-xl hover:bg-violet-700 transition-colors shrink-0"
         >
           <IconPlus /> Nuevo código
         </button>

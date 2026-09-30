@@ -78,7 +78,7 @@ export default function Agenda() {
     if (d || searchParams.get('new')) setSearchParams({}, { replace: true });
   }, [searchParams, setSearchParams]);
 
-  useSetMobileHeader({ title: 'Agenda' });
+  useSetMobileHeader({ title: 'Agenda', action: { label: 'Cita', onClick: () => openNew('', '', date) } });
 
   const loadSetup = useCallback(async () => {
     const [r, s, sch] = await Promise.all([bookingsApi.resources(), bookingsApi.services(), bookingsApi.schedule()]);
@@ -166,7 +166,7 @@ export default function Agenda() {
     <div ref={rootRef} className={fill ? 'flex flex-col gap-3' : 'space-y-4'} style={fill && fitHeight ? { height: fitHeight } : undefined}>
       <div className="flex items-center justify-between gap-3 shrink-0">
         <div className="min-w-0 flex-1">
-          <h2 className="hidden sm:block text-xl font-bold text-gray-900">Agenda</h2>
+          <h2 className="hidden xl:block text-xl font-bold text-gray-900">Agenda</h2>
           <p className="text-[13px] sm:text-sm leading-snug text-gray-500 sm:mt-0.5">
             {activeView === 'week' ? `Semana del ${Number(from.slice(8))} al ${Number(to.slice(8))}` : longDate(date)}
             {activeView !== 'week' && dayTotal.n > 0 && <> · {pluralize(dayTotal.n, 'cita', 'citas')} · {euros(dayTotal.revenue)}</>}
@@ -181,7 +181,7 @@ export default function Agenda() {
               </button>
             ))}
           </div>
-          <button type="button" className={`${btnPrimary} hidden sm:inline-flex`} onClick={() => openNew('', '', date)}>Nueva cita</button>
+          <button type="button" className={`${btnPrimary} hidden xl:inline-flex`} onClick={() => openNew('', '', date)}>Nueva cita</button>
         </div>
       </div>
 

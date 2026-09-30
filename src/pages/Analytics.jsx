@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
+import { useSetMobileHeader } from '../context/MobileHeaderContext';
 
 // ─── KPI Card ────────────────────────────────────────────────────────────────
 function KpiCard({ label, value, sub, trend, trendLabel, color = 'violet', icon }) {
@@ -150,6 +151,7 @@ const IcoPeople = () => (
 
 // ─── Main ─────────────────────────────────────────────────────────────────────
 export default function Estadisticas() {
+  useSetMobileHeader({ title: 'Estadísticas' });
   const [period, setPeriod] = useState(30);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -179,7 +181,7 @@ export default function Estadisticas() {
       {/* Header */}
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
-          <h2 className="text-xl font-bold text-gray-900">Estadísticas</h2>
+          <h2 className="hidden xl:block text-xl font-bold text-gray-900">Estadísticas</h2>
           <p className="text-sm text-gray-400 mt-0.5">
             {data?.range ? `${data.range.from} — ${data.range.to}` : 'Cargando...'}
           </p>

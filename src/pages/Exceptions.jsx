@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import api from '../services/api';
+import { useSetMobileHeader } from '../context/MobileHeaderContext';
 
 const inputCls = 'w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-white';
 const labelCls = 'block text-sm font-medium text-gray-700 mb-1.5';
@@ -37,6 +38,7 @@ function defaultMessageForType(type) {
 }
 
 export default function Exceptions() {
+  useSetMobileHeader({ title: 'Excepciones', action: { label: 'Excepción', onClick: () => openCreate() } });
   const today = new Date().toISOString().slice(0, 10);
   const [rows, setRows] = useState([]);
   const [formSlots, setFormSlots] = useState([]);
@@ -162,12 +164,12 @@ export default function Exceptions() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-xl font-bold text-gray-900">Excepciones</h2>
+          <h2 className="hidden xl:block text-xl font-bold text-gray-900">Excepciones</h2>
           <p className="text-sm text-gray-400 mt-0.5">Mostrando solo excepciones futuras</p>
         </div>
         <button
           onClick={openCreate}
-          className="flex items-center gap-2 bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors shadow-sm"
+          className="hidden xl:flex items-center gap-2 bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors shadow-sm"
         >
           Nueva excepción
         </button>

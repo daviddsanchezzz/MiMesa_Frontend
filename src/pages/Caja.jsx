@@ -61,10 +61,10 @@ export default function Caja() {
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-end justify-between gap-3">
+      <div className="flex flex-wrap items-center xl:items-end justify-between gap-3">
         <div>
-          <h2 className="text-xl font-bold text-gray-900">Caja</h2>
-          <p className="text-sm text-gray-500 mt-0.5">{longDate(date)}{closed && ' · Cerrada'}</p>
+          <h2 className="hidden xl:block text-xl font-bold text-gray-900">Caja</h2>
+          <p className="text-sm text-gray-500 xl:mt-0.5">{longDate(date)}{closed && ' · Cerrada'}</p>
         </div>
         <div className="flex items-center gap-1.5">
           <button type="button" className={`${btnSecondary} !px-3`} onClick={() => setDate(addDays(date, -1))} aria-label="Día anterior">‹</button>

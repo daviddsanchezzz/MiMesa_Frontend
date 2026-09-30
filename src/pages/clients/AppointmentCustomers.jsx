@@ -64,7 +64,7 @@ export default function AppointmentCustomers() {
   const [sort, setSort] = useState('recent');
   const [creating, setCreating] = useState(false);
 
-  useSetMobileHeader({ title: 'Clientes' });
+  useSetMobileHeader({ title: 'Clientes', action: { label: 'Cliente', onClick: () => setCreating(true) } });
 
   const load = () => Promise.all([api.get('/customers').then((r) => r.data), bookingsApi.customersSummary(), bookingsApi.resources()])
     .then(([c, s, r]) => { setCustomers(c); setSummary(s); setResources(r); })
@@ -109,13 +109,13 @@ export default function AppointmentCustomers() {
     <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="text-xl font-bold text-gray-900">Clientes</h2>
-          <p className="text-sm text-gray-500 mt-0.5">
+          <h2 className="hidden xl:block text-xl font-bold text-gray-900">Clientes</h2>
+          <p className="text-sm text-gray-500 xl:mt-0.5">
             {customers ? `${pluralize(customers.length, 'cliente', 'clientes')}` : 'Cargando…'}
             {counts.due > 0 && <> · <button type="button" className="font-semibold text-emerald-700 hover:underline" onClick={() => setFilter('due')}>{pluralize(counts.due, 'le toca volver', 'les toca volver')}</button></>}
           </p>
         </div>
-        <button type="button" className={btnPrimary} onClick={() => setCreating(true)}>Nuevo cliente</button>
+        <button type="button" className={`${btnPrimary} hidden xl:inline-flex`} onClick={() => setCreating(true)}>Nuevo cliente</button>
       </div>
 
       {error && <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</p>}

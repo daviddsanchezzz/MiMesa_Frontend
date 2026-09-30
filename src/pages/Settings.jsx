@@ -13,6 +13,7 @@ import { BillingSection } from './settings/BillingSection';
 import { PagosSection } from './settings/PagosSection';
 import { ProfessionalsSettings, ServicesSettings, HoursSettings } from './agenda/AgendaSettings';
 import { BookingLinkSettings } from './agenda/BookingLinkSettings';
+import { useSetMobileHeader } from '../context/MobileHeaderContext';
 
 const svg = (d) => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 shrink-0"><path fillRule="evenodd" d={d} clipRule="evenodd" /></svg>
@@ -46,6 +47,7 @@ const TABS = [
 const OWNER_ONLY_TABS = new Set(['suscripcion', 'pagos']);
 
 export default function Settings() {
+  useSetMobileHeader({ title: 'Configuración' });
   const { hasRole, isAppointments } = useAuth();
   const isOwner = hasRole('owner');
   const tabsForType = isAppointments
@@ -64,7 +66,7 @@ export default function Settings() {
   return (
     <div className="space-y-5">
       <div>
-        <h2 className="text-xl font-bold text-gray-900">Configuración</h2>
+        <h2 className="hidden xl:block text-xl font-bold text-gray-900">Configuración</h2>
         <p className="text-sm text-gray-400 mt-0.5">Administra la operativa y ajustes del negocio.</p>
       </div>
 

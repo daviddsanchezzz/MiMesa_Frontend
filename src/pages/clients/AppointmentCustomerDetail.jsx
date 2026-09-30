@@ -51,7 +51,7 @@ export default function AppointmentCustomerDetail() {
   const [notesSaved, setNotesSaved] = useState(false);
   const [editing, setEditing] = useState(false);
 
-  useSetMobileHeader({ title: customer?.name || 'Cliente' });
+  useSetMobileHeader({ title: 'Ficha de cliente', action: customer ? { label: 'Cita', onClick: () => navigate(bookUrl) } : undefined });
 
   const load = () => Promise.all([api.get(`/customers/${id}`).then((r) => r.data.customer), bookingsApi.customerHistory(id), bookingsApi.resources(true)])
     .then(([c, h, r]) => { setCustomer(c); setNotes(c.notes || ''); setHistory(h); setResources(r); })
@@ -119,7 +119,7 @@ export default function AppointmentCustomerDetail() {
           <p className="text-xs text-gray-400 mt-0.5">Cliente desde {new Date(customer.createdAt).toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}</p>
         </div>
         <div className="flex flex-wrap gap-2 w-full sm:w-auto">
-          <Link to={bookUrl} className={`${btnPrimary} flex-1 sm:flex-none`}>Dar cita</Link>
+          <Link to={bookUrl} className={`${btnPrimary} hidden xl:inline-flex`}>Dar cita</Link>
           {customer.phone && <a href={`tel:${customer.phone.replace(/\s/g, '')}`} className={`${btnSecondary} flex-1 sm:flex-none`}>Llamar</a>}
           {wa && <a href={wa} target="_blank" rel="noreferrer" className="inline-flex items-center justify-center px-4 py-2.5 rounded-xl bg-[#25D366] text-white text-sm font-semibold hover:brightness-95 flex-1 sm:flex-none">WhatsApp</a>}
           <button type="button" className={`${btnSecondary} flex-1 sm:flex-none`} onClick={() => setEditing(true)}>Editar</button>

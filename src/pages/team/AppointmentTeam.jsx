@@ -177,8 +177,8 @@ export default function AppointmentTeam() {
     <div className="space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="text-xl font-bold text-gray-900">Personal</h2>
-          <p className="text-sm text-gray-500 mt-0.5">Cómo cobra cada profesional y lo que deja al negocio.</p>
+          <h2 className="hidden xl:block text-xl font-bold text-gray-900">Personal</h2>
+          <p className="text-sm text-gray-500 xl:mt-0.5">Cómo cobra cada profesional y lo que deja al negocio.</p>
         </div>
         <div className="flex items-center gap-1.5">
           <button type="button" className={`${btnSecondary} !px-3`} onClick={() => setMonth(shiftMonth(month, -1))} aria-label="Mes anterior">‹</button>

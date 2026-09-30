@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import api from '../services/api';
+import { useSetMobileHeader } from '../context/MobileHeaderContext';
 
 // ── Color palette (static — color key stored in DB → Tailwind bg class) ───────
 
@@ -1618,6 +1619,7 @@ function RevenueModal({ date = toIso(), initialValue = null, onClose, onSave }) 
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 export default function Finanzas() {
+  useSetMobileHeader({ title: 'Finanzas' });
   const [tab, setTab] = useState('dashboard');
   const [period, setPeriod] = useState('month');
   const [dateRange, setDateRange] = useState(getMonthRange());
@@ -1660,7 +1662,7 @@ export default function Finanzas() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">Finanzas</h1>
+          <h1 className="hidden xl:block text-xl font-bold text-gray-900">Finanzas</h1>
           <p className="text-sm text-gray-400 mt-0.5">Control de ingresos, gastos y rentabilidad</p>
         </div>
       </div>

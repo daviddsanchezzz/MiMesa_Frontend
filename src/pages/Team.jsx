@@ -61,7 +61,7 @@ function ErrorBanner({ msg }) {
 
 /* Main page */
 export default function Team() {
-  const { role: myRole, session, hasRole } = useAuth();
+  const { role: myRole, session, hasRole, isAppointments } = useAuth();
   const myUserId = session?.user?.id;
 
   const [members,     setMembers]     = useState([]);
@@ -297,8 +297,8 @@ export default function Team() {
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {[
             { role: 'owner',   desc: 'Control total, usuarios y facturación' },
-            { role: 'manager', desc: 'Reservas, turnos, clientes y mesas' },
-            { role: 'staff',   desc: 'Solo lectura y operaciones básicas' },
+            { role: 'manager', desc: isAppointments ? 'Agenda de todo el equipo, clientes, caja y cierres' : 'Reservas, turnos, clientes y mesas' },
+            { role: 'staff',   desc: isAppointments ? 'Ve su agenda (si está vinculado a un profesional) y cobra sus citas' : 'Solo lectura y operaciones básicas' },
           ].map(({ role, desc }) => (
             <div key={role} className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
               <RolePill role={role} />

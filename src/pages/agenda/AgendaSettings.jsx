@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import Modal from '../../components/Modal';
+import api from '../../services/api';
 import { bookingsApi, apiError } from '../../services/bookingsApi';
 import ScheduleEditor, { scheduleForApi } from './ScheduleEditor';
 import ServiceFormModal from './ServiceFormModal';
@@ -228,6 +229,44 @@ function StaffServicesModal({ resource, services, staff, onClose, onSaved }) {
   );
 }
 
+function LinkUserModal({ resource, members, onClose, onSaved }) {
+  const [userId, setUserId] = useState(resource.userId || '');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const active = members.filter((m) => m.status !== 'invited');
+  async function save() {
+    setSaving(true);
+    setError('');
+    try {
+      await bookingsApi.updateResource(resource._id, { userId: userId || null });
+      onSaved();
+    } catch (err) { setError(apiError(err)); } finally { setSaving(false); }
+  }
+  return (
+    <Modal title={`¿Quién es ${resource.name} en la app?`} subtitle="Esa persona verá «Mi agenda» con sus citas al entrar." onClose={onClose}>
+      <div className="space-y-2">
+        {[{ userId: '', userName: 'Nadie', userEmail: 'No está vinculada a ningún usuario' }, ...active].map((m) => (
+          <label key={m.userId || 'none'} className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl border cursor-pointer ${userId === m.userId ? 'border-violet-300 bg-violet-50/50' : 'border-gray-200'}`}>
+            <input type="radio" name="link-user" checked={userId === m.userId} onChange={() => setUserId(m.userId)} className="accent-violet-600" />
+            <span className="min-w-0">
+              <span className="block text-sm font-medium text-gray-900 truncate">{m.userName || m.userEmail}</span>
+              <span className="block text-xs text-gray-500 truncate">{m.userId ? m.userEmail : m.userEmail}</span>
+            </span>
+          </label>
+        ))}
+        {active.length <= 1 && (
+          <p className="text-xs text-gray-500">Para vincular a otra persona, invítala primero desde <b>Equipo</b>.</p>
+        )}
+        {error && <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</p>}
+        <div className="flex justify-end gap-2 pt-2">
+          <button type="button" className={btnSecondary} onClick={onClose}>Cancelar</button>
+          <button type="button" className={btnPrimary} onClick={save} disabled={saving}>{saving ? 'Guardando…' : 'Guardar'}</button>
+        </div>
+      </div>
+    </Modal>
+  );
+}
+
 function Resources({ resources, services, reload }) {
   const [name, setName] = useState('');
   const [kind, setKind] = useState('staff');
@@ -236,6 +275,13 @@ function Resources({ resources, services, reload }) {
   const [editingServices, setEditingServices] = useState(null);
   const [renaming, setRenaming] = useState(null);
   const [uploading, setUploading] = useState(null);
+  const [linking, setLinking] = useState(null);
+  const [members, setMembers] = useState([]);
+  useEffect(() => { api.get('/members').then((r) => setMembers(r.data || [])).catch(() => setMembers([])); }, []);
+  const memberName = (userId) => {
+    const m = members.find((x) => x.userId === userId);
+    return m ? (m.userName || m.userEmail) : 'Usuario';
+  };
   const colors = staffColors(resources);
   const staff = resources.filter((r) => r.kind === 'staff');
 
@@ -301,6 +347,12 @@ function Resources({ resources, services, reload }) {
                   )}
                   {isStaff && <ColorPicker value={colors[r._id]} onChange={(c) => update(r, { color: c })} />}
                   {!isStaff && <span className="text-[11px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">{KIND_LABEL[r.kind]}</span>}
+                  {isStaff && r.userId && (
+                    <button type="button" onClick={() => setLinking(r)} title="Usuario de la app vinculado"
+                      className="text-[11px] px-2 py-0.5 rounded-full bg-violet-50 text-violet-700 font-medium truncate max-w-[10rem]">
+                      👤 {memberName(r.userId)}
+                    </button>
+                  )}
                 </div>
                 <button type="button" onClick={() => isStaff && setEditingServices(r)}
                   className={`mt-0.5 text-xs text-left ${isStaff ? 'text-gray-500 hover:text-violet-700' : 'text-gray-400 cursor-default'}`}>
@@ -315,6 +367,7 @@ function Resources({ resources, services, reload }) {
                 <RowMenu items={[
                   { label: 'Cambiar nombre', onClick: () => setRenaming(r._id) },
                   isStaff && { label: 'Servicios que hace', onClick: () => setEditingServices(r) },
+                  isStaff && { label: r.userId ? 'Cambiar usuario vinculado' : 'Vincular a un usuario', onClick: () => setLinking(r) },
                   r.photo && { label: 'Quitar foto', onClick: () => update(r, { photo: null }) },
                   { label: 'Desactivar', danger: true, onClick: () => remove(r) },
                 ]} />
@@ -332,6 +385,9 @@ function Resources({ resources, services, reload }) {
       </form>
       {error && <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</p>}
       {editingSchedule && <ResourceScheduleModal resource={editingSchedule} onClose={() => setEditingSchedule(null)} />}
+      {linking && (
+        <LinkUserModal resource={linking} members={members} onClose={() => setLinking(null)} onSaved={() => { setLinking(null); reload(); }} />
+      )}
       {editingServices && (
         <StaffServicesModal resource={editingServices} services={services} staff={staff}
           onClose={() => setEditingServices(null)} onSaved={() => { setEditingServices(null); reload(); }} />

@@ -7,6 +7,7 @@ import DayView from './agenda/DayView';
 import WeekView from './agenda/WeekView';
 import ListView from './agenda/ListView';
 import DayStrip from './agenda/DayStrip';
+import StaffAvatar from './agenda/StaffAvatar';
 import NewBookingModal from './agenda/NewBookingModal';
 import BookingDetailModal from './agenda/BookingDetailModal';
 import {
@@ -15,6 +16,7 @@ import {
 } from './agenda/utils';
 
 const VIEW_KEY = 'vetra.agenda.view';
+const SCOPE_KEY = 'vetra.agenda.scope';
 const isDate = (s) => /^\d{4}-\d{2}-\d{2}$/.test(s || '');
 
 function useIsMobile() {
@@ -39,7 +41,7 @@ function readView() {
  * and hours are set up in Configuración.
  */
 export default function Agenda() {
-  const { business, hasRole } = useAuth();
+  const { business, hasRole, role } = useAuth();
   const tz = business?.timezone || DEFAULT_TZ;
   const isManager = hasRole('manager');
   const isMobile = useIsMobile();
@@ -107,9 +109,19 @@ export default function Agenda() {
   }, [loadBookings]);
 
   const staff = useMemo(() => resources.filter((r) => r.kind === 'staff'), [resources]);
+  // "Mi agenda": the professional linked to the logged-in user
+  const me = useMemo(() => staff.find((r) => r.userId && r.userId === business?.userId) || null, [staff, business?.userId]);
+  const [scope, setScopeRaw] = useState(() => { try { return localStorage.getItem(SCOPE_KEY) || ''; } catch { return ''; } });
+  const setScope = (v) => { setScopeRaw(v); try { localStorage.setItem(SCOPE_KEY, v); } catch { /* ignore */ } };
+  // Default: staff members start on their own agenda, managers on the whole team
+  const scopeId = scope === 'all' ? null
+    : scope && staff.some((r) => r._id === scope) ? scope
+      : (!scope && me && role === 'staff') ? me._id : null;
+  const shownStaff = useMemo(() => (scopeId ? staff.filter((r) => r._id === scopeId) : staff), [staff, scopeId]);
+  const inScope = useCallback((b) => !scopeId || (b.segments || []).some((seg) => (seg.resourceIds || []).includes(scopeId)), [scopeId]);
   const byId = useMemo(() => Object.fromEntries(resources.map((r) => [r._id, r])), [resources]);
   const colors = useMemo(() => staffColors(resources), [resources]);
-  const visibleWeek = useMemo(() => bookings.filter((b) => showCancelled || b.status !== 'cancelled'), [bookings, showCancelled]);
+  const visibleWeek = useMemo(() => bookings.filter((b) => (showCancelled || b.status !== 'cancelled') && inScope(b)), [bookings, showCancelled, inScope]);
   const dayBookings = useMemo(() => visibleWeek.filter((b) => dateInTz(b.start, tz) === date), [visibleWeek, date, tz]);
   const counts = useMemo(() => {
     const out = {};
@@ -152,15 +164,15 @@ export default function Agenda() {
 
   return (
     <div ref={rootRef} className={fill ? 'flex flex-col gap-3' : 'space-y-4'} style={fill && fitHeight ? { height: fitHeight } : undefined}>
-      <div className="flex flex-wrap items-center justify-between gap-3 shrink-0">
-        <div className="min-w-0">
-          <h2 className="text-xl font-bold text-gray-900">Agenda</h2>
-          <p className="text-sm text-gray-500 mt-0.5">
+      <div className="flex items-center justify-between gap-3 shrink-0">
+        <div className="min-w-0 flex-1">
+          <h2 className="hidden sm:block text-xl font-bold text-gray-900">Agenda</h2>
+          <p className="text-[13px] sm:text-sm leading-snug text-gray-500 sm:mt-0.5">
             {activeView === 'week' ? `Semana del ${Number(from.slice(8))} al ${Number(to.slice(8))}` : longDate(date)}
             {activeView !== 'week' && dayTotal.n > 0 && <> · {pluralize(dayTotal.n, 'cita', 'citas')} · {euros(dayTotal.revenue)}</>}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <div className="inline-flex p-1 rounded-xl bg-gray-100" role="tablist" aria-label="Vista">
             {views.map(([key, label]) => (
               <button key={key} type="button" role="tab" aria-selected={activeView === key} onClick={() => chooseView(key)}
@@ -197,6 +209,22 @@ export default function Agenda() {
         </div>
       ) : (
         <>
+          {staff.length > 1 && (
+            <div className="shrink-0 flex gap-1.5 overflow-x-auto -mx-1 px-1 pb-0.5" role="tablist" aria-label="Qué agenda ver">
+              {[{ id: 'all', label: 'Todo el equipo' }, ...(me ? [{ id: me._id, label: 'Mi agenda', person: me }] : []),
+                ...staff.filter((r) => r._id !== me?._id).map((r) => ({ id: r._id, label: r.name, person: r }))].map((o) => {
+                const active = (o.id === 'all' && !scopeId) || o.id === scopeId;
+                return (
+                  <button key={o.id} type="button" role="tab" aria-selected={active} onClick={() => setScope(o.id)}
+                    className={`shrink-0 inline-flex items-center gap-1.5 pl-1.5 pr-3 py-1 rounded-full text-xs font-semibold border transition-colors ${
+                      active ? 'bg-gray-900 border-gray-900 text-white' : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300'} ${o.person ? '' : 'pl-3'}`}>
+                    {o.person && <StaffAvatar name={o.person.name} photo={o.person.photo} color={colors[o.person._id]} size={20} />}
+                    {o.label}
+                  </button>
+                );
+              })}
+            </div>
+          )}
           <div className="shrink-0">
             <DayStrip date={date} today={today} counts={counts} closedDays={closedDays} onChange={setDate}
               extra={(
@@ -214,13 +242,13 @@ export default function Agenda() {
           )}
 
           {activeView === 'week' && (
-            <div className="flex-1 min-h-0"><WeekView fill from={from} today={today} tz={tz} staff={staff} bookings={visibleWeek} businessSchedule={schedule}
+            <div className="flex-1 min-h-0"><WeekView fill from={from} today={today} tz={tz} staff={shownStaff} bookings={visibleWeek} businessSchedule={schedule}
               colors={colors} onBookingClick={setSelected}
               onEmptyClick={(resourceId, time, d) => openNew(resourceId, time, d)}
               onDayClick={(d) => { setDate(d); chooseView('day'); }} /></div>
           )}
           {activeView === 'day' && (
-            <div className="flex-1 min-h-0"><DayView fill date={date} tz={tz} staff={staff} bookings={dayBookings} businessSchedule={schedule}
+            <div className="flex-1 min-h-0"><DayView fill compact={isMobile} date={date} tz={tz} staff={shownStaff} bookings={dayBookings} businessSchedule={schedule}
               staffSchedules={staffSchedules} colors={colors} isToday={date === today}
               onEmptyClick={(resourceId, time) => openNew(resourceId, time, date)} onBookingClick={setSelected} /></div>
           )}

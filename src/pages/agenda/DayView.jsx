@@ -21,7 +21,7 @@ export function visibleRange(windowsList, bookings, tz) {
  * One day: a column per professional with their photo or initials, their own
  * hours (inside the business hours) and their appointments in their colour.
  */
-export default function DayView({ date, tz, staff, bookings, businessSchedule, staffSchedules = {}, colors, isToday, onEmptyClick, onBookingClick, fill = false }) {
+export default function DayView({ date, tz, staff, bookings, businessSchedule, staffSchedules = {}, colors, isToday, onEmptyClick, onBookingClick, fill = false, compact = false }) {
   const bizWindows = useMemo(() => windowsForDate(businessSchedule, date), [businessSchedule, date]);
   const windowsFor = (id) => (staffSchedules[id] ? intersectWindows(windowsForDate(staffSchedules[id], date), bizWindows) : bizWindows);
   const [startMin, endMin] = useMemo(() => visibleRange([bizWindows], bookings, tz), [bizWindows, bookings, tz]);
@@ -81,5 +81,7 @@ export default function DayView({ date, tz, staff, bookings, businessSchedule, s
       </div>
     );
   }
-  return <TimeGrid columns={columns} startMin={startMin} endMin={endMin} tz={tz} fill={fill} />;
+  // Phones: one or two people fit the screen; more scroll sideways
+  const minColWidth = compact ? (columns.length <= 2 ? '0px' : '8.5rem') : '11rem';
+  return <TimeGrid columns={columns} startMin={startMin} endMin={endMin} tz={tz} fill={fill} minColWidth={minColWidth} />;
 }

@@ -72,6 +72,12 @@ const IconClock = () => (
   </svg>
 );
 
+const IconCash = () => (
+  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 shrink-0">
+    <path fillRule="evenodd" d="M1 4.75C1 3.784 1.784 3 2.75 3h14.5c.966 0 1.75.784 1.75 1.75v10.5A1.75 1.75 0 0 1 17.25 17H2.75A1.75 1.75 0 0 1 1 15.25V4.75ZM10 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM4 6.5a.5.5 0 0 0-.5.5v.5a.5.5 0 0 0 1 0V7a.5.5 0 0 0-.5-.5Zm12 5.5a.5.5 0 0 0-.5.5v.5a.5.5 0 0 0 1 0v-.5a.5.5 0 0 0-.5-.5Z" clipRule="evenodd" />
+  </svg>
+);
+
 const links = [
   { to: '/', label: 'Dashboard', icon: <IconHome /> },
   { to: '/reservations', label: 'Reservas', icon: <IconCalendar /> },
@@ -103,7 +109,9 @@ export default function Sidebar({
 
   // Appointment businesses use the agenda instead of restaurant reservations.
   const baseLinks = isAppointments
-    ? links.map((link) => (link.to === '/reservations' ? { to: '/agenda', label: 'Agenda', icon: <IconClock /> } : link))
+    ? links.flatMap((link) => (link.to === '/reservations'
+      ? [{ to: '/agenda', label: 'Agenda', icon: <IconClock /> }, { to: '/caja', label: 'Caja', icon: <IconCash /> }]
+      : [link]))
     : links;
   // Appointment businesses get Clientes and Equipo on every plan: an agenda
   // without customers or without the rest of the team is not usable.

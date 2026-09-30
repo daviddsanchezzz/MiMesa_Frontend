@@ -30,8 +30,9 @@ function catDot(cats, value) {
   const c = cats?.find((x) => x.value === value);
   return COLOR_DOT[c?.color] || 'bg-slate-400';
 }
+const BUILT_IN_LABELS = { staff: 'Personal', commissions: 'Comisiones' };
 function catLabel(cats, value) {
-  return cats?.find((x) => x.value === value)?.label || value;
+  return cats?.find((x) => x.value === value)?.label || BUILT_IN_LABELS[value] || value;
 }
 
 // ── Date helpers ──────────────────────────────────────────────────────────────
@@ -331,6 +332,7 @@ function DashboardTab({ dateRange, categories, refreshTrigger }) {
   if (loading) return <Spinner />;
   if (!data) return <EmptyState message="No se pudieron cargar los datos" />;
 
+  const appt = data.mode === 'appointments';
   const maxExpense = data.expensesByCategory[0]?.amount || 1;
   const totalExpensesSum = data.expensesByCategory.reduce((s, c) => s + c.amount, 0) || 1;
 
@@ -339,17 +341,19 @@ function DashboardTab({ dateRange, categories, refreshTrigger }) {
       {/* KPI cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <KpiCard
-          label="Ingresos estimados"
+          label={appt ? 'Facturado en citas' : 'Ingresos estimados'}
           value={fmtEur(data.estimatedRevenue)}
-          sub={`${data.totalCovers} comensales`}
+          sub={appt ? `${data.appointments} ${data.appointments === 1 ? 'cita atendida' : 'citas atendidas'}` : `${data.totalCovers} comensales`}
           color="sky"
-          badge="desde reservas"
+          badge={appt ? 'desde la agenda' : 'desde reservas'}
           icon={<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4"><path d="M10 2a.75.75 0 0 1 .75.75v.258a33.186 33.186 0 0 1 6.668.83.75.75 0 0 1-.336 1.461 31.28 31.28 0 0 0-1.103-.232l1.702 7.545a.75.75 0 0 1-.387.832A4.981 4.981 0 0 1 15 14c-.825 0-1.606-.2-2.294-.556a.75.75 0 0 1-.387-.832l1.77-7.849a31.743 31.743 0 0 0-3.339-.254v11.505a20.01 20.01 0 0 1 3.78.501.75.75 0 1 1-.339 1.46A18.51 18.51 0 0 0 10 17.5c-1.49 0-2.938.208-4.21.582a.75.75 0 0 1-.339-1.46 20.01 20.01 0 0 1 3.78-.501V5.509a31.743 31.743 0 0 0-3.339.254l1.77 7.85a.75.75 0 0 1-.387.831A4.981 4.981 0 0 1 5 14a4.981 4.981 0 0 1-2.294-.556.75.75 0 0 1-.387-.832L4.021 5.067c-.37.07-.738.148-1.103.232a.75.75 0 0 1-.336-1.462 33.186 33.186 0 0 1 6.668-.829V2.75A.75.75 0 0 1 10 2Z" /></svg>}
         />
         <KpiCard
           label="Ingresos reales"
           value={data.actualRevenue !== null ? fmtEur(data.actualRevenue) : '—'}
-          sub={data.actualRevenue !== null ? 'introducido manualmente' : 'sin datos manuales'}
+          sub={appt
+            ? (data.actualRevenue !== null ? `cobrado en caja${data.tips ? ` · +${fmtEur(data.tips)} propinas` : ''}` : 'aún no hay cobros en caja')
+            : (data.actualRevenue !== null ? 'introducido manualmente' : 'sin datos manuales')}
           color="emerald"
           icon={<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4"><path fillRule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clipRule="evenodd" /></svg>}
         />
@@ -363,7 +367,7 @@ function DashboardTab({ dateRange, categories, refreshTrigger }) {
         <KpiCard
           label="Beneficio estimado"
           value={fmtEur(data.estimatedProfit)}
-          sub={data.profitBasis === 'actual' ? 'basado en ingresos reales' : 'basado en estimación'}
+          sub={data.profitBasis === 'actual' ? 'basado en ingresos reales' : data.profitBasis === 'mixed' ? 'cobrado en caja + citas de días sin cobros' : 'basado en estimación'}
           color={data.estimatedProfit >= 0 ? 'emerald' : 'rose'}
           icon={<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4"><path fillRule="evenodd" d="M12.577 4.878a.75.75 0 0 1 .919-.53l4.78 1.281a.75.75 0 0 1 .531.919l-1.281 4.78a.75.75 0 0 1-1.449-.387l.81-3.022a19.407 19.407 0 0 0-5.594 5.203.75.75 0 0 1-1.139.093L7 10.06l-4.72 4.72a.75.75 0 0 1-1.06-1.061l5.25-5.25a.75.75 0 0 1 1.06 0l3.074 3.073a20.923 20.923 0 0 1 5.545-4.931l-3.042-.815a.75.75 0 0 1-.53-.918Z" clipRule="evenodd" /></svg>}
         />
@@ -374,8 +378,11 @@ function DashboardTab({ dateRange, categories, refreshTrigger }) {
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 text-gray-400">
           <path fillRule="evenodd" d="M15 8A7 7 0 1 1 1 8a7 7 0 0 1 14 0ZM9 5a1 1 0 1 1-2 0 1 1 0 0 1 2 0ZM6.75 8a.75.75 0 0 0 0 1.5h.75v1.75a.75.75 0 0 0 1.5 0v-2.5A.75.75 0 0 0 8.25 8h-1.5Z" clipRule="evenodd" />
         </svg>
-        Ticket medio estimado:&nbsp;
-        <TicketAverageEdit value={data.ticketAverage} onSave={saveTicketAverage} />
+        {appt ? (
+          <>Ticket medio por cita:&nbsp;<span className="font-semibold text-violet-700">{fmtEur(data.averageTicket)}</span></>
+        ) : (
+          <>Ticket medio estimado:&nbsp;<TicketAverageEdit value={data.ticketAverage} onSave={saveTicketAverage} /></>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -413,7 +420,9 @@ function DashboardTab({ dateRange, categories, refreshTrigger }) {
         {/* Daily breakdown */}
         <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
           <h3 className="text-sm font-semibold text-gray-700 mb-1">Ingresos por día</h3>
-          <p className="text-xs text-gray-400 mb-4">Haz clic en "+ añadir" para introducir el ingreso real del día</p>
+          <p className="text-xs text-gray-400 mb-4">
+            {appt ? 'Lo cobrado en Caja aparece solo. Haz clic en un importe para corregir un día a mano.' : 'Haz clic en "+ añadir" para introducir el ingreso real del día'}
+          </p>
           {data.days.length === 0 ? (
             <p className="text-sm text-gray-400">Sin días en este período</p>
           ) : (() => {
@@ -426,8 +435,8 @@ function DashboardTab({ dateRange, categories, refreshTrigger }) {
                     <thead>
                       <tr className="text-left text-xs text-gray-400 border-b border-gray-100">
                         <th className="pb-2 font-medium">Fecha</th>
-                        <th className="pb-2 font-medium text-right">Comens.</th>
-                        <th className="pb-2 font-medium text-right">Estimado</th>
+                        <th className="pb-2 font-medium text-right">{appt ? 'Citas' : 'Comens.'}</th>
+                        <th className="pb-2 font-medium text-right">{appt ? 'En citas' : 'Estimado'}</th>
                         <th className="pb-2 font-medium text-right">Real</th>
                       </tr>
                     </thead>
@@ -435,7 +444,7 @@ function DashboardTab({ dateRange, categories, refreshTrigger }) {
                       {slice.map((day) => (
                         <tr key={day.date} className="hover:bg-gray-50/50">
                           <td className="py-2 text-gray-600">{fmtDate(day.date)}</td>
-                          <td className="py-2 text-right text-gray-500">{day.covers || '—'}</td>
+                          <td className="py-2 text-right text-gray-500">{(appt ? day.appointments : day.covers) || '—'}</td>
                           <td className="py-2 text-right text-gray-500">{day.estimatedRevenue > 0 ? fmtEur(day.estimatedRevenue) : '—'}</td>
                           <td className="py-2 text-right">
                             <InlineRevenueEdit
@@ -443,6 +452,9 @@ function DashboardTab({ dateRange, categories, refreshTrigger }) {
                               value={day.actualRevenue}
                               onSave={(v) => saveActual(day.date, v)}
                             />
+                            {appt && day.actualSource && (
+                              <span className="block text-[10px] text-gray-400 pr-2">{day.actualSource === 'till' ? 'caja' : 'a mano'}</span>
+                            )}
                           </td>
                         </tr>
                       ))}
@@ -481,6 +493,37 @@ function DashboardTab({ dateRange, categories, refreshTrigger }) {
           })()}
         </div>
       </div>
+
+      {appt && data.byStaff?.length > 0 && (
+        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
+          <h3 className="text-sm font-semibold text-gray-700 mb-1">Por profesional</h3>
+          <p className="text-xs text-gray-400 mb-4">Lo que ha facturado cada una en citas atendidas y su comisión (según el % de cada servicio).</p>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="text-left text-xs text-gray-400 border-b border-gray-100">
+                  <th className="pb-2 font-medium">Profesional</th>
+                  <th className="pb-2 font-medium text-right">Citas</th>
+                  <th className="pb-2 font-medium text-right">Facturado</th>
+                  <th className="pb-2 font-medium text-right">Comisión</th>
+                  <th className="pb-2 font-medium text-right">Queda al negocio</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {data.byStaff.map((p) => (
+                  <tr key={p.id}>
+                    <td className="py-2 text-gray-800 font-medium">{p.name}</td>
+                    <td className="py-2 text-right text-gray-500 tabular-nums">{p.appointments || '—'}</td>
+                    <td className="py-2 text-right text-gray-800 tabular-nums">{fmtEur(p.billed)}</td>
+                    <td className="py-2 text-right text-gray-500 tabular-nums">{p.commission ? fmtEur(p.commission) : '—'}</td>
+                    <td className="py-2 text-right font-semibold text-gray-900 tabular-nums">{fmtEur(p.billed - p.commission)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -30,6 +30,11 @@ export const bookingsApi = {
   create: (data) => unwrap(api.post('/bookings', data)),
   setStatus: (id, status) => unwrap(api.patch(`/bookings/${id}/status`, { status })),
   setNotes: (id, data) => unwrap(api.patch(`/bookings/${id}/notes`, data)),
+  checkout: (id, data) => unwrap(api.post(`/bookings/${id}/checkout`, data)),
+  undoCheckout: (id) => unwrap(api.delete(`/bookings/${id}/checkout`)),
+  cashDay: (date) => unwrap(api.get('/bookings/cash', { params: date ? { date } : {} })),
+  closeCash: (data) => unwrap(api.post('/bookings/cash/close', data)),
+  reopenCash: (date) => unwrap(api.delete('/bookings/cash/close', { params: { date } })),
 };
 
 export function apiError(err, fallback = 'Algo ha fallado. Inténtalo de nuevo.') {

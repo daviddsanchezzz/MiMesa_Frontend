@@ -54,7 +54,11 @@ export const toMinutes = (hhmm) => {
 
 export const toHHMM = (min) => `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`;
 
-export const euros = (cents) => `${((cents || 0) / 100).toLocaleString('es-ES', { minimumFractionDigits: 0, maximumFractionDigits: 2, useGrouping: 'always' })} €`;
+export const euros = (cents) => {
+  const c = Math.round(cents || 0);
+  const digits = c % 100 === 0 ? 0 : 2; // 12 € · 12,50 €
+  return `${(c / 100).toLocaleString('es-ES', { minimumFractionDigits: digits, maximumFractionDigits: digits, useGrouping: 'always' })} €`;
+};
 
 // Opening windows of a schedule on a date (mirror of the backend logic).
 export function windowsForDate(schedule, dateStr) {
@@ -224,3 +228,20 @@ export function summarizeRules(rules = []) {
     return `${days} ${g.text}`;
   }).join(' · ');
 }
+
+// "12,50" / "12.5" / "12" → 1250 cents (null if not a number)
+export function parseEuros(text) {
+  const t = String(text ?? '').trim().replace(/\s|€/g, '').replace(',', '.');
+  if (t === '') return 0;
+  const n = Number(t);
+  return Number.isFinite(n) && n >= 0 ? Math.round(n * 100) : null;
+}
+export const centsToInput = (c) => (c ? (c / 100).toFixed(2).replace('.', ',').replace(/,00$/, '') : '');
+
+export const PAY_METHODS = [
+  { key: 'cash', label: 'Efectivo', icon: '💶' },
+  { key: 'card', label: 'Tarjeta', icon: '💳' },
+  { key: 'bizum', label: 'Bizum', icon: '📱' },
+  { key: 'other', label: 'Otro', icon: '•' },
+];
+export const payMethodLabel = (k) => PAY_METHODS.find((m) => m.key === k)?.label || k;

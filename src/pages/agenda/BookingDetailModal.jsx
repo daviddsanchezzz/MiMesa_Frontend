@@ -1,13 +1,15 @@
 import { useState } from 'react';
+import { useAuth } from '../../context/AuthContext';
+import CheckoutModal from './CheckoutModal';
 import Modal from '../../components/Modal';
 import { bookingsApi, apiError } from '../../services/bookingsApi';
-import { STATUS, btnPrimary, btnSecondary, euros, inputCls, labelCls, timeInTz } from './utils';
+import { STATUS, btnPrimary, btnSecondary, euros, inputCls, labelCls, timeInTz, payMethodLabel } from './utils';
 
 // Next steps offered for each status (mirrors the backend transitions).
 const ACTIONS = {
   pending:    [['confirmed', 'Confirmar'], ['cancelled', 'Rechazar']],
-  confirmed:  [['checked_in', 'Ha llegado'], ['completed', 'Completada'], ['no_show', 'No vino'], ['cancelled', 'Cancelar']],
-  checked_in: [['completed', 'Completada'], ['cancelled', 'Cancelar']],
+  confirmed:  [['checked_in', 'Ha llegado'], ['completed', 'Completada sin cobrar'], ['no_show', 'No vino'], ['cancelled', 'Cancelar']],
+  checked_in: [['completed', 'Completada sin cobrar'], ['cancelled', 'Cancelar']],
   no_show:    [['confirmed', 'Volver a confirmar']],
   completed:  [],
   cancelled:  [],
@@ -20,6 +22,9 @@ export default function BookingDetailModal({ booking, staffById, tz, onClose, on
   const [internalNotes, setInternalNotes] = useState(booking.internalNotes || '');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [charging, setCharging] = useState(false);
+  const { hasRole } = useAuth();
+  const canCharge = !booking.payment && ['confirmed', 'checked_in', 'completed'].includes(booking.status);
   const st = STATUS[booking.status] || STATUS.confirmed;
   const notesChanged = notes !== (booking.notes || '') || internalNotes !== (booking.internalNotes || '');
 
@@ -94,17 +99,46 @@ export default function BookingDetailModal({ booking, staffById, tz, onClose, on
 
         {error && <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</p>}
 
-        {(ACTIONS[booking.status] || []).length > 0 && (
+        {booking.payment && (
+          <div className="rounded-xl bg-emerald-50 border border-emerald-200 px-4 py-3 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold text-emerald-900">Cobrada · {euros(booking.payment.total + (booking.payment.tip || 0))}</p>
+              <p className="text-xs text-emerald-800">
+                {payMethodLabel(booking.payment.method)} · {timeInTz(booking.payment.paidAt, tz)}
+                {booking.payment.tip > 0 && ` · propina ${euros(booking.payment.tip)}`}
+                {booking.payment.discount > 0 && ` · descuento ${euros(booking.payment.discount)}`}
+              </p>
+            </div>
+            {hasRole('manager') && (
+              <button type="button" disabled={busy} className="text-xs font-semibold text-emerald-800 hover:text-rose-700"
+                onClick={() => { if (window.confirm('¿Deshacer el cobro?')) run(() => bookingsApi.undoCheckout(booking._id)); }}>
+                Deshacer
+              </button>
+            )}
+          </div>
+        )}
+
+        {(canCharge || (ACTIONS[booking.status] || []).length > 0) && (
           <div className="flex flex-wrap gap-2 pt-1">
-            {ACTIONS[booking.status].map(([status, label], i) => (
+            {canCharge && (
+              <button type="button" disabled={busy} onClick={() => setCharging(true)}
+                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700">
+                Cobrar {euros(booking.totalPrice)}
+              </button>
+            )}
+            {(ACTIONS[booking.status] || []).map(([status, label], i) => (
               <button key={status} type="button" disabled={busy} onClick={() => changeStatus(status)}
-                className={i === 0 ? btnPrimary : status === 'cancelled' ? `${btnSecondary} text-rose-600 border-rose-200 hover:bg-rose-50` : btnSecondary}>
+                className={i === 0 && !canCharge ? btnPrimary : status === 'cancelled' ? `${btnSecondary} text-rose-600 border-rose-200 hover:bg-rose-50` : btnSecondary}>
                 {label}
               </button>
             ))}
           </div>
         )}
       </div>
+      {charging && (
+        <CheckoutModal booking={booking} tz={tz} onClose={() => setCharging(false)}
+          onPaid={(updated) => { setCharging(false); onChanged?.(updated); }} />
+      )}
     </Modal>
   );
 }

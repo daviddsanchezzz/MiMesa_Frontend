@@ -8,3 +8,47 @@
     font-size: 16px !important;
   }
 }
+
+/*
+ * Date/time pickers and selects on iOS Safari: the native control ignores
+ * width:100% (it has its own min-width, so it overflows its column), draws a
+ * grey pill taller than the other fields and centres the text. Reset it so it
+ * looks and sizes like any other input; tapping still opens the native picker.
+ */
+@layer base {
+  input[type='date'],
+  input[type='time'],
+  input[type='datetime-local'],
+  input[type='month'] {
+    -webkit-appearance: none;
+    appearance: none;
+    min-width: 0;
+    max-width: 100%;
+    background-color: #fff;
+    line-height: 1.5;
+    text-align: left;
+  }
+  /* iOS: keep the value left-aligned and give an empty field its height */
+  input[type='date']::-webkit-date-and-time-value,
+  input[type='time']::-webkit-date-and-time-value,
+  input[type='datetime-local']::-webkit-date-and-time-value,
+  input[type='month']::-webkit-date-and-time-value {
+    text-align: left;
+    margin: 0;
+    min-height: 1.5em;
+  }
+
+  select:not(.appearance-none):not([multiple]) {
+    -webkit-appearance: none;
+    appearance: none;
+    min-width: 0;
+    max-width: 100%;
+    background-color: #fff;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20' fill='%239ca3af'%3E%3Cpath fill-rule='evenodd' d='M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z' clip-rule='evenodd'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.6rem center;
+    background-size: 1.1rem;
+    padding-right: 2.25rem !important;
+    text-overflow: ellipsis;
+  }
+}

@@ -1,4 +1,5 @@
 ﻿import { useState, useEffect, useCallback } from 'react';
+import NewClientModal, { OwnerCell } from './dev/NewClientModal';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../services/api';
 import Modal from '../components/Modal';
@@ -128,9 +129,6 @@ export default function DevDashboard() {
   const [planFilter, setPlanFilter] = useState('all');
 
   const [showModal, setShowModal] = useState(false);
-  const [form, setForm] = useState({ name: '', email: '', phone: '', address: '', plan: 'free' });
-  const [saving, setSaving] = useState(false);
-  const [formError, setFormError] = useState('');
 
   const [editingBusiness, setEditingBusiness] = useState(null);
   const [editPlan, setEditPlan] = useState('free');
@@ -193,22 +191,6 @@ export default function DevDashboard() {
     if (!q) return true;
   return (u.name || '').toLowerCase().includes(q) || (u.email || '').toLowerCase().includes(q);
   });
-
-  const handleCreate = async (e) => {
-    e.preventDefault();
-    setFormError('');
-    setSaving(true);
-    try {
-      await api.post('/dev/businesses', form);
-      setShowModal(false);
-      setForm({ name: '', email: '', phone: '', address: '', plan: 'free' });
-      await load();
-    } catch (err) {
-      setFormError(err.response?.data?.message || err.message);
-    } finally {
-      setSaving(false);
-    }
-  };
 
   const openBusinessEditor = (business) => {
     setEditingBusiness(business);
@@ -375,7 +357,7 @@ export default function DevDashboard() {
               onClick={() => setShowModal(true)}
               className="bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors"
             >
-              Nuevo negocio
+              Nuevo cliente
             </button>
           </div>
 
@@ -386,12 +368,14 @@ export default function DevDashboard() {
               <div className="bg-white rounded-2xl border border-gray-200 shadow-sm py-12 text-center text-sm text-gray-400">Sin resultados</div>
             ) : (
               filtered.map((b) => (
-                <MobileBusinessCard
-                  key={b.id}
-                  b={b}
-                  moduleCatalog={moduleCatalog}
-                  onEdit={openBusinessEditor}
-                />
+                <div key={b.id} className="space-y-1.5">
+                  <MobileBusinessCard
+                    b={b}
+                    moduleCatalog={moduleCatalog}
+                    onEdit={openBusinessEditor}
+                  />
+                  <div className="bg-white rounded-xl border border-gray-200 px-4 py-3"><OwnerCell b={b} onChanged={load} /></div>
+                </div>
               ))
             )}
           </div>
@@ -403,10 +387,11 @@ export default function DevDashboard() {
               <div className="py-14 text-center text-sm text-gray-400">Sin resultados</div>
             ) : (
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[1060px] text-sm">
+                <table className="w-full min-w-[1260px] text-sm">
                   <thead>
                     <tr className="border-b border-gray-200 bg-slate-50/80">
                       <th className="text-left px-6 py-3.5 text-[11px] font-bold text-gray-500 uppercase tracking-wide">Negocio</th>
+                      <th className="text-left px-4 py-3.5 text-[11px] font-bold text-gray-500 uppercase tracking-wide">Dueño</th>
                       <th className="text-left px-4 py-3.5 text-[11px] font-bold text-gray-500 uppercase tracking-wide">Plan</th>
                       <th className="text-left px-4 py-3.5 text-[11px] font-bold text-gray-500 uppercase tracking-wide">Modulos</th>
                       <th className="text-center px-4 py-3.5 text-[11px] font-bold text-gray-500 uppercase tracking-wide">Miembros</th>
@@ -421,8 +406,9 @@ export default function DevDashboard() {
                       <tr key={b.id} className="hover:bg-slate-50/80 transition-colors">
                         <td className="px-6 py-4 align-middle">
                           <p className="font-semibold text-gray-900 truncate max-w-[200px]">{b.name}</p>
-                          <p className="text-xs text-gray-400 truncate max-w-[200px]">{b.email}</p>
+                          <p className="text-xs text-gray-400 truncate max-w-[200px]">{b.businessType === 'appointments' ? 'Citas' : 'Restaurante'} · {b.email}</p>
                         </td>
+                        <td className="px-4 py-4 align-middle"><OwnerCell b={b} onChanged={load} /></td>
                         <td className="px-4 py-4 align-middle">
                           <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${planPillClass(b.plan)}`}>
                             {b.plan}
@@ -676,96 +662,7 @@ export default function DevDashboard() {
       )}
 
       {showModal && (
-        <Modal
-          title="Nuevo negocio"
-          subtitle="Crea un negocio de prueba para desarrollo"
-          onClose={() => {
-            if (saving) return;
-            setShowModal(false);
-            setFormError('');
-          }}
-          size="md"
-        >
-          {formError && (
-            <div className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-4 py-3 mb-4">
-              {formError}
-            </div>
-          )}
-
-          <form onSubmit={handleCreate} className="space-y-4">
-            <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Nombre *</label>
-              <input
-                required
-                value={form.name}
-                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                placeholder="Restaurante El Patio"
-                className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Email *</label>
-              <input
-                required
-                type="email"
-                value={form.email}
-                onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-                placeholder="info@restaurante.com"
-                className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Teléfono</label>
-              <input
-                value={form.phone}
-                onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
-                placeholder="+34 600 000 000"
-                className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Dirección</label>
-              <input
-                value={form.address}
-                onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))}
-                placeholder="Calle Mayor 123, Madrid"
-                className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Plan</label>
-              <select
-                value={form.plan}
-                onChange={(e) => setForm((f) => ({ ...f, plan: e.target.value }))}
-                className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white"
-              >
-                <option value="free">Free</option>
-                <option value="basic">Basic</option>
-                <option value="pro">Pro</option>
-              </select>
-            </div>
-
-            <div className="flex gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowModal(false);
-                  setFormError('');
-                }}
-                className="flex-1 border border-gray-200 text-gray-600 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                type="submit"
-                disabled={saving}
-                className="flex-1 bg-violet-600 hover:bg-violet-700 disabled:opacity-60 text-white py-2.5 rounded-xl text-sm font-semibold transition-colors"
-              >
-                {saving ? 'Creando...' : 'Crear negocio'}
-              </button>
-            </div>
-          </form>
-        </Modal>
+        <NewClientModal onClose={() => setShowModal(false)} onCreated={() => load()} />
       )}
 
       {selectedUser && (

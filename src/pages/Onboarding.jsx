@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import BusinessTypePicker from '../components/BusinessTypePicker';
+import { LegalConsent } from './AcceptInvite';
 
 export default function Onboarding() {
   const navigate = useNavigate();
@@ -10,6 +11,7 @@ export default function Onboarding() {
   const [form, setForm] = useState({ businessType: 'restaurant', name: '', email: '', phone: '', address: '', cif: '' });
   const [error, setError]   = useState('');
   const [loading, setLoading] = useState(false);
+  const [legal, setLegal] = useState(false);
 
   const set = (field) => (e) => setForm(f => ({ ...f, [field]: e.target.value }));
   const isRestaurant = form.businessType === 'restaurant';
@@ -19,7 +21,7 @@ export default function Onboarding() {
     setError('');
     setLoading(true);
     try {
-      await api.post('/businesses', form);
+      await api.post('/businesses', { ...form, acceptLegal: legal });
       await refreshBusiness();
       navigate(form.businessType === 'appointments' ? '/configuracion' : '/');
     } catch (err) {
@@ -112,9 +114,10 @@ export default function Onboarding() {
                 className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white"
               />
             </div>
+            <LegalConsent documents={['terms', 'dpa', 'privacy']} checked={legal} onChange={setLegal} />
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !legal}
               className="w-full bg-violet-600 hover:bg-violet-700 disabled:opacity-60 text-white py-2.5 rounded-xl text-sm font-semibold transition-colors mt-2"
             >
               {loading ? 'Creando...' : 'Crear negocio'}

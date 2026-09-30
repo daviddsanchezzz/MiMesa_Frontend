@@ -1,10 +1,12 @@
 import { useState } from 'react';
+import { useSignupMode } from '../lib/signupMode';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { authClient } from '../lib/authClient';
 import PasswordInput from '../components/PasswordInput';
 
 export default function Login() {
+  const signupMode = useSignupMode();
   const { login } = useAuth();
   const navigate  = useNavigate();
   const [form, setForm]     = useState({ email: '', password: '' });
@@ -140,8 +142,8 @@ export default function Login() {
           </form>
 
           <p className="text-center text-sm text-gray-500 mt-6">
-            ¿No tienes cuenta?{' '}
-            <Link to="/register" className="text-violet-600 hover:text-violet-700 font-semibold">Regístrate gratis</Link>
+            {signupMode === 'open' ? '¿No tienes cuenta?' : '¿Quieres usar Vetra?'}{' '}
+            <Link to="/register" className="text-violet-600 hover:text-violet-700 font-semibold">{signupMode === 'open' ? 'Regístrate gratis' : 'Solicita acceso'}</Link>
           </p>
 
         </div>

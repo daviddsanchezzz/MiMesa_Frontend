@@ -1,17 +1,43 @@
 import { useState, useEffect } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import { authClient } from '../lib/authClient';
 import api from '../services/api';
 import PasswordInput from '../components/PasswordInput';
 
 const ROLE_LABELS = { owner: 'Propietario', manager: 'Encargado', staff: 'Personal' };
 
+const LEGAL_LINKS = {
+  terms: ['Condiciones de uso', '/legal/condiciones'],
+  dpa: ['Contrato de encargo del tratamiento', '/legal/encargo'],
+  privacy: ['Política de privacidad', '/legal/privacidad'],
+};
+
+// "He leído y acepto las Condiciones de uso, el Contrato… y la Política de privacidad."
+export function LegalConsent({ documents = ['terms', 'privacy'], checked, onChange, color = '#7c3aed' }) {
+  const items = ['terms', 'dpa', 'privacy'].filter((d) => documents.includes(d)).map((d) => LEGAL_LINKS[d]);
+  const joined = items.map(([label, href], i) => (
+    <span key={href}>
+      {i > 0 && (i === items.length - 1 ? ' y ' : ', ')}
+      {i === 0 || i === items.length - 1 ? (i === 0 ? 'las ' : 'la ') : 'el '}
+      <Link to={href} target="_blank" rel="noreferrer" className="font-semibold underline underline-offset-2" style={{ color }}>{label}</Link>
+    </span>
+  ));
+  return (
+    <label className="flex items-start gap-2.5 text-xs text-gray-600 leading-relaxed">
+      <input type="checkbox" className="mt-0.5 w-4 h-4 shrink-0" checked={checked} onChange={(e) => onChange(e.target.checked)} required />
+      <span>He leído y acepto {joined}.</span>
+    </label>
+  );
+}
+
 export default function AcceptInvite() {
   const [searchParams] = useSearchParams();
-  const navigate       = useNavigate();
   const token          = searchParams.get('token');
 
+  const { login } = useAuth();
   const [invite, setInvite]         = useState(null);
+  const [legal, setLegal]           = useState(false);
   const [fetchError, setFetchError] = useState('');
 
   const [form, setForm]             = useState({ password: '', confirm: '' });
@@ -32,7 +58,7 @@ export default function AcceptInvite() {
   }, [token]);
 
   const acceptToken = async () => {
-    const { data, error: err } = await api.post(`/invitations/accept/${token}`).catch(e => ({
+    const { data, error: err } = await api.post(`/invitations/accept/${token}`, { acceptLegal: true }).catch(e => ({
       data: null, error: e.response?.data?.message || e.message,
     }));
     if (err) throw new Error(typeof err === 'string' ? err : 'Error al aceptar la invitación');
@@ -66,8 +92,10 @@ export default function AcceptInvite() {
         setAccountCreated(true);
       }
       await acceptToken();
+      // The invitation verified the email: sign in straight away
+      await login(invite.email, form.password).catch(() => {});
       setPhase('done');
-      setTimeout(() => navigate(invite.type === 'platform' ? '/onboarding' : '/'), 2000);
+      setTimeout(() => { window.location.href = invite.type === 'platform' ? '/onboarding' : '/'; }, 1500);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -87,8 +115,9 @@ export default function AcceptInvite() {
       });
       if (signInError) throw new Error(signInError.message || 'Credenciales incorrectas');
       await acceptToken();
+      await login(invite.email, form.password).catch(() => {});
       setPhase('done');
-      setTimeout(() => navigate(invite.type === 'platform' ? '/onboarding' : '/'), 2000);
+      setTimeout(() => { window.location.href = invite.type === 'platform' ? '/onboarding' : '/'; }, 1500);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -128,7 +157,7 @@ export default function AcceptInvite() {
         <h2 className="text-xl font-bold text-gray-900 mb-1">¡Cuenta activada!</h2>
         <p className="text-sm text-gray-500">
           {invite.type === 'platform'
-            ? 'Redirigiendo para configurar tu restaurante...'
+            ? 'Redirigiendo para configurar tu negocio...'
             : <>Te has unido a <strong>{invite.business?.name}</strong>. Redirigiendo...</>
           }
         </p>
@@ -159,8 +188,9 @@ export default function AcceptInvite() {
               </div>
               <h1 className="text-xl font-bold text-gray-900">{invite.business?.name}</h1>
               <p className="text-sm text-gray-500 mt-1">
-                Te han invitado como{' '}
-                <span className="font-semibold text-gray-700">{ROLE_LABELS[invite.role] || invite.role}</span>
+                {invite.role === 'owner'
+                  ? 'Tu negocio ya está preparado. Activa tu cuenta para entrar.'
+                  : <>Te han invitado como <span className="font-semibold text-gray-700">{ROLE_LABELS[invite.role] || invite.role}</span></>}
               </p>
             </>
           )}
@@ -213,8 +243,11 @@ export default function AcceptInvite() {
                 />
               </div>
             )}
+            <div className="pt-1">
+              <LegalConsent documents={invite.legal?.documents} checked={legal} onChange={setLegal} color={brandColor} />
+            </div>
             <button
-              type="submit" disabled={loading}
+              type="submit" disabled={loading || !legal}
               className="w-full text-white py-2.5 rounded-xl text-sm font-semibold transition-colors disabled:opacity-60 mt-2"
               style={{ background: brandColor }}
             >
@@ -222,7 +255,7 @@ export default function AcceptInvite() {
                 ? (phase === 'login' ? 'Iniciando sesión...' : 'Activando cuenta...')
                 : phase === 'login'
                   ? 'Iniciar sesión'
-                  : invite.type === 'platform' ? 'Activar mi cuenta' : 'Activar cuenta y unirme'}
+                  : invite.type === 'platform' || invite.role === 'owner' ? 'Activar mi cuenta' : 'Activar cuenta y unirme'}
             </button>
           </form>
 

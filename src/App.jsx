@@ -32,6 +32,7 @@ const PublicBooking = lazy(() => import('./pages/PublicBooking'));
 const PublicBookingCancel = lazy(() => import('./pages/PublicBookingCancel'));
 const PublicCancel = lazy(() => import('./pages/PublicCancel'));
 const PublicUnsubscribe = lazy(() => import('./pages/PublicUnsubscribe'));
+const Legal = lazy(() => import('./pages/Legal'));
 import ErrorBoundary from './components/ErrorBoundary';
 import Sidebar from './components/Sidebar';
 import Modal from './components/Modal';
@@ -326,6 +327,7 @@ export default function App() {
           <Route path="/public/:businessId/cita/cancelar" element={<PublicBookingCancel />} />
           <Route path="/public/cancel"       element={<PublicCancel />} />
           <Route path="/public/unsubscribe"  element={<PublicUnsubscribe />} />
+          <Route path="/legal/:doc"          element={<Legal />} />
           {/* Auth — public only (redirect to / if already logged in) */}
           <Route path="/login"           element={<PublicRoute><Login /></PublicRoute>} />
           <Route path="/register"        element={<PublicRoute><Register /></PublicRoute>} />

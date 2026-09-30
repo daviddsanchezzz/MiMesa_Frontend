@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
@@ -8,7 +8,11 @@ import { LegalConsent } from './AcceptInvite';
 export default function Onboarding() {
   const navigate = useNavigate();
   const { refreshBusiness, session } = useAuth();
-  const [form, setForm] = useState({ businessType: 'restaurant', name: '', email: '', phone: '', address: '', cif: '' });
+  const [form, setForm] = useState({ businessType: 'restaurant', template: '', name: '', email: '', phone: '', address: '', cif: '' });
+  const [templates, setTemplates] = useState([]);
+  useEffect(() => {
+    api.get('/businesses/templates').then((r) => setTemplates((r.data || []).filter((t) => t.businessType === 'appointments'))).catch(() => {});
+  }, []);
   const [error, setError]   = useState('');
   const [loading, setLoading] = useState(false);
   const [legal, setLegal] = useState(false);
@@ -21,9 +25,10 @@ export default function Onboarding() {
     setError('');
     setLoading(true);
     try {
-      await api.post('/businesses', { ...form, acceptLegal: legal });
+      const { template, ...rest } = form;
+      await api.post('/businesses', { ...rest, ...(rest.businessType === 'appointments' && template ? { template } : {}), acceptLegal: legal });
       await refreshBusiness();
-      navigate(form.businessType === 'appointments' ? '/configuracion' : '/');
+      navigate(form.businessType === 'appointments' ? '/bienvenida' : '/');
     } catch (err) {
       setError(err.response?.data?.message || err.message);
     } finally {
@@ -56,6 +61,22 @@ export default function Onboarding() {
               <p className="block text-sm font-medium text-gray-700 mb-1.5">¿Qué tipo de negocio tienes?</p>
               <BusinessTypePicker value={form.businessType} onChange={(businessType) => setForm((f) => ({ ...f, businessType }))} />
             </div>
+            {!isRestaurant && templates.length > 0 && (
+              <div>
+                <p className="block text-sm font-medium text-gray-700 mb-1.5">¿A qué te dedicas?</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {templates.map((t) => (
+                    <button key={t.key} type="button" onClick={() => setForm((f) => ({ ...f, template: t.key }))}
+                      aria-pressed={form.template === t.key}
+                      className={`text-left rounded-xl border px-3 py-2.5 transition-colors ${form.template === t.key ? 'border-violet-500 bg-violet-50 ring-1 ring-violet-500' : 'border-gray-200 hover:border-gray-300'}`}>
+                      <span className="block text-sm font-semibold text-gray-900">{t.label}</span>
+                      <span className="block text-xs text-gray-500 mt-0.5">{t.description}</span>
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-gray-500 mt-1.5">Te preparamos los servicios típicos con precio y duración; luego los ajustas.</p>
+              </div>
+            )}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">
                 Nombre del negocio *

@@ -20,6 +20,7 @@ const Profile = lazy(() => import('./pages/Profile'));
 const AcceptInvite = lazy(() => import('./pages/AcceptInvite'));
 const DevDashboard = lazy(() => import('./pages/DevDashboard'));
 const Onboarding = lazy(() => import('./pages/Onboarding'));
+const SetupWizard = lazy(() => import('./pages/SetupWizard'));
 const Publicidad = lazy(() => import('./pages/Publicidad'));
 const Analytics = lazy(() => import('./pages/Analytics'));
 const Personal = lazy(() => import('./pages/Personal'));
@@ -343,6 +344,7 @@ export default function App() {
           <Route path="/verify-email"    element={<VerifyEmail />} />
           <Route path="/invite"          element={<AcceptInvite />} />
           <Route path="/onboarding" element={<OnboardingRoute><Onboarding /></OnboardingRoute>} />
+          <Route path="/bienvenida" element={<RoleRoute minRole="manager"><SetupWizard /></RoleRoute>} />
           <Route path="/dev"        element={<DevRoute><DevLayout><DevDashboard /></DevLayout></DevRoute>} />
           <Route path="/"             element={<DevRedirect><PrivateLayout><HomeDashboard /></PrivateLayout></DevRedirect>} />
           <Route path="/rooms"        element={<RestaurantRoute><RoleRoute minRole="manager"><PrivateLayout><Rooms /></PrivateLayout></RoleRoute></RestaurantRoute>} />

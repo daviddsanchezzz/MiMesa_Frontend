@@ -158,9 +158,12 @@ export default function AppointmentsDashboard() {
 
       {setup && !setupDone && (
         <section className={`${card} border-violet-200 p-5 space-y-3`}>
-          <div>
-            <h3 className="text-base font-semibold text-gray-900">Prepara tu agenda</h3>
-            <p className="text-sm text-gray-500">Tres pasos y podrás empezar a dar citas.</p>
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h3 className="text-base font-semibold text-gray-900">Prepara tu agenda</h3>
+              <p className="text-sm text-gray-500">Tres pasos y podrás empezar a dar citas.</p>
+            </div>
+            {isManager && <Link to="/bienvenida" className={btnPrimary}>Hacerlo paso a paso</Link>}
           </div>
           <ol className="space-y-2">
             {[

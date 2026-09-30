@@ -144,7 +144,7 @@ export function BillingSection() {
             <div className="flex items-center justify-between gap-4 flex-wrap">
               <div>
                 <p className="text-2xl font-bold text-gray-800">Free</p>
-                <p className="text-sm text-gray-500 mt-0.5">{isAppointments ? 'Para empezar a probar la agenda' : `Hasta ${limit} reservas al mes · 2 turnos · 15 mesas`}</p>
+                <p className="text-sm text-gray-500 mt-0.5">{isAppointments ? '1 profesional · hasta 30 citas al mes · sin recordatorios' : `Hasta ${limit} reservas al mes · 2 turnos · 15 mesas`}</p>
               </div>
               <span className="text-xs font-semibold bg-gray-100 text-gray-500 px-3 py-1.5 rounded-full">Gratuito</span>
             </div>

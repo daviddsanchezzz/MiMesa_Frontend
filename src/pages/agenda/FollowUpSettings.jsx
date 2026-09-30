@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { bookingsApi, apiError } from '../../services/bookingsApi';
 import { btnPrimary, inputCls, labelCls } from './utils';
+import { useAuth } from '../../context/AuthContext';
+import UpgradeHint from '../../components/UpgradeHint';
 
 function Toggle({ checked, onChange, label }) {
   return (
@@ -11,7 +13,7 @@ function Toggle({ checked, onChange, label }) {
   );
 }
 
-function Card({ title, desc, checked, onToggle, children, sent }) {
+function Card({ title, desc, checked, onToggle, children, sent, paused = false }) {
   return (
     <section className="bg-white rounded-2xl border border-gray-200 p-5 space-y-3">
       <div className="flex items-start justify-between gap-4">
@@ -19,6 +21,7 @@ function Card({ title, desc, checked, onToggle, children, sent }) {
           <h3 className="text-sm font-semibold text-gray-900">{title}</h3>
           <p className="text-sm text-gray-500 mt-0.5">{desc}</p>
           {sent !== undefined && <p className="text-xs text-gray-400 mt-1">Enviados en los últimos 30 días: {sent}</p>}
+          {paused && <p className="text-xs font-medium text-amber-700 mt-1">En pausa: tu plan actual no lo incluye.</p>}
         </div>
         {onToggle && <Toggle checked={checked} onChange={onToggle} label={title} />}
       </div>
@@ -32,6 +35,8 @@ function Card({ title, desc, checked, onToggle, children, sent }) {
  * The 24h reminder is always on; the two follow-ups are optional.
  */
 export default function FollowUpSettings() {
+  const { business } = useAuth();
+  const remindersOn = business?.capabilities?.bookingReminders !== false;
   const [data, setData] = useState(null);
   const [form, setForm] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -71,12 +76,22 @@ export default function FollowUpSettings() {
   return (
     <div className="space-y-4 max-w-2xl">
       <Card title="Recordatorio de la cita"
-        desc="Email 24 horas antes, con el botón para cancelar y liberar el hueco. Siempre activo para los clientes con email." />
+        desc={remindersOn
+          ? 'Email 24 horas antes, con el botón para cambiar o cancelar y liberar el hueco. Siempre activo para los clientes con email.'
+          : 'Email 24 horas antes, con el botón para cambiar o cancelar y liberar el hueco.'}>
+        {!remindersOn && <UpgradeHint plan="Basic">Los recordatorios automáticos van incluidos en los planes de pago.</UpgradeHint>}
+      </Card>
 
-      <Card title="Te toca volver" checked={form.rebook} onToggle={(v) => set({ rebook: v })} sent={data.sentLast30Days.rebook}
+      {data.available === false && (
+        <UpgradeHint>«Te toca volver» y las reseñas automáticas son del plan Pro: Vetra escribe a tus clientes por ti.</UpgradeHint>
+      )}
+
+      <Card title="Te toca volver" checked={form.rebook} paused={data.available === false && data.rebook.enabled}
+        onToggle={data.available === false && !data.rebook.enabled ? null : (v) => set({ rebook: v })} sent={data.sentLast30Days.rebook}
         desc="Cuando un cliente pasa de su ritmo habitual y no tiene cita, le llega un email con el botón para reservar. Uno por visita, por la mañana." />
 
-      <Card title="Pedir opinión en Google" checked={form.review} onToggle={(v) => set({ review: v })} sent={data.sentLast30Days.review}
+      <Card title="Pedir opinión en Google" checked={form.review} paused={data.available === false && data.review.enabled}
+        onToggle={data.available === false && !data.review.enabled ? null : (v) => set({ review: v })} sent={data.sentLast30Days.review}
         desc="Unas horas después de una cita atendida o cobrada, un email con el enlace a tu ficha de Google. Como mucho uno cada 4 meses por cliente.">
         {form.review && (
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">

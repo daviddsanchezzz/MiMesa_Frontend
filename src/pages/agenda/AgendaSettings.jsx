@@ -7,6 +7,8 @@ import ServiceFormModal from './ServiceFormModal';
 import { btnPrimary, btnSecondary, euros, inputCls, resizeImage, staffColors, STAFF_COLORS, summarizeRules } from './utils';
 import StaffAvatar from './StaffAvatar';
 import { useUnsavedChanges } from '../../lib/unsavedChanges';
+import { useAuth } from '../../context/AuthContext';
+import UpgradeHint from '../../components/UpgradeHint';
 
 const KIND_LABEL = { staff: 'Profesional', space: 'Sala o espacio', equipment: 'Equipo' };
 
@@ -284,6 +286,15 @@ function Resources({ resources, services, reload }) {
   };
   const colors = staffColors(resources);
   const staff = resources.filter((r) => r.kind === 'staff');
+  const { business } = useAuth();
+  const maxPros = business?.capabilities?.maxProfessionals; // null = unlimited
+  const prosFull = typeof maxPros === 'number' && staff.filter((r) => r.active !== false).length >= maxPros;
+  // Same rule as the backend (planLimits.lockedStaff): over the limit, the newest rest.
+  const resting = new Set(typeof maxPros === 'number'
+    ? staff.filter((r) => r.active !== false)
+      .sort((a, b) => (a.sortOrder || 0) - (b.sortOrder || 0) || new Date(a.createdAt || 0) - new Date(b.createdAt || 0) || String(a._id).localeCompare(String(b._id)))
+      .slice(maxPros).map((r) => r._id)
+    : []);
 
   async function add(e) {
     e.preventDefault();
@@ -347,6 +358,10 @@ function Resources({ resources, services, reload }) {
                   )}
                   {isStaff && <ColorPicker value={colors[r._id]} onChange={(c) => update(r, { color: c })} />}
                   {!isStaff && <span className="text-[11px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">{KIND_LABEL[r.kind]}</span>}
+                  {resting.has(r._id) && (
+                    <span title="Tu plan incluye menos profesionales: no recibe citas nuevas. Sus citas ya reservadas se mantienen."
+                      className="shrink-0 whitespace-nowrap text-[11px] px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 font-medium">En pausa</span>
+                  )}
                   {isStaff && r.userId && (
                     <button type="button" onClick={() => setLinking(r)} title="Usuario de la app vinculado"
                       className="text-[11px] px-2 py-0.5 rounded-full bg-violet-50 text-violet-700 font-medium truncate max-w-[10rem]">
@@ -383,6 +398,11 @@ function Resources({ resources, services, reload }) {
         </select>
         <button type="submit" className={btnPrimary}>Añadir</button>
       </form>
+      {prosFull && (
+        <UpgradeHint>
+          Tu plan incluye {maxPros} profesional.{resting.size > 0 && ` ${resting.size === 1 ? 'Quien está' : 'Quienes están'} «en pausa» no recibe${resting.size === 1 ? '' : 'n'} citas nuevas.`} Con Pro trabajas con todo tu equipo.
+        </UpgradeHint>
+      )}
       {error && <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</p>}
       {editingSchedule && <ResourceScheduleModal resource={editingSchedule} onClose={() => setEditingSchedule(null)} />}
       {linking && (

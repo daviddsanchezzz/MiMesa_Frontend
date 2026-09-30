@@ -154,19 +154,23 @@ export const BASIC_FEATURES = [
 
 // Appointment businesses (salons, clinics…): same plans, worded for them.
 export const APPT_BASIC_FEATURES = [
-  'Citas ilimitadas',
-  'Enlace de reservas con tu marca',
-  'Emails de confirmación y cancelación',
+  '1 profesional, con citas y clientes ilimitados',
+  'Agenda completa: ausencias, vacaciones y bloqueos',
+  'Página de reservas online con tu marca',
   'Recordatorio automático el día antes',
-  'Agenda por profesional',
-  'Hasta 5 usuarios de equipo',
-  'Historial de clientes',
+  'Tus clientes cambian o cancelan su cita solos',
+  'Caja y cobros: efectivo, tarjeta y Bizum',
+  'Ficha e historial de cada cliente',
 ];
 
+// What Pro adds for appointment businesses (keep in sync with planCapabilities).
 export const APPT_PRO_EXTRAS = [
-  'Equipo y roles ilimitados',
-  'Módulo de finanzas y caja diaria',
-  'Gestión del personal y sus horarios',
+  'Todo tu equipo: horario, servicios y agenda por profesional',
+  'Tus clientes eligen profesional o «cualquiera disponible»',
+  '«Te toca volver»: avisos automáticos a quien le toca repetir',
+  'Reseñas de Google pedidas automáticamente tras la visita',
+  'Facturación y ocupación por profesional',
+  'Finanzas: gastos, sueldos y comisiones',
   'Soporte prioritario',
 ];
 

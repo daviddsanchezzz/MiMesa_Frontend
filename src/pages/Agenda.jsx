@@ -275,6 +275,7 @@ export default function Agenda() {
         <BookingDetailModal
           booking={selected}
           staffById={byId}
+          colors={colors}
           tz={tz}
           onClose={() => setSelected(null)}
           onChanged={(updated) => { setSelected(updated); loadBookings(); }}

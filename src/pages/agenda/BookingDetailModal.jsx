@@ -1,40 +1,69 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import CheckoutModal from './CheckoutModal';
 import Modal from '../../components/Modal';
+import StaffAvatar from './StaffAvatar';
 import { bookingsApi, apiError } from '../../services/bookingsApi';
-import { STATUS, btnPrimary, btnSecondary, euros, inputCls, labelCls, timeInTz, payMethodLabel } from './utils';
+import {
+  STATUS, DEFAULT_TZ, btnPrimary, btnSecondary, euros, inputCls, timeInTz, dateInTz, addDays, initials, payMethodLabel, waLink,
+} from './utils';
 
-// Next steps offered for each status (mirrors the backend transitions).
+// What each status offers (mirrors the backend transitions):
+// main = big buttons, more = small text links under them.
 const ACTIONS = {
-  pending:    [['confirmed', 'Confirmar'], ['cancelled', 'Rechazar']],
-  confirmed:  [['checked_in', 'Ha llegado'], ['completed', 'Completada sin cobrar'], ['no_show', 'No vino'], ['cancelled', 'Cancelar']],
-  checked_in: [['completed', 'Completada sin cobrar'], ['cancelled', 'Cancelar']],
-  no_show:    [['confirmed', 'Volver a confirmar']],
-  completed:  [],
-  cancelled:  [],
+  pending:    { main: [['confirmed', 'Confirmar']], more: [['cancelled', 'Rechazar']] },
+  confirmed:  { main: [['checked_in', 'Ha llegado'], ['no_show', 'No vino']], more: [['completed', 'Completada sin cobrar'], ['cancelled', 'Cancelar cita']] },
+  checked_in: { main: [], more: [['completed', 'Completada sin cobrar'], ['cancelled', 'Cancelar cita']] },
+  no_show:    { main: [['confirmed', 'Volver a confirmar']], more: [] },
+  completed:  { main: [], more: [] },
+  cancelled:  { main: [], more: [] },
 };
 
-const SOURCE = { online: 'Online', phone: 'Teléfono', walk_in: 'Sin cita', staff: 'Equipo' };
+const contactBtn = 'inline-flex items-center justify-center gap-1.5 px-2 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50';
 
-export default function BookingDetailModal({ booking, staffById, tz, onClose, onChanged }) {
+const SOURCE = { online: 'Reservada online', phone: 'Reservada por teléfono', walk_in: 'Sin cita previa', staff: 'Creada por el equipo' };
+
+function dayText(iso, tz) {
+  const d = dateInTz(iso, tz);
+  const today = dateInTz(new Date().toISOString(), tz);
+  if (d === today) return 'Hoy';
+  if (d === addDays(today, 1)) return 'Mañana';
+  if (d === addDays(today, -1)) return 'Ayer';
+  const text = new Date(iso).toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short', timeZone: tz });
+  return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+const Icon = {
+  phone: <svg viewBox="0 0 20 20" className="w-4 h-4" fill="currentColor"><path d="M2 3.5A1.5 1.5 0 0 1 3.5 2h1.15a1.5 1.5 0 0 1 1.46 1.14l.57 2.3a1.5 1.5 0 0 1-.6 1.6l-.9.6a10.5 10.5 0 0 0 5.18 5.18l.6-.9a1.5 1.5 0 0 1 1.6-.6l2.3.57A1.5 1.5 0 0 1 18 13.35v1.15A1.5 1.5 0 0 1 16.5 16h-1A13.5 13.5 0 0 1 2 4.5v-1Z" /></svg>,
+  wa: <svg viewBox="0 0 24 24" className="w-4 h-4" fill="currentColor"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2Zm5.3 14.1c-.2.6-1.3 1.2-1.8 1.2-.5.1-1 .2-3.3-.7-2.8-1.1-4.5-3.9-4.7-4.1-.1-.2-1.1-1.5-1.1-2.8s.7-2 1-2.3c.2-.3.5-.3.7-.3h.5c.2 0 .4 0 .6.5l.8 2c.1.2.1.4 0 .5l-.3.5-.4.4c-.1.1-.3.3-.1.6.2.3.8 1.3 1.7 2.1 1.2 1 2.2 1.4 2.5 1.5.3.2.5.1.6 0l.9-1c.2-.3.4-.2.6-.1l1.9.9c.3.1.5.2.5.3.1.2.1.7-.1 1.3Z" /></svg>,
+  mail: <svg viewBox="0 0 20 20" className="w-4 h-4" fill="currentColor"><path d="M3 4a2 2 0 0 0-2 2v.4l9 5 9-5V6a2 2 0 0 0-2-2H3Zm16 4.7-8.5 4.7a1 1 0 0 1-1 0L1 8.7V14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8.7Z" /></svg>,
+};
+
+export default function BookingDetailModal({ booking, staffById, colors = {}, tz = DEFAULT_TZ, onClose, onChanged }) {
   const [notes, setNotes] = useState(booking.notes || '');
   const [internalNotes, setInternalNotes] = useState(booking.internalNotes || '');
+  const [editingNotes, setEditingNotes] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [charging, setCharging] = useState(false);
   const { hasRole } = useAuth();
   const canCharge = !booking.payment && ['confirmed', 'checked_in', 'completed'].includes(booking.status);
   const st = STATUS[booking.status] || STATUS.confirmed;
+  const actions = ACTIONS[booking.status] || { main: [], more: [] };
   const notesChanged = notes !== (booking.notes || '') || internalNotes !== (booking.internalNotes || '');
+  const showTotal = booking.segments.length > 1;
+  const wa = waLink(booking.guestPhone);
 
   async function run(fn) {
     setBusy(true);
     setError('');
     try {
       onChanged?.(await fn());
+      return true;
     } catch (err) {
       setError(apiError(err));
+      return false;
     } finally {
       setBusy(false);
     }
@@ -45,59 +74,146 @@ export default function BookingDetailModal({ booking, staffById, tz, onClose, on
     run(() => bookingsApi.setStatus(booking._id, status));
   };
 
-  return (
-    <Modal title={booking.guestName} subtitle={`${timeInTz(booking.start, tz)} – ${timeInTz(booking.end, tz)}`} onClose={onClose} size="md">
-      <div className="space-y-4">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${st.cls}`}>{st.label}</span>
-          <span className="text-xs text-gray-400">{SOURCE[booking.source] || booking.source}</span>
-          {booking.partySize > 1 && <span className="text-xs text-gray-500">{booking.partySize} personas</span>}
-        </div>
+  const saveNotes = async () => {
+    if (await run(() => bookingsApi.setNotes(booking._id, { notes, internalNotes }))) setEditingNotes(false);
+  };
 
-        <ul className="divide-y divide-gray-100 border border-gray-100 rounded-xl">
-          {booking.segments.map((seg) => (
-            <li key={seg._id} className="px-3 py-2.5 flex items-center justify-between gap-3">
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">{seg.serviceName}</p>
-                <p className="text-xs text-gray-500">
-                  {timeInTz(seg.start, tz)} – {timeInTz(seg.end, tz)}
-                  {(seg.resourceIds || []).length > 0 && ` · ${seg.resourceIds.map((id) => staffById[id]?.name || '—').join(', ')}`}
-                </p>
-              </div>
-              <span className="text-sm text-gray-700 tabular-nums shrink-0">{euros(seg.price)}</span>
-            </li>
+  const header = (
+    <div className="flex items-center gap-3 min-w-0">
+      <span className="w-11 h-11 rounded-full bg-violet-100 text-violet-700 flex items-center justify-center text-sm font-bold shrink-0">
+        {initials(booking.guestName)}
+      </span>
+      <div className="min-w-0">
+        <div className="flex items-center gap-2 min-w-0">
+          <h3 className="text-base font-semibold text-gray-900 truncate">{booking.guestName}</h3>
+          <span className={`shrink-0 text-[11px] font-semibold px-2 py-0.5 rounded-full border ${st.cls}`}>{st.label}</span>
+        </div>
+        <p className="text-sm text-gray-500 mt-0.5">
+          {dayText(booking.start, tz)} · {timeInTz(booking.start, tz)} – {timeInTz(booking.end, tz)}
+        </p>
+      </div>
+    </div>
+  );
+
+  const hasFooter = canCharge || actions.main.length > 0 || actions.more.length > 0;
+  const footer = hasFooter ? (
+    <div className="space-y-2">
+      {canCharge && (
+        <button type="button" disabled={busy} onClick={() => setCharging(true)}
+          className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-emerald-600 text-white text-base font-semibold hover:bg-emerald-700 disabled:opacity-50">
+          Cobrar {euros(booking.totalPrice)}
+        </button>
+      )}
+      {actions.main.length > 0 && (
+        <div className={`grid gap-2 ${actions.main.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
+          {actions.main.map(([status, label], i) => (
+            <button key={status} type="button" disabled={busy} onClick={() => changeStatus(status)}
+              className={i === 0 && !canCharge ? btnPrimary : btnSecondary}>
+              {label}
+            </button>
           ))}
-          <li className="px-3 py-2.5 flex justify-between text-sm">
-            <span className="text-gray-500">Total</span>
-            <span className="font-semibold text-gray-900">{euros(booking.totalPrice)}</span>
-          </li>
+        </div>
+      )}
+      {actions.more.length > 0 && (
+        <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-1 pt-1">
+          {actions.more.map(([status, label]) => (
+            <button key={status} type="button" disabled={busy} onClick={() => changeStatus(status)}
+              className={`text-sm font-medium py-1 ${status === 'cancelled' ? 'text-rose-600 hover:text-rose-700' : 'text-gray-500 hover:text-gray-800'}`}>
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  ) : null;
+
+  return (
+    <Modal header={header} footer={footer} onClose={onClose} size="md">
+      <div className="space-y-4">
+        {/* What and who */}
+        <ul className="rounded-xl border border-gray-200 divide-y divide-gray-100">
+          {booking.segments.map((seg) => {
+            const people = (seg.resourceIds || []).map((id) => staffById[id]).filter((r) => r && r.kind === 'staff');
+            const person = people[0];
+            return (
+              <li key={seg._id} className="px-3.5 py-3 flex items-center gap-3">
+                {person
+                  ? <StaffAvatar name={person.name} photo={person.photo} color={colors[person._id]} size={32} />
+                  : <span className="w-8 h-8 rounded-full bg-gray-100 shrink-0" />}
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-gray-900 truncate">{seg.serviceName}</p>
+                  <p className="text-xs text-gray-500 truncate">
+                    {people.length ? people.map((p) => p.name).join(', ') : 'Sin asignar'}
+                    {showTotal && ` · ${timeInTz(seg.start, tz)}`}
+                  </p>
+                </div>
+                <span className="text-sm font-semibold text-gray-900 tabular-nums shrink-0">{euros(seg.price)}</span>
+              </li>
+            );
+          })}
+          {showTotal && (
+            <li className="px-3.5 py-2.5 flex justify-between text-sm">
+              <span className="text-gray-500">Total</span>
+              <span className="font-semibold text-gray-900 tabular-nums">{euros(booking.totalPrice)}</span>
+            </li>
+          )}
         </ul>
 
+        {/* Contact: one row of equal buttons */}
         {(booking.guestPhone || booking.guestEmail) && (
-          <div className="text-sm text-gray-700 space-y-1">
-            {booking.guestPhone && <p><a className="text-violet-600 hover:underline" href={`tel:${booking.guestPhone}`}>{booking.guestPhone}</a></p>}
-            {booking.guestEmail && <p><a className="text-violet-600 hover:underline" href={`mailto:${booking.guestEmail}`}>{booking.guestEmail}</a></p>}
+          <div className="grid grid-flow-col auto-cols-fr gap-2">
+            {booking.guestPhone && (
+              <a href={`tel:${booking.guestPhone.replace(/\s/g, '')}`} className={contactBtn}>{Icon.phone} Llamar</a>
+            )}
+            {wa && (
+              <a href={wa} target="_blank" rel="noreferrer" className={`${contactBtn} border-emerald-200 bg-emerald-50 text-emerald-800 hover:bg-emerald-100`}>{Icon.wa} WhatsApp</a>
+            )}
+            {booking.guestEmail && (
+              <a href={`mailto:${booking.guestEmail}`} title={booking.guestEmail} className={contactBtn}>{Icon.mail} Email</a>
+            )}
           </div>
         )}
 
-        <div className="space-y-3">
-          <div>
-            <label className={labelCls}>Notas del cliente</label>
-            <textarea className={inputCls} rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={1000} />
-          </div>
-          <div>
-            <label className={labelCls}>Notas internas</label>
-            <textarea className={inputCls} rows={2} value={internalNotes} onChange={(e) => setInternalNotes(e.target.value)} maxLength={2000} />
-          </div>
-          {notesChanged && (
-            <button type="button" className={btnSecondary} disabled={busy}
-              onClick={() => run(() => bookingsApi.setNotes(booking._id, { notes, internalNotes }))}>
-              Guardar notas
-            </button>
+        <p className="text-xs text-gray-400 flex flex-wrap gap-x-2">
+          {booking.guestPhone && <span className="text-gray-500">{booking.guestPhone} ·</span>}
+          <span>{SOURCE[booking.source] || booking.source}</span>
+          {booking.partySize > 1 && <span>· {booking.partySize} personas</span>}
+          {booking.customerId && (
+            <Link to={`/customers/${booking.customerId}`} className="text-violet-600 font-medium hover:underline">· Ver ficha del cliente</Link>
           )}
-        </div>
+        </p>
 
-        {error && <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</p>}
+        {/* Notes: shown only when there are some, editable on demand */}
+        {editingNotes ? (
+          <div className="space-y-3 rounded-xl bg-gray-50 p-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Nota del cliente</label>
+              <textarea className={`${inputCls} bg-white`} rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={1000} />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Nota interna <span className="text-gray-400 font-normal">(solo la ve el equipo)</span></label>
+              <textarea className={`${inputCls} bg-white`} rows={2} value={internalNotes} onChange={(e) => setInternalNotes(e.target.value)} maxLength={2000} autoFocus />
+            </div>
+            <div className="flex gap-2">
+              <button type="button" className={btnPrimary} disabled={busy || !notesChanged} onClick={saveNotes}>Guardar</button>
+              <button type="button" className={btnSecondary} disabled={busy}
+                onClick={() => { setNotes(booking.notes || ''); setInternalNotes(booking.internalNotes || ''); setEditingNotes(false); }}>
+                Cancelar
+              </button>
+            </div>
+          </div>
+        ) : (booking.notes || booking.internalNotes) ? (
+          <button type="button" onClick={() => setEditingNotes(true)}
+            className="w-full text-left rounded-xl bg-amber-50/70 border border-amber-100 px-3.5 py-3 space-y-1.5 hover:bg-amber-50">
+            {booking.notes && <p className="text-sm text-gray-800"><span className="font-semibold">Cliente:</span> {booking.notes}</p>}
+            {booking.internalNotes && <p className="text-sm text-gray-800"><span className="font-semibold">Interna:</span> {booking.internalNotes}</p>}
+            <p className="text-xs font-medium text-amber-800">Editar notas</p>
+          </button>
+        ) : (
+          <button type="button" onClick={() => setEditingNotes(true)} className="text-sm font-medium text-violet-700 hover:text-violet-800">
+            + Añadir una nota
+          </button>
+        )}
 
         {booking.payment && (
           <div className="rounded-xl bg-emerald-50 border border-emerald-200 px-4 py-3 flex items-center justify-between gap-3">
@@ -118,22 +234,7 @@ export default function BookingDetailModal({ booking, staffById, tz, onClose, on
           </div>
         )}
 
-        {(canCharge || (ACTIONS[booking.status] || []).length > 0) && (
-          <div className="flex flex-wrap gap-2 pt-1">
-            {canCharge && (
-              <button type="button" disabled={busy} onClick={() => setCharging(true)}
-                className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700">
-                Cobrar {euros(booking.totalPrice)}
-              </button>
-            )}
-            {(ACTIONS[booking.status] || []).map(([status, label], i) => (
-              <button key={status} type="button" disabled={busy} onClick={() => changeStatus(status)}
-                className={i === 0 && !canCharge ? btnPrimary : status === 'cancelled' ? `${btnSecondary} text-rose-600 border-rose-200 hover:bg-rose-50` : btnSecondary}>
-                {label}
-              </button>
-            ))}
-          </div>
-        )}
+        {error && <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</p>}
       </div>
       {charging && (
         <CheckoutModal booking={booking} tz={tz} onClose={() => setCharging(false)}

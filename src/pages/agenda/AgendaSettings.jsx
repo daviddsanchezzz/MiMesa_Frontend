@@ -9,6 +9,7 @@ import StaffAvatar from './StaffAvatar';
 import { useUnsavedChanges } from '../../lib/unsavedChanges';
 import { useAuth } from '../../context/AuthContext';
 import UpgradeHint from '../../components/UpgradeHint';
+import { PRICES } from '../../lib/billing';
 
 const KIND_LABEL = { staff: 'Profesional', space: 'Sala o espacio', equipment: 'Equipo' };
 
@@ -398,9 +399,15 @@ function Resources({ resources, services, reload }) {
         </select>
         <button type="submit" className={btnPrimary}>Añadir</button>
       </form>
+      {business?.effectivePlan === 'pro' && business?.hasSubscription && !business?.legacyAccess
+        && staff.filter((r) => r.active !== false).length >= PRICES.proIncluded && (
+        <p className="text-xs text-gray-500">
+          Tu plan Pro incluye {PRICES.proIncluded} profesionales; cada uno más suma {PRICES.proExtra}/mes a tu factura (se ajusta solo al añadir o desactivar).
+        </p>
+      )}
       {prosFull && (
         <UpgradeHint>
-          Tu plan incluye {maxPros} profesional.{resting.size > 0 && ` ${resting.size === 1 ? 'Quien está' : 'Quienes están'} «en pausa» no recibe${resting.size === 1 ? '' : 'n'} citas nuevas.`} Con Pro trabajas con todo tu equipo.
+          Tu plan incluye {maxPros} profesional.{resting.size > 0 && ` ${resting.size === 1 ? 'Quien está' : 'Quienes están'} «en pausa» no recibe${resting.size === 1 ? '' : 'n'} citas nuevas.`} Con Pro ({PRICES.pro}/mes, {PRICES.proIncluded} profesionales incluidos) trabajas con tu equipo.
         </UpgradeHint>
       )}
       {error && <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</p>}

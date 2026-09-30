@@ -165,7 +165,8 @@ export const APPT_BASIC_FEATURES = [
 
 // What Pro adds for appointment businesses (keep in sync with planCapabilities).
 export const APPT_PRO_EXTRAS = [
-  'Todo tu equipo: horario, servicios y agenda por profesional',
+  'Hasta 3 profesionales incluidos; cada uno más, 5 €/mes',
+  'Horario, servicios y agenda de cada profesional',
   'Tus clientes eligen profesional o «cualquiera disponible»',
   '«Te toca volver»: avisos automáticos a quien le toca repetir',
   'Reseñas de Google pedidas automáticamente tras la visita',
@@ -175,7 +176,7 @@ export const APPT_PRO_EXTRAS = [
 ];
 
 export const PRO_EXTRAS = [
-  'Equipo y roles ilimitados',
+  'Equipo y roles',
   'Marketing y campañas de email',
   'Códigos promocionales',
   'Estadísticas avanzadas',

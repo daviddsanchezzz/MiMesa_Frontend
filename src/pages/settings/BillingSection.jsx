@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import Modal from '../../components/Modal';
-import { paymentGraceUntil } from '../../lib/billing';
+import { paymentGraceUntil, PRICES } from '../../lib/billing';
 import { BASIC_FEATURES as R_BASIC, CheckIcon, PRO_EXTRAS as R_PRO, APPT_BASIC_FEATURES, APPT_PRO_EXTRAS } from './shared';
 
 export function BillingSection() {
@@ -217,8 +217,8 @@ export function BillingSection() {
                     <p className="text-violet-200 text-xs">Sin límites, sin complicaciones</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-white font-bold text-2xl">19€</p>
-                    <p className="text-violet-200 text-xs">/ mes</p>
+                    <p className="text-white font-bold text-2xl">{PRICES.basic}</p>
+                    <p className="text-violet-200 text-xs">/ mes + IVA</p>
                   </div>
                 </div>
                 <div className="p-5 flex flex-col flex-1">
@@ -251,8 +251,8 @@ export function BillingSection() {
                     <p className="text-amber-100 text-xs">Para {audience} que quieren más</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-white font-bold text-2xl">39€</p>
-                    <p className="text-amber-100 text-xs">/ mes</p>
+                    <p className="text-white font-bold text-2xl">{PRICES.pro}</p>
+                    <p className="text-amber-100 text-xs">/ mes + IVA</p>
                   </div>
                 </div>
                 <div className="p-5 flex flex-col flex-1">
@@ -349,7 +349,7 @@ export function BillingSection() {
                 )}
                 {!isTrialing && currentPeriodEnd && !cancelAtPeriodEnd && (
                   <p className="text-sm text-gray-500">
-                    Próxima factura el <strong className="text-gray-700">{fmt(currentPeriodEnd)}</strong> · 19€/mes
+                    Próxima factura el <strong className="text-gray-700">{fmt(currentPeriodEnd)}</strong>
                   </p>
                 )}
               </div>
@@ -420,7 +420,7 @@ export function BillingSection() {
                 <div>
                   <div className="flex items-center gap-2 mb-0.5">
                     <p className="text-base font-bold text-amber-700">Pro</p>
-                    <span className="text-xs font-semibold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">39€/mes</span>
+                    <span className="text-xs font-semibold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">{PRICES.pro}/mes + IVA</span>
                   </div>
                   <p className="text-xs text-amber-600">
                     {isTrialing
@@ -505,7 +505,7 @@ export function BillingSection() {
                   <p className="text-sm text-gray-500">Prueba gratuita · finaliza el <strong className="text-gray-700">{fmt(trialEndsAt)}</strong></p>
                 )}
                 {!isTrialing && currentPeriodEnd && !cancelAtPeriodEnd && (
-                  <p className="text-sm text-gray-500">Próxima factura el <strong className="text-gray-700">{fmt(currentPeriodEnd)}</strong> · 39€/mes</p>
+                  <p className="text-sm text-gray-500">Próxima factura el <strong className="text-gray-700">{fmt(currentPeriodEnd)}</strong></p>
                 )}
               </div>
               <div className="flex items-center gap-2 shrink-0">

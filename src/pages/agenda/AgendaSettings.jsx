@@ -16,13 +16,17 @@ const KIND_LABEL = { staff: 'Profesional', space: 'Sala o espacio', equipment: '
 function Card({ title, subtitle, children, action }) {
   return (
     <section className="space-y-4">
-      <div className="flex items-start justify-between gap-3 pb-3 border-b border-gray-100">
-        <div>
-          <h3 className="text-[15px] font-semibold text-gray-900">{title}</h3>
-          {subtitle && <p className="text-xs text-gray-500 mt-0.5">{subtitle}</p>}
+      {(title || action) && (
+        <div className="flex items-center justify-between gap-3">
+          {title ? (
+            <div>
+              <h3 className="text-[15px] font-semibold text-gray-900">{title}</h3>
+              {subtitle && <p className="text-xs text-gray-500 mt-0.5">{subtitle}</p>}
+            </div>
+          ) : <span className="text-sm text-gray-500">{subtitle}</span>}
+          {action}
         </div>
-        {action}
-      </div>
+      )}
       {children}
     </section>
   );
@@ -138,7 +142,7 @@ function Toggle({ checked, onChange, label }) {
         <span className="absolute inset-0 rounded-full bg-gray-300 peer-checked:bg-emerald-500 transition-colors" />
         <span className="absolute left-0.5 h-4 w-4 rounded-full bg-white shadow-sm peer-checked:translate-x-4 transition-transform" />
       </span>
-      <span className="text-xs text-gray-700">{label}</span>
+      {label && <span className="text-xs text-gray-600">{label}</span>}
     </label>
   );
 }
@@ -148,7 +152,7 @@ function ColorPicker({ value, onChange }) {
   return (
     <div className="relative">
       <button type="button" onClick={() => setOpen((o) => !o)} aria-label="Cambiar color"
-        className="w-6 h-6 rounded-full border-2 border-white shadow ring-1 ring-gray-200" style={{ backgroundColor: value }} />
+        className="w-4 h-4 rounded-full ring-2 ring-white shadow-[0_0_0_1px_rgba(0,0,0,0.08)]" style={{ backgroundColor: value }} />
       {open && (
         <>
           <div className="fixed inset-0 z-20" onClick={() => setOpen(false)} />
@@ -333,71 +337,66 @@ function Resources({ resources, services, reload }) {
   });
 
   return (
-    <Card title="Profesionales y espacios" subtitle="Quién o qué se reserva: personas, salas, cabinas, equipos.">
-      <ul className="space-y-2">
-        {resources.length === 0 && <li className="px-3 py-3 text-sm text-gray-400">Todavía no hay ninguno.</li>}
+    <Card subtitle={`${resources.length} ${resources.length === 1 ? 'persona o espacio' : 'personas o espacios'}`}>
+      <ul className="divide-y divide-gray-100 border-y border-gray-100">
+        {resources.length === 0 && <li className="py-4 text-sm text-gray-400">Todavía no hay ninguno.</li>}
         {resources.map((r) => {
           const theirs = servicesOf(r);
           const isStaff = r.kind === 'staff';
           return (
-            <li key={r._id} className="border border-gray-200 rounded-2xl px-4 py-3 flex flex-wrap items-center gap-x-4 gap-y-3">
+            <li key={r._id} className="py-3 flex items-center gap-3">
               <label className="relative cursor-pointer shrink-0 group" title="Cambiar foto">
-                <StaffAvatar name={r.name} photo={r.photo} color={colors[r._id] || '#9ca3af'} size={44} />
+                <StaffAvatar name={r.name} photo={r.photo} color={colors[r._id] || '#9ca3af'} size={40} />
                 <span className="absolute inset-0 rounded-full bg-black/40 text-white text-[10px] font-semibold items-center justify-center hidden group-hover:flex">
                   {uploading === r._id ? '…' : 'Foto'}
                 </span>
                 <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && uploadPhoto(r, e.target.files[0])} />
               </label>
-              <div className="min-w-0 flex-1 basis-40">
-                <div className="flex items-center gap-2">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-center gap-1.5 min-w-0">
                   {renaming === r._id ? (
-                    <input autoFocus className={`${inputCls} !w-48 !py-1.5`} defaultValue={r.name}
+                    <input autoFocus className={`${inputCls} !w-44 !py-1`} defaultValue={r.name}
                       onBlur={(e) => { setRenaming(null); if (e.target.value.trim() && e.target.value !== r.name) update(r, { name: e.target.value.trim() }); }}
                       onKeyDown={(e) => { if (e.key === 'Enter') e.currentTarget.blur(); if (e.key === 'Escape') setRenaming(null); }} />
                   ) : (
-                    <p className="text-sm font-semibold text-gray-900 truncate">{r.name}</p>
+                    <p className="text-[15px] font-medium text-gray-900 truncate">{r.name}</p>
                   )}
                   {isStaff && <ColorPicker value={colors[r._id]} onChange={(c) => update(r, { color: c })} />}
-                  {!isStaff && <span className="text-[11px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">{KIND_LABEL[r.kind]}</span>}
+                  {!isStaff && <span className="text-[11px] px-1.5 py-px rounded bg-gray-100 text-gray-500">{KIND_LABEL[r.kind]}</span>}
                   {resting.has(r._id) && (
                     <span title="Tu plan incluye menos profesionales: no recibe citas nuevas. Sus citas ya reservadas se mantienen."
-                      className="shrink-0 whitespace-nowrap text-[11px] px-2 py-0.5 rounded-full bg-amber-50 text-amber-800 font-medium">En pausa</span>
-                  )}
-                  {isStaff && r.userId && (
-                    <button type="button" onClick={() => setLinking(r)} title="Usuario de la app vinculado"
-                      className="text-[11px] px-2 py-0.5 rounded-full bg-violet-50 text-violet-700 font-medium truncate max-w-[10rem]">
-                      👤 {memberName(r.userId)}
-                    </button>
+                      className="shrink-0 whitespace-nowrap text-[11px] px-1.5 py-px rounded bg-amber-50 text-amber-800 font-medium">En pausa</span>
                   )}
                 </div>
-                <button type="button" onClick={() => isStaff && setEditingServices(r)}
-                  className={`mt-0.5 text-xs text-left ${isStaff ? 'text-gray-500 hover:text-violet-700' : 'text-gray-400 cursor-default'}`}>
-                  {theirs.length === 0
-                    ? (isStaff ? 'No hace ningún servicio · Asignar' : 'No se usa en ningún servicio')
-                    : `${theirs.length === services.length && services.length > 1 ? 'Todos los servicios' : theirs.map((s) => s.name).join(', ')}${isStaff ? ' · Editar' : ''}`}
-                </button>
+                <p className="text-[13px] text-gray-500 truncate">
+                  <button type="button" onClick={() => isStaff && setEditingServices(r)} className={isStaff ? 'hover:text-violet-700' : 'cursor-default'}>
+                    {theirs.length === 0
+                      ? (isStaff ? 'Sin servicios' : 'Sin servicios')
+                      : theirs.length === services.length && services.length > 1 ? 'Todos los servicios' : theirs.map((x) => x.name).join(', ')}
+                  </button>
+                  {isStaff && r.userId && <> · <button type="button" onClick={() => setLinking(r)} className="hover:text-violet-700">Usuario: {memberName(r.userId)}</button></>}
+                  {r.bookableOnline === false && <span className="text-gray-400"> · solo interno</span>}
+                </p>
               </div>
-              <div className="flex items-center gap-3 ml-auto">
-                <Toggle checked={r.bookableOnline !== false} onChange={(v) => update(r, { bookableOnline: v })} label="Se puede reservar online" />
-                <button type="button" className="text-xs font-semibold text-violet-700 hover:text-violet-900 px-2.5 py-1.5 rounded-lg bg-violet-50" onClick={() => setEditingSchedule(r)}>Horario</button>
-                <RowMenu items={[
-                  { label: 'Cambiar nombre', onClick: () => setRenaming(r._id) },
-                  isStaff && { label: 'Servicios que hace', onClick: () => setEditingServices(r) },
-                  isStaff && { label: r.userId ? 'Cambiar usuario vinculado' : 'Vincular a un usuario', onClick: () => setLinking(r) },
-                  r.photo && { label: 'Quitar foto', onClick: () => update(r, { photo: null }) },
-                  { label: 'Desactivar', danger: true, onClick: () => remove(r) },
-                ]} />
-              </div>
+              <button type="button" className="shrink-0 h-8 px-2.5 rounded-full text-[13px] font-semibold text-gray-700 hover:bg-gray-100" onClick={() => setEditingSchedule(r)}>Horario</button>
+              <RowMenu items={[
+                { label: r.bookableOnline !== false ? 'Quitar de la reserva online' : 'Permitir reservar online', onClick: () => update(r, { bookableOnline: r.bookableOnline === false }) },
+                { label: 'Cambiar nombre', onClick: () => setRenaming(r._id) },
+                isStaff && { label: 'Servicios que hace', onClick: () => setEditingServices(r) },
+                isStaff && { label: r.userId ? 'Cambiar usuario vinculado' : 'Vincular a un usuario', onClick: () => setLinking(r) },
+                r.photo && { label: 'Quitar foto', onClick: () => update(r, { photo: null }) },
+                { label: 'Desactivar', danger: true, onClick: () => remove(r) },
+              ]} />
             </li>
           );
         })}
       </ul>
-      <form onSubmit={add} className="flex flex-wrap gap-2 pt-1">
-        <input className={`${inputCls} !w-auto flex-1 min-w-[10rem]`} placeholder="Nombre (Ana, Sala 1…)" value={name} onChange={(e) => setName(e.target.value)} required maxLength={100} />
-        <select className={`${inputCls} !w-auto`} value={kind} onChange={(e) => setKind(e.target.value)}>
+      <form onSubmit={add} className="flex gap-2">
+        <input className={`${inputCls} !py-2 min-w-0 flex-1`} placeholder="Nuevo: nombre" value={name} onChange={(e) => setName(e.target.value)} required maxLength={100} />
+        <select className={`${inputCls} !py-2 !w-[9.5rem] shrink-0`} value={kind} onChange={(e) => setKind(e.target.value)} aria-label="Tipo">
           {Object.entries(KIND_LABEL).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
         </select>
-        <button type="submit" className={btnPrimary}>Añadir</button>
+        <button type="submit" className="shrink-0 h-10 w-10 rounded-xl bg-gray-900 text-white text-xl leading-none hover:bg-black" aria-label="Añadir">+</button>
       </form>
       {business?.effectivePlan === 'pro' && business?.hasSubscription && !business?.legacyAccess
         && staff.filter((r) => r.active !== false).length >= PRICES.proIncluded && (
@@ -447,22 +446,32 @@ function Services({ services, staff, reload }) {
   }
 
   return (
-    <Card title="Servicios" subtitle="Lo que se puede reservar, cuánto dura y quién lo hace."
-      action={<button type="button" className={btnPrimary} onClick={() => setEditing(null)}>Nuevo servicio</button>}>
-      <ul className="divide-y divide-gray-100 border border-gray-100 rounded-xl">
-        {services.length === 0 && <li className="px-3 py-3 text-sm text-gray-400">Todavía no hay servicios.</li>}
+    <Card subtitle={`${services.length} ${services.length === 1 ? 'servicio' : 'servicios'}`}
+      action={(
+        <button type="button" onClick={() => setEditing(null)}
+          className="h-9 px-3.5 rounded-full bg-gray-900 text-white text-[13px] font-semibold hover:bg-black">+ Nuevo</button>
+      )}>
+      <ul className="divide-y divide-gray-100 border-y border-gray-100">
+        {services.length === 0 && <li className="py-4 text-sm text-gray-400">Todavía no hay servicios.</li>}
         {services.map((s) => {
           const req = (s.requirements || []).find((r) => r.kind === 'staff');
-          const who = !req ? '—' : (req.resourceIds || []).length
+          const who = !req ? '' : (req.resourceIds || []).length
             ? req.resourceIds.map((id) => staff.find((x) => x._id === id)?.name).filter(Boolean).join(', ')
             : 'Cualquier profesional';
           return (
-            <li key={s._id} className="px-3 py-2.5 flex flex-wrap items-center gap-x-3 gap-y-1">
-              <button type="button" className="text-sm font-medium text-gray-900 hover:text-violet-700 text-left" onClick={() => setEditing(s)}>{s.name}</button>
-              <span className="text-xs text-gray-500">{s.durationMin} min · {euros(s.price?.amount)}</span>
-              <span className="text-xs text-gray-400 truncate">{who}</span>
-              {s.onlineBooking?.enabled === false && <span className="text-[11px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-500">Solo interno</span>}
-              <button type="button" className="ml-auto text-xs text-gray-400 hover:text-rose-600" onClick={() => remove(s)}>Desactivar</button>
+            <li key={s._id} className="py-3 flex items-center gap-3">
+              <button type="button" className="min-w-0 flex-1 text-left group" onClick={() => setEditing(s)}>
+                <p className="text-[15px] font-medium text-gray-900 truncate group-hover:text-violet-700">
+                  {s.name}
+                  {s.onlineBooking?.enabled === false && <span className="ml-1.5 align-middle text-[11px] font-normal px-1.5 py-px rounded bg-gray-100 text-gray-500">Solo interno</span>}
+                </p>
+                <p className="text-[13px] text-gray-500 truncate">{s.durationMin} min{who && ` · ${who}`}</p>
+              </button>
+              <span className="text-[15px] font-semibold tabular-nums text-gray-900">{euros(s.price?.amount)}</span>
+              <RowMenu items={[
+                { label: 'Editar', onClick: () => setEditing(s) },
+                { label: 'Desactivar', danger: true, onClick: () => remove(s) },
+              ]} />
             </li>
           );
         })}

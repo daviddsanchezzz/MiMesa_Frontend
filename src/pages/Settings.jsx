@@ -23,8 +23,8 @@ const GROUPS = {
   appointments: [
     { title: 'Negocio', items: [{ key: 'negocio', label: 'Datos del negocio', desc: 'Nombre, logo, dirección y contacto', icon: 'building' }] },
     { title: 'Qué se reserva', items: [
-      { key: 'profesionales', label: 'Profesionales', desc: 'Quién atiende y en qué horario', icon: 'person' },
-      { key: 'servicios', label: 'Servicios', desc: 'Duración y precio', icon: 'list' },
+      { key: 'profesionales', label: 'Profesionales', desc: 'Quién o qué se reserva y en qué horario', icon: 'person' },
+      { key: 'servicios', label: 'Servicios', desc: 'Lo que se reserva: duración, precio y quién lo hace', icon: 'list' },
     ] },
     { title: 'Cuándo', items: [{ key: 'horario', label: 'Horario y cierres', desc: 'Apertura, festivos y vacaciones', icon: 'clock' }] },
     { title: 'Reservas online', items: [
@@ -63,7 +63,6 @@ const SECTIONS = {
  * on its own screen. On desktop the list stays on the left.
  */
 export default function Settings() {
-  useSetMobileHeader({ title: 'Configuración' });
   const { hasRole, isAppointments } = useAuth();
   const isOwner = hasRole('owner');
   const groups = GROUPS[isAppointments ? 'appointments' : 'restaurant']
@@ -89,6 +88,8 @@ export default function Settings() {
   };
   const current = all.find((t) => t.key === tab);
   const Current = tab ? SECTIONS[tab] : null;
+  // Phone: the header names the setting you are in; the back link returns to the list.
+  useSetMobileHeader({ title: current && !isDesktop ? current.label : 'Configuración' });
 
   const list = (
     <nav className="space-y-6">
@@ -129,13 +130,13 @@ export default function Settings() {
           <div className="min-w-0">
             {!isDesktop && (
               <button type="button" onClick={() => confirmLeave() && setSearchParams({})}
-                className="mb-3 inline-flex items-center gap-1 text-sm text-gray-500 font-medium">
-                <Icon name="left" className="w-4 h-4" strokeWidth={2} />Configuración
+                className="mb-2 -ml-1 inline-flex items-center gap-0.5 text-sm text-violet-700 font-medium">
+                <Icon name="left" className="w-4 h-4" strokeWidth={2} />Ajustes
               </button>
             )}
             <div className="mb-5">
-              <h2 className="text-xl font-semibold text-gray-900">{current.label}</h2>
-              <p className="text-sm text-gray-500 mt-0.5">{current.desc}</p>
+              <h2 className="hidden lg:block text-xl font-semibold text-gray-900">{current.label}</h2>
+              <p className="text-sm text-gray-500 lg:mt-0.5">{current.desc}</p>
             </div>
             <Current />
           </div>

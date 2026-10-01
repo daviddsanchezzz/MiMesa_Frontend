@@ -237,10 +237,10 @@ export default function NewBookingModal({ date: initialDate, time: initialTime, 
                 : [['Mañana', morning], ['Tarde', afternoon]].filter(([, l]) => l.length).map(([label, list]) => (
                   <div key={label} className="mb-2">
                     <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 mb-1">{label}</p>
-                    <div className="flex flex-wrap gap-1.5">
+                    <div className="grid grid-cols-4 sm:grid-cols-6 gap-1.5">
                       {list.map((s) => (
                         <button key={s.time} type="button" onClick={() => setTime(s.time)}
-                          className={`px-3 py-1.5 rounded-full text-sm font-semibold border tabular-nums transition-colors ${time === s.time ? 'bg-violet-600 border-violet-600 text-white' : 'bg-white border-gray-200 text-gray-700 hover:border-gray-400'}`}>
+                          className={`py-2 rounded-xl text-sm font-semibold border tabular-nums text-center transition-colors ${time === s.time ? 'bg-violet-600 border-violet-600 text-white' : 'bg-white border-gray-200 text-gray-700 hover:border-gray-400'}`}>
                           {s.time}
                         </button>
                       ))}

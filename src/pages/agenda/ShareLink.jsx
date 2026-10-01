@@ -10,7 +10,7 @@ export function bookingUrl(business) {
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
 // A printable A5 poster with the QR code, for the mirror or the counter.
-function printPoster({ business, qr, url }) {
+function printPoster({ business, qr, url, restaurant }) {
   const color = business?.brandColor || '#7c3aed';
   const w = window.open('', '_blank', 'width=720,height=960');
   if (!w) return;
@@ -30,10 +30,10 @@ function printPoster({ business, qr, url }) {
 </style></head><body><div class="page">
   ${business?.logoUrl ? `<img class="logo" src="${esc(business.logoUrl)}" alt="">` : ''}
   <p class="name">${esc(business?.name)}</p>
-  <p class="title">Reserva tu próxima cita</p>
+  <p class="title">${restaurant ? 'Reserva tu mesa' : 'Reserva tu próxima cita'}</p>
   <p class="sub">Escanea el código con la cámara del móvil</p>
   <img class="qr" src="${qr}" alt="Código QR">
-  <div class="steps">Elige servicio, profesional y hora.<br>Te llega la confirmación al momento.</div>
+  <div class="steps">${restaurant ? 'Elige día, hora y cuántos sois.' : 'Elige servicio, profesional y hora.'}<br>Te llega la confirmación al momento.</div>
   <div class="url">${esc(url)}</div>
 </div>
 <script>window.onload = function () { setTimeout(function () { window.print(); }, 300); };</script>
@@ -46,7 +46,8 @@ function printPoster({ business, qr, url }) {
  * QR code (download or print as a poster).
  */
 export default function ShareLink({ variant = 'full' }) {
-  const { business } = useAuth();
+  const { business, isAppointments } = useAuth();
+  const restaurant = !isAppointments;
   const url = bookingUrl(business);
   const [qr, setQr] = useState('');
   const [copied, setCopied] = useState(false);
@@ -60,7 +61,7 @@ export default function ShareLink({ variant = 'full' }) {
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   };
-  const whatsapp = `https://wa.me/?text=${encodeURIComponent(`¡Hola! Ya puedes reservar tu cita en ${business?.name} desde aquí: ${url}`)}`;
+  const whatsapp = `https://wa.me/?text=${encodeURIComponent(`¡Hola! Ya puedes reservar ${restaurant ? 'mesa' : 'tu cita'} en ${business?.name} desde aquí: ${url}`)}`;
   const compact = variant === 'compact';
 
   return (
@@ -88,7 +89,7 @@ export default function ShareLink({ variant = 'full' }) {
             className="inline-flex items-center justify-center px-3.5 py-2.5 rounded-xl border border-gray-300 text-gray-700 text-sm font-medium hover:bg-gray-50">
             Ver mi página
           </a>
-          <button type="button" disabled={!qr} onClick={() => printPoster({ business, qr, url })}
+          <button type="button" disabled={!qr} onClick={() => printPoster({ business, qr, url, restaurant })}
             className="inline-flex items-center justify-center px-3.5 py-2.5 rounded-xl border border-gray-300 text-gray-700 text-sm font-medium hover:bg-gray-50 disabled:opacity-50">
             Imprimir cartel
           </button>
@@ -99,7 +100,7 @@ export default function ShareLink({ variant = 'full' }) {
         </div>
         {!compact && (
           <p className="text-xs text-gray-500">
-            Ponlo en tu bio de Instagram, en Google y en el estado de WhatsApp. El cartel con el QR va genial en el espejo o en el mostrador.
+            Ponlo en tu bio de Instagram, en Google y en el estado de WhatsApp. El cartel con el QR va genial {restaurant ? 'en la entrada, en las mesas o en la carta' : 'en el espejo o en el mostrador'}.
           </p>
         )}
       </div>

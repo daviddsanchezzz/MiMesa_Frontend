@@ -13,7 +13,7 @@ const formFrom = (b) => ({
 });
 
 // What customers see at the top of the booking page, live as you type.
-function BookingPreview({ form, logoUrl, color, services }) {
+function BookingPreview({ form, logoUrl, color, services, restaurant }) {
   const sample = services.length ? services.slice(0, 3) : [
     { _id: 'a', name: 'Corte', durationMin: 45, price: { amount: 2200 } },
     { _id: 'b', name: 'Peinado', durationMin: 30, price: { amount: 1800 } },
@@ -33,14 +33,30 @@ function BookingPreview({ form, logoUrl, color, services }) {
           </p>
         </div>
         <div className="flex gap-1">{[0, 1, 2, 3].map((i) => <div key={i} className="h-1 flex-1 rounded-full" style={{ backgroundColor: i === 0 ? color : '#e5e7eb' }} />)}</div>
-        <p className="text-xs font-semibold text-gray-900">Elige un servicio</p>
-        {sample.map((s) => (
+        {restaurant ? (
+          <>
+            <p className="text-xs font-semibold text-gray-900">¿Cuántos sois?</p>
+            <div className="grid grid-cols-4 gap-1.5">
+              {[1, 2, 3, 4, 5, 6, 7, 8].map((n) => (
+                <div key={n} className="rounded-lg border border-gray-200 bg-white py-1.5 text-center text-xs font-semibold"
+                  style={n === 2 ? { backgroundColor: color, color: '#fff', borderColor: color } : undefined}>{n}</div>
+              ))}
+            </div>
+            <p className="text-xs font-semibold text-gray-900 pt-1">Elige la hora</p>
+            <div className="grid grid-cols-3 gap-1.5">
+              {['13:30', '14:00', '14:30', '20:30', '21:00', '21:30'].map((t) => (
+                <div key={t} className="rounded-lg border border-gray-200 bg-white py-1.5 text-center text-xs font-semibold text-gray-800">{t}</div>
+              ))}
+            </div>
+          </>
+        ) : <p className="text-xs font-semibold text-gray-900">Elige un servicio</p>}
+        {!restaurant && sample.map((s) => (
           <div key={s._id} className="bg-white border border-gray-200 rounded-xl px-3 py-2 flex justify-between gap-2">
             <div className="min-w-0"><p className="text-xs font-semibold text-gray-900 truncate">{s.name}</p><p className="text-[10px] text-gray-500">{s.durationMin} min</p></div>
             <span className="text-xs font-semibold text-gray-900">{euros(s.price?.amount)}</span>
           </div>
         ))}
-        <div className="rounded-xl py-2 text-center text-xs font-semibold text-white" style={{ backgroundColor: color }}>Reservar cita</div>
+        <div className="rounded-xl py-2 text-center text-xs font-semibold text-white" style={{ backgroundColor: color }}>{restaurant ? 'Reservar mesa' : 'Reservar cita'}</div>
       </div>
     </div>
   );
@@ -71,9 +87,9 @@ function BrandCard({ business, refreshBusiness, onColor, color }) {
   };
 
   return (
-    <div className="bg-white rounded-2xl p-6 border border-gray-200 space-y-5">
+    <div className="space-y-5">
       <div>
-        <h3 className="text-sm font-semibold text-gray-900">Tu marca</h3>
+        <h3 className="text-[15px] font-semibold text-gray-900">Tu marca</h3>
         <p className="text-sm text-gray-500 mt-0.5">Sale en tu página de reservas, en los emails a tus clientes y en la app.</p>
       </div>
       <ErrorBanner msg={error} />
@@ -164,17 +180,14 @@ export function NegocioSection() {
   );
 
   const formCard = (
-    <div className="bg-white rounded-2xl p-6 border border-gray-200">
-      <h3 className="text-sm font-semibold text-gray-900 mb-1">Datos del negocio</h3>
-      <p className="text-sm text-gray-500 mb-4">
-        {isAppointments ? 'Tus clientes ven el nombre, la dirección y el teléfono al reservar y en los emails.' : 'Nombre, contacto y datos fiscales del negocio.'}
-      </p>
+    <div>
+      <p className="text-sm text-gray-500 mb-4">Tus clientes ven el nombre, la dirección y el teléfono al reservar y en los emails.</p>
       <ErrorBanner msg={error} />
       <form onSubmit={onSubmit} className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {field('name', 'Nombre')}
           {field('phone', 'Teléfono', { type: 'tel', placeholder: '600 000 000' },
-            isAppointments && !form.phone
+            !form.phone
               ? <p className="text-xs text-amber-700 mt-1">Añádelo: tus clientes lo necesitan para llamarte si llegan tarde.</p>
               : null)}
           {field('address', 'Dirección', { placeholder: 'Calle, número, ciudad' })}
@@ -197,17 +210,16 @@ export function NegocioSection() {
     </div>
   );
 
-  if (!isAppointments) return <div className="space-y-4">{formCard}</div>;
-
+  // The same screen for citas and restaurante: details, brand, live preview.
   return (
-    <div className="grid grid-cols-1 xl:grid-cols-5 gap-5 items-start">
-      <div className="xl:col-span-3 space-y-5">
+    <div className="grid grid-cols-1 xl:grid-cols-5 gap-x-12 gap-y-10 items-start">
+      <div className="xl:col-span-3 space-y-10">
         {formCard}
         <BrandCard business={business} refreshBusiness={refreshBusiness} color={color} onColor={saveColor} />
       </div>
       <div className="xl:col-span-2 xl:sticky xl:top-6">
         <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide text-center mb-3">Así lo ven tus clientes</p>
-        <BookingPreview form={form} logoUrl={business?.logoUrl} color={color} services={services.filter((s) => s.onlineBooking?.enabled !== false)} />
+        <BookingPreview form={form} logoUrl={business?.logoUrl} color={color} restaurant={!isAppointments} services={services.filter((s) => s.onlineBooking?.enabled !== false)} />
       </div>
     </div>
   );

@@ -218,10 +218,10 @@ export default function ReservationForm({ reservation, onSave, onCancel, initial
                 : Object.entries(slotsByShift).map(([shiftName, list]) => (
                   <div key={shiftName} className="mb-2">
                     <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 mb-1">{shiftName}</p>
-                    <div className="flex flex-wrap gap-1.5">
+                    <div className="grid grid-cols-4 sm:grid-cols-6 gap-1.5">
                       {list.map((s) => (
                         <button key={s.time} type="button" onClick={() => setForm((f) => ({ ...f, time: s.time }))}
-                          className={`px-3 py-1.5 rounded-full text-sm font-semibold border tabular-nums transition-colors ${form.time === s.time ? 'bg-violet-600 border-violet-600 text-white' : 'bg-white border-gray-200 text-gray-700 hover:border-gray-400'}`}>
+                          className={`py-2 rounded-xl text-sm font-semibold border tabular-nums text-center transition-colors ${form.time === s.time ? 'bg-violet-600 border-violet-600 text-white' : 'bg-white border-gray-200 text-gray-700 hover:border-gray-400'}`}>
                           {s.label || s.time}
                         </button>
                       ))}

@@ -62,7 +62,7 @@ function ShiftsAndClosures() {
 
 const SECTIONS = {
   negocio: NegocioSection, mesas: TablesAndRooms, turnos: ShiftsAndClosures, normas: PolicySettings,
-  limites: LimitesSection, publico: PublicoSection, suscripcion: BillingSection, pagos: PagosSection,
+  limites: LimitesSection, publico: BookingLinkSettings, suscripcion: BillingSection, pagos: PagosSection,
   profesionales: ProfessionalsSettings, servicios: ServicesSettings, horario: HoursSettings, enlace: BookingLinkSettings, avisos: FollowUpSettings,
 };
 

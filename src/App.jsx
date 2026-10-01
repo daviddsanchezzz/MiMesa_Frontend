@@ -93,7 +93,17 @@ function MobileHeader({ devMode, onLogout }) {
         <p className="text-[17px] font-semibold text-gray-900 truncate">{title || business?.name || 'Vetra'}</p>
       </div>
       {devMode ? (
-        <button type="button" onClick={onLogout} className="text-sm font-semibold text-gray-600">Salir</button>
+        <div className="flex items-center gap-1 -mr-2">
+          {action && (
+            <button type="button" onClick={action.onClick} aria-label={`Nuevo: ${action.label}`}
+              className="flex items-center gap-1 text-violet-700 px-2 py-1.5 rounded-lg text-[15px] font-semibold active:bg-violet-50">
+              <Icon name="plus" className="w-5 h-5" strokeWidth={2} />{action.label}
+            </button>
+          )}
+          <button type="button" onClick={onLogout} aria-label="Cerrar sesión" className="w-9 h-9 flex items-center justify-center rounded-lg text-gray-500 active:bg-gray-100">
+            <Icon name="logout" className="w-5 h-5" />
+          </button>
+        </div>
       ) : actions ?? (action ? (
         <button
           type="button"

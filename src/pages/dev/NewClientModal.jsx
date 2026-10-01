@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import api from '../../services/api';
 import Modal from '../../components/Modal';
+import { Segmented } from '../../ui/kit';
 
 const input = 'w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500';
 const label = 'block text-xs font-medium text-gray-500 mb-1';
@@ -78,7 +79,7 @@ export default function NewClientModal({ onClose, onCreated }) {
     return (
       <Modal title="Cliente creado" onClose={onClose} size="md">
         <div className="space-y-4">
-          <div className={`rounded-xl px-4 py-3 text-sm ${result.emailed ? 'bg-emerald-50 border border-emerald-200 text-emerald-900' : 'bg-amber-50 border border-amber-200 text-amber-900'}`}>
+          <div className={`rounded-xl px-4 py-3 text-sm ${result.emailed ? 'bg-emerald-50 text-emerald-900' : 'bg-amber-50 text-amber-900'}`}>
             {result.emailed
               ? <><strong>{result.name}</strong> está listo. Hemos enviado la invitación a <strong>{form.ownerEmail}</strong>.</>
               : <><strong>{result.name}</strong> está listo, pero el email no se ha podido enviar. Mándale el enlace tú.</>}
@@ -96,8 +97,8 @@ export default function NewClientModal({ onClose, onCreated }) {
   return (
     <Modal title="Nuevo cliente" subtitle="Creamos su negocio ya preparado y le invitamos a activarlo" onClose={() => !saving && onClose()} size="md">
       <form onSubmit={submit} className="space-y-4">
-        {error && <div className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-4 py-3">{error}</div>}
-        <p className="text-xs font-bold text-gray-500 uppercase tracking-wide">Negocio</p>
+        {error && <div className="text-sm text-rose-700 bg-rose-50 rounded-xl px-4 py-3">{error}</div>}
+        <p className="text-[13px] font-semibold uppercase tracking-wide text-gray-400">Negocio</p>
         <div>
           <label className={label}>Nombre *</label>
           <input required className={input} value={form.name} onChange={set('name')} placeholder="Peluquería Marta" />
@@ -118,19 +119,17 @@ export default function NewClientModal({ onClose, onCreated }) {
             <option value="">Vacío (lo configura el cliente)</option>
           </select>
         </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div><label className={label}>Teléfono</label><input className={input} value={form.phone} onChange={set('phone')} placeholder="937 00 00 00" /></div>
-          <div>
-            <label className={label}>Plan</label>
-            <select className={input} value={form.plan} onChange={set('plan')}>
-              <option value="trial">Prueba 14 días</option><option value="basic">Basic (regalado)</option><option value="pro">Pro (regalado)</option><option value="free">Gratis (cortesía)</option>
-            </select>
-          </div>
+        <div>
+          <p className={label}>Plan</p>
+          <Segmented value={form.plan} onChange={(plan) => setForm((f) => ({ ...f, plan }))}
+            options={[['trial', 'Prueba 14 días'], ['basic', 'Basic'], ['pro', 'Pro'], ['free', 'Cortesía']]} />
+          {form.plan !== 'trial' && <p className="text-xs text-gray-500 mt-1.5">{form.plan === 'free' ? 'Acceso gratis sin límite de tiempo.' : 'Regalado, sin pasar por Stripe.'}</p>}
         </div>
+        <div><label className={label}>Teléfono</label><input className={input} value={form.phone} onChange={set('phone')} placeholder="937 00 00 00" /></div>
         <div><label className={label}>Dirección</label><input className={input} value={form.address} onChange={set('address')} placeholder="Calle Mayor 12, Mataró" /></div>
 
-        <p className="text-xs font-bold text-gray-500 uppercase tracking-wide pt-2">Dueño</p>
-        <div className="grid grid-cols-2 gap-3">
+        <p className="text-[13px] font-semibold uppercase tracking-wide text-gray-400 pt-2">Dueño</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div><label className={label}>Nombre *</label><input required className={input} value={form.ownerName} onChange={set('ownerName')} placeholder="Marta Soler" /></div>
           <div><label className={label}>Email *</label><input required type="email" className={input} value={form.ownerEmail} onChange={set('ownerEmail')} placeholder="marta@email.com" /></div>
         </div>

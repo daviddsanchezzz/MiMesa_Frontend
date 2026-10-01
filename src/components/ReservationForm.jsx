@@ -209,14 +209,7 @@ export default function ReservationForm({ reservation, onSave, onCancel, initial
         )}
       </Step>
 
-      <Step n="3" title="Día y hora" aside={(
-        <label className="relative text-xs font-semibold text-violet-700 cursor-pointer">
-          Otro día
-          <input type="date" value={form.date} onChange={(e) => e.target.value && setForm((f) => ({ ...f, date: e.target.value }))}
-            onClick={(e) => { try { e.currentTarget.showPicker?.(); } catch { /* ignore */ } }}
-            className="absolute inset-0 opacity-0 cursor-pointer" />
-        </label>
-      )}>
+      <Step n="3" title="Día y hora">
         <DayChips date={form.date} today={todayStr} onChange={(d) => setForm((f) => ({ ...f, date: d }))} />
         <div className="mt-3">
           {slots === null ? <p className="text-xs text-gray-400">Buscando horas…</p>

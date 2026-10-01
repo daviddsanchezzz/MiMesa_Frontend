@@ -229,14 +229,7 @@ export default function NewBookingModal({ date: initialDate, time: initialTime, 
           </Step>
         )}
 
-        <Step n={eligible.length > 0 ? '4' : '3'} title="Día y hora" aside={(
-          <label className="relative text-xs font-semibold text-violet-700 cursor-pointer">
-            Otro día
-            <input type="date" value={date} onChange={(e) => { if (e.target.value) { setDate(e.target.value); setTime(''); } }}
-              onClick={(e) => { try { e.currentTarget.showPicker?.(); } catch { /* ignore */ } }}
-              className="absolute inset-0 opacity-0 cursor-pointer" />
-          </label>
-        )}>
+        <Step n={eligible.length > 0 ? '4' : '3'} title="Día y hora">
           <DayChips date={date} today={today} onChange={(d) => { setDate(d); setTime(''); }} />
           <div className="mt-3">
             {slots === null ? <p className="text-xs text-gray-400">Buscando huecos…</p>

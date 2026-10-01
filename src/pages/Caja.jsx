@@ -3,13 +3,13 @@ import { useAuth } from '../context/AuthContext';
 import { useSetMobileHeader } from '../context/MobileHeaderContext';
 import { bookingsApi, apiError } from '../services/bookingsApi';
 import CheckoutModal from './agenda/CheckoutModal';
-import StaffAvatar from './agenda/StaffAvatar';
+import { Section, TimeRow, RowAction } from '../ui/kit';
+import { bookingTone } from '../lib/status';
 import {
-  DEFAULT_TZ, PAY_METHODS, addDays, btnPrimary, btnSecondary, euros, inputCls, longDate, parseEuros, payMethodLabel,
+  DEFAULT_TZ, PAY_METHODS, addDays, btnSecondary, euros, inputCls, longDate, parseEuros, payMethodLabel,
   pluralize, staffColors, timeInTz, todayIn,
 } from './agenda/utils';
 
-const card = 'bg-white rounded-2xl border border-gray-200';
 
 /**
  * Caja: charge today's appointments, see what came in by payment method and
@@ -59,123 +59,125 @@ export default function Caja() {
     run(() => bookingsApi.closeCash({ date, countedCash: counted === '' ? null : countedCents, note }).then(() => { setCounted(''); setNote(''); }));
   };
 
+  const METHOD_COLOR = { cash: '#10b981', card: '#8b5cf6', bizum: '#0ea5e9', other: '#94a3b8' };
+
   return (
-    <div className="space-y-5">
-      <div className="flex flex-wrap items-center lg:items-end justify-between gap-3">
+    <div className="max-w-6xl mx-auto">
+      <div className="flex items-center justify-between gap-3 mb-5">
         <div>
-          <h2 className="hidden lg:block text-xl font-bold text-gray-900">Caja</h2>
-          <p className="text-sm text-gray-500 lg:mt-0.5">{longDate(date)}{closed && ' · Cerrada'}</p>
+          <h1 className="hidden lg:block text-2xl font-semibold tracking-tight text-gray-900">Caja</h1>
+          <p className="text-sm text-gray-500 lg:mt-0.5">{longDate(date)}{closed && ' · cerrada'}</p>
         </div>
-        <div className="flex items-center gap-1.5">
-          <button type="button" className={`${btnSecondary} !px-3`} onClick={() => setDate(addDays(date, -1))} aria-label="Día anterior">‹</button>
-          <button type="button" className={btnSecondary} onClick={() => setDate(today)} disabled={date === today}>Hoy</button>
-          <button type="button" className={`${btnSecondary} !px-3`} onClick={() => setDate(addDays(date, 1))} disabled={date >= today} aria-label="Día siguiente">›</button>
+        <div className="flex items-center gap-1">
+          <button type="button" className="w-9 h-9 rounded-full hover:bg-gray-100 text-gray-600" onClick={() => setDate(addDays(date, -1))} aria-label="Día anterior">‹</button>
+          <button type="button" className="h-9 px-3 rounded-full text-sm font-semibold text-violet-700 hover:bg-violet-50 disabled:text-gray-300 disabled:hover:bg-transparent" onClick={() => setDate(today)} disabled={date === today}>Hoy</button>
+          <button type="button" className="w-9 h-9 rounded-full hover:bg-gray-100 text-gray-600 disabled:text-gray-300" onClick={() => setDate(addDays(date, 1))} disabled={date >= today} aria-label="Día siguiente">›</button>
         </div>
       </div>
 
-      {error && <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</p>}
+      {error && <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2 mb-4">{error}</p>}
       {!data && !error && <p className="text-sm text-gray-400">Cargando…</p>}
 
       {data && (
         <>
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
-            <div className={`${card} px-4 py-3.5 col-span-2 lg:col-span-1`}>
-              <p className="text-xs text-gray-500">Cobrado</p>
-              <p className="text-2xl font-bold text-gray-900 tabular-nums mt-1">{euros(t.total)}</p>
-              <p className="text-xs text-gray-400 mt-0.5">{pluralize(t.payments, 'cobro', 'cobros')}{t.tips ? ` · +${euros(t.tips)} propinas` : ''}</p>
+          <section className="mb-8">
+            <p className="text-[13px] font-semibold uppercase tracking-wide text-gray-400">Cobrado</p>
+            <div className="flex items-baseline gap-3 flex-wrap">
+              <p className="text-4xl lg:text-5xl font-semibold tracking-tight tabular-nums text-gray-900">{euros(t.total)}</p>
+              <p className="text-sm text-gray-500">{pluralize(t.payments, 'cobro', 'cobros')}{t.tips ? ` · +${euros(t.tips)} propinas` : ''}
+                {data.toCharge.length > 0 && <> · <b className="text-orange-600">{euros(data.toChargeAmount)}</b> por cobrar</>}</p>
             </div>
-            {PAY_METHODS.map((m) => (
-              <div key={m.key} className={`${card} px-4 py-3.5`}>
-                <p className="text-xs text-gray-500">{m.icon} {m.label}</p>
-                <p className="text-xl font-bold text-gray-900 tabular-nums mt-1">{euros(t[m.key])}</p>
+            {t.total > 0 && (
+              <div className="mt-4 h-3 rounded-full overflow-hidden flex bg-gray-100">
+                {PAY_METHODS.filter((m) => t[m.key] > 0).map((m) => (
+                  <div key={m.key} style={{ width: `${(t[m.key] / t.total) * 100}%`, backgroundColor: METHOD_COLOR[m.key] }} title={`${m.label}: ${euros(t[m.key])}`} />
+                ))}
               </div>
-            ))}
-          </div>
+            )}
+            <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1.5">
+              {PAY_METHODS.map((m) => (
+                <span key={m.key} className="inline-flex items-center gap-2 text-sm">
+                  <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: METHOD_COLOR[m.key] }} />
+                  <span className="text-gray-500">{m.label}</span>
+                  <b className="tabular-nums text-gray-900">{euros(t[m.key])}</b>
+                </span>
+              ))}
+            </div>
+          </section>
 
-          <div className="grid grid-cols-1 lg:grid-cols-5 gap-5 items-start">
-            <div className="lg:col-span-3 space-y-5">
-              <section className={card}>
-                <div className="px-5 py-3.5 border-b border-gray-100 flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-gray-900">Por cobrar</h3>
-                  <span className="text-xs text-gray-500">{data.toCharge.length ? `${pluralize(data.toCharge.length, 'cita', 'citas')} · ${euros(data.toChargeAmount)}` : ''}</span>
-                </div>
+          <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-x-12 gap-y-9 items-start">
+            <div className="space-y-9 min-w-0">
+              <Section title="Por cobrar" aside={data.toCharge.length > 0 && <span className="text-xs text-gray-500">{pluralize(data.toCharge.length, 'cita', 'citas')} · {euros(data.toChargeAmount)}</span>}>
                 {data.toCharge.length === 0 ? (
-                  <p className="px-5 py-8 text-center text-sm text-gray-400">No queda nada por cobrar este día.</p>
+                  <p className="py-6 text-sm text-gray-500">No queda nada por cobrar este día.</p>
                 ) : (
                   <ul className="divide-y divide-gray-100">
                     {data.toCharge.map((b) => {
                       const person = personOf(b);
                       const upcoming = new Date(b.start).getTime() > now;
                       return (
-                        <li key={b._id} className="px-5 py-3 flex items-center gap-3">
-                          <span className="text-sm font-semibold tabular-nums text-gray-900 w-11 shrink-0">{timeInTz(b.start, tz)}</span>
-                          {person && <StaffAvatar name={person.name} photo={person.photo} color={colors[person._id]} size={26} />}
-                          <div className="min-w-0 flex-1">
-                            <p className="text-sm font-medium text-gray-900 truncate">{b.guestName}</p>
-                            <p className="text-xs text-gray-500 truncate">{b.segments.map((s) => s.serviceName).join(' + ')}{upcoming ? ' · aún no ha empezado' : ''}</p>
-                          </div>
-                          <span className="text-sm font-semibold tabular-nums text-gray-900">{euros(b.totalPrice)}</span>
-                          <button type="button" disabled={!!closed} onClick={() => setCharging(b)}
-                            className="shrink-0 px-3.5 py-2 rounded-xl bg-emerald-600 text-white text-sm font-semibold hover:bg-emerald-700 disabled:opacity-40">
-                            Cobrar
-                          </button>
-                        </li>
+                        <TimeRow key={b._id} time={timeInTz(b.start, tz)} tone={bookingTone(b)} title={b.guestName}
+                          subtitle={`${b.segments.map((x) => x.serviceName).join(' + ')}${person ? ` · ${person.name}` : ''}${upcoming ? ' · aún no ha empezado' : ''}`}
+                          trailing={(
+                            <>
+                              <span className="text-sm font-semibold tabular-nums text-gray-900">{euros(b.totalPrice)}</span>
+                              <RowAction disabled={!!closed} onClick={() => setCharging(b)}>Cobrar</RowAction>
+                            </>
+                          )}
+                          onClick={closed ? undefined : () => setCharging(b)} />
                       );
                     })}
                   </ul>
                 )}
-              </section>
+              </Section>
 
-              <section className={card}>
-                <div className="px-5 py-3.5 border-b border-gray-100"><h3 className="text-sm font-semibold text-gray-900">Cobros del día</h3></div>
+              <Section title="Cobros del día">
                 {data.payments.length === 0 ? (
-                  <p className="px-5 py-8 text-center text-sm text-gray-400">Todavía no hay cobros.</p>
+                  <p className="py-6 text-sm text-gray-500">Todavía no hay cobros.</p>
                 ) : (
                   <ul className="divide-y divide-gray-100">
                     {data.payments.map((b) => {
                       const p = b.payment;
                       const extras = (p.extras || []).map((x) => `${x.qty > 1 ? `${x.qty}× ` : ''}${x.name}`).join(', ');
                       return (
-                        <li key={b._id} className="px-5 py-3 flex items-center gap-3">
-                          <span className="text-xs text-gray-400 tabular-nums w-11 shrink-0">{timeInTz(p.paidAt, tz)}</span>
+                        <li key={b._id} className="py-3 flex items-center gap-3">
+                          <span className="w-12 shrink-0 text-right text-[13px] text-gray-400 tabular-nums">{timeInTz(p.paidAt, tz)}</span>
+                          <span className="w-[3px] self-stretch rounded-full shrink-0" style={{ backgroundColor: METHOD_COLOR[p.method] || METHOD_COLOR.other }} />
                           <div className="min-w-0 flex-1">
-                            <p className="text-sm font-medium text-gray-900 truncate">{b.guestName}</p>
-                            <p className="text-xs text-gray-500 truncate">
-                              {b.segments.map((s) => s.serviceName).join(' + ')}{extras && ` · ${extras}`}
+                            <p className="text-[15px] font-medium text-gray-900 truncate">{b.guestName}</p>
+                            <p className="text-[13px] text-gray-500 truncate">
+                              {payMethodLabel(p.method)} · {b.segments.map((x) => x.serviceName).join(' + ')}{extras && ` · ${extras}`}
                               {p.discount > 0 && ` · −${euros(p.discount)}`}{p.tip > 0 && ` · propina ${euros(p.tip)}`}
                             </p>
                           </div>
-                          <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-700">{payMethodLabel(p.method)}</span>
-                          <span className="text-sm font-semibold tabular-nums text-gray-900 w-20 text-right">{euros(p.total + (p.tip || 0))}</span>
+                          <span className="text-sm font-semibold tabular-nums text-gray-900">{euros(p.total + (p.tip || 0))}</span>
                           {hasRole('manager') && !closed && (
                             <button type="button" disabled={busy} title="Deshacer cobro" aria-label="Deshacer cobro"
                               onClick={() => { if (window.confirm(`¿Deshacer el cobro de ${b.guestName}?`)) run(() => bookingsApi.undoCheckout(b._id)); }}
-                              className="text-gray-300 hover:text-rose-600 text-sm">↺</button>
+                              className="w-8 h-8 rounded-full text-gray-300 hover:text-rose-600 hover:bg-rose-50">↺</button>
                           )}
                         </li>
                       );
                     })}
                   </ul>
                 )}
-              </section>
+              </Section>
             </div>
 
-            {/* Close the day */}
-            <section className={`${card} lg:col-span-2 p-5 space-y-4`}>
-              <h3 className="text-sm font-semibold text-gray-900">Cierre de caja</h3>
+            <Section title="Cierre de caja">
               {closed ? (
                 <div className="space-y-3">
-                  <div className="rounded-xl bg-gray-50 border border-gray-100 px-4 py-3 space-y-1.5 text-sm">
-                    <div className="flex justify-between"><span className="text-gray-600">Efectivo esperado</span><span className="font-semibold tabular-nums">{euros(closed.totals.cash)}</span></div>
+                  <dl className="text-sm divide-y divide-gray-100 border-y border-gray-100">
+                    <div className="flex justify-between py-2"><dt className="text-gray-600">Efectivo esperado</dt><dd className="font-semibold tabular-nums">{euros(closed.totals.cash)}</dd></div>
                     {closed.countedCash !== null && (
                       <>
-                        <div className="flex justify-between"><span className="text-gray-600">Contado</span><span className="font-semibold tabular-nums">{euros(closed.countedCash)}</span></div>
-                        <div className="flex justify-between"><span className="text-gray-600">Diferencia</span>
-                          <span className={`font-bold tabular-nums ${closed.difference === 0 ? 'text-emerald-700' : 'text-rose-600'}`}>{closed.difference > 0 ? '+' : ''}{euros(closed.difference)}</span></div>
+                        <div className="flex justify-between py-2"><dt className="text-gray-600">Contado</dt><dd className="font-semibold tabular-nums">{euros(closed.countedCash)}</dd></div>
+                        <div className="flex justify-between py-2"><dt className="text-gray-600">Diferencia</dt>
+                          <dd className={`font-bold tabular-nums ${closed.difference === 0 ? 'text-emerald-700' : 'text-rose-600'}`}>{closed.difference > 0 ? '+' : ''}{euros(closed.difference)}</dd></div>
                       </>
                     )}
-                    <div className="flex justify-between pt-1.5 border-t border-gray-200"><span className="text-gray-600">Total del día</span><span className="font-bold tabular-nums">{euros(closed.totals.total)}</span></div>
-                  </div>
+                    <div className="flex justify-between py-2"><dt className="text-gray-600">Total del día</dt><dd className="font-bold tabular-nums">{euros(closed.totals.total)}</dd></div>
+                  </dl>
                   {closed.note && <p className="text-sm text-gray-600">“{closed.note}”</p>}
                   <p className="text-xs text-gray-400">Cerrada a las {timeInTz(closed.createdAt, tz)}. Los cobros de este día ya no se pueden cambiar.</p>
                   {hasRole('manager') && (
@@ -187,7 +189,7 @@ export default function Caja() {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  <div className="rounded-xl bg-gray-50 border border-gray-100 px-4 py-3 flex justify-between text-sm">
+                  <div className="flex justify-between text-sm py-2 border-y border-gray-100">
                     <span className="text-gray-600">Efectivo que debería haber</span>
                     <span className="font-bold tabular-nums">{euros(t.cash)}</span>
                   </div>
@@ -201,11 +203,11 @@ export default function Caja() {
                     )}
                   </div>
                   <input className={inputCls} placeholder="Nota (opcional)" value={note} onChange={(e) => setNote(e.target.value)} maxLength={500} />
-                  <button type="button" className={`${btnPrimary} w-full`} disabled={busy} onClick={closeDay}>Cerrar caja del día</button>
+                  <button type="button" className="w-full h-11 rounded-xl bg-gray-900 text-white text-sm font-semibold hover:bg-black disabled:opacity-50" disabled={busy} onClick={closeDay}>Cerrar caja del día</button>
                   <p className="text-xs text-gray-400">Lo cobrado aparece en Finanzas como ingreso real del día. Al cerrar, los cobros de este día quedan bloqueados.</p>
                 </div>
               )}
-            </section>
+            </Section>
           </div>
         </>
       )}

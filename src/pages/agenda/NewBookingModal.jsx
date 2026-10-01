@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import DayChips from '../../ui/DayChips';
 import Modal from '../../components/Modal';
 import api from '../../services/api';
 import { useData } from '../../lib/query';
@@ -93,7 +94,6 @@ export default function NewBookingModal({ date: initialDate, time: initialTime, 
   };
 
   const setItem = (i, serviceId) => setItems((prev) => prev.map((it, idx) => (idx === i ? { serviceId } : it)));
-  const days = Array.from({ length: 14 }, (_, i) => addDays(today, i));
   const morning = (slots || []).filter((s) => toMinutes(s.time) < 14 * 60 + 30);
   const afternoon = (slots || []).filter((s) => toMinutes(s.time) >= 14 * 60 + 30);
 
@@ -237,19 +237,7 @@ export default function NewBookingModal({ date: initialDate, time: initialTime, 
               className="absolute inset-0 opacity-0 cursor-pointer" />
           </label>
         )}>
-          <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1">
-            {(days.includes(date) ? days : [date, ...days]).map((d) => {
-              const { weekday, day } = shortDay(d);
-              const on = d === date;
-              return (
-                <button key={d} type="button" onClick={() => { setDate(d); setTime(''); }}
-                  className={`${chip(on)} w-12 py-1.5 text-center`}>
-                  <span className={`block text-[11px] ${on ? 'text-gray-300' : 'text-gray-500'}`}>{d === today ? 'hoy' : weekday}</span>
-                  <span className="block text-base font-semibold tabular-nums">{day}</span>
-                </button>
-              );
-            })}
-          </div>
+          <DayChips date={date} today={today} onChange={(d) => { setDate(d); setTime(''); }} />
           <div className="mt-3">
             {slots === null ? <p className="text-xs text-gray-400">Buscando huecos…</p>
               : slots.length === 0 ? <p className="text-sm text-gray-500">No hay huecos libres este día{resourceId ? ' con esta persona' : ''}. Prueba otro día.</p>

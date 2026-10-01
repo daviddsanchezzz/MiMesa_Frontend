@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import DayChips from '../ui/DayChips';
 import api from '../services/api';
 import { useData } from '../lib/query';
 import { useAuth } from '../context/AuthContext';
@@ -121,8 +122,6 @@ export default function ReservationForm({ reservation, onSave, onCancel, initial
     setForm((f) => ({ ...f, guestName: '', guestPhone: '', guestEmail: '' }));
   };
 
-  const days = Array.from({ length: 14 }, (_, i) => addDays(todayStr, i));
-  const shownDays = days.includes(form.date) ? days : [form.date, ...days];
 
   const handleSubmit = async (e) => {
     e?.preventDefault();
@@ -218,18 +217,7 @@ export default function ReservationForm({ reservation, onSave, onCancel, initial
             className="absolute inset-0 opacity-0 cursor-pointer" />
         </label>
       )}>
-        <div className="flex gap-1.5 overflow-x-auto pb-1 -mx-1 px-1">
-          {shownDays.map((d) => {
-            const { weekday, day } = shortDay(d);
-            const on = d === form.date;
-            return (
-              <button key={d} type="button" onClick={() => setForm((f) => ({ ...f, date: d }))} className={`${chip(on)} w-12 py-1.5 text-center`}>
-                <span className={`block text-[11px] ${on ? 'text-gray-300' : 'text-gray-500'}`}>{d === todayStr ? 'hoy' : weekday}</span>
-                <span className="block text-base font-semibold tabular-nums">{day}</span>
-              </button>
-            );
-          })}
-        </div>
+        <DayChips date={form.date} today={todayStr} onChange={(d) => setForm((f) => ({ ...f, date: d }))} />
         <div className="mt-3">
           {slots === null ? <p className="text-xs text-gray-400">Buscando horas…</p>
             : vacation?.closed ? <p className="text-sm text-rose-700">El restaurante está cerrado este día.</p>

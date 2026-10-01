@@ -84,23 +84,52 @@ export default function PublicBooking({ businessId: businessIdProp, slug = null 
     return ids.length ? catalog.staff.filter((s) => ids.includes(String(s.id))) : catalog.staff;
   }, [service, catalog]);
 
-  // Load 3 weeks of availability once a service (and professional) is chosen.
+  // Availability in blocks of 3 weeks: the first when a service (and
+  // professional) is chosen, the next ones with «Más días», up to how far
+  // ahead the service can be booked online.
+  const maxDays = Math.max(1, service?.maxDaysAhead || 60);
+  const [loadedDays, setLoadedDays] = useState(0);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const fetchDays = (fromIdx, count) => publicBookingsApi.availability(businessId, {
+    serviceId: service.id, from: addDays(today, fromIdx), to: addDays(today, fromIdx + count - 1),
+    ...(staffId ? { resourceId: staffId } : {}),
+  }).then((slots) => {
+    const grouped = {};
+    for (const s of slots) (grouped[s.date] ||= []).push(s);
+    return grouped;
+  });
+
   useEffect(() => {
     if (step !== 'time' || !service) return;
     setSlotsByDay(null);
-    publicBookingsApi.availability(businessId, {
-      serviceId: service.id, from: today, to: addDays(today, DAYS_SHOWN - 1),
-      ...(staffId ? { resourceId: staffId } : {}),
-    })
-      .then((slots) => {
-        const grouped = {};
-        for (const s of slots) (grouped[s.date] ||= []).push(s);
-        setSlotsByDay(grouped);
-        const first = Object.keys(grouped).sort()[0];
-        setDay((d) => (d && grouped[d] ? d : first || ''));
+    setLoadedDays(0);
+    const count = Math.min(DAYS_SHOWN, maxDays);
+    fetchDays(0, count)
+      .then(async (grouped) => {
+        // Nothing free in the first weeks: look further before saying "no hay huecos".
+        let all = grouped; let loaded = count;
+        while (!Object.keys(all).length && loaded < maxDays) {
+          const next = Math.min(DAYS_SHOWN, maxDays - loaded);
+          all = { ...all, ...(await fetchDays(loaded, next)) };
+          loaded += next;
+        }
+        setSlotsByDay(all);
+        setLoadedDays(loaded);
+        const first = Object.keys(all).sort()[0];
+        setDay((d) => (d && all[d] ? d : first || ''));
       })
       .catch((err) => { setSlotsByDay({}); setError(apiError(err)); });
-  }, [step, service, staffId, businessId, today]);
+  }, [step, service, staffId, businessId, today]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const loadMore = () => {
+    const next = Math.min(DAYS_SHOWN, maxDays - loadedDays);
+    if (next <= 0) return;
+    setLoadingMore(true);
+    fetchDays(loadedDays, next)
+      .then((grouped) => { setSlotsByDay((prev) => ({ ...(prev || {}), ...grouped })); setLoadedDays(loadedDays + next); })
+      .catch((err) => setError(apiError(err)))
+      .finally(() => setLoadingMore(false));
+  };
 
   const groupedServices = useMemo(() => {
     const groups = {};
@@ -267,7 +296,7 @@ export default function PublicBooking({ businessId: businessIdProp, slug = null 
           ) : (
             <>
               <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 [scrollbar-width:none]">
-                {Array.from({ length: DAYS_SHOWN }, (_, i) => addDays(today, i)).map((d) => {
+                {Array.from({ length: loadedDays }, (_, i) => addDays(today, i)).map((d) => {
                   const p = dayParts(d);
                   const has = !!slotsByDay[d];
                   const active = d === day;
@@ -281,6 +310,12 @@ export default function PublicBooking({ businessId: businessIdProp, slug = null 
                     </button>
                   );
                 })}
+                {loadedDays < maxDays && (
+                  <button type="button" onClick={loadMore} disabled={loadingMore}
+                    className="shrink-0 w-20 rounded-xl border border-dashed border-gray-300 py-2 text-center text-xs font-semibold text-gray-600 hover:border-gray-400 disabled:opacity-50">
+                    {loadingMore ? 'Cargando…' : <>Más<br />días →</>}
+                  </button>
+                )}
               </div>
               {day && (
                 <div className="bg-white border border-gray-200 rounded-2xl p-4 space-y-3">

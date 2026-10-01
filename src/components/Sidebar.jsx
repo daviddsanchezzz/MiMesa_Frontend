@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNav } from '../lib/nav';
 import Icon from '../ui/Icon';
+import BusinessLogo from '../ui/BusinessLogo';
 
 function Item({ to, label, icon, end, collapsed, onClick }) {
   return (
@@ -46,7 +47,7 @@ export default function Sidebar({ collapsed = false, onDesktopToggleCollapse, de
     <aside className={`relative ${collapsed ? 'w-[72px]' : 'w-60'} bg-white border-r border-gray-200 flex flex-col shrink-0 select-none`}>
       <div className={`px-3 pt-4 pb-3 flex items-center gap-2.5 ${collapsed ? 'justify-center' : ''}`}>
         {!devSidebar && business?.logoUrl ? (
-          <img src={business.logoUrl} alt="" className="w-9 h-9 shrink-0 rounded-xl object-contain bg-white border border-gray-200 p-0.5" />
+          <BusinessLogo business={business} size={40} />
         ) : (
           <img src="/logo.svg" alt="Vetra" className="w-9 h-9 shrink-0" />
         )}

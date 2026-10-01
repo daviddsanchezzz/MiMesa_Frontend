@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useSetMobileHeader } from '../context/MobileHeaderContext';
 import { useNav } from '../lib/nav';
 import Icon from '../ui/Icon';
+import BusinessLogo from '../ui/BusinessLogo';
 
 function Group({ title, children }) {
   return (
@@ -43,9 +44,7 @@ export default function More() {
   return (
     <div className="w-full space-y-6">
       <div className="flex items-center gap-3 px-1">
-        {business?.logoUrl
-          ? <img src={business.logoUrl} alt="" className="w-12 h-12 rounded-2xl object-contain bg-white border border-gray-200 p-1" />
-          : <div className="w-12 h-12 rounded-2xl bg-gray-900 text-white flex items-center justify-center text-lg font-bold">{(business?.name || 'V')[0]}</div>}
+        <BusinessLogo business={business} size={56} />
         <div className="min-w-0">
           <p className="text-lg font-semibold text-gray-900 truncate">{business?.name}</p>
           <p className="text-sm text-gray-500 truncate">{userName}{userEmail && ` · ${userEmail}`}</p>

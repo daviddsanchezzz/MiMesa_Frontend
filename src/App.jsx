@@ -44,6 +44,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import Sidebar from './components/Sidebar';
 import BottomNav from './components/BottomNav';
 import Icon from './ui/Icon';
+import BusinessLogo from './ui/BusinessLogo';
 
 const DESKTOP_QUERY = '(min-width: 1024px)';
 import Modal from './components/Modal';
@@ -87,7 +88,7 @@ function MobileHeader({ devMode, onLogout }) {
     <div className="lg:hidden flex items-center gap-3 px-4 h-14 bg-white/95 backdrop-blur border-b border-gray-100 shrink-0 z-30 pt-[env(safe-area-inset-top)]">
       <div className="flex items-center gap-2.5 flex-1 min-w-0">
         {business?.logoUrl
-          ? <img src={business.logoUrl} alt="" className="w-7 h-7 shrink-0 rounded-lg object-contain bg-white border border-gray-200 p-0.5" />
+          ? <BusinessLogo business={business} size={30} />
           : <img src="/logo.svg" alt="Vetra" className="w-7 h-7 shrink-0" />}
         <p className="text-[17px] font-semibold text-gray-900 truncate">{title || business?.name || 'Vetra'}</p>
       </div>

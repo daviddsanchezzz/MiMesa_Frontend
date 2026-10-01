@@ -69,7 +69,7 @@ export default function Settings() {
   return (
     <div className="space-y-5">
       <div>
-        <h2 className="hidden xl:block text-xl font-bold text-gray-900">Configuración</h2>
+        <h2 className="hidden lg:block text-xl font-bold text-gray-900">Configuración</h2>
         <p className="text-sm text-gray-400 mt-0.5">Administra la operativa y ajustes del negocio.</p>
       </div>
 

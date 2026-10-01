@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../services/api';
 import { useSetMobileHeader } from '../context/MobileHeaderContext';
+import { dayLabel } from '../lib/dates';
 
 function StatCard({ label, value, tone = 'gray' }) {
   const tones = {
@@ -103,7 +104,7 @@ export default function CustomerDetail() {
         >
           Volver
         </button>
-        <h2 className="hidden xl:block text-xl font-bold text-gray-900">Ficha de cliente</h2>
+        <h2 className="hidden lg:block text-xl font-bold text-gray-900">Ficha de cliente</h2>
       </div>
 
       {loading && (
@@ -202,7 +203,7 @@ export default function CustomerDetail() {
                         : (r?.tableId?.name || '-');
                       return (
                         <tr key={r._id} className={index < reservations.length - 1 ? 'border-b border-gray-50' : ''}>
-                          <td className="px-5 py-3.5 text-gray-800">{r.date}</td>
+                          <td className="px-5 py-3.5 text-gray-800">{r.date ? dayLabel(r.date) : ''}</td>
                           <td className="px-4 py-3.5 text-gray-800">{r.time || '-'}</td>
                           <td className="px-4 py-3.5 text-gray-700">{r.people || 0}</td>
                           <td className="px-4 py-3.5">

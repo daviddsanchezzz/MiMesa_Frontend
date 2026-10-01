@@ -77,12 +77,12 @@ export default function PromoCodes() {
     <div className="space-y-5 max-w-3xl">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="hidden xl:block text-xl font-bold text-gray-900">Códigos promocionales</h2>
+          <h2 className="hidden lg:block text-xl font-bold text-gray-900">Códigos promocionales</h2>
           <p className="text-sm text-gray-400 mt-0.5">Los clientes pueden usarlos al reservar online.</p>
         </div>
         <button
           onClick={() => setCreating(true)}
-          className="hidden xl:flex items-center gap-1.5 px-3 py-2 bg-violet-600 text-white text-sm font-medium rounded-xl hover:bg-violet-700 transition-colors shrink-0"
+          className="hidden lg:flex items-center gap-1.5 px-3 py-2 bg-violet-600 text-white text-sm font-medium rounded-xl hover:bg-violet-700 transition-colors shrink-0"
         >
           <IconPlus /> Nuevo código
         </button>

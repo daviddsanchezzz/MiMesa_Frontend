@@ -1,440 +1,152 @@
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import Modal from './Modal';
-import ReservationForm from './ReservationForm';
+import { useNav } from '../lib/nav';
+import Icon from '../ui/Icon';
 
-const IconTeam = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 shrink-0">
-    <path d="M10 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />
-    <path d="M6 8a2 2 0 1 1-4 0 2 2 0 0 1 4 0ZM1.49 15.326a.78.78 0 0 1-.358-.442 3 3 0 0 1 4.308-3.516 6.484 6.484 0 0 0-1.905 3.959c-.023.222-.014.442.025.654a4.97 4.97 0 0 1-2.07-.655ZM16.44 15.98a4.97 4.97 0 0 0 2.07-.654.78.78 0 0 0 .357-.442 3 3 0 0 0-4.308-3.517 6.484 6.484 0 0 1 1.907 3.96 2.32 2.32 0 0 1-.026.654ZM18 8a2 2 0 1 1-4 0 2 2 0 0 1 4 0Z" />
-    <path d="M5.304 16.19a.844.844 0 0 1-.277-.71 5 5 0 0 1 9.947 0 .843.843 0 0 1-.277.71A6.975 6.975 0 0 1 10 18a6.974 6.974 0 0 1-4.696-1.81Z" />
-  </svg>
-);
+function Item({ to, label, icon, end, collapsed, onClick }) {
+  return (
+    <NavLink to={to} end={end} onClick={onClick} title={collapsed ? label : undefined}
+      className={({ isActive }) => `flex items-center ${collapsed ? 'justify-center' : 'gap-3'} px-3 py-2 rounded-lg text-sm transition-colors ${
+        isActive ? 'bg-gray-100 text-gray-900 font-semibold' : 'text-gray-600 font-medium hover:bg-gray-50 hover:text-gray-900'}`}>
+      {({ isActive }) => (
+        <>
+          <Icon name={icon} className={`w-5 h-5 ${isActive ? 'text-violet-600' : 'text-gray-400'}`} strokeWidth={isActive ? 1.9 : 1.6} />
+          {!collapsed && <span className="truncate">{label}</span>}
+        </>
+      )}
+    </NavLink>
+  );
+}
 
-const IconHome = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 shrink-0">
-    <path fillRule="evenodd" d="M9.293 2.293a1 1 0 0 1 1.414 0l7 7A1 1 0 0 1 17 11h-1v6a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1v-3a1 1 0 0 0-1-1H9a1 1 0 0 0-1 1v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-6H3a1 1 0 0 1-.707-1.707l7-7Z" clipRule="evenodd" />
-  </svg>
-);
-
-const IconCalendar = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 shrink-0">
-    <path fillRule="evenodd" d="M5.75 2a.75.75 0 0 1 .75.75V4h7V2.75a.75.75 0 0 1 1.5 0V4h.25A2.75 2.75 0 0 1 18 6.75v8.5A2.75 2.75 0 0 1 15.25 18H4.75A2.75 2.75 0 0 1 2 15.25v-8.5A2.75 2.75 0 0 1 4.75 4H5V2.75A.75.75 0 0 1 5.75 2Zm-1 5.5c-.69 0-1.25.56-1.25 1.25v6.5c0 .69.56 1.25 1.25 1.25h10.5c.69 0 1.25-.56 1.25-1.25v-6.5c0-.69-.56-1.25-1.25-1.25H4.75Z" clipRule="evenodd" />
-  </svg>
-);
-
-const IconUsers = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 shrink-0">
-    <path d="M7 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM14.5 9a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5ZM1.615 16.428a1.224 1.224 0 0 1-.569-1.175 6.002 6.002 0 0 1 11.908 0c.058.467-.172.92-.57 1.174A9.953 9.953 0 0 1 7 17a9.953 9.953 0 0 1-5.385-1.572ZM14.5 16h-.106c.07-.297.088-.611.048-.933a7.47 7.47 0 0 0-1.588-3.755 4.502 4.502 0 0 1 5.874 2.636.818.818 0 0 1-.36.98A7.465 7.465 0 0 1 14.5 16Z" />
-  </svg>
-);
-
-const IconBriefcase = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 shrink-0">
-    <path fillRule="evenodd" d="M6 5V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v1h2.25A1.75 1.75 0 0 1 18 6.75v8.5A1.75 1.75 0 0 1 16.25 17H3.75A1.75 1.75 0 0 1 2 15.25v-8.5A1.75 1.75 0 0 1 3.75 5H6Zm1.5 0h5V4a.5.5 0 0 0-.5-.5H8a.5.5 0 0 0-.5.5v1Z" clipRule="evenodd" />
-  </svg>
-);
-const IconSettings = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 shrink-0">
-    <path fillRule="evenodd" d="M7.84 1.804A1 1 0 0 1 8.82 1h2.36a1 1 0 0 1 .98.804l.331 1.652a6.993 6.993 0 0 1 1.929 1.115l1.598-.54a1 1 0 0 1 1.186.447l1.18 2.044a1 1 0 0 1-.205 1.251l-1.267 1.113a7.047 7.047 0 0 1 0 2.228l1.267 1.113a1 1 0 0 1 .206 1.25l-1.18 2.045a1 1 0 0 1-1.187.447l-1.598-.54a6.993 6.993 0 0 1-1.929 1.115l-.33 1.652a1 1 0 0 1-.98.804H8.82a1 1 0 0 1-.98-.804l-.331-1.652a6.993 6.993 0 0 1-1.929-1.115l-1.598.54a1 1 0 0 1-1.186-.447l-1.18-2.044a1 1 0 0 1 .205-1.251l1.267-1.114a7.05 7.05 0 0 1 0-2.227L1.821 7.773a1 1 0 0 1-.206-1.25l1.18-2.045a1 1 0 0 1 1.187-.447l1.598.54A6.992 6.992 0 0 1 7.51 3.456l.33-1.652ZM10 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" clipRule="evenodd" />
-  </svg>
-);
-
-const IconChartBar = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 shrink-0">
-    <path d="M15.5 2A1.5 1.5 0 0 0 14 3.5v13a1.5 1.5 0 0 0 3 0v-13A1.5 1.5 0 0 0 15.5 2ZM9.5 6A1.5 1.5 0 0 0 8 7.5v9a1.5 1.5 0 0 0 3 0v-9A1.5 1.5 0 0 0 9.5 6ZM3.5 10A1.5 1.5 0 0 0 2 11.5v5a1.5 1.5 0 0 0 3 0v-5A1.5 1.5 0 0 0 3.5 10Z" />
-  </svg>
-);
-
-const IconCurrencyEuro = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 shrink-0">
-    <path d="M1 4.25a3.733 3.733 0 0 1 2.25-.75h13.5c.844 0 1.623.279 2.25.75A2.25 2.25 0 0 0 16.75 2H3.25A2.25 2.25 0 0 0 1 4.25ZM1 7.25a3.733 3.733 0 0 1 2.25-.75h13.5c.844 0 1.623.279 2.25.75A2.25 2.25 0 0 0 16.75 5H3.25A2.25 2.25 0 0 0 1 7.25ZM7 8a1 1 0 0 0 0 2h6a1 1 0 1 0 0-2H7ZM3.25 8A2.25 2.25 0 0 0 1 10.25v4.5A2.25 2.25 0 0 0 3.25 17h13.5A2.25 2.25 0 0 0 19 14.75v-4.5A2.25 2.25 0 0 0 16.75 8H3.25Z" />
-  </svg>
-);
-
-
-const IconMegaphone = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 shrink-0">
-    <path d="M13.92 3.845a19.361 19.361 0 0 1-6.3 1.98C6.765 5.942 5.89 6 5 6a4 4 0 0 0 0 8c.184 0 .368-.006.55-.016A19.065 19.065 0 0 1 13.92 16.155 1 1 0 0 0 15 15.27V4.73a1 1 0 0 0-1.08-.885ZM16 9.5a.75.75 0 0 1 .75-.75h1.5a.75.75 0 0 1 0 1.5h-1.5A.75.75 0 0 1 16 9.5ZM7 14.803V17a1 1 0 0 0 1 1h.5a1 1 0 0 0 .979-.8l.34-1.7A19.52 19.52 0 0 1 7 14.803Z" />
-  </svg>
-);
-
-const IconCart = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 shrink-0">
-    <path d="M1.75 2.5a.75.75 0 0 0 0 1.5h1.31l1.56 7.022A2.25 2.25 0 0 0 6.816 12.75h6.736a2.25 2.25 0 0 0 2.196-1.728l1.064-4.255A1.75 1.75 0 0 0 15.114 4.5H4.842l-.152-.683A.75.75 0 0 0 3.958 3.25H1.75ZM7 16a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Zm8 0a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z" />
-  </svg>
-);
-
-const IconClock = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 shrink-0">
-    <path fillRule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm.75-13a.75.75 0 0 0-1.5 0v5c0 .199.079.39.22.53l3 3a.75.75 0 1 0 1.06-1.06l-2.78-2.78V5Z" clipRule="evenodd" />
-  </svg>
-);
-
-const IconCash = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5 shrink-0">
-    <path fillRule="evenodd" d="M1 4.75C1 3.784 1.784 3 2.75 3h14.5c.966 0 1.75.784 1.75 1.75v10.5A1.75 1.75 0 0 1 17.25 17H2.75A1.75 1.75 0 0 1 1 15.25V4.75ZM10 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM4 6.5a.5.5 0 0 0-.5.5v.5a.5.5 0 0 0 1 0V7a.5.5 0 0 0-.5-.5Zm12 5.5a.5.5 0 0 0-.5.5v.5a.5.5 0 0 0 1 0v-.5a.5.5 0 0 0-.5-.5Z" clipRule="evenodd" />
-  </svg>
-);
-
-const links = [
-  { to: '/', label: 'Dashboard', icon: <IconHome /> },
-  { to: '/reservations', label: 'Reservas', icon: <IconCalendar /> },
-  { to: '/customers', label: 'Clientes', icon: <IconUsers /> },
-];
-
-const configLinks = [
-  { to: '/configuracion', label: 'Configuración', icon: <IconSettings /> },
-];
-
-export default function Sidebar({
-  isOpen,
-  onClose,
-  devMode = false,
-  closeOnNavigate = true,
-  collapsed = false,
-  onDesktopToggleCollapse,
-  onReservationCreated,
-}) {
-  const { business, memberships, logout, hasRole, switchBusiness, session, isSubscribed, isModuleEnabled, isAppointments } = useAuth();
+/**
+ * Desktop menu (from 1024 px): light, the same order as the phone bar — Hoy,
+ * Agenda/Reservas, Clientes — then the rest of the business, then the account.
+ */
+export default function Sidebar({ collapsed = false, onDesktopToggleCollapse, devMode = false, onNew }) {
+  const { business, memberships, logout, switchBusiness, session } = useAuth();
+  const { primary, manage, account, newLabel } = useNav();
   const navigate = useNavigate();
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
-  const [isSmallScreen, setIsSmallScreen] = useState(false);
-  const [newRsvModal, setNewRsvModal] = useState(false);
   const menuRef = useRef(null);
-  const isStaff = business?.role === 'staff';
-  const isFree = !isSubscribed;
-
-  // Appointment businesses use the agenda instead of restaurant reservations.
-  const baseLinks = isAppointments
-    ? links.flatMap((link) => (link.to === '/reservations'
-      ? [{ to: '/agenda', label: 'Agenda', icon: <IconClock /> }, { to: '/caja', label: 'Caja', icon: <IconCash /> }]
-      : [link]))
-    : links;
-  // Appointment businesses get Clientes and Equipo on every plan: an agenda
-  // without customers or without the rest of the team is not usable.
-  const lockedByPlan = isFree && !isAppointments;
-  const mainLinks = isStaff || lockedByPlan
-    ? baseLinks.filter((link) => link.to !== '/customers')
-    : baseLinks;
-  const lowerLinks = isStaff || lockedByPlan
-    ? []
-    : hasRole('manager') ? [{ to: '/team', label: 'Equipo', icon: <IconTeam /> }] : [];
-  const visibleConfigLinks = hasRole('manager') ? configLinks : [];
-  const personalLink = (isModuleEnabled('staff') && hasRole('manager'))
-    ? [{ to: '/personal', label: 'Personal', icon: <IconBriefcase /> }]
-    : [];
-  const finanzasLink = (isModuleEnabled('expenses') && hasRole('owner'))
-    ? [{ to: '/finanzas', label: 'Finanzas', icon: <IconCurrencyEuro /> }]
-    : [];
-  const agendaLink = (isModuleEnabled('bookings') && !isAppointments)
-    ? [{ to: '/agenda', label: 'Agenda', icon: <IconClock /> }]
-    : [];
-  const comprasLink = (isModuleEnabled('purchases') && hasRole('manager'))
-    ? [{ to: '/compras', label: 'Compras', icon: <IconCart /> }]
-    : [];
-  const navLinks = [
-    mainLinks[0],
-    mainLinks[1],
-    ...agendaLink,
-    ...mainLinks.slice(2),
-    ...lowerLinks,
-    ...personalLink,
-    ...finanzasLink,
-    ...comprasLink,
-  ].filter(Boolean).filter((link) => !(isSmallScreen && link.to === '/tables'));
+  const devSidebar = devMode || business?.isDev || false;
 
   const userName = session?.user?.name || business?.userName || business?.name || 'Usuario';
   const userEmail = session?.user?.email || business?.userEmail || business?.email || '';
-  const activeBusinessId = business?.id || null;
   const initial = userName?.[0]?.toUpperCase() || 'U';
-  const devSidebar = devMode || business?.isDev || false;
-  const devLinks = [
-    { tab: 'clients', label: 'Clientes', icon: <IconBriefcase /> },
-  ];
-
-  const handleNavClick = () => {
-    setMenuOpen(false);
-    if (closeOnNavigate && onClose) onClose();
-  };
 
   useEffect(() => {
-    const onDocumentClick = (e) => {
-      if (!menuRef.current?.contains(e.target)) setMenuOpen(false);
-    };
+    const onDocumentClick = (e) => { if (!menuRef.current?.contains(e.target)) setMenuOpen(false); };
     document.addEventListener('click', onDocumentClick);
     return () => document.removeEventListener('click', onDocumentClick);
   }, []);
 
-  useEffect(() => {
-    const media = window.matchMedia('(max-width: 767px)');
-    const sync = () => setIsSmallScreen(media.matches);
-    sync();
-    media.addEventListener('change', sync);
-    return () => media.removeEventListener('change', sync);
-  }, []);
-
   return (
-    <>
-    <aside
-      className={`
-        fixed xl:relative inset-y-0 left-0 z-50 xl:z-auto
-        w-64 ${collapsed ? 'xl:w-20' : 'xl:w-56'} bg-slate-900 flex flex-col shrink-0 select-none
-        transform transition-transform duration-200 ease-in-out
-        ${isOpen ? 'translate-x-0' : '-translate-x-full xl:translate-x-0'}
-      `}
-    >
-      <div className="px-4 py-5 border-b border-slate-700/50">
-        <div className="flex items-center gap-2.5">
-          {!devSidebar && business?.logoUrl ? (
-            <img src={business.logoUrl} alt="" className="w-8 h-8 shrink-0 rounded-lg bg-white object-contain p-0.5" />
-          ) : (
-            <img src="/logo.svg" alt="Vetra" className="w-8 h-8 shrink-0" />
-          )}
-          <div className={`min-w-0 flex-1 ${collapsed ? 'lg:hidden' : ''}`}>
-            {devSidebar ? (
-              <>
-                <p className="text-white text-sm font-semibold leading-tight">Vetra</p>
-                <p className="text-slate-400 text-xs truncate leading-tight mt-0.5">Panel de desarrollo</p>
-              </>
-            ) : (
-              <>
-                <p className="text-white text-sm font-semibold leading-tight line-clamp-2 break-words">{business?.name || 'Vetra'}</p>
-                <p className="text-slate-400 text-xs truncate leading-tight mt-0.5">con Vetra</p>
-              </>
-            )}
+    <aside className={`relative ${collapsed ? 'w-[72px]' : 'w-60'} bg-white border-r border-gray-200 flex flex-col shrink-0 select-none`}>
+      <div className={`px-3 pt-4 pb-3 flex items-center gap-2.5 ${collapsed ? 'justify-center' : ''}`}>
+        {!devSidebar && business?.logoUrl ? (
+          <img src={business.logoUrl} alt="" className="w-9 h-9 shrink-0 rounded-xl object-contain bg-white border border-gray-200 p-0.5" />
+        ) : (
+          <img src="/logo.svg" alt="Vetra" className="w-9 h-9 shrink-0" />
+        )}
+        {!collapsed && (
+          <div className="min-w-0 flex-1">
+            <p className="text-sm font-semibold text-gray-900 leading-tight line-clamp-2 break-words">{devSidebar ? 'Vetra' : business?.name || 'Vetra'}</p>
+            <p className="text-xs text-gray-400 truncate leading-tight mt-0.5">{devSidebar ? 'Panel de desarrollo' : 'con Vetra'}</p>
           </div>
-          {onDesktopToggleCollapse && (
-            <button
-              type="button"
-              onClick={onDesktopToggleCollapse}
-              className="hidden xl:flex w-8 h-8 items-center justify-center rounded-lg text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition-colors"
-              aria-label={collapsed ? 'Expandir menú lateral' : 'Colapsar menú lateral'}
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
-                {collapsed ? (
-                  <path fillRule="evenodd" d="M7.47 4.47a.75.75 0 0 1 1.06 0l5 5a.75.75 0 0 1 0 1.06l-5 5a.75.75 0 1 1-1.06-1.06L11.94 10 7.47 5.53a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
-                ) : (
-                  <path fillRule="evenodd" d="M12.53 4.47a.75.75 0 0 1 0 1.06L8.06 10l4.47 4.47a.75.75 0 1 1-1.06 1.06L6.47 10.53a.75.75 0 0 1 0-1.06l5-5a.75.75 0 0 1 1.06 0Z" clipRule="evenodd" />
-                )}
-              </svg>
-            </button>
-          )}
-        </div>
+        )}
+        {onDesktopToggleCollapse && (
+          <button type="button" onClick={onDesktopToggleCollapse}
+            className={`${collapsed ? 'absolute -right-3 top-6 bg-white border border-gray-200 shadow-sm z-10' : ''} w-7 h-7 flex items-center justify-center rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors`}
+            aria-label={collapsed ? 'Expandir menú lateral' : 'Colapsar menú lateral'}>
+            <Icon name={collapsed ? 'right' : 'left'} className="w-4 h-4" strokeWidth={2} />
+          </button>
+        )}
       </div>
 
       {!devSidebar && (
-        <div className="px-3 pt-3 pb-1">
-          <button
-            onClick={() => {
-              if (isAppointments) {
-                navigate('/agenda?new=1');
-                if (closeOnNavigate) onClose?.();
-              } else {
-                setNewRsvModal(true);
-              }
-            }}
-            className={`w-full flex items-center justify-center ${collapsed ? '' : 'gap-2'} px-3 py-2 rounded-lg border border-violet-400/60 text-violet-200 bg-transparent hover:bg-violet-500/10 hover:border-violet-300 hover:text-violet-100 text-sm font-semibold transition-colors`}
-            title={collapsed ? (isAppointments ? 'Nueva cita' : 'Nueva reserva') : undefined}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 shrink-0">
-              <path d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z" />
-            </svg>
-            {!collapsed && (isAppointments ? 'Nueva cita' : 'Nueva reserva')}
+        <div className="px-3 pb-2">
+          <button type="button" onClick={onNew} title={collapsed ? newLabel : undefined}
+            className={`w-full flex items-center justify-center ${collapsed ? '' : 'gap-2'} h-10 rounded-xl bg-violet-600 text-white hover:bg-violet-700 text-sm font-semibold transition-colors shadow-sm`}>
+            <Icon name="plus" className="w-5 h-5" strokeWidth={2} />
+            {!collapsed && newLabel}
           </button>
         </div>
       )}
 
-      <nav className="flex-1 px-3 py-4 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        <div className="space-y-0.5">
-          {!collapsed && <p className="text-slate-500 text-[10px] font-semibold uppercase tracking-widest px-2 pb-2">Menú</p>}
-          {devSidebar ? (
-            devLinks.map((link) => {
-              const active = location.pathname === '/dev';
-              return (
-                <button
-                  key={link.tab}
-                  onClick={() => {
-                    navigate('/dev');
-                    handleNavClick();
-                  }}
-                  className={`w-full flex items-center ${collapsed ? 'justify-center' : 'gap-3'} px-3 py-3 lg:py-2 rounded-lg text-sm font-medium transition-all duration-100 ${
-                    active ? 'bg-violet-600 text-white shadow-sm' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100'
-                  }`}
-                  title={collapsed ? link.label : undefined}
-                >
-                  {link.icon}
-                  {!collapsed && link.label}
-                </button>
-              );
-            })
-          ) : (
-            navLinks.map((link) => (
-              <NavLink
-                key={link.to}
-                to={link.to}
-                end={link.to === '/'}
-                onClick={handleNavClick}
-                className={({ isActive }) =>
-                  `flex items-center ${collapsed ? 'justify-center' : 'gap-3'} px-3 py-3 lg:py-2 rounded-lg text-sm font-medium transition-all duration-100 ${
-                    isActive ? 'bg-violet-600 text-white shadow-sm' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100'
-                  }`
-                }
-                title={collapsed ? link.label : undefined}
-              >
-                {link.icon}
-                {!collapsed && link.label}
-              </NavLink>
-            ))
-          )}
-
-          {!devSidebar && !isStaff && !isFree && !isAppointments && hasRole('manager') && (
-            <NavLink
-              to="/analytics"
-              onClick={handleNavClick}
-              className={({ isActive }) =>
-                `flex items-center ${collapsed ? 'justify-center' : 'gap-3'} px-3 py-3 lg:py-2 rounded-lg text-sm font-medium transition-all duration-100 ${
-                  isActive ? 'bg-violet-600 text-white shadow-sm' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100'
-                }`
-              }
-              title={collapsed ? 'Estadísticas' : undefined}
-            >
-              <IconChartBar />
-              {!collapsed && 'Estadísticas'}
-            </NavLink>
-          )}
-
-          {!devSidebar && !isStaff && !isFree && hasRole('manager') && (
-            <NavLink
-              to="/publicidad"
-              onClick={handleNavClick}
-              className={({ isActive }) =>
-                `flex items-center ${collapsed ? 'justify-center' : 'gap-3'} px-3 py-3 lg:py-2 rounded-lg text-sm font-medium transition-all duration-100 ${
-                  isActive ? 'bg-violet-600 text-white shadow-sm' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100'
-                }`
-              }
-              title={collapsed ? 'Publicidad' : undefined}
-            >
-              <IconMegaphone />
-              {!collapsed && 'Publicidad'}
-            </NavLink>
-          )}
-        </div>
+      <nav className="flex-1 px-3 py-2 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {devSidebar ? (
+          <button type="button" onClick={() => navigate('/dev')}
+            className={`w-full flex items-center ${collapsed ? 'justify-center' : 'gap-3'} px-3 py-2 rounded-lg text-sm transition-colors ${
+              location.pathname === '/dev' ? 'bg-gray-100 text-gray-900 font-semibold' : 'text-gray-600 font-medium hover:bg-gray-50'}`}>
+            <Icon name="briefcase" className="w-5 h-5 text-violet-600" />
+            {!collapsed && 'Clientes'}
+          </button>
+        ) : (
+          <>
+            <div className="space-y-0.5">
+              {primary.map((l) => <Item key={l.to} {...l} collapsed={collapsed} />)}
+            </div>
+            {manage.length > 0 && (
+              <div className="mt-5 space-y-0.5">
+                {!collapsed && <p className="px-3 pb-1.5 text-[11px] font-semibold uppercase tracking-wider text-gray-400">Negocio</p>}
+                {collapsed && <div className="mx-3 mb-2 h-px bg-gray-100" />}
+                {manage.map((l) => <Item key={l.to} {...l} collapsed={collapsed} />)}
+              </div>
+            )}
+          </>
+        )}
       </nav>
 
-      <div className="px-3 pb-4 border-t border-slate-700/50 pt-3">
-        {!devSidebar && visibleConfigLinks.map((link) => (
-          <NavLink
-            key={link.to}
-            to={link.to}
-            onClick={handleNavClick}
-            className={({ isActive }) =>
-              `mb-2 flex items-center ${collapsed ? 'justify-center' : 'gap-3'} px-3 py-2 rounded-lg text-sm font-medium transition-all duration-100 ${
-                isActive
-                  ? 'bg-violet-600 text-white shadow-sm'
-                  : 'text-slate-300 hover:bg-slate-800 hover:text-slate-100'
-              }`
-            }
-            title={collapsed ? link.label : undefined}
-          >
-            {link.icon}
-            {!collapsed && link.label}
-          </NavLink>
-        ))}
+      <div className="px-3 pb-3 pt-2 border-t border-gray-100">
+        {!devSidebar && account.filter((l) => l.to !== '/profile').map((l) => <Item key={l.to} {...l} collapsed={collapsed} />)}
 
-        <div ref={menuRef} className="relative">
-          <button
-            onClick={() => setMenuOpen((v) => !v)}
-            className={`w-full flex items-center ${collapsed ? 'justify-center' : 'gap-2.5'} px-2.5 py-2 rounded-lg hover:bg-slate-800 transition-colors`}
-          >
-            <div className="w-8 h-8 rounded-full bg-violet-600 flex items-center justify-center text-white text-xs font-bold shrink-0">
-              {initial}
-            </div>
+        <div ref={menuRef} className="relative mt-1">
+          <button type="button" onClick={() => setMenuOpen((v) => !v)}
+            className={`w-full flex items-center ${collapsed ? 'justify-center' : 'gap-2.5'} px-2 py-2 rounded-lg hover:bg-gray-50 transition-colors`}>
+            <div className="w-8 h-8 rounded-full bg-gray-900 flex items-center justify-center text-white text-xs font-bold shrink-0">{initial}</div>
             {!collapsed && (
               <>
                 <div className="min-w-0 flex-1 text-left">
-                  <p className="text-slate-200 text-xs font-medium truncate">{userName}</p>
-                  <p className="text-slate-400 text-xs truncate">{userEmail}</p>
+                  <p className="text-[13px] font-medium text-gray-900 truncate">{userName}</p>
+                  <p className="text-xs text-gray-400 truncate">{userEmail}</p>
                 </div>
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 text-slate-500 shrink-0">
-                  <path fillRule="evenodd" d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 11.168l3.71-3.938a.75.75 0 1 1 1.08 1.04l-4.25 4.5a.75.75 0 0 1-1.08 0l-4.25-4.5a.75.75 0 0 1 .02-1.06Z" clipRule="evenodd" />
-                </svg>
+                <Icon name="down" className="w-4 h-4 text-gray-400" strokeWidth={2} />
               </>
             )}
           </button>
 
           {menuOpen && (
-            <div className="absolute left-0 right-0 bottom-full mb-2 bg-slate-800 border border-slate-700 rounded-lg p-1 shadow-lg">
+            <div className={`absolute ${collapsed ? 'left-full ml-2 bottom-0 w-56' : 'left-0 right-0 bottom-full mb-2'} bg-white border border-gray-200 rounded-xl p-1 shadow-lg z-50`}>
               {!devSidebar && memberships.length > 1 && (
                 <>
-                  <p className="px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-slate-500">
-                    Negocio activo
-                  </p>
+                  <p className="px-3 py-1 text-[11px] font-semibold uppercase tracking-wider text-gray-400">Negocio activo</p>
                   <div className="max-h-48 overflow-y-auto mb-1">
                     {memberships.map((m) => {
-                      const isActiveBiz = m.businessId === activeBusinessId;
+                      const active = m.businessId === business?.id;
                       return (
-                        <button
-                          key={m.businessId}
-                          onClick={async () => {
-                            if (isActiveBiz) { setMenuOpen(false); return; }
-                            await switchBusiness(m.businessId);
-                            navigate('/');
-                            handleNavClick();
-                          }}
-                          className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${
-                            isActiveBiz
-                              ? 'bg-violet-600/20 text-violet-200'
-                              : 'text-slate-200 hover:bg-slate-700'
-                          }`}
-                        >
+                        <button key={m.businessId} type="button"
+                          onClick={async () => { setMenuOpen(false); if (active) return; await switchBusiness(m.businessId); navigate('/'); }}
+                          className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-colors ${active ? 'bg-violet-50 text-violet-800 font-semibold' : 'text-gray-700 hover:bg-gray-50'}`}>
                           <span className="block truncate">{m.businessName}</span>
-                          {!isActiveBiz && <span className="text-[11px] text-slate-400">Cambiar</span>}
                         </button>
                       );
                     })}
                   </div>
-                  <div className="h-px bg-slate-700 my-1" />
+                  <div className="h-px bg-gray-100 my-1" />
                 </>
               )}
               {!devSidebar && (
-                <button
-                  onClick={() => { navigate('/profile'); handleNavClick(); }}
-                  className="w-full text-left px-3 py-2 rounded-md text-sm text-slate-200 hover:bg-slate-700 transition-colors"
-                >
-                  Perfil
-                </button>
+                <button type="button" onClick={() => { setMenuOpen(false); navigate('/profile'); }}
+                  className="w-full text-left px-3 py-2 rounded-lg text-sm text-gray-700 hover:bg-gray-50">Mi perfil</button>
               )}
-              <button
-                onClick={() => { logout(); if (onClose) onClose(); }}
-                className="w-full text-left px-3 py-2 rounded-md text-sm text-red-300 hover:bg-red-500/10 transition-colors"
-              >
-                Cerrar sesión
-              </button>
+              <button type="button" onClick={() => logout()}
+                className="w-full text-left px-3 py-2 rounded-lg text-sm text-rose-600 hover:bg-rose-50">Cerrar sesión</button>
             </div>
           )}
         </div>
       </div>
     </aside>
-
-    {!devSidebar && newRsvModal && (
-      <Modal title="Nueva reserva" onClose={() => setNewRsvModal(false)}>
-        <ReservationForm
-          onSave={() => {
-            setNewRsvModal(false);
-            if (typeof onReservationCreated === 'function') onReservationCreated();
-            else {
-              window.dispatchEvent(new CustomEvent('reservation:created'));
-              window.dispatchEvent(new CustomEvent('app:toast', { detail: { message: 'Reserva creada', type: 'success' } }));
-            }
-            handleNavClick();
-          }}
-          onCancel={() => setNewRsvModal(false)}
-        />
-      </Modal>
-    )}
-    </>
   );
 }

@@ -1662,7 +1662,7 @@ export default function Finanzas() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="hidden xl:block text-xl font-bold text-gray-900">Finanzas</h1>
+          <h1 className="hidden lg:block text-xl font-bold text-gray-900">Finanzas</h1>
           <p className="text-sm text-gray-400 mt-0.5">Control de ingresos, gastos y rentabilidad</p>
         </div>
       </div>

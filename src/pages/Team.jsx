@@ -186,13 +186,13 @@ export default function Team() {
         {/* Page header */}
         <div className="flex items-start justify-between">
           <div>
-            <h1 className="hidden xl:block text-xl font-bold text-gray-900">Equipo</h1>
+            <h1 className="hidden lg:block text-xl font-bold text-gray-900">Equipo</h1>
             <p className="text-sm text-gray-500 mt-0.5">{members.length} {members.length === 1 ? 'persona' : 'personas'} en tu negocio</p>
           </div>
           {isManager && (
             <button
               onClick={() => setShowModal(true)}
-              className="hidden xl:flex items-center gap-2 bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors shadow-sm shadow-violet-200"
+              className="hidden lg:flex items-center gap-2 bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors shadow-sm shadow-violet-200"
             >
               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
                 <path d="M11 5a3 3 0 1 1-6 0 3 3 0 0 1 6 0ZM2.046 15.253c-.058.468.172.92.57 1.175A9.953 9.953 0 0 0 8 18c1.982 0 3.83-.573 5.384-1.573.398-.254.628-.707.57-1.175a7 7 0 0 0-13.908 0ZM15.75 7.5a.75.75 0 0 0-1.5 0v2.25H12a.75.75 0 0 0 0 1.5h2.25v2.25a.75.75 0 0 0 1.5 0v-2.25H18a.75.75 0 0 0 0-1.5h-2.25V7.5Z"/>

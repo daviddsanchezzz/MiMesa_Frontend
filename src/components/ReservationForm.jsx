@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import { longDate } from '../pages/agenda/utils';
 
 const inputCls = 'w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-white';
 const labelCls = 'block text-sm font-medium text-gray-700 mb-1.5';
@@ -476,7 +477,7 @@ export default function ReservationForm({ reservation, onSave, onCancel, initial
       {step === 4 && (
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="rounded-xl bg-violet-50 border border-violet-100 px-3.5 py-2.5 text-sm text-violet-700 font-medium">
-            {form.date} · {form.time} · {form.people} {form.people === 1 ? 'persona' : 'personas'}
+            {longDate(form.date)} · {form.time} · {form.people} {form.people === 1 ? 'persona' : 'personas'}
           </div>
 
           {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-3 py-2">{error}</div>}

@@ -1,24 +1,16 @@
-/**
- * The colour of an appointment tells its state, the same in the list and in
- * the day view: lila = next / in progress, green = charged, amber = attended
- * but not charged, red = cancelled or no-show, dashed grey = to confirm,
- * grey = the rest.
- */
-export const LINE = {
-  next:     { color: '#7c3aed', label: 'Siguiente / en curso' },
-  paid:     { color: '#10b981', label: 'Cobrada' },
-  unpaid:   { color: '#f59e0b', label: 'Atendida sin cobrar' },
-  lost:     { color: '#f43f5e', label: 'No vino o cancelada' },
-  pending:  { color: '#9ca3af', label: 'Por confirmar', dashed: true },
-  other:    { color: '#d1d5db', label: 'Resto' },
-};
+import { TONES, bookingTone, toneLabel } from '../../lib/status';
 
-export function lineFor(b, isNext) {
-  if (['cancelled', 'no_show'].includes(b.status)) return 'lost';
-  if (b.status === 'completed' || b.payment) return b.payment ? 'paid' : 'unpaid';
-  if (isNext || b.status === 'checked_in') return 'next';
-  if (b.status === 'pending') return 'pending';
-  return 'other';
+/**
+ * The colour of an appointment tells its state, the same in the list, the
+ * day view and in the restaurant (see lib/status): amber dashed = to confirm,
+ * violet = confirmed, green = has arrived, orange = attended but not charged,
+ * slate = charged, red = no-show, light grey = cancelled.
+ */
+export const LINE = Object.fromEntries(Object.entries(TONES).map(([k, t]) => [k, { ...t, label: toneLabel(k) }]));
+
+// isNext is kept for callers; the next appointment is marked with a ring, not a colour.
+export function lineFor(b) {
+  return bookingTone(b);
 }
 
 /** Today's first appointment that hasn't finished (and isn't cancelled). */
@@ -31,8 +23,8 @@ export function nextBookingId(bookings, isToday, now = new Date()) {
 
 /** Only the colours that appear. */
 export function LineLegend({ kinds }) {
-  const shown = Object.entries(LINE).filter(([k]) => k !== 'other' && kinds.has(k));
-  if (!shown.length) return null;
+  const shown = Object.entries(LINE).filter(([k]) => kinds.has(k));
+  if (shown.length < 2) return null;
   return (
     <div className="flex flex-wrap gap-x-4 gap-y-1.5 px-1 text-[11px] text-gray-500">
       {shown.map(([k, l]) => (

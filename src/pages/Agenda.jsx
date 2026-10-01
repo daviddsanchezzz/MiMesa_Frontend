@@ -8,6 +8,7 @@ import WeekView from './agenda/WeekView';
 import ListView from './agenda/ListView';
 import DayStrip from './agenda/DayStrip';
 import StaffAvatar from './agenda/StaffAvatar';
+import { Segmented } from '../ui/kit';
 import NewBookingModal from './agenda/NewBookingModal';
 import BookingDetailModal from './agenda/BookingDetailModal';
 import AbsenceModal, { AbsenceDetailModal } from './agenda/AbsenceModal';
@@ -82,7 +83,7 @@ export default function Agenda() {
     if (d || searchParams.get('new')) setSearchParams({}, { replace: true });
   }, [searchParams, setSearchParams]);
 
-  useSetMobileHeader({ title: 'Agenda', action: { label: 'Cita', onClick: () => openNew('', '', date) } });
+  useSetMobileHeader({ title: 'Agenda', action: false });
 
   const loadSetup = useCallback(async () => {
     const [r, s, sch] = await Promise.all([bookingsApi.resources(), bookingsApi.services(), bookingsApi.schedule()]);
@@ -174,24 +175,8 @@ export default function Agenda() {
   return (
     <div ref={rootRef} className={fill ? 'flex flex-col gap-3' : 'space-y-4'} style={fill && fitHeight ? { height: fitHeight } : undefined}>
       <div className="flex items-center justify-between gap-3 shrink-0">
-        <div className="min-w-0 flex-1">
-          <h2 className="hidden xl:block text-xl font-bold text-gray-900">Agenda</h2>
-          <p className="text-[13px] sm:text-sm leading-snug text-gray-500 sm:mt-0.5">
-            {activeView === 'week' ? `Semana del ${Number(from.slice(8))} al ${Number(to.slice(8))}` : longDate(date)}
-            {activeView !== 'week' && dayTotal.n > 0 && <> · {pluralize(dayTotal.n, 'cita', 'citas')} · {euros(dayTotal.revenue)}</>}
-          </p>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <div className="inline-flex p-1 rounded-xl bg-gray-100" role="tablist" aria-label="Vista">
-            {views.map(([key, label]) => (
-              <button key={key} type="button" role="tab" aria-selected={activeView === key} onClick={() => chooseView(key)}
-                className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors ${activeView === key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}>
-                {label}
-              </button>
-            ))}
-          </div>
-          <button type="button" className={`${btnPrimary} hidden xl:inline-flex`} onClick={() => openNew('', '', date)}>Nueva cita</button>
-        </div>
+        <h1 className="hidden lg:block text-2xl font-semibold tracking-tight text-gray-900">Agenda</h1>
+        <Segmented value={activeView} onChange={chooseView} options={views} />
       </div>
 
       {error && <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</p>}
@@ -250,12 +235,16 @@ export default function Agenda() {
                 </label>
               )} />
           </div>
-          {activeView === 'list' && (
-            <label className="md:hidden flex items-center justify-end gap-1.5 text-xs text-gray-500">
+          <div className="shrink-0 flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+            <p className="text-sm text-gray-600">
+              <span className="font-semibold text-gray-900">{activeView === 'week' ? `Semana del ${Number(from.slice(8))} al ${Number(to.slice(8))}` : longDate(date)}</span>
+              {activeView !== 'week' && dayTotal.n > 0 && <> · {pluralize(dayTotal.n, 'cita', 'citas')}{isManager && <> · {euros(dayTotal.revenue)}</>}</>}
+            </p>
+            <label className="md:hidden flex items-center gap-1.5 text-xs text-gray-500">
               <input type="checkbox" checked={showCancelled} onChange={(e) => setShowCancelled(e.target.checked)} />
               Ver canceladas
             </label>
-          )}
+          </div>
 
           {activeView === 'week' && (
             <div className="flex-1 min-h-0"><WeekView fill from={from} today={today} tz={tz} staff={shownStaff} bookings={visibleWeek} absences={shownAbsences} onAbsenceClick={setSelectedAbsence} businessSchedule={schedule}

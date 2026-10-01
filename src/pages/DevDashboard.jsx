@@ -443,7 +443,7 @@ export default function DevDashboard() {
 
   return (
     <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 py-4 space-y-4">
-      <div className="hidden xl:flex items-end justify-between gap-3">
+      <div className="hidden lg:flex items-end justify-between gap-3">
         <div>
           <h2 className="text-xl font-bold text-gray-900">Clientes</h2>
           <p className="text-sm text-gray-500 mt-0.5">Negocios que usan Vetra, su equipo y su actividad.</p>

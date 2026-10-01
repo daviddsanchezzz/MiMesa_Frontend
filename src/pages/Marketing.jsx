@@ -52,7 +52,7 @@ export default function Marketing() {
   return (
     <div className="space-y-5 max-w-3xl">
       <div>
-        <h2 className="hidden xl:block text-xl font-bold text-gray-900">Email marketing</h2>
+        <h2 className="hidden lg:block text-xl font-bold text-gray-900">Email marketing</h2>
         <p className="text-sm text-gray-400 mt-0.5">
           {subscribers.length} suscriptor{subscribers.length !== 1 ? 'es' : ''} activo{subscribers.length !== 1 ? 's' : ''} · {remaining}/3 envíos disponibles este mes
         </p>

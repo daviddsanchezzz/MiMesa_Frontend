@@ -292,8 +292,8 @@ export default function Compras() {
   return (
     <div className="max-w-6xl mx-auto space-y-6">
       <div>
-        <h1 className="hidden xl:block text-2xl font-bold text-gray-900">Compras</h1>
-        <p className="text-sm text-gray-500 xl:mt-1">Pedidos de compra y catálogo de productos por proveedor</p>
+        <h1 className="hidden lg:block text-2xl font-bold text-gray-900">Compras</h1>
+        <p className="text-sm text-gray-500 lg:mt-1">Pedidos de compra y catálogo de productos por proveedor</p>
       </div>
 
       <div className="border-b border-gray-200">

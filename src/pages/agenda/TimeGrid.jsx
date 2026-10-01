@@ -47,8 +47,8 @@ export function AbsenceBlock({ absence, top, height, left = '4px', width = 'calc
 
 // kind (day view): the colour tells the state, like the list (see lineColors).
 // Without it (week view) the block takes the professional's colour.
-export function BookingBlock({ booking, segment, color, kind = null, tz, top, height, left = '4px', width = 'calc(100% - 8px)', dense = false, onClick }) {
-  if (kind) return <StateBlock {...{ booking, segment, kind, tz, top, height, left, width, dense, onClick }} />;
+export function BookingBlock({ booking, segment, color, kind = null, isNext = false, tz, top, height, left = '4px', width = 'calc(100% - 8px)', dense = false, onClick }) {
+  if (kind) return <StateBlock {...{ booking, segment, kind, isNext, tz, top, height, left, width, dense, onClick }} />;
   const st = STATUS_STYLE[booking.status];
   const muted = st?.muted;
   return (
@@ -78,18 +78,19 @@ export function BookingBlock({ booking, segment, color, kind = null, tz, top, he
   );
 }
 
-const STATE_BG = { next: 0.14, paid: 0.12, unpaid: 0.14, lost: 0, pending: 0, other: 0 };
+// Background tint per state: strong for what is live, faint for what is over.
+const STATE_BG = { confirmed: 0.13, here: 0.16, unpaid: 0.14, done: 0.1, pending: 0.08, lost: 0, cancelled: 0 };
 
-function StateBlock({ booking, segment, kind, tz, top, height, left, width, dense, onClick }) {
-  const l = LINE[kind];
-  const lost = kind === 'lost';
+function StateBlock({ booking, segment, kind, isNext, tz, top, height, left, width, dense, onClick }) {
+  const l = LINE[kind] || LINE.confirmed;
+  const lost = kind === 'lost' || kind === 'cancelled';
   const bg = STATE_BG[kind] ? tint(l.color, STATE_BG[kind]) : lost ? '#fff7f8' : '#f9fafb';
   return (
     <button
       type="button"
       onClick={(e) => { e.stopPropagation(); onClick?.(booking); }}
       title={`${timeInTz(segment.start, tz)}–${timeInTz(segment.end, tz)} · ${booking.guestName} · ${segment.serviceName} · ${l.label}`}
-      className={`absolute z-10 rounded-lg text-left overflow-hidden transition-shadow hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-gray-400 ${dense ? 'px-1.5 py-0.5' : 'px-2 py-1'} ${kind === 'next' ? 'ring-1 ring-violet-300' : ''}`}
+      className={`absolute z-10 rounded-lg text-left overflow-hidden transition-shadow hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-gray-400 ${dense ? 'px-1.5 py-0.5' : 'px-2 py-1'} ${isNext ? 'ring-2 ring-violet-400 ring-offset-1' : ''}`}
       style={{
         top, height, left, width,
         backgroundColor: bg,

@@ -386,12 +386,17 @@ export default function FloorPlan({ tables, rooms, onStatusChange, onRefresh, ed
     });
   }, []);
 
-  // Default room on first load
+  // Default room: the first one with tables. Rooms may arrive after the first
+  // render, so keep choosing until the user picks one ("Sin sala" only when
+  // there are no rooms or it is the only place with tables).
+  const pickedRoomRef = useRef(false);
   useEffect(() => {
-    if (roomFilter !== null) return;
-    if (rooms.length > 0) setRoomFilter(rooms[0]._id);
-    else setRoomFilter('__none__');
-  }, [rooms, roomFilter]);
+    if (pickedRoomRef.current) return;
+    const inRoom = (r) => tables.some((t) => t.roomId?._id === r._id || t.roomId === r._id);
+    const best = rooms.find(inRoom) || rooms[0];
+    const next = best ? best._id : '__none__';
+    if (next !== roomFilter) setRoomFilter(next);
+  }, [rooms, tables, roomFilter]);
 
   const getPos = useCallback((table) => {
     if (posRef.current[table._id]) return posRef.current[table._id];
@@ -606,12 +611,12 @@ export default function FloorPlan({ tables, rooms, onStatusChange, onRefresh, ed
     }
   };
 
-  const changeRoom = (id) => { setRoomFilter(id); setActiveId(null); setEditingTable(null); if (!editOnly) setEditMode(false); };
+  const changeRoom = (id) => { pickedRoomRef.current = true; setRoomFilter(id); setActiveId(null); setEditingTable(null); if (!editOnly) setEditMode(false); };
 
   const roomTabs = [
     ...rooms.map(r => ({ id: r._id, label: r.name, count: tables.filter(t => t.roomId?._id === r._id || t.roomId === r._id).length })),
     { id: '__none__', label: 'Sin sala', count: tables.filter(t => !t.roomId).length },
-  ];
+  ].filter((tab) => tab.id !== '__none__' || tab.count > 0 || rooms.length === 0);
 
   const pct = Math.round(scale * 100);
   const editShape = TABLE_SHAPES[editForm.shape] ? editForm.shape : inferShapeFromCapacity(Number(editForm.capacity) || 2);

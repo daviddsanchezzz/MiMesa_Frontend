@@ -164,12 +164,12 @@ export default function Exceptions() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="hidden xl:block text-xl font-bold text-gray-900">Excepciones</h2>
+          <h2 className="hidden lg:block text-xl font-bold text-gray-900">Excepciones</h2>
           <p className="text-sm text-gray-400 mt-0.5">Mostrando solo excepciones futuras</p>
         </div>
         <button
           onClick={openCreate}
-          className="hidden xl:flex items-center gap-2 bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors shadow-sm"
+          className="hidden lg:flex items-center gap-2 bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors shadow-sm"
         >
           Nueva excepción
         </button>

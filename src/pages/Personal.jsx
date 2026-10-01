@@ -594,7 +594,7 @@ export default function Personal() {
   
   return (
     <div className="space-y-5">
-      <div className="hidden xl:flex items-center justify-between gap-3">
+      <div className="hidden lg:flex items-center justify-between gap-3">
         <div>
           <h2 className="text-xl font-bold text-gray-900">Personal</h2>
           <p className="text-sm text-gray-500">Gestión de empleados, planificación semanal y costes estimados.</p>

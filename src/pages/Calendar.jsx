@@ -497,7 +497,7 @@ export default function Calendar() {
               </svg>
             </NavButton>
             <div className="text-center min-w-[160px]">
-              <p className="text-sm font-bold text-gray-900 capitalize">{dateLabel}</p>
+              <p className="text-sm font-bold text-gray-900">{dateLabel.charAt(0).toUpperCase() + dateLabel.slice(1)}</p>
               {!isToday && (
                 <button onClick={() => setDate(today)} className="text-[11px] text-violet-600 hover:text-violet-700 font-medium transition-colors">
                   Volver a hoy

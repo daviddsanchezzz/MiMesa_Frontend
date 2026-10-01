@@ -181,7 +181,7 @@ export default function Estadisticas() {
       {/* Header */}
       <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
-          <h2 className="hidden xl:block text-xl font-bold text-gray-900">Estadísticas</h2>
+          <h2 className="hidden lg:block text-xl font-bold text-gray-900">Estadísticas</h2>
           <p className="text-sm text-gray-400 mt-0.5">
             {data?.range ? `${data.range.from} — ${data.range.to}` : 'Cargando...'}
           </p>

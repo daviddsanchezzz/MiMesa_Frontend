@@ -15,7 +15,7 @@ export default function DayStrip({ date, today, counts = {}, onChange, closedDay
   const [y, m] = date.split('-').map(Number);
 
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 px-2 py-1.5 flex flex-wrap sm:flex-nowrap items-center gap-1.5">
+    <div className="flex flex-wrap sm:flex-nowrap items-center gap-1.5 border-b border-gray-100 pb-2">
       <span className="flex-1 sm:flex-none sm:hidden lg:block text-sm font-semibold text-gray-900 px-1.5 whitespace-nowrap capitalize">{MONTHS[m - 1]} {y}</span>
       <button type="button" aria-label="Semana anterior" onClick={() => onChange(addDays(date, -7))} className={iconBtn}>‹</button>
       <div className="grid grid-cols-7 gap-1 min-w-0 order-last w-full sm:order-none sm:w-auto sm:flex-1">
@@ -27,13 +27,13 @@ export default function DayStrip({ date, today, counts = {}, onChange, closedDay
           return (
             <button key={d} type="button" onClick={() => onChange(d)} title={closed ? 'Cerrado' : undefined}
               className={`h-12 sm:h-9 rounded-lg flex flex-col sm:flex-row items-center justify-center gap-0 sm:gap-1.5 text-sm transition-colors min-w-0 ${
-                selected ? 'bg-violet-600 text-white shadow-sm'
-                  : isToday ? 'bg-violet-50 text-violet-800 ring-1 ring-violet-200'
+                selected ? 'bg-gray-900 text-white shadow-sm'
+                  : isToday ? 'text-violet-700 ring-1 ring-inset ring-violet-200'
                     : closed ? 'text-gray-300 hover:bg-gray-50' : 'text-gray-700 hover:bg-gray-50'}`}>
-              <span className={`text-[11px] font-medium ${selected ? 'text-violet-100' : closed ? '' : 'text-gray-400'}`}>{LETTER[dayOfWeek(d)]}</span>
+              <span className={`text-[11px] font-medium ${selected ? 'text-gray-300' : closed ? '' : 'text-gray-400'}`}>{LETTER[dayOfWeek(d)]}</span>
               <span className="font-bold tabular-nums">{Number(d.slice(8))}</span>
               {n > 0 && (
-                <span className={`sm:hidden block w-1 h-1 rounded-full mt-0.5 ${selected ? 'bg-white' : 'bg-violet-400'}`} aria-hidden="true" />
+                <span className={`sm:hidden block w-1 h-1 rounded-full mt-0.5 ${selected ? 'bg-white' : 'bg-gray-400'}`} aria-hidden="true" />
               )}
               {n > 0 && (
                 <span className={`hidden sm:inline-flex min-w-[1.1rem] h-[1.1rem] px-1 rounded-full text-[10px] font-semibold items-center justify-center tabular-nums ${

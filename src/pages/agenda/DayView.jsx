@@ -80,7 +80,7 @@ export default function DayView({ date, tz, staff, bookings, absences = [], onAb
         const w = 100 / cols;
         return {
           key: `${booking._id}-${segment._id}-${id}`,
-          render: <BookingBlock booking={booking} segment={segment} tz={tz} top={top} height={height} color={colors[id] || '#9ca3af'} kind={lineFor(booking, booking._id === nextId)}
+          render: <BookingBlock booking={booking} segment={segment} tz={tz} top={top} height={height} color={colors[id] || '#9ca3af'} kind={lineFor(booking)} isNext={booking._id === nextId}
             left={`calc(${col * w}% + 4px)`} width={`calc(${w}% - 8px)`} onClick={onBookingClick} />,
         };
       })],

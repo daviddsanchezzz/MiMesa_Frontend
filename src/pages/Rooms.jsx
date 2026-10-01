@@ -103,14 +103,14 @@ export default function Rooms() {
       {/* Header */}
       <div className="flex items-start justify-between">
         <div>
-          <h2 className="hidden xl:block text-2xl font-bold text-gray-900">Salas</h2>
+          <h2 className="hidden lg:block text-2xl font-bold text-gray-900">Salas</h2>
           <p className="text-sm text-gray-400 mt-0.5">
             {rooms.length} sala{rooms.length !== 1 ? 's' : ''} · {totalCapacity} personas de capacidad total
           </p>
         </div>
         <button
           onClick={openCreate}
-          className="hidden xl:flex items-center gap-2 bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors shadow-sm"
+          className="hidden lg:flex items-center gap-2 bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors shadow-sm"
         >
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
             <path d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z" />

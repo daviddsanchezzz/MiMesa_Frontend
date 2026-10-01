@@ -164,16 +164,16 @@ export default function Tables() {
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between px-6 py-3 bg-white border-b border-gray-200 shrink-0">
+      <div className="flex items-center justify-between gap-3 px-4 lg:px-6 py-3 bg-white border-b border-gray-200 shrink-0">
         <div>
-          <h2 className="hidden xl:block text-lg font-bold text-gray-900">Mesas</h2>
-          <p className="text-xs text-gray-400 xl:mt-0.5">
+          <h2 className="hidden lg:block text-lg font-bold text-gray-900">Mesas</h2>
+          <p className="text-xs text-gray-400 lg:mt-0.5">
             {activeTables.length}{limit !== Infinity ? ` / ${limit}` : ''} mesa{activeTables.length !== 1 ? 's' : ''} activa{activeTables.length !== 1 ? 's' : ''}
             {lockedTables.length > 0 && <span className="text-amber-500 ml-1">· {lockedTables.length} bloqueada{lockedTables.length !== 1 ? 's' : ''}</span>}
             {' · '}{rooms.length} sala{rooms.length !== 1 ? 's' : ''}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={() => { setRanges([emptyRange()]); setQuickError(''); setQuickOpen(true); }}
             disabled={atLimit}
@@ -183,7 +183,7 @@ export default function Tables() {
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 text-violet-500">
               <path d="M2 2.75A.75.75 0 0 1 2.75 2h10.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 2.75ZM2 8a.75.75 0 0 1 .75-.75h10.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 8Zm0 5.25a.75.75 0 0 1 .75-.75h4.5a.75.75 0 0 1 0 1.5h-4.5a.75.75 0 0 1-.75-.75Z" />
             </svg>
-            Creación rápida
+            <span className="hidden sm:inline">Creación rápida</span><span className="sm:hidden">Varias</span>
           </button>
           <button
             onClick={openCreate}
@@ -194,7 +194,7 @@ export default function Tables() {
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
               <path d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z" />
             </svg>
-            Nueva mesa
+            <span className="hidden sm:inline">Nueva mesa</span><span className="sm:hidden">Mesa</span>
           </button>
         </div>
       </div>

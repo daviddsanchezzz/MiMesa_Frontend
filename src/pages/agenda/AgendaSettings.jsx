@@ -15,10 +15,10 @@ const KIND_LABEL = { staff: 'Profesional', space: 'Sala o espacio', equipment: '
 
 function Card({ title, subtitle, children, action }) {
   return (
-    <section className="bg-white rounded-2xl border border-gray-200 p-5 space-y-4">
-      <div className="flex items-start justify-between gap-3">
+    <section className="space-y-4">
+      <div className="flex items-start justify-between gap-3 pb-3 border-b border-gray-100">
         <div>
-          <h3 className="text-base font-semibold text-gray-900">{title}</h3>
+          <h3 className="text-[15px] font-semibold text-gray-900">{title}</h3>
           {subtitle && <p className="text-xs text-gray-500 mt-0.5">{subtitle}</p>}
         </div>
         {action}

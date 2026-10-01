@@ -52,13 +52,32 @@ import { Toaster, toast } from 'sonner';
 
 function LoadingScreen() {
   return (
-    <div className="flex items-center justify-center h-screen bg-slate-900">
-      <div className="flex flex-col items-center gap-3">
-        <div className="w-10 h-10 rounded-xl bg-violet-600 animate-pulse" />
-        <p className="text-slate-400 text-sm">Cargando...</p>
-      </div>
+    <div className="flex items-center justify-center h-[100dvh] bg-white">
+      <img src="/logo.svg" alt="" className="w-10 h-10 animate-pulse" />
     </div>
   );
+}
+
+// While a screen's code arrives the menu and bar stay put; only the content waits.
+function PageFallback() {
+  return <div className="h-40" aria-busy="true" />;
+}
+
+// After login, fetch the code of the everyday screens in the background so
+// switching tabs never waits for a download.
+let prefetched = false;
+function prefetchScreens(isAppointments) {
+  if (prefetched) return;
+  prefetched = true;
+  const go = () => {
+    const list = isAppointments
+      ? [() => import('./pages/Agenda'), () => import('./pages/today/AppointmentsToday'), () => import('./pages/Caja')]
+      : [() => import('./pages/reservas/Reservas'), () => import('./pages/today/RestaurantToday'), () => import('./pages/Reservations')];
+    [...list, () => import('./pages/clients/Customers'), () => import('./pages/clients/CustomerFile'), () => import('./pages/More'),
+      () => import('./pages/Settings'), () => import('./pages/Profile')].forEach((load) => load().catch(() => {}));
+  };
+  if ('requestIdleCallback' in window) window.requestIdleCallback(go, { timeout: 3000 });
+  else setTimeout(go, 1500);
 }
 
 function MobileHeader({ devMode, onLogout }) {
@@ -176,6 +195,7 @@ function LayoutShell({ children, fullBleed = false, devMode = false }) {
   if (!business.id && !business.isDev) return <Navigate to="/onboarding" replace />;
 
   const showBottomNav = !isDesktop && !devMode;
+  if (!devMode) prefetchScreens(isAppointments);
 
   return (
     <MobileHeaderProvider>
@@ -201,7 +221,7 @@ function LayoutShell({ children, fullBleed = false, devMode = false }) {
           ? `flex-1 overflow-hidden flex flex-col ${showBottomNav ? 'pb-[calc(4rem+env(safe-area-inset-bottom))]' : ''}`
           : `flex-1 overflow-auto px-4 pt-4 lg:px-8 lg:pt-7 ${showBottomNav ? 'pb-[calc(6rem+env(safe-area-inset-bottom))]' : 'pb-10'} ${impersonation ? 'pt-16 lg:pt-20' : ''}`}>
           {!devMode && !fullBleed && <PaymentIssueBanner />}
-          {children}
+          <Suspense fallback={<PageFallback />}>{children}</Suspense>
         </main>
       </div>
       {showBottomNav && <BottomNav onNew={openNew} />}

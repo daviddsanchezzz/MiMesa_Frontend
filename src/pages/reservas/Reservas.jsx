@@ -4,6 +4,7 @@ import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useSetMobileHeader } from '../../context/MobileHeaderContext';
 import { Segmented, Empty } from '../../ui/kit';
+import { useData } from '../../lib/query';
 import Icon from '../../ui/Icon';
 import DayStrip from '../agenda/DayStrip';
 import { DEFAULT_TZ, addDays, longDate, todayIn, weekStart, toHHMM } from '../agenda/utils';
@@ -117,7 +118,6 @@ export default function Reservas() {
   const [params, setParams] = useSearchParams();
   const view = ['calendar', 'map'].includes(params.get('view')) ? params.get('view') : 'list';
   const [date, setDate] = useState(() => (isDate(params.get('date')) ? params.get('date') : today));
-  const [counts, setCounts] = useState({});
 
   useSetMobileHeader({ title: 'Reservas', action: false });
 
@@ -132,18 +132,13 @@ export default function Reservas() {
   }, [params, setParams]);
 
   const from = weekStart(date);
-  useEffect(() => {
-    const load = () => api.get('/reservations', { params: { from, to: addDays(from, 6) } })
-      .then((res) => {
-        const out = {};
-        for (const r of (res.data || []).filter(live)) out[r.date] = (out[r.date] || 0) + 1;
-        setCounts(out);
-      })
-      .catch(() => {});
-    load();
-    window.addEventListener('reservation:created', load);
-    return () => window.removeEventListener('reservation:created', load);
-  }, [from]);
+  const weekQ = useData(['reservations', 'range', from, addDays(from, 6)],
+    () => api.get('/reservations', { params: { from, to: addDays(from, 6) } }).then((res) => res.data || []));
+  const counts = useMemo(() => {
+    const out = {};
+    for (const r of (weekQ.data || []).filter(live)) out[r.date] = (out[r.date] || 0) + 1;
+    return out;
+  }, [weekQ.data]);
 
   const setView = (v) => {
     const next = new URLSearchParams(params);

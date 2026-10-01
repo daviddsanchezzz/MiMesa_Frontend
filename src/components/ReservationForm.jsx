@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import api from '../services/api';
+import { useData } from '../lib/query';
 import { useAuth } from '../context/AuthContext';
 import { DEFAULT_TZ, addDays, todayIn } from '../pages/agenda/utils';
 import { dayLabel, shortDay } from '../lib/dates';
@@ -35,7 +36,8 @@ export default function ReservationForm({ reservation, onSave, onCancel, initial
   const isEdit = Boolean(reservation?._id);
   const theForkModuleEnabled = isModuleEnabled('thefork');
   const initialDate = reservation?.date || initialContext?.date || todayStr;
-  const [rooms, setRooms] = useState(initialContext?.rooms || []);
+  const roomsQ = useData(['rooms'], () => api.get('/rooms').then((r) => r.data || []), { enabled: !initialContext?.rooms?.length, staleTime: 5 * 60000 });
+  const rooms = initialContext?.rooms?.length ? initialContext.rooms : (roomsQ.data || []);
   const [form, setForm] = useState({
     guestName: reservation?.guestName || '',
     guestPhone: reservation?.guestPhone || '',
@@ -54,10 +56,6 @@ export default function ReservationForm({ reservation, onSave, onCancel, initial
   const skipInitialFetchRef = useRef(Boolean(initialContext && !isEdit && initialContext?.date === initialDate));
   const [showNotes, setShowNotes] = useState(Boolean(reservation?.notes));
 
-  useEffect(() => {
-    if (rooms.length > 0) return;
-    api.get('/rooms').then((r) => setRooms(r.data)).catch(() => setRooms([]));
-  }, [rooms.length]);
 
   useEffect(() => {
     if (!form.date) return;
@@ -88,16 +86,13 @@ export default function ReservationForm({ reservation, onSave, onCancel, initial
   const quickPeopleMax = Math.min(10, Math.max(1, Number(business?.maxReservationPeople) || 10));
   const peopleOptions = Array.from({ length: quickPeopleMax }, (_, i) => i + 1);
   const [customPeopleOpen, setCustomPeopleOpen] = useState(form.people > quickPeopleMax);
-  const [customers, setCustomers] = useState([]);
   const [customerQuery, setCustomerQuery] = useState(reservation?.guestName || '');
   const [selectedCustomer, setSelectedCustomer] = useState(() => (!isEdit && reservation?.guestName
     ? { name: reservation.guestName, phone: reservation.guestPhone, email: reservation.guestEmail } : null));
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    if (isEdit) return;
-    api.get('/customers').then((r) => setCustomers(Array.isArray(r.data) ? r.data : [])).catch(() => setCustomers([]));
-  }, [isEdit]);
+  // Same cache as Clientes.
+  const customers = useData(['customers', 'list'], () => api.get('/customers').then((r) => r.data), { enabled: !isEdit, retry: false }).data || [];
 
   const customerMatches = useMemo(() => {
     if (isEdit || selectedCustomer) return [];

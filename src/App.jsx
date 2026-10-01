@@ -2,6 +2,8 @@ import { lazy, Suspense, useEffect, useState } from 'react';
 import { MobileHeaderProvider, useMobileHeader } from './context/MobileHeaderContext';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { queryClient } from './lib/query';
 const Login = lazy(() => import('./pages/Login'));
 const Register = lazy(() => import('./pages/Register'));
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
@@ -305,6 +307,7 @@ function ModuleRoute({ moduleKey, children }) {
 export default function App() {
   return (
     <ErrorBoundary>
+    <QueryClientProvider client={queryClient}>
     <AuthProvider>
       <BrowserRouter>
         <Suspense fallback={<LoadingScreen />}>
@@ -355,6 +358,7 @@ export default function App() {
         </Suspense>
       </BrowserRouter>
     </AuthProvider>
+    </QueryClientProvider>
     </ErrorBoundary>
   );
 }

@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { useSetMobileHeader } from '../../context/MobileHeaderContext';
+import { useData } from '../../lib/query';
 import { Section, SectionLink, TodoRow, TodoLink, FigureLine, Empty, greeting } from '../../ui/kit';
 import { DEFAULT_TZ, addDays, longDate, todayIn, toMinutes } from '../agenda/utils';
 import { shortDay } from '../../lib/dates';
@@ -49,7 +50,6 @@ export default function RestaurantToday() {
   const { reservations, shifts, shiftOf, seats, pending, tables, actions, isManager, loading } = day;
   const [openId, setOpenId] = useState(null);
   const [showPending, setShowPending] = useState(false);
-  const [week, setWeek] = useState([]);
   const [nowMin, setNowMin] = useState(() => nowMinutes(tz));
 
   useSetMobileHeader({ title: business?.name || 'Hoy' });
@@ -59,19 +59,17 @@ export default function RestaurantToday() {
     return () => clearInterval(t);
   }, [tz]);
 
-  useEffect(() => {
-    const to = addDays(today, 6);
-    api.get('/reservations', { params: { from: today, to } })
-      .then((res) => {
-        const list = (res.data || []).filter(live);
-        setWeek(Array.from({ length: 7 }, (_, i) => {
-          const d = addDays(today, i);
-          const rows = list.filter((r) => r.date === d);
-          return { date: d, count: rows.length, people: peopleOf(rows) };
-        }));
-      })
-      .catch(() => setWeek([]));
-  }, [today, reservations]);
+  const weekQ = useData(['reservations', 'range', today, addDays(today, 6)],
+    () => api.get('/reservations', { params: { from: today, to: addDays(today, 6) } }).then((res) => res.data || []));
+  const week = useMemo(() => {
+    if (!weekQ.data) return [];
+    const list = weekQ.data.filter(live);
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = addDays(today, i);
+      const rows = list.filter((r) => r.date === d);
+      return { date: d, count: rows.length, people: peopleOf(rows) };
+    });
+  }, [weekQ.data, today]);
 
   const groups = useMemo(() => groupByShift(reservations, shifts, shiftOf), [reservations, shifts, shiftOf]);
   const liveToday = reservations.filter(live);

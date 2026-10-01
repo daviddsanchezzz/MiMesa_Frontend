@@ -1,9 +1,13 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useSetMobileHeader } from '../context/MobileHeaderContext';
 import { bookingsApi, apiError } from '../services/bookingsApi';
 import CheckoutModal from './agenda/CheckoutModal';
 import { Section, TimeRow, RowAction } from '../ui/kit';
+import { queryClient, useData } from '../lib/query';
+import { useResources } from './agenda/queries';
+
+const NONE = [];
 import { bookingTone } from '../lib/status';
 import {
   DEFAULT_TZ, PAY_METHODS, addDays, btnSecondary, euros, inputCls, longDate, parseEuros, payMethodLabel,
@@ -20,9 +24,7 @@ export default function Caja() {
   const tz = business?.timezone || DEFAULT_TZ;
   const today = todayIn(tz);
   const [date, setDate] = useState(today);
-  const [data, setData] = useState(null);
-  const [resources, setResources] = useState([]);
-  const [error, setError] = useState('');
+  const [actionError, setError] = useState('');
   const [charging, setCharging] = useState(null);
   const [counted, setCounted] = useState('');
   const [note, setNote] = useState('');
@@ -30,12 +32,12 @@ export default function Caja() {
 
   useSetMobileHeader({ title: 'Caja' });
 
-  const load = useCallback(() => {
-    setError('');
-    return bookingsApi.cashDay(date).then(setData).catch((err) => setError(apiError(err)));
-  }, [date]);
-  useEffect(() => { load(); }, [load]);
-  useEffect(() => { bookingsApi.resources().then(setResources).catch(() => {}); }, []);
+  // Cached (lib/query); charging, undoing or closing refreshes it.
+  const cashQ = useData(['bookings', 'cash', date], () => bookingsApi.cashDay(date));
+  const data = cashQ.data || null;
+  const resources = useResources().data || NONE;
+  const error = actionError || (cashQ.error ? apiError(cashQ.error) : '');
+  const load = useCallback(() => queryClient.invalidateQueries({ queryKey: ['bookings', 'cash'] }), []);
 
   const colors = useMemo(() => staffColors(resources), [resources]);
   const staffById = useMemo(() => Object.fromEntries(resources.map((r) => [r._id, r])), [resources]);

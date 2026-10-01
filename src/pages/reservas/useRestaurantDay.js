@@ -1,4 +1,7 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo } from 'react';
+import { queryClient, useData } from '../../lib/query';
+
+const EMPTY = [];
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { toMinutes } from '../agenda/utils';
@@ -14,41 +17,21 @@ const errText = (err, fallback) => err?.response?.data?.message || fallback;
 export default function useRestaurantDay(date) {
   const { hasRole } = useAuth();
   const isManager = hasRole('manager');
-  const [reservations, setReservations] = useState([]);
-  const [slots, setSlots] = useState([]);
-  const [tables, setTables] = useState([]);
-  const [pending, setPending] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const list = (x) => (Array.isArray(x.data) ? x.data : []);
+  const day = useData(['reservations', 'day', date], () => api.get('/reservations', { params: { date } }).then(list), { refetchInterval: 2 * 60000 });
+  const slotsQ = useData(['shifts', 'slots', date], () => api.get('/shifts/slots', { params: { date } }).then(list));
+  const pendingQ = useData(['reservations', 'pending'], () => api.get('/reservations/pending').then(list), { enabled: isManager, refetchInterval: 2 * 60000 });
+  const tablesQ = useData(['tables'], () => api.get('/tables').then(list), { staleTime: 5 * 60000 });
+  const reservations = day.data || EMPTY;
+  const slots = slotsQ.data || EMPTY;
+  const tables = tablesQ.data || EMPTY;
+  const pending = (isManager && pendingQ.data) || EMPTY;
+  const loading = day.isPending;
 
-  const loadDay = useCallback(async () => {
-    const [r, s] = await Promise.all([
-      api.get('/reservations', { params: { date } }).then((x) => x.data).catch(() => []),
-      api.get('/shifts/slots', { params: { date } }).then((x) => x.data).catch(() => []),
-    ]);
-    setReservations(Array.isArray(r) ? r : []);
-    setSlots(Array.isArray(s) ? s : []);
-  }, [date]);
-
-  const loadPending = useCallback(async () => {
-    if (!isManager) { setPending([]); return; }
-    const p = await api.get('/reservations/pending').then((x) => x.data).catch(() => []);
-    setPending(Array.isArray(p) ? p : []);
-  }, [isManager]);
-
-  const reload = useCallback(() => Promise.all([loadDay(), loadPending()]), [loadDay, loadPending]);
-
-  useEffect(() => {
-    setLoading(true);
-    loadDay().finally(() => setLoading(false));
-  }, [loadDay]);
-  useEffect(() => { loadPending(); }, [loadPending]);
-  useEffect(() => { api.get('/tables').then((x) => setTables(x.data || [])).catch(() => {}); }, []);
-  useEffect(() => {
-    const onCreated = () => reload();
-    window.addEventListener('reservation:created', onCreated);
-    const t = setInterval(reload, 2 * 60000);
-    return () => { window.removeEventListener('reservation:created', onCreated); clearInterval(t); };
-  }, [reload]);
+  const reload = useCallback(() => Promise.all([
+    queryClient.invalidateQueries({ queryKey: ['reservations'] }),
+    queryClient.invalidateQueries({ queryKey: ['shifts', 'slots', date] }),
+  ]), [date]);
 
   // Shifts in order, with the span of their slots: [{ name, start, end }]
   const shifts = useMemo(() => {

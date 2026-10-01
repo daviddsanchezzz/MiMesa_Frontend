@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { clearCache, invalidateAfterWrite } from '../lib/query';
 
 const DEFAULT_API_ORIGIN = import.meta.env.DEV ? 'http://localhost:5000' : 'https://api.vetrareserve.com';
 const API_ORIGIN = (import.meta.env.VITE_API_URL || DEFAULT_API_ORIGIN).replace(/\/api\/?$/, '');
@@ -23,7 +24,10 @@ function readStoredBusinessId() {
 let _activeBusinessId = readStoredBusinessId();
 
 export function setActiveBusinessId(id) {
-  _activeBusinessId = id ? String(id) : null;
+  const next = id ? String(id) : null;
+  // Another business (or none): nothing cached belongs to it.
+  if (next !== _activeBusinessId) clearCache();
+  _activeBusinessId = next;
   try {
     if (_activeBusinessId) localStorage.setItem(ACTIVE_BUSINESS_KEY, _activeBusinessId);
     else localStorage.removeItem(ACTIVE_BUSINESS_KEY);
@@ -48,7 +52,12 @@ api.interceptors.request.use(config => {
 
 // ── 401 handler ──────────────────────────────────────────────────────────────
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    // Something was saved: what depends on it is stale now (see lib/query).
+    const method = (response.config?.method || 'get').toLowerCase();
+    if (method !== 'get') invalidateAfterWrite(response.config?.url);
+    return response;
+  },
   (error) => {
     if (error.response?.status === 401) {
       window.dispatchEvent(new Event('auth:logout'));

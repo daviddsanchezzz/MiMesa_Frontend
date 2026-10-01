@@ -9,6 +9,7 @@ import {
   setImpersonationOriginalToken,
   clearImpersonationState,
 } from '../lib/authClient';
+import { clearCache } from '../lib/query';
 import api, { setActiveBusinessId } from '../services/api';
 
 const AuthContext = createContext(null);
@@ -102,6 +103,7 @@ export function AuthProvider({ children }) {
 
   // Logout
   const logout = async () => {
+    clearCache();
     await authClient.signOut().catch(() => {});
     setStoredToken(null);
     setBusiness(null);
@@ -112,6 +114,7 @@ export function AuthProvider({ children }) {
   };
 
   const startImpersonation = async ({ token, user }) => {
+    clearCache();
     const currentToken = getStoredToken();
     if (!currentToken) throw new Error('No hay sesión activa para iniciar suplantación');
     if (!token) throw new Error('Token de suplantación no válido');
@@ -135,6 +138,7 @@ export function AuthProvider({ children }) {
   };
 
   const stopImpersonation = async () => {
+    clearCache();
     const impersonatedToken = getStoredToken();
     const originalToken = getImpersonationOriginalToken();
     let restoredToken = originalToken || null;

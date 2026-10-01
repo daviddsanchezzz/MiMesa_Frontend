@@ -10,6 +10,7 @@
   "dependencies": {
     "@stripe/react-stripe-js": "^6.1.0",
     "@stripe/stripe-js": "^9.0.1",
+    "@tanstack/react-query": "^5.104.0",
     "axios": "^1.6.8",
     "better-auth": "^1.5.5",
     "html2canvas": "^1.4.1",

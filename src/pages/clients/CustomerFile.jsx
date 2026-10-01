@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
+import { queryClient, useData } from '../../lib/query';
 import api from '../../services/api';
 import { bookingsApi, apiError } from '../../services/bookingsApi';
 import { useAuth } from '../../context/AuthContext';
@@ -107,18 +108,26 @@ export default function CustomerFile() {
   const { business, isAppointments } = useAuth();
   const tz = business?.timezone || DEFAULT_TZ;
   const today = todayIn(tz);
-  const [file, setFile] = useState(null);
-  const [error, setError] = useState('');
+  const [actionError, setError] = useState('');
   const [notes, setNotes] = useState('');
   const [savingNotes, setSavingNotes] = useState(false);
   const [notesSaved, setNotesSaved] = useState(false);
   const [editing, setEditing] = useState(false);
   const [booking, setBooking] = useState(false);
 
-  const load = () => (isAppointments ? loadAppointments : loadRestaurant)(id, tz, today)
-    .then((f) => { setFile(f); setNotes(f.customer.notes || ''); })
-    .catch((err) => setError(apiError(err, 'No se encontró el cliente')));
-  useEffect(() => { load(); }, [id, isAppointments]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Cached per customer (lib/query); never shows another customer's file while loading.
+  const fileKey = ['customers', 'file', id, isAppointments ? 'appointments' : 'restaurant'];
+  const fileQ = useData(fileKey, () => (isAppointments ? loadAppointments : loadRestaurant)(id, tz, today), { placeholderData: undefined });
+  const file = fileQ.data || null;
+  const setFile = (fn) => queryClient.setQueryData(fileKey, (f) => (f ? fn(f) : f));
+  const load = () => queryClient.invalidateQueries({ queryKey: fileKey });
+  const error = actionError || (fileQ.error ? apiError(fileQ.error, 'No se encontró el cliente') : '');
+  // Notes follow the saved ones unless you are typing.
+  const savedNotes = file?.customer?.notes || '';
+  const [notesBase, setNotesBase] = useState(null);
+  useEffect(() => {
+    if (file && (notesBase === null || notes === notesBase)) { setNotes(savedNotes); setNotesBase(savedNotes); }
+  }, [savedNotes, file]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const customer = file?.customer;
   const book = () => (file?.bookUrl ? navigate(file.bookUrl) : setBooking(true));
@@ -132,6 +141,7 @@ export default function CustomerFile() {
     try {
       await api.put(`/customers/${id}`, { notes });
       setFile((f) => ({ ...f, customer: { ...f.customer, notes } }));
+      setNotesBase(notes);
       setNotesSaved(true);
       setTimeout(() => setNotesSaved(false), 2000);
     } catch (err) { setError(apiError(err)); } finally { setSavingNotes(false); }

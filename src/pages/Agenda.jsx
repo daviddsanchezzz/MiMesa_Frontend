@@ -10,6 +10,11 @@ import DayStrip from './agenda/DayStrip';
 import StaffAvatar from './agenda/StaffAvatar';
 import { Segmented } from '../ui/kit';
 import NewBookingModal from './agenda/NewBookingModal';
+import { useAbsences, useBookings, useResources, useSchedule, useServices, refreshBookings } from './agenda/queries';
+import { useData } from '../lib/query';
+
+const NONE = [];
+const NO_SCHEDULES = {};
 import BookingDetailModal from './agenda/BookingDetailModal';
 import AbsenceModal, { AbsenceDetailModal } from './agenda/AbsenceModal';
 import {
@@ -52,15 +57,8 @@ export default function Agenda() {
 
   const [date, setDate] = useState(() => (isDate(searchParams.get('date')) ? searchParams.get('date') : today));
   const [view, setView] = useState(() => readView() || (window.matchMedia('(max-width: 639px)').matches ? 'list' : 'day'));
-  const [resources, setResources] = useState([]);
-  const [services, setServices] = useState([]);
-  const [schedule, setSchedule] = useState(null);
-  const [staffSchedules, setStaffSchedules] = useState({});
-  const [bookings, setBookings] = useState([]);
-  const [absences, setAbsences] = useState([]);
   const [blocking, setBlocking] = useState(false);
   const [selectedAbsence, setSelectedAbsence] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [creating, setCreating] = useState(null);   // { resourceId, time, date } | null
   const [selected, setSelected] = useState(null);
@@ -85,35 +83,33 @@ export default function Agenda() {
 
   useSetMobileHeader({ title: 'Agenda', action: false });
 
-  const loadSetup = useCallback(async () => {
-    const [r, s, sch] = await Promise.all([bookingsApi.resources(), bookingsApi.services(), bookingsApi.schedule()]);
-    setResources(r);
-    setServices(s);
-    setSchedule(sch);
-    const staff = r.filter((x) => x.kind === 'staff');
-    const own = await Promise.all(staff.map((x) => bookingsApi.schedule({ ownerType: 'resource', ownerId: x._id }).catch(() => null)));
-    setStaffSchedules(Object.fromEntries(staff.map((x, i) => [x._id, own[i]?._id ? own[i] : null]).filter(([, v]) => v)));
-  }, []);
+  // Cached (lib/query): coming back to the agenda shows it at once.
+  const resQ = useResources();
+  const servQ = useServices();
+  const schedQ = useSchedule();
+  const resources = resQ.data || NONE;
+  const services = servQ.data || NONE;
+  const schedule = schedQ.data || null;
+  const staffIds = resources.filter((x) => x.kind === 'staff').map((x) => x._id);
+  const ownQ = useData(['bookings', 'schedule', 'staff', staffIds.join(',')], async () => {
+    const own = await Promise.all(staffIds.map((id) => bookingsApi.schedule({ ownerType: 'resource', ownerId: id }).catch(() => null)));
+    return Object.fromEntries(staffIds.map((id, i) => [id, own[i]?._id ? own[i] : null]).filter(([, v]) => v));
+  }, { enabled: staffIds.length > 0, staleTime: 5 * 60000 });
+  const staffSchedules = ownQ.data || NO_SCHEDULES;
+  const loading = resQ.isPending || servQ.isPending;
 
   const from = weekStart(date);
   const to = addDays(from, 6);
-  const loadBookings = useCallback(async () => {
-    const [b, a] = await Promise.all([bookingsApi.list({ from, to }), bookingsApi.absences(from, to).catch(() => [])]);
-    setBookings(b);
-    setAbsences(a);
-  }, [from, to]);
+  const bookingsQ = useBookings(from, to);
+  const absencesQ = useAbsences(from, to);
+  const bookings = bookingsQ.data || NONE;
+  const absences = absencesQ.data || NONE;
+  const loadBookings = refreshBookings;
 
   useEffect(() => {
-    setLoading(true);
-    setError('');
-    loadSetup().catch((err) => setError(apiError(err))).finally(() => setLoading(false));
-  }, [loadSetup]);
-
-  useEffect(() => {
-    loadBookings().catch((err) => setError(apiError(err)));
-    const t = setInterval(() => loadBookings().catch(() => {}), 2 * 60000);
-    return () => clearInterval(t);
-  }, [loadBookings]);
+    const failed = [resQ, servQ, bookingsQ].find((q) => q.error);
+    setError(failed ? apiError(failed.error) : '');
+  }, [resQ.error, servQ.error, bookingsQ.error]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const staff = useMemo(() => resources.filter((r) => r.kind === 'staff'), [resources]);
   // "Mi agenda": the professional linked to the logged-in user

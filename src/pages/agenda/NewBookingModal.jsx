@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import Modal from '../../components/Modal';
 import api from '../../services/api';
+import { useData } from '../../lib/query';
 import { bookingsApi, apiError } from '../../services/bookingsApi';
 import { DEFAULT_TZ, addDays, euros, inputCls, labelCls, todayIn, toMinutes } from './utils';
 import { useAuth } from '../../context/AuthContext';
@@ -51,12 +52,12 @@ export default function NewBookingModal({ date: initialDate, time: initialTime, 
   const [guest, setGuest] = useState({ guestName: '', guestPhone: '', guestEmail: '', ...(initialGuest || {}), notes: '', internalNotes: '' });
   const [partySize, setPartySize] = useState(1);
   const [showNotes, setShowNotes] = useState(false);
-  const [customers, setCustomers] = useState([]);
   const [picked, setPicked] = useState(() => (initialGuest?.guestName ? { name: initialGuest.guestName } : null));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
-  useEffect(() => { api.get('/customers').then((r) => setCustomers(r.data || [])).catch(() => {}); }, []);
+  // Same cache as Clientes: the search works from the first letter.
+  const customers = useData(['customers', 'list'], () => api.get('/customers').then((r) => r.data || []), { retry: false }).data || [];
 
   const first = bookable.find((s) => s._id === items[0]?.serviceId);
   const eligible = useMemo(() => staffForService(first, staff), [first, staff]);

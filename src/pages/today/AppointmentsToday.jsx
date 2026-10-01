@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useSetMobileHeader } from '../../context/MobileHeaderContext';
@@ -7,6 +7,7 @@ import { publicBookingUrl } from '../../lib/publicUrl';
 import { bookingTone } from '../../lib/status';
 import { Section, SectionLink, TimeRow, RowAction, TodoRow, TodoLink, FigureLine, Empty, greeting } from '../../ui/kit';
 import DayRibbon from '../../ui/DayRibbon';
+import { useAbsences, useBookings, useResources, useSchedule, useServices, useStats, refreshBookings } from '../agenda/queries';
 import StaffAvatar from '../agenda/StaffAvatar';
 import ShareLink from '../agenda/ShareLink';
 import BookingDetailModal from '../agenda/BookingDetailModal';
@@ -28,31 +29,30 @@ export default function AppointmentsToday() {
   const isManager = hasRole('manager');
   const navigate = useNavigate();
 
-  const [data, setData] = useState(null);
-  const [error, setError] = useState('');
   const [now, setNow] = useState(() => Date.now());
   const [showOverdue, setShowOverdue] = useState(false);
   const [selectedId, setSelectedId] = useState(null);
 
   useSetMobileHeader({ title: business?.name || 'Hoy' });
 
-  const load = useCallback(() => Promise.all([
-    bookingsApi.stats(),
-    bookingsApi.list({ from: today, to: today }),
-    bookingsApi.resources(),
-    bookingsApi.services(),
-    bookingsApi.schedule(),
-    bookingsApi.absences(today, today).catch(() => []),
-  ])
-    .then(([stats, bookings, resources, services, schedule, absences]) => setData({ stats, bookings, resources, services, schedule, absences }))
-    .catch((err) => setError(apiError(err))), [today]);
+  const statsQ = useStats();
+  const listQ = useBookings(today, today);
+  const resQ = useResources();
+  const servQ = useServices();
+  const schedQ = useSchedule();
+  const absQ = useAbsences(today, today);
+  const all = [statsQ, listQ, resQ, servQ, schedQ];
+  const data = all.every((q) => q.data !== undefined)
+    ? { stats: statsQ.data, bookings: listQ.data, resources: resQ.data, services: servQ.data, schedule: schedQ.data, absences: absQ.data || [] }
+    : null;
+  const failed = all.find((q) => q.error && q.data === undefined);
+  const error = failed ? apiError(failed.error) : '';
+  const load = refreshBookings;
 
   useEffect(() => {
-    load();
     const tick = setInterval(() => setNow(Date.now()), 60000);
-    const refresh = setInterval(load, 3 * 60000);
-    return () => { clearInterval(tick); clearInterval(refresh); };
-  }, [load]);
+    return () => clearInterval(tick);
+  }, []);
 
   const colors = useMemo(() => staffColors(data?.resources), [data]);
   const staffById = useMemo(() => Object.fromEntries((data?.resources || []).map((r) => [r._id, r])), [data]);

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import { bookingsApi, apiError } from '../../services/bookingsApi';
@@ -7,6 +7,11 @@ import { useSetMobileHeader } from '../../context/MobileHeaderContext';
 import CustomerForm from '../../components/CustomerForm';
 import Modal from '../../components/Modal';
 import CustomerListTools from '../../components/CustomerListTools';
+import { queryClient, useData } from '../../lib/query';
+import { useResources } from '../agenda/queries';
+
+const NO_SUMMARY = {};
+const NO_RESOURCES = [];
 import Icon from '../../ui/Icon';
 import { DEFAULT_TZ, euros, initials, pluralize, staffColors, todayIn } from '../agenda/utils';
 import { dayLabel } from '../../lib/dates';
@@ -56,10 +61,6 @@ export default function Customers() {
   const tz = business?.timezone || DEFAULT_TZ;
   const today = todayIn(tz);
   const navigate = useNavigate();
-  const [customers, setCustomers] = useState(null);
-  const [summary, setSummary] = useState({});
-  const [resources, setResources] = useState([]);
-  const [error, setError] = useState('');
   const [q, setQ] = useState('');
   const [filter, setFilter] = useState('all');
   const [sort, setSort] = useState('recent');
@@ -67,10 +68,16 @@ export default function Customers() {
 
   useSetMobileHeader({ title: 'Clientes', action: { label: 'Cliente', onClick: () => setCreating(true) } });
 
-  const load = () => Promise.all([api.get('/customers').then((r) => r.data), cfg.load()])
-    .then(([c, extra]) => { setCustomers(c); setSummary(extra.summary || {}); setResources(extra.resources || []); })
-    .catch((err) => setError(apiError(err)));
-  useEffect(() => { load(); }, [sector]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Cached (lib/query); saving a customer, booking or reservation refreshes it.
+  const customersQ = useData(['customers', 'list'], () => api.get('/customers').then((r) => r.data));
+  const summaryQ = useData([isAppointments ? 'bookings' : 'reservations', 'customersSummary'],
+    () => (isAppointments ? bookingsApi.customersSummary() : api.get('/reservations/customers/summary').then((r) => r.data).catch(() => ({}))));
+  const resQ = useResources();
+  const customers = customersQ.data || null;
+  const summary = summaryQ.data || NO_SUMMARY;
+  const resources = (isAppointments && resQ.data) || NO_RESOURCES;
+  const error = customersQ.error ? apiError(customersQ.error) : '';
+  const load = () => queryClient.invalidateQueries({ queryKey: ['customers'] });
 
   const colors = useMemo(() => staffColors(resources), [resources]);
   const staffById = useMemo(() => Object.fromEntries(resources.map((r) => [r._id, r])), [resources]);

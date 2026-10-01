@@ -30,8 +30,8 @@ export default function DayRibbon({ lanes, from, to, now = null, onEmpty }) {
                 const m = from + ((e.clientX - rect.left) / rect.width) * span;
                 onEmpty(lane.id, Math.floor(m / 15) * 15);
               } : undefined}>
-              {(lane.closed || []).map(([s, e]) => (
-                <div key={`c${s}`} className="absolute inset-y-0"
+              {(lane.closed || []).map(([s, e], i) => (
+                <div key={`c${i}-${s}`} className="absolute inset-y-0"
                   style={{ left: pct(s), width: width(s, e), backgroundImage: 'repeating-linear-gradient(135deg, rgba(156,163,175,0.22) 0 4px, transparent 4px 8px)' }} />
               ))}
               {lane.blocks.map((b) => {

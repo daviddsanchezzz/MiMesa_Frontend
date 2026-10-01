@@ -164,7 +164,7 @@ export default function AppointmentsToday() {
   );
 
   return (
-    <div className="max-w-6xl mx-auto">
+    <div className="w-full">
       <header className="mb-6">
         <div className="min-w-0">
           <p className="text-sm text-gray-500">{longDate(today)}</p>

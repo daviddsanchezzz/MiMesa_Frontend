@@ -163,7 +163,7 @@ export default function CustomerFile() {
 
   if (error && !file) {
     return (
-      <div className="max-w-5xl mx-auto space-y-3">
+      <div className="w-full space-y-3">
         <Link to="/customers" className="text-sm text-violet-700 font-semibold">‹ Clientes</Link>
         <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</p>
       </div>
@@ -172,7 +172,7 @@ export default function CustomerFile() {
   if (!file) return <p className="text-sm text-gray-400">Cargando…</p>;
 
   return (
-    <div className="max-w-5xl mx-auto">
+    <div className="w-full">
       <Link to="/customers" className="inline-flex items-center gap-1 text-sm text-gray-500 font-medium hover:text-gray-900">
         <Icon name="left" className="w-4 h-4" strokeWidth={2} />Clientes
       </Link>

@@ -1658,7 +1658,7 @@ export default function Finanzas() {
   ];
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6" style={{ overflowX: 'clip' }}>
+    <div className="w-full space-y-6" style={{ overflowX: 'clip' }}>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>

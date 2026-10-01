@@ -442,7 +442,7 @@ export default function DevDashboard() {
   };
 
   return (
-    <div className="w-full max-w-5xl mx-auto px-4 sm:px-6 py-4 space-y-4">
+    <div className="w-full px-4 sm:px-6 py-4 space-y-4">
       <div className="hidden lg:flex items-end justify-between gap-3">
         <div>
           <h2 className="text-xl font-bold text-gray-900">Clientes</h2>

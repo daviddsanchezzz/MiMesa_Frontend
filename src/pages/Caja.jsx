@@ -64,7 +64,7 @@ export default function Caja() {
   const METHOD_COLOR = { cash: '#10b981', card: '#8b5cf6', bizum: '#0ea5e9', other: '#94a3b8' };
 
   return (
-    <div className="max-w-6xl mx-auto">
+    <div className="w-full">
       <div className="flex items-center justify-between gap-3 mb-5">
         <div>
           <h1 className="hidden lg:block text-2xl font-semibold tracking-tight text-gray-900">Caja</h1>

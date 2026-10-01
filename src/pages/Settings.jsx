@@ -122,7 +122,7 @@ export default function Settings() {
   );
 
   return (
-    <div className="max-w-6xl mx-auto">
+    <div className="w-full">
       <h1 className="hidden lg:block text-2xl font-semibold tracking-tight text-gray-900 mb-6">Configuración</h1>
       <div className="grid grid-cols-1 lg:grid-cols-[220px_minmax(0,1fr)] gap-10 items-start">
         <div className={`${tab && !isDesktop ? 'hidden' : ''} lg:block lg:sticky lg:top-6`}>{list}</div>

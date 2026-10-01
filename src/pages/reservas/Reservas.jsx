@@ -147,7 +147,7 @@ export default function Reservas() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-4">
+    <div className="w-full space-y-4">
       <div className="flex items-center justify-between gap-3">
         <h1 className="hidden lg:block text-2xl font-semibold tracking-tight text-gray-900">Reservas</h1>
         <Segmented value={view} onChange={setView} options={[['list', 'Lista'], ['calendar', 'Calendario'], ['map', 'Plano']]} />

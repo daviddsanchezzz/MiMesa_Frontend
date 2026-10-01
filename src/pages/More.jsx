@@ -41,7 +41,7 @@ export default function More() {
   const userEmail = session?.user?.email || business?.userEmail || '';
 
   return (
-    <div className="max-w-xl mx-auto space-y-6">
+    <div className="w-full space-y-6">
       <div className="flex items-center gap-3 px-1">
         {business?.logoUrl
           ? <img src={business.logoUrl} alt="" className="w-12 h-12 rounded-2xl object-contain bg-white border border-gray-200 p-1" />

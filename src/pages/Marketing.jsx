@@ -50,7 +50,7 @@ export default function Marketing() {
   const remaining = Math.max(0, 3 - recentCampaigns);
 
   return (
-    <div className="space-y-5 max-w-3xl">
+    <div className="space-y-5">
       <div>
         <h2 className="hidden lg:block text-xl font-bold text-gray-900">Email marketing</h2>
         <p className="text-sm text-gray-400 mt-0.5">

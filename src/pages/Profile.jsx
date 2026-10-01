@@ -193,7 +193,7 @@ export default function Profile() {
   const displayName = user.name || 'Sin nombre';
 
   return (
-    <div className="max-w-xl mx-auto space-y-7">
+    <div className="w-full space-y-7">
       <header className="flex items-center gap-4 pt-1">
         <span className="w-16 h-16 rounded-full flex items-center justify-center text-white text-xl font-semibold shrink-0" style={{ backgroundColor: avatarColor(displayName) }}>
           {initials(displayName)}
@@ -209,6 +209,8 @@ export default function Profile() {
 
       {pageError && <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{pageError}</p>}
 
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-x-10 gap-y-7 items-start">
+      <div className="space-y-7">
       <Group title="Tus datos">
         {editingName ? (
           <li className="px-4 py-3">
@@ -238,6 +240,8 @@ export default function Profile() {
         </Group>
       ))}
 
+      </div>
+      <div className="space-y-7">
       <Group title="En este dispositivo">
         <PushNotificationToggle businessType={business?.businessType} />
         {!isPushSupported() && (
@@ -273,6 +277,8 @@ export default function Profile() {
       <Group>
         <Row icon="logout" label="Cerrar sesión" danger onClick={() => logout()} />
       </Group>
+      </div>
+      </div>
 
       {showPassword && (
         <Modal title="Cambiar contraseña" subtitle="Tu sesión sigue abierta después del cambio."

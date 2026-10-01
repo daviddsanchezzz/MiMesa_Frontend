@@ -101,7 +101,7 @@ export default function RestaurantToday() {
   ].filter(Boolean);
 
   return (
-    <div className="max-w-6xl mx-auto">
+    <div className="w-full">
       <header className="mb-6">
         <p className="text-sm text-gray-500">{longDate(today)}</p>
         <h1 className="text-2xl lg:text-3xl font-semibold tracking-tight text-gray-900 mt-0.5">{greeting(session?.user?.name)}</h1>

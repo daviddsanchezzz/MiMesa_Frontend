@@ -74,7 +74,7 @@ export default function FollowUpSettings() {
   }
 
   return (
-    <div className="space-y-4 max-w-2xl">
+    <div className="space-y-4">
       <Card title="Recordatorio de la cita"
         desc={remindersOn
           ? 'Email 24 horas antes, con el botón para cambiar o cancelar y liberar el hueco. Siempre activo para los clientes con email.'

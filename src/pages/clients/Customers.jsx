@@ -133,7 +133,7 @@ export default function Customers() {
   }, [summary, isAppointments]);
 
   return (
-    <div className="max-w-6xl mx-auto space-y-5">
+    <div className="w-full space-y-5">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="hidden lg:block text-2xl font-semibold tracking-tight text-gray-900">Clientes</h1>

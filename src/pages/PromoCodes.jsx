@@ -74,7 +74,7 @@ export default function PromoCodes() {
   const isMaxed   = (p) => p.maxUses !== null && p.usedCount >= p.maxUses;
 
   return (
-    <div className="space-y-5 max-w-3xl">
+    <div className="space-y-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h2 className="hidden lg:block text-xl font-bold text-gray-900">Códigos promocionales</h2>

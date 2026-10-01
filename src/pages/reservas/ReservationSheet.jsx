@@ -78,7 +78,7 @@ export default function ReservationSheet({ reservation: r, tables, actions, isMa
 
   if (editing) {
     return (
-      <Modal title="Editar reserva" onClose={() => setEditing(false)}>
+      <Modal title="Editar reserva" onClose={() => setEditing(false)} size="md">
         <ReservationForm reservation={r} onSave={async () => { setEditing(false); await actions.reload?.(); onClose(); }} onCancel={() => setEditing(false)} />
       </Modal>
     );

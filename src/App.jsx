@@ -204,7 +204,7 @@ function LayoutShell({ children, fullBleed = false, devMode = false }) {
       </div>
       {showBottomNav && <BottomNav onNew={openNew} />}
       {!devMode && newRsvModal && (
-        <Modal title="Nueva reserva" onClose={() => setNewRsvModal(false)}>
+        <Modal title="Nueva reserva" onClose={() => setNewRsvModal(false)} size="md">
           <ReservationForm
             onSave={() => {
               setNewRsvModal(false);

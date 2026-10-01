@@ -241,7 +241,7 @@ export default function CustomerFile() {
         </Modal>
       )}
       {booking && (
-        <Modal title="Nueva reserva" onClose={() => setBooking(false)}>
+        <Modal title="Nueva reserva" onClose={() => setBooking(false)} size="md">
           <ReservationForm reservation={{ guestName: customer.name, guestPhone: customer.phone || '', guestEmail: customer.email || '' }}
             onSave={() => { setBooking(false); window.dispatchEvent(new CustomEvent('app:toast', { detail: { message: 'Reserva creada' } })); load(); }}
             onCancel={() => setBooking(false)} />

@@ -5,9 +5,11 @@ import CheckoutModal from './CheckoutModal';
 import RescheduleModal from './RescheduleModal';
 import Modal from '../../components/Modal';
 import StaffAvatar from './StaffAvatar';
+import { StatusText } from '../../ui/kit';
+import { bookingTone } from '../../lib/status';
 import { bookingsApi, apiError } from '../../services/bookingsApi';
 import {
-  STATUS, DEFAULT_TZ, btnPrimary, btnSecondary, euros, inputCls, timeInTz, dateInTz, addDays, initials, payMethodLabel, waLink,
+  DEFAULT_TZ, btnPrimary, btnSecondary, euros, inputCls, timeInTz, dateInTz, addDays, payMethodLabel, waLink,
 } from './utils';
 
 // What each status offers (mirrors the backend transitions):
@@ -21,6 +23,7 @@ const ACTIONS = {
   cancelled:  { main: [], more: [] },
 };
 
+const bigBtn = 'w-full inline-flex items-center justify-center gap-2 h-12 rounded-xl text-[15px] font-semibold transition-colors disabled:opacity-50';
 const contactBtn = 'inline-flex items-center justify-center gap-1.5 px-2 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-gray-700 hover:bg-gray-50';
 
 const SOURCE = { online: 'Reservada online', phone: 'Reservada por teléfono', walk_in: 'Sin cita previa', staff: 'Creada por el equipo' };
@@ -52,7 +55,6 @@ export default function BookingDetailModal({ booking, staffById, services = [], 
   const canMove = !booking.payment && ['pending', 'confirmed', 'checked_in'].includes(booking.status);
   const { hasRole } = useAuth();
   const canCharge = !booking.payment && ['confirmed', 'checked_in', 'completed'].includes(booking.status);
-  const st = STATUS[booking.status] || STATUS.confirmed;
   const actions = ACTIONS[booking.status] || { main: [], more: [] };
   const notesChanged = notes !== (booking.notes || '') || internalNotes !== (booking.internalNotes || '');
   const showTotal = booking.segments.length > 1;
@@ -82,19 +84,10 @@ export default function BookingDetailModal({ booking, staffById, services = [], 
   };
 
   const header = (
-    <div className="flex items-center gap-3 min-w-0">
-      <span className="w-11 h-11 rounded-full bg-violet-100 text-violet-700 flex items-center justify-center text-sm font-bold shrink-0">
-        {initials(booking.guestName)}
-      </span>
-      <div className="min-w-0">
-        <div className="flex items-center gap-2 min-w-0">
-          <h3 className="text-base font-semibold text-gray-900 truncate">{booking.guestName}</h3>
-          <span className={`shrink-0 text-[11px] font-semibold px-2 py-0.5 rounded-full border ${st.cls}`}>{st.label}</span>
-        </div>
-        <p className="text-sm text-gray-500 mt-0.5">
-          {dayText(booking.start, tz)} · {timeInTz(booking.start, tz)} – {timeInTz(booking.end, tz)}
-        </p>
-      </div>
+    <div className="min-w-0">
+      <p className="text-xs text-gray-500">{dayText(booking.start, tz)} · {timeInTz(booking.start, tz)} – {timeInTz(booking.end, tz)}</p>
+      <h3 className="text-lg font-semibold text-gray-900 truncate">{booking.guestName}</h3>
+      <StatusText tone={bookingTone(booking)} className="mt-0.5" />
     </div>
   );
 
@@ -103,7 +96,7 @@ export default function BookingDetailModal({ booking, staffById, services = [], 
     <div className="space-y-2">
       {canCharge && (
         <button type="button" disabled={busy} onClick={() => setCharging(true)}
-          className="w-full inline-flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-emerald-600 text-white text-base font-semibold hover:bg-emerald-700 disabled:opacity-50">
+          className={`${bigBtn} bg-gray-900 text-white hover:bg-black`}>
           Cobrar {euros(booking.totalPrice)}
         </button>
       )}
@@ -111,7 +104,8 @@ export default function BookingDetailModal({ booking, staffById, services = [], 
         <div className={`grid gap-2 ${actions.main.length > 1 ? 'grid-cols-2' : 'grid-cols-1'}`}>
           {actions.main.map(([status, label], i) => (
             <button key={status} type="button" disabled={busy} onClick={() => changeStatus(status)}
-              className={i === 0 && !canCharge ? btnPrimary : btnSecondary}>
+              className={`${bigBtn} ${status === 'checked_in' ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                : i === 0 && !canCharge ? 'bg-violet-600 text-white hover:bg-violet-700' : 'border border-gray-200 text-gray-800 hover:bg-gray-50'}`}>
               {label}
             </button>
           ))}
@@ -140,12 +134,12 @@ export default function BookingDetailModal({ booking, staffById, services = [], 
     <Modal header={header} footer={footer} onClose={onClose} size="md">
       <div className="space-y-4">
         {/* What and who */}
-        <ul className="rounded-xl border border-gray-200 divide-y divide-gray-100">
+        <ul className="divide-y divide-gray-100 border-y border-gray-100">
           {booking.segments.map((seg) => {
             const people = (seg.resourceIds || []).map((id) => staffById[id]).filter((r) => r && r.kind === 'staff');
             const person = people[0];
             return (
-              <li key={seg._id} className="px-3.5 py-3 flex items-center gap-3">
+              <li key={seg._id} className="py-3 flex items-center gap-3">
                 {person
                   ? <StaffAvatar name={person.name} photo={person.photo} color={colors[person._id]} size={32} />
                   : <span className="w-8 h-8 rounded-full bg-gray-100 shrink-0" />}
@@ -161,7 +155,7 @@ export default function BookingDetailModal({ booking, staffById, services = [], 
             );
           })}
           {showTotal && (
-            <li className="px-3.5 py-2.5 flex justify-between text-sm">
+            <li className="py-2.5 flex justify-between text-sm">
               <span className="text-gray-500">Total</span>
               <span className="font-semibold text-gray-900 tabular-nums">{euros(booking.totalPrice)}</span>
             </li>

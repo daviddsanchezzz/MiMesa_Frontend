@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import Icon from './Icon';
 import { TONES, toneBar, toneLabel } from '../lib/status';
@@ -151,4 +152,31 @@ export function greeting(name) {
   const hello = h < 6 ? 'Buenas noches' : h < 14 ? 'Buenos días' : h < 21 ? 'Buenas tardes' : 'Buenas noches';
   const first = /[a-zA-ZÀ-ÿ]/.test(name || '') ? name.trim().split(/\s+/)[0] : '';
   return first ? `${hello}, ${first}` : hello;
+}
+
+/** A small button that opens a list of choices (no native select: no iOS zoom, same look everywhere). */
+export function MenuButton({ children, items, align = 'right', className = '', ariaLabel }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="relative shrink-0">
+      <button type="button" aria-label={ariaLabel} onClick={() => setOpen((o) => !o)}
+        className={`inline-flex items-center gap-1 rounded-full text-[13px] font-semibold text-gray-700 hover:bg-gray-100 ${className}`}>
+        {children}
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
+          <div className={`absolute z-40 top-full mt-1 ${align === 'right' ? 'right-0' : 'left-0'} min-w-[12rem] bg-white border border-gray-200 rounded-xl shadow-lg py-1`}>
+            {items.filter(Boolean).map((it) => (
+              <button key={it.label} type="button" onClick={() => { setOpen(false); it.onClick(); }}
+                className={`w-full flex items-center justify-between gap-3 text-left px-3.5 py-2.5 text-sm hover:bg-gray-50 ${it.active ? 'font-semibold text-gray-900' : 'text-gray-700'}`}>
+                {it.label}
+                {it.active && <Icon name="check" className="w-4 h-4 text-violet-600" strokeWidth={2} />}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
 }

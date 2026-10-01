@@ -13,6 +13,7 @@ import { useResources } from '../agenda/queries';
 const NO_SUMMARY = {};
 const NO_RESOURCES = [];
 import Icon from '../../ui/Icon';
+import { MenuButton } from '../../ui/kit';
 import { DEFAULT_TZ, euros, initials, pluralize, staffColors, todayIn } from '../agenda/utils';
 import { dayLabel } from '../../lib/dates';
 import { avatarColor, relDays, shortDateTime } from './format';
@@ -161,7 +162,7 @@ export default function Customers() {
             className="w-full rounded-full bg-gray-100 border border-transparent pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:bg-white focus:border-gray-300 focus:ring-2 focus:ring-violet-500/30" />
         </label>
         <div className="flex items-center gap-2">
-          <div className="flex gap-1.5 overflow-x-auto -mx-1 px-1 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div className="flex-1 min-w-0 flex gap-1.5 overflow-x-auto -mx-1 px-1 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {cfg.filters.map(([key, label]) => (
               <button key={key} type="button" onClick={() => setFilter(key)}
                 className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${filter === key ? 'bg-gray-900 border-gray-900 text-white' : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'}`}>
@@ -169,10 +170,13 @@ export default function Customers() {
               </button>
             ))}
           </div>
-          <select value={sort} onChange={(e) => setSort(e.target.value)} aria-label="Ordenar"
-            className="ml-auto shrink-0 text-xs border border-gray-200 rounded-full pl-3 py-1.5 bg-white text-gray-600">
-            {cfg.sorts.map(([k, l]) => <option key={k} value={k}>{l}</option>)}
-          </select>
+          <div className="ml-auto">
+            <MenuButton ariaLabel="Ordenar" className="h-8 pl-2.5 pr-2 border border-gray-200"
+              items={cfg.sorts.map(([k, l]) => ({ label: l, active: k === sort, onClick: () => setSort(k) }))}>
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.7" className="w-4 h-4"><path d="M6 4v12m0 0-3-3m3 3 3-3M14 16V4m0 0-3 3m3-3 3 3" strokeLinecap="round" strokeLinejoin="round" /></svg>
+              <span className="hidden sm:inline">{cfg.sorts.find(([k]) => k === sort)?.[1]}</span>
+            </MenuButton>
+          </div>
         </div>
       </div>
 

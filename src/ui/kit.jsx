@@ -60,7 +60,7 @@ export function RowAction({ children, onClick, tone = 'neutral', disabled }) {
  * colour of its state, who and what, and on the right whatever helps most
  * (people, professional, a one-tap action).
  */
-export function TimeRow({ time, end, tone = 'confirmed', title, subtitle, badge, trailing, onClick, highlight = false, muted, sector }) {
+export function TimeRow({ time, end, tone = 'confirmed', title, subtitle, badge, trailing, onClick, highlight = false, muted, sector, wide = false }) {
   const isMuted = muted ?? ['cancelled', 'lost'].includes(tone);
   return (
     <li>
@@ -68,8 +68,8 @@ export function TimeRow({ time, end, tone = 'confirmed', title, subtitle, badge,
         onClick={onClick}
         onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick(); } } : undefined}
         className={`group flex items-stretch gap-3 py-3 px-2 -mx-2 rounded-xl ${onClick ? 'cursor-pointer hover:bg-gray-50 active:bg-gray-100' : ''} ${highlight ? 'bg-violet-50/70 hover:bg-violet-50' : ''}`}>
-        <div className="w-12 shrink-0 text-right pt-px">
-          <p className={`text-[15px] font-semibold tabular-nums leading-5 ${isMuted ? 'text-gray-300 line-through' : 'text-gray-900'}`}>{time}</p>
+        <div className={`${wide ? 'w-[74px]' : 'w-12'} shrink-0 text-right pt-px`}>
+          <p className={`${wide ? 'text-[13px]' : 'text-[15px]'} font-semibold tabular-nums leading-5 whitespace-nowrap ${isMuted ? 'text-gray-300 line-through' : 'text-gray-900'}`}>{time}</p>
           {end && <p className="text-[11px] text-gray-400 tabular-nums leading-4">{end}</p>}
         </div>
         <span className="w-[3px] rounded-full shrink-0" style={toneBar(tone)} aria-hidden="true" />

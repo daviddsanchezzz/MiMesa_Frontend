@@ -6,7 +6,8 @@ export default defineConfig({
   server: {
     port: 3000,
     proxy: {
-      '/api': 'http://localhost:5000',
+      // Local: the same backend the app talks to (VITE_API_URL), so public pages work too.
+      '/api': process.env.VITE_API_URL || 'http://localhost:5000',
     },
   },
 });

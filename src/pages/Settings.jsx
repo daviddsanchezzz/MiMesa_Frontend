@@ -14,6 +14,7 @@ import { PagosSection } from './settings/PagosSection';
 import { ProfessionalsSettings, ServicesSettings, HoursSettings } from './agenda/AgendaSettings';
 import { BookingLinkSettings } from './agenda/BookingLinkSettings';
 import FollowUpSettings from './agenda/FollowUpSettings';
+import PolicySettings from './agenda/PolicySettings';
 import { useSetMobileHeader } from '../context/MobileHeaderContext';
 import Icon from '../ui/Icon';
 
@@ -23,12 +24,13 @@ const GROUPS = {
   appointments: [
     { title: 'Negocio', items: [{ key: 'negocio', label: 'Datos del negocio', desc: 'Nombre, logo, dirección y contacto', icon: 'building' }] },
     { title: 'Qué se reserva', items: [
-      { key: 'profesionales', label: 'Profesionales', desc: 'Quién o qué se reserva y en qué horario', icon: 'person' },
-      { key: 'servicios', label: 'Servicios', desc: 'Lo que se reserva: duración, precio y quién lo hace', icon: 'list' },
+      { key: 'profesionales', label: 'Profesionales', desc: 'Quién atiende y su horario', icon: 'person' },
+      { key: 'servicios', label: 'Servicios', desc: 'Duración, precio y quién lo hace', icon: 'list' },
     ] },
-    { title: 'Cuándo', items: [{ key: 'horario', label: 'Horario y cierres', desc: 'Apertura, festivos y vacaciones', icon: 'clock' }] },
+    { title: 'Cuándo', items: [{ key: 'horario', label: 'Horario y cierres', desc: 'Cuándo abres, festivos y vacaciones', icon: 'clock' }] },
     { title: 'Reservas online', items: [
       { key: 'enlace', label: 'Tu página de reservas', desc: 'El enlace que compartes con tus clientes', icon: 'link' },
+      { key: 'normas', label: 'Normas de reserva', desc: 'Hasta cuándo pueden cambiar o cancelar', icon: 'alert' },
       { key: 'avisos', label: 'Avisos a clientes', desc: 'Recordatorios, te toca volver y opiniones', icon: 'chat' },
     ] },
     { title: 'Facturación', items: [{ key: 'suscripcion', label: 'Suscripción', desc: 'Plan, uso y facturas', icon: 'cash', owner: true }] },
@@ -36,24 +38,30 @@ const GROUPS = {
   restaurant: [
     { title: 'Negocio', items: [{ key: 'negocio', label: 'Datos del negocio', desc: 'Nombre, logo, dirección y contacto', icon: 'building' }] },
     { title: 'Qué se reserva', items: [
-      { key: 'salas', label: 'Salas', desc: 'Zonas del restaurante', icon: 'more' },
-      { key: 'mesas', label: 'Mesas', desc: 'Mesas y capacidades', icon: 'map' },
+      { key: 'mesas', label: 'Mesas y salas', desc: 'Zonas del local y sus mesas', icon: 'map' },
     ] },
-    { title: 'Cuándo', items: [
-      { key: 'turnos', label: 'Turnos', desc: 'Horarios de comida y cena', icon: 'clock' },
-      { key: 'vacaciones', label: 'Cierres y vacaciones', desc: 'Días cerrados', icon: 'calendar' },
-      { key: 'limites', label: 'Límites', desc: 'Personas máximas por reserva', icon: 'users' },
-    ] },
+    { title: 'Cuándo', items: [{ key: 'turnos', label: 'Turnos y cierres', desc: 'Comida y cena, festivos y vacaciones', icon: 'clock' }] },
     { title: 'Reservas online', items: [
       { key: 'publico', label: 'Tu página de reservas', desc: 'Lo que ven tus clientes al reservar', icon: 'link' },
+      { key: 'limites', label: 'Normas de reserva', desc: 'Antelación, personas máximas y duración', icon: 'alert' },
       { key: 'pagos', label: 'Señales y garantías', desc: 'Cobrar por adelantado o con tarjeta', icon: 'euro', owner: true },
     ] },
     { title: 'Facturación', items: [{ key: 'suscripcion', label: 'Suscripción', desc: 'Plan, uso y facturas', icon: 'cash', owner: true }] },
   ],
 };
 
+// Old tabs that now live inside another screen (links keep working).
+const ALIASES = { salas: 'mesas', vacaciones: 'turnos' };
+
+function TablesAndRooms() {
+  return <div className="space-y-10"><SalasSection /><MesasSection /></div>;
+}
+function ShiftsAndClosures() {
+  return <div className="space-y-10"><TurnosSection /><VacacionesSection /></div>;
+}
+
 const SECTIONS = {
-  negocio: NegocioSection, salas: SalasSection, mesas: MesasSection, turnos: TurnosSection, vacaciones: VacacionesSection,
+  negocio: NegocioSection, mesas: TablesAndRooms, turnos: ShiftsAndClosures, normas: PolicySettings,
   limites: LimitesSection, publico: PublicoSection, suscripcion: BillingSection, pagos: PagosSection,
   profesionales: ProfessionalsSettings, servicios: ServicesSettings, horario: HoursSettings, enlace: BookingLinkSettings, avisos: FollowUpSettings,
 };
@@ -71,7 +79,8 @@ export default function Settings() {
   const all = groups.flatMap((g) => g.items);
 
   const [searchParams, setSearchParams] = useSearchParams();
-  const urlTab = all.find((t) => t.key === searchParams.get('tab'))?.key || null;
+  const askedTab = ALIASES[searchParams.get('tab')] || searchParams.get('tab');
+  const urlTab = all.find((t) => t.key === askedTab)?.key || null;
   const [isDesktop, setIsDesktop] = useState(() => window.matchMedia('(min-width: 1024px)').matches);
   useEffect(() => {
     const mq = window.matchMedia('(min-width: 1024px)');

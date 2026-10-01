@@ -5,7 +5,6 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { btnSecondary } from './utils';
 import ShareLink from './ShareLink';
-import PolicySettings from './PolicySettings';
 
 // Configuración → Enlace de reservas (appointment businesses): the public
 // booking link to share (copy, WhatsApp, QR poster) and the embed code for
@@ -41,8 +40,6 @@ export function BookingLinkSettings() {
         <ShareLink />
         <div className="pt-3 border-t border-gray-100"><PublicAddressEditor /></div>
       </section>
-
-      <PolicySettings />
 
       <p className="text-xs text-gray-500 px-1">
         El logo y el color de tu página se cambian en <Link to="/configuracion?tab=negocio" className="font-semibold text-violet-700">Negocio</Link>.

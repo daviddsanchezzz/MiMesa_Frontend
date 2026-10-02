@@ -5,6 +5,7 @@ import { lineFor, nextBookingId, LineLegend } from './lineColors';
 import { minutesInTz, toHHMM, windowsForDate, intersectWindows, layoutOverlaps, absenceSpan } from './utils';
 
 const UNASSIGNED = '__none__';
+const MIN_BLOCK_PX = 30;
 
 // Visible hours: opening hours (whole hours) plus any booking outside them.
 export function visibleRange(windowsList, bookings, tz) {
@@ -73,11 +74,15 @@ export default function DayView({ date, tz, staff, bookings, absences = [], onAb
       blocks: [...(awayBy[id] || []).filter((x) => x.e > x.s).map(({ a, s: as, e: ae }) => ({
         key: `away-${a._id}`,
         render: <AbsenceBlock absence={a} top={(as - startMin) * ppm} height={Math.max(22, (ae - as) * ppm)} onClick={onAbsenceClick} />,
-      })), ...layoutOverlaps((byCol[id] || []).map(({ booking, segment }) => ({
-        booking, segment, start: minutesInTz(segment.start, tz), end: minutesInTz(segment.start, tz) + (new Date(segment.end) - new Date(segment.start)) / 60000,
-      }))).map(({ booking, segment, start, end, col, cols }) => {
-        const top = (start - startMin) * ppm;
-        const height = Math.max(26, (end - start) * ppm);
+      })), ...layoutOverlaps((byCol[id] || []).map(({ booking, segment }) => {
+        const start = minutesInTz(segment.start, tz);
+        const realEnd = start + (new Date(segment.end) - new Date(segment.start)) / 60000;
+        // A very short appointment is drawn taller than its time so it can be read;
+        // lay it out with that height so it sits beside the next one instead of under it.
+        return { booking, segment, start, realEnd, end: Math.max(realEnd, start + MIN_BLOCK_PX / ppm) };
+      })).map(({ booking, segment, start, realEnd, col, cols }) => {
+        const top = (start - startMin) * ppm + 1;
+        const height = Math.max(MIN_BLOCK_PX, (realEnd - start) * ppm) - 3;
         const w = 100 / cols;
         return {
           key: `${booking._id}-${segment._id}-${id}`,

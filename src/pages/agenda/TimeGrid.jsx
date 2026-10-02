@@ -90,7 +90,7 @@ function StateBlock({ booking, segment, kind, isNext, tz, top, height, left, wid
       type="button"
       onClick={(e) => { e.stopPropagation(); onClick?.(booking); }}
       title={`${timeInTz(segment.start, tz)}–${timeInTz(segment.end, tz)} · ${booking.guestName} · ${segment.serviceName} · ${l.label}`}
-      className={`absolute z-10 rounded-lg text-left overflow-hidden transition-shadow hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-gray-400 ${dense ? 'px-1.5 py-0.5' : 'px-2 py-1'} ${isNext ? 'ring-2 ring-violet-400 ring-offset-1' : ''}`}
+      className={`absolute z-10 rounded-lg text-left overflow-hidden transition-shadow hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-gray-400 flex flex-col justify-start items-stretch ${dense ? 'px-1.5 py-0.5' : height < 34 ? 'px-2 py-0.5 justify-center' : 'px-2 py-1.5'} ${isNext ? 'ring-2 ring-violet-400 ring-offset-1' : ''}`}
       style={{
         top, height, left, width,
         backgroundColor: bg,

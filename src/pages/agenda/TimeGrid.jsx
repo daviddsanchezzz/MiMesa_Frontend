@@ -181,7 +181,7 @@ export default function TimeGrid({ columns, startMin, endMin, tz, minColWidth = 
 
   return (
     <div className={`bg-white rounded-2xl border border-gray-200 overflow-hidden ${fill ? 'h-full flex flex-col' : ''}`}>
-      <div ref={scrollRef} className={fill ? 'flex-1 min-h-0 overflow-auto overscroll-contain' : 'overflow-x-auto'}
+      <div ref={scrollRef} data-page-scroll className={fill ? 'flex-1 min-h-0 overflow-auto overscroll-contain' : 'overflow-x-auto'}
         style={snapX ? { scrollSnapType: 'x proximity', scrollPaddingLeft: labelWidth === 'w-11' ? '2.75rem' : '3.5rem' } : undefined}>
         <div className="flex min-w-full w-max">
           {/* Hour labels */}

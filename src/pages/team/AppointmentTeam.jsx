@@ -226,8 +226,8 @@ export default function AppointmentTeam() {
   const t = data?.totals;
 
   return (
-    <div className="w-full space-y-8">
-      <PageHeader title="Rendimiento" subtitle="Facturación, costes y margen de cada profesional." mobileActions
+    <div className="w-full flex flex-1 min-h-0 flex-col">
+      <PageHeader className="shrink-0 pb-5" title="Rendimiento" subtitle="Facturación, costes y margen de cada profesional." mobileActions
         actions={(
           <div className="flex items-center gap-1">
             <button type="button" className="w-9 h-9 rounded-full hover:bg-gray-100 text-gray-600" onClick={() => setMonth(shiftMonth(month, -1))} aria-label="Mes anterior">‹</button>
@@ -236,6 +236,7 @@ export default function AppointmentTeam() {
           </div>
         )} />
 
+      <div key={month} data-page-scroll className="flex-1 min-h-0 overflow-y-auto overscroll-contain pb-6 space-y-8">
       {error && <p className="text-sm text-rose-700 rounded-xl bg-rose-50 px-3 py-2">{error}</p>}
       {!data && !error && <p className="text-sm text-gray-400">Cargando…</p>}
 
@@ -319,6 +320,7 @@ export default function AppointmentTeam() {
         </>
       )}
 
+      </div>
     </div>
   );
 }

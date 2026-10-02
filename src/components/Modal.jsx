@@ -6,7 +6,7 @@ let openCount = 0;
 let saved = [];
 function lockPageScroll() {
   if (openCount++ > 0) return;
-  saved = [document.body, ...document.querySelectorAll('main')].map((el) => [el, el.style.overflow]);
+  saved = [document.body, ...document.querySelectorAll('main, [data-page-scroll]')].map((el) => [el, el.style.overflow]);
   saved.forEach(([el]) => { el.style.overflow = 'hidden'; });
 }
 function unlockPageScroll() {

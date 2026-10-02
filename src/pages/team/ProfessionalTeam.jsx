@@ -160,7 +160,7 @@ function TeamContent() {
   const active = resources.filter((r) => r.active !== false);
   return (
     <div
-      className={`w-full max-w-5xl ${params.get('pro') ? 'flex flex-1 min-h-0 flex-col overflow-hidden' : 'space-y-4'}`}
+      className="w-full max-w-5xl flex flex-1 min-h-0 flex-col"
     >
       {error && (
         <p role="alert" className="shrink-0 text-sm text-rose-700">
@@ -225,6 +225,7 @@ function TeamContent() {
             </div>
             <div
               key={`${resource._id}-${tab}`}
+              data-page-scroll
               className="flex-1 min-h-0 overflow-y-auto overscroll-contain pt-5 pb-6"
             >
               {tab === 'general' && (
@@ -277,6 +278,7 @@ function TeamContent() {
       ) : (
         <>
           <PageHeader
+            className="shrink-0 pb-4"
             title="Equipo"
             subtitle={`${active.length} ${active.length === 1 ? 'profesional' : 'profesionales'}`}
             actions={
@@ -285,6 +287,7 @@ function TeamContent() {
               </PrimaryButton>
             }
           />
+          <div data-page-scroll className="flex-1 min-h-0 overflow-y-auto overscroll-contain pb-6 space-y-4">
           {!resources.length && (
             <p className="text-sm text-gray-500">
               Crea tu primer profesional. No necesita una cuenta para recibir
@@ -386,6 +389,7 @@ function TeamContent() {
               ))}
             </section>
           )}
+          </div>
         </>
       )}
       {adding && (

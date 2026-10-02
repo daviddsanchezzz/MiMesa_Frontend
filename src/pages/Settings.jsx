@@ -10,7 +10,7 @@ import { LimitesSection } from './settings/LimitesSection';
 import { PublicoSection } from './settings/PublicoSection';
 import { BillingSection } from './settings/BillingSection';
 import { PagosSection } from './settings/PagosSection';
-import { ProfessionalsSettings, SpacesSettings, ServicesSettings, HoursSettings } from './agenda/AgendaSettings';
+import { SpacesSettings, ServicesSettings, HoursSettings } from './agenda/AgendaSettings';
 import { BookingLinkSettings } from './agenda/BookingLinkSettings';
 import FollowUpSettings from './agenda/FollowUpSettings';
 import PolicySettings from './agenda/PolicySettings';
@@ -23,7 +23,6 @@ const GROUPS = {
   appointments: [
     { title: 'Negocio', items: [{ key: 'negocio', label: 'Datos del negocio', desc: 'Nombre, logo, dirección y contacto', icon: 'building' }] },
     { title: 'Qué se reserva', items: [
-      { key: 'profesionales', label: 'Equipo', desc: 'Profesionales, servicios, horarios y fotos', icon: 'person' },
       { key: 'espacios', label: 'Salas y equipamiento', desc: 'Recursos adicionales para las reservas', icon: 'map' },
       { key: 'servicios', label: 'Servicios', desc: 'Duración, precio y quién lo hace', icon: 'list' },
     ] },
@@ -64,7 +63,7 @@ const SECTIONS = {
   espacios: SpacesSettings,
   negocio: NegocioSection, mesas: TablesAndRooms, turnos: ShiftsAndClosures, normas: PolicySettings,
   limites: LimitesSection, publico: BookingLinkSettings, suscripcion: BillingSection, pagos: PagosSection,
-  profesionales: ProfessionalsSettings, servicios: ServicesSettings, horario: HoursSettings, enlace: BookingLinkSettings, avisos: FollowUpSettings,
+  servicios: ServicesSettings, horario: HoursSettings, enlace: BookingLinkSettings, avisos: FollowUpSettings,
 };
 
 /**

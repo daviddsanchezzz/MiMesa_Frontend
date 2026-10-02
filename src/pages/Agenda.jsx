@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useSetMobileHeader } from '../context/MobileHeaderContext';
@@ -167,21 +167,6 @@ export default function Agenda() {
 
   // Day/week: the page fits the screen and only the grid scrolls.
   const ready = !loading && staff.length > 0 && services.length > 0;
-  const fill = ready && activeView !== 'list';
-  const rootRef = useRef(null);
-  const [fitHeight, setFitHeight] = useState(null);
-  useLayoutEffect(() => {
-    if (!fill) { setFitHeight(null); return undefined; }
-    const measure = () => {
-      const main = rootRef.current?.closest('main');
-      if (!main) return;
-      const cs = getComputedStyle(main);
-      setFitHeight(Math.max(420, main.clientHeight - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom)));
-    };
-    measure();
-    window.addEventListener('resize', measure);
-    return () => window.removeEventListener('resize', measure);
-  }, [fill]);
 
   const scopeChips = (withBlock) => (staff.length > 1 || (withBlock && canBlock)) && (
             <div className="shrink-0 flex gap-1.5 overflow-x-auto -mx-1 px-1 pb-0.5" role="tablist" aria-label="Qué agenda ver">
@@ -223,7 +208,7 @@ export default function Agenda() {
   );
 
   return (
-    <div ref={rootRef} className={fill ? 'flex flex-col gap-3' : 'space-y-4'} style={fill && fitHeight ? { height: fitHeight } : undefined}>
+    <div className="flex flex-1 min-h-0 flex-col gap-3 pb-3">
       <div className="flex items-center gap-3 shrink-0">
         <h1 className="hidden lg:block text-2xl font-semibold tracking-tight text-gray-900 mr-auto">Agenda</h1>
         <Segmented value={activeView} onChange={chooseView} options={views} />
@@ -248,7 +233,7 @@ export default function Agenda() {
       {loading ? (
         <p className="text-sm text-gray-400">Cargando…</p>
       ) : (!staff.length || !services.length) ? (
-        <div className="bg-white rounded-2xl border border-gray-200 p-8 text-center space-y-3">
+        <div data-page-scroll className="min-h-0 overflow-y-auto bg-white rounded-2xl border border-gray-200 p-8 text-center space-y-3">
           <p className="text-base font-semibold text-gray-900">Prepara tu agenda</p>
           <p className="text-sm text-gray-500 max-w-md mx-auto">
             Para empezar a dar citas necesitas {!staff.length ? 'añadir al menos un profesional' : ''}
@@ -280,8 +265,10 @@ export default function Agenda() {
 
           {!expanded && grid(false)}
           {activeView === 'list' && (
+            <div key={`${date}-${scopeId}`} data-page-scroll className="flex-1 min-h-0 overflow-y-auto overscroll-contain pb-6">
             <ListView tz={tz} date={date} bookings={dayBookings} absences={shownAbsences} onAbsenceClick={setSelectedAbsence} staffById={byId} colors={colors} isToday={date === today}
               onBookingClick={setSelected} onNew={() => openNew('', '', date)} />
+            </div>
           )}
         </>
       )}

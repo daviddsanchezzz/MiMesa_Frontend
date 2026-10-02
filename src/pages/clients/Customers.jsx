@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../../services/api';
 import { bookingsApi, apiError } from '../../services/bookingsApi';
@@ -66,6 +66,8 @@ export default function Customers() {
   const [filter, setFilter] = useState('all');
   const [sort, setSort] = useState('recent');
   const [creating, setCreating] = useState(false);
+  const listRef = useRef(null);
+  useEffect(() => { listRef.current?.scrollTo({ top: 0 }); }, [q, filter, sort]);
 
   useSetMobileHeader({ title: 'Clientes', action: { label: 'Cliente', onClick: () => setCreating(true) } });
 
@@ -134,7 +136,8 @@ export default function Customers() {
   }, [summary, isAppointments]);
 
   return (
-    <div className="w-full space-y-5">
+    <div className="w-full flex flex-1 min-h-0 flex-col">
+      <div className="shrink-0 space-y-5 pb-4">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="hidden lg:block text-2xl font-semibold tracking-tight text-gray-900">Clientes</h1>
@@ -180,6 +183,8 @@ export default function Customers() {
         </div>
       </div>
 
+      </div>
+      <div ref={listRef} data-page-scroll className="flex-1 min-h-0 overflow-y-auto overscroll-contain pb-6" aria-label="Lista de clientes" tabIndex={0}>
       {customers && rows.length === 0 && (
         <div className="py-14 text-center">
           <p className="text-sm text-gray-500">
@@ -192,7 +197,7 @@ export default function Customers() {
 
       {rows.length > 0 && (
         <div>
-          <div className="hidden md:grid grid-cols-12 gap-4 px-2 pb-2 border-b border-gray-200 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+          <div className="hidden md:grid sticky top-0 z-10 bg-white grid-cols-12 gap-4 px-2 pb-2 border-b border-gray-200 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
             <span className="col-span-4">Cliente</span>
             <span className="col-span-2">Última visita</span>
             <span className="col-span-3">{cfg.nextLabel}</span>
@@ -247,6 +252,7 @@ export default function Customers() {
         </div>
       )}
 
+      </div>
       {creating && (
         <Modal title="Nuevo cliente" onClose={() => setCreating(false)}>
           <CustomerForm onSave={() => { setCreating(false); load(); }} onCancel={() => setCreating(false)} />

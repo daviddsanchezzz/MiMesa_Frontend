@@ -141,6 +141,7 @@ function LayoutShell({ children, fullBleed = false, devMode = false }) {
   const location = useLocation();
   const professionalDetail = location.pathname === '/equipo' && new URLSearchParams(location.search).has('pro');
   const { business, loading, impersonation, stopImpersonation, isAppointments, logout } = useAuth();
+  const containedScroll = ['/customers', '/equipo', '/agenda'].includes(location.pathname) || (location.pathname === '/personal' && isAppointments);
   const navigate = useNavigate();
   const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] = useState(() => {
     if (typeof window === 'undefined') return false;
@@ -228,8 +229,8 @@ function LayoutShell({ children, fullBleed = false, devMode = false }) {
       )}
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
         {location.pathname !== '/agenda' && <MobileHeader devMode={devMode} onLogout={() => logout()} />}
-        <main className={professionalDetail
-          ? `flex-1 min-h-0 overflow-hidden flex flex-col px-4 pt-2 lg:px-8 lg:pt-4 ${showBottomNav ? 'pb-[calc(4rem+env(safe-area-inset-bottom))]' : ''} ${impersonation ? 'pt-16 lg:pt-20' : ''}`
+        <main className={containedScroll
+          ? `flex-1 min-h-0 overflow-hidden flex flex-col px-4 ${location.pathname === '/agenda' ? 'pt-[calc(1rem+env(safe-area-inset-top))]' : professionalDetail ? 'pt-2' : 'pt-4'} lg:px-8 lg:pt-4 ${showBottomNav ? 'pb-[calc(4rem+env(safe-area-inset-bottom))]' : ''} ${impersonation ? 'pt-16 lg:pt-20' : ''}`
           : fullBleed
           ? `flex-1 overflow-hidden flex flex-col ${showBottomNav ? 'pb-[calc(4rem+env(safe-area-inset-bottom))]' : ''}`
           : `flex-1 overflow-auto px-4 ${location.pathname === '/agenda' ? 'pt-[calc(1rem+env(safe-area-inset-top))]' : 'pt-4'} lg:px-8 lg:pt-7 ${showBottomNav ? 'pb-[calc(6rem+env(safe-area-inset-bottom))]' : 'pb-10'} ${impersonation ? 'pt-16 lg:pt-20' : ''}`}>

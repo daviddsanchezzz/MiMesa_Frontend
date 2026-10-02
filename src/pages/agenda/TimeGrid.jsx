@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { closedGaps, minutesInTz, timeInTz, tint, toHHMM } from './utils';
+import { closedGaps, euros, minutesInTz, timeInTz, tint, toHHMM } from './utils';
 import { LINE } from './lineColors';
 
 export const PX_PER_MIN = 1.4;
@@ -101,11 +101,28 @@ function StateBlock({ booking, segment, kind, isNext, tz, top, height, left, wid
         paddingLeft: l.dashed ? (dense ? 9 : 11) : undefined,
       }}
     >
-      <p className={`text-[11px] font-semibold leading-tight truncate ${lost ? 'text-gray-400 line-through' : 'text-gray-900'}`}>
-        {!dense && <span className="tabular-nums">{timeInTz(segment.start, tz)} · </span>}{dense ? booking.guestName.split(' ')[0] : booking.guestName}
-      </p>
-      {height > 34 && !dense && (
-        <p className={`text-[11px] leading-tight truncate ${lost ? 'text-gray-400' : 'text-gray-600'}`}>{segment.serviceName}</p>
+      {dense ? (
+        <p className={`text-[11px] font-semibold leading-tight truncate ${lost ? 'text-gray-400 line-through' : 'text-gray-900'}`}>{booking.guestName.split(' ')[0]}</p>
+      ) : height < 34 ? (
+        <p className={`text-[12px] font-semibold leading-tight truncate ${lost ? 'text-gray-400 line-through' : 'text-gray-900'}`}>
+          <span className="tabular-nums font-medium text-gray-500">{timeInTz(segment.start, tz)}</span> {booking.guestName}
+        </p>
+      ) : (
+        <>
+          <p className={`text-[13px] font-semibold leading-tight truncate ${lost ? 'text-gray-400 line-through' : 'text-gray-900'}`}>{booking.guestName}</p>
+          <p className={`text-[12px] leading-tight truncate mt-0.5 ${lost ? 'text-gray-400' : 'text-gray-600'}`}>
+            <span className="tabular-nums">{timeInTz(segment.start, tz)}–{timeInTz(segment.end, tz)}</span>{height < 52 ? ` · ${segment.serviceName}` : ''}
+          </p>
+          {height >= 52 && <p className={`text-[12px] leading-tight truncate mt-0.5 ${lost ? 'text-gray-400' : 'text-gray-700'}`}>{segment.serviceName}</p>}
+          {height >= 76 && (
+            <p className="mt-1 flex items-center gap-1.5 text-[11px] text-gray-500">
+              {segment.price > 0 && <span className="font-semibold tabular-nums text-gray-700">{euros(segment.price)}</span>}
+              {kind === 'pending' && <span className="font-semibold text-amber-700">Por confirmar</span>}
+              {booking.notes && <span className="inline-flex items-center gap-0.5" title={booking.notes}>· <svg viewBox="0 0 16 16" fill="currentColor" className="w-3 h-3"><path d="M3 2.5A1.5 1.5 0 0 1 4.5 1h5.379a1.5 1.5 0 0 1 1.06.44l2.122 2.12A1.5 1.5 0 0 1 13.5 4.622V13.5A1.5 1.5 0 0 1 12 15H4.5A1.5 1.5 0 0 1 3 13.5v-11Z" /></svg>nota</span>}
+              {booking.source === 'online' && <span>· online</span>}
+            </p>
+          )}
+        </>
       )}
       <span className="sr-only">{l.label}</span>
     </button>
@@ -120,29 +137,30 @@ function StateBlock({ booking, segment, kind, isNext, tz, top, height, left, wid
  * columns: [{ key, header, windows: [[s,e]], isToday, blocks: [{ key, top, height, left, width, render }],
  *             lanes: [{ key, left, width }] | undefined, onEmpty(minute, laneKey) | undefined }]
  */
-export default function TimeGrid({ columns, startMin, endMin, tz, minColWidth = '11rem', headerHeight = 'h-14', fill = false }) {
+export default function TimeGrid({ columns, startMin, endMin, tz, minColWidth = '11rem', headerHeight = 'h-14', fill = false, pxPerMin = PX_PER_MIN, snapX = false, labelWidth = 'w-14' }) {
+  const PPM = pxPerMin;
   const scrollRef = useRef(null);
   const scrolledFor = useRef(null);
   const [ghost, setGhost] = useState(null); // { col, lane, minute }
   const anyToday = columns.some((c) => c.isToday);
   const nowMin = useNowMinute(tz, anyToday);
-  const height = (endMin - startMin) * PX_PER_MIN;
+  const height = (endMin - startMin) * PPM;
   const columnsKey = columns.map((c) => c.key).join('|');
   // Open scrolled to the current time (today) or the start of the day.
   useEffect(() => {
     const el = scrollRef.current;
     if (!el || scrolledFor.current === columnsKey) return;
     scrolledFor.current = columnsKey;
-    const target = anyToday && nowMin !== null ? (nowMin - startMin) * PX_PER_MIN - 120 : 0;
+    const target = anyToday && nowMin !== null ? (nowMin - startMin) * PPM - 120 : 0;
     el.scrollTop = Math.max(0, target);
   }, [columnsKey, anyToday, nowMin, startMin]);
   const hours = [];
   for (let m = startMin; m <= endMin; m += 60) hours.push(m);
-  const y = (m) => (m - startMin) * PX_PER_MIN;
+  const y = (m) => (m - startMin) * PPM;
 
   function pointerMinute(e) {
     const rect = e.currentTarget.getBoundingClientRect();
-    const minute = Math.floor((startMin + (e.clientY - rect.top) / PX_PER_MIN) / SNAP_MIN) * SNAP_MIN;
+    const minute = Math.floor((startMin + (e.clientY - rect.top) / PPM) / SNAP_MIN) * SNAP_MIN;
     return Math.max(startMin, Math.min(minute, endMin - SNAP_MIN));
   }
   function laneAt(e, col) {
@@ -155,10 +173,11 @@ export default function TimeGrid({ columns, startMin, endMin, tz, minColWidth = 
 
   return (
     <div className={`bg-white rounded-2xl border border-gray-200 overflow-hidden ${fill ? 'h-full flex flex-col' : ''}`}>
-      <div ref={scrollRef} className={fill ? 'flex-1 min-h-0 overflow-auto overscroll-contain' : 'overflow-x-auto'}>
+      <div ref={scrollRef} className={fill ? 'flex-1 min-h-0 overflow-auto overscroll-contain' : 'overflow-x-auto'}
+        style={snapX ? { scrollSnapType: 'x proximity', scrollPaddingLeft: labelWidth === 'w-11' ? '2.75rem' : '3.5rem' } : undefined}>
         <div className="flex min-w-full w-max">
           {/* Hour labels */}
-          <div className="sticky left-0 z-30 bg-white border-r border-gray-100 w-14 shrink-0">
+          <div className={`sticky left-0 z-30 bg-white border-r border-gray-100 ${labelWidth} shrink-0`}>
             <div className={`${headerHeight} border-b border-gray-100 sticky top-0 z-10 bg-white`} />
             <div className="relative" style={{ height: height + TOP_PAD }}>
               {hours.map((m) => (
@@ -180,7 +199,7 @@ export default function TimeGrid({ columns, startMin, endMin, tz, minColWidth = 
             const closed = closedGaps(col.windows, startMin, endMin);
             const showGhost = ghost && ghost.col === col.key && col.onEmpty;
             return (
-              <div key={col.key} className="flex-1 border-r border-gray-100 last:border-r-0" style={{ minWidth: minColWidth }}>
+              <div key={col.key} className="flex-1 border-r border-gray-100 last:border-r-0" style={{ minWidth: minColWidth, scrollSnapAlign: snapX ? 'start' : undefined }}>
                 <div className={`${headerHeight} border-b border-gray-100 flex items-center justify-center px-2 sticky top-0 z-[25] ${col.isToday ? 'bg-violet-50' : 'bg-white'}`}>
                   {col.header}
                 </div>
@@ -213,7 +232,7 @@ export default function TimeGrid({ columns, startMin, endMin, tz, minColWidth = 
                     {showGhost && !inClosed(col, ghost.minute) && (
                       <div className="absolute z-0 rounded-lg border border-dashed border-violet-400 bg-violet-50/70 text-[11px] font-semibold text-violet-700 px-2 flex items-center pointer-events-none"
                         style={{
-                          top: y(ghost.minute), height: 30 * PX_PER_MIN,
+                          top: y(ghost.minute), height: 30 * PPM,
                           left: ghost.lane ? `calc(${ghost.lane.left} + 2px)` : 4,
                           width: ghost.lane ? `calc(${ghost.lane.width} - 4px)` : 'calc(100% - 8px)',
                         }}>

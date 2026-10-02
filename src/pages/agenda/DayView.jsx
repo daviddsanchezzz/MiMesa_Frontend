@@ -24,6 +24,7 @@ export function visibleRange(windowsList, bookings, tz) {
  * like the list (lila next, green charged, amber unpaid, red cancelled, grey rest).
  */
 export default function DayView({ date, tz, staff, bookings, absences = [], onAbsenceClick, businessSchedule, staffSchedules = {}, colors, isToday, onEmptyClick, onBookingClick, fill = false, compact = false }) {
+  const ppm = compact ? 1.9 : PX_PER_MIN;
   const bizWindows = useMemo(() => windowsForDate(businessSchedule, date), [businessSchedule, date]);
   const windowsFor = (id) => (staffSchedules[id] ? intersectWindows(windowsForDate(staffSchedules[id], date), bizWindows) : bizWindows);
   const [startMin, endMin] = useMemo(() => visibleRange([bizWindows], bookings, tz), [bizWindows, bookings, tz]);
@@ -71,12 +72,12 @@ export default function DayView({ date, tz, staff, bookings, absences = [], onAb
       onEmpty: id === UNASSIGNED ? undefined : (minute) => onEmptyClick?.(id, toHHMM(minute), date),
       blocks: [...(awayBy[id] || []).filter((x) => x.e > x.s).map(({ a, s: as, e: ae }) => ({
         key: `away-${a._id}`,
-        render: <AbsenceBlock absence={a} top={(as - startMin) * PX_PER_MIN} height={Math.max(22, (ae - as) * PX_PER_MIN)} onClick={onAbsenceClick} />,
+        render: <AbsenceBlock absence={a} top={(as - startMin) * ppm} height={Math.max(22, (ae - as) * ppm)} onClick={onAbsenceClick} />,
       })), ...layoutOverlaps((byCol[id] || []).map(({ booking, segment }) => ({
         booking, segment, start: minutesInTz(segment.start, tz), end: minutesInTz(segment.start, tz) + (new Date(segment.end) - new Date(segment.start)) / 60000,
       }))).map(({ booking, segment, start, end, col, cols }) => {
-        const top = (start - startMin) * PX_PER_MIN;
-        const height = Math.max(22, (end - start) * PX_PER_MIN);
+        const top = (start - startMin) * ppm;
+        const height = Math.max(26, (end - start) * ppm);
         const w = 100 / cols;
         return {
           key: `${booking._id}-${segment._id}-${id}`,
@@ -89,7 +90,7 @@ export default function DayView({ date, tz, staff, bookings, absences = [], onAb
     if (byCol[UNASSIGNED]) cols.push(make(UNASSIGNED, 'Sin profesional'));
     return cols;
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bookings, absences, staff, startMin, endMin, tz, colors, bizWindows, staffSchedules, isToday, date, nextId]);
+  }, [bookings, absences, staff, startMin, endMin, tz, colors, bizWindows, staffSchedules, isToday, date, nextId, ppm]);
 
   if (!columns.length) {
     return (
@@ -98,12 +99,13 @@ export default function DayView({ date, tz, staff, bookings, absences = [], onAb
       </div>
     );
   }
-  // Phones: one or two people fit the screen; more scroll sideways
-  const minColWidth = compact ? (columns.length <= 2 ? '0px' : '8.5rem') : '11rem';
+  // Phones: one person per screen (the next one peeks in), slide sideways to the others.
+  const minColWidth = compact ? (columns.length === 1 ? '0px' : 'calc(100vw - 6.75rem)') : '11rem';
   return (
     <div className={fill ? 'h-full flex flex-col gap-2' : 'space-y-2'}>
       <div className={fill ? 'flex-1 min-h-0' : ''}>
-        <TimeGrid columns={columns} startMin={startMin} endMin={endMin} tz={tz} fill={fill} minColWidth={minColWidth} />
+        <TimeGrid columns={columns} startMin={startMin} endMin={endMin} tz={tz} fill={fill} minColWidth={minColWidth}
+          pxPerMin={ppm} snapX={compact && columns.length > 1} labelWidth={compact ? 'w-11' : 'w-14'} />
       </div>
       <div className="shrink-0"><LineLegend kinds={kinds} /></div>
     </div>

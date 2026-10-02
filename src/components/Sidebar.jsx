@@ -19,7 +19,6 @@ function Item({ to, label, icon, end, collapsed, onClick }) {
     </NavLink>
   );
 }
-
 /**
  * Desktop menu (from 1024 px): light, the same order as the phone bar — Hoy,
  * Agenda/Reservas, Clientes — then the rest of the business, then the account.
@@ -31,37 +30,7 @@ export default function Sidebar({ collapsed = false, onDesktopToggleCollapse, de
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
-<<<<<<< HEAD
-  const isStaff = business?.role === 'staff';
-  const isFree = !isSubscribed;
-
-  const mainLinks = isStaff
-    ? links.filter((link) => link.to !== '/customers')
-    : isFree
-      ? links.filter((link) => link.to !== '/customers')
-      : links;
-  const lowerLinks = isStaff || isFree
-    ? []
-    : hasRole('manager') ? [{ to: '/equipo', label: 'Equipo', icon: <IconTeam /> }] : [];
-  const visibleConfigLinks = hasRole('manager') ? configLinks : [];
-  const personalLink = (isModuleEnabled('staff') && hasRole('manager'))
-    ? [{ to: '/rendimiento', label: 'Rendimiento', icon: <IconBriefcase /> }]
-    : [];
-  const finanzasLink = (isModuleEnabled('expenses') && hasRole('owner'))
-    ? [{ to: '/finanzas', label: 'Finanzas', icon: <IconCurrencyEuro /> }]
-    : [];
-  const comprasLink = (isModuleEnabled('purchases') && hasRole('manager'))
-    ? [{ to: '/compras', label: 'Compras', icon: <IconCart /> }]
-    : [];
-  const navLinks = [
-    mainLinks[0],
-    mainLinks[1],
-    ...mainLinks.slice(2),
-    ...(hasRole('manager') ? [{ to: '/mas', label: 'Más', icon: <IconBriefcase /> }] : []),
-  ].filter(Boolean).filter((link) => !(isSmallScreen && link.to === '/tables'));
-=======
   const devSidebar = devMode || business?.isDev || false;
->>>>>>> 1f9caddbdaece80755cdfd4a32b6a7e6aeaffa96
 
   const userName = session?.user?.name || business?.userName || business?.name || 'Usuario';
   const userEmail = session?.user?.email || business?.userEmail || business?.email || '';
@@ -106,105 +75,6 @@ export default function Sidebar({ collapsed = false, onDesktopToggleCollapse, de
         </div>
       )}
 
-<<<<<<< HEAD
-      <nav className="flex-1 px-3 py-4 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        <div className="space-y-0.5">
-          {!collapsed && <p className="text-slate-500 text-[10px] font-semibold uppercase tracking-widest px-2 pb-2">Menu</p>}
-          {devSidebar ? (
-            devLinks.map((link) => {
-              const active = location.pathname === '/dev' && currentDevTab === link.tab;
-              return (
-                <button
-                  key={link.tab}
-                  onClick={() => {
-                    navigate(`/dev?tab=${link.tab}`);
-                    handleNavClick();
-                  }}
-                  className={`w-full flex items-center ${collapsed ? 'justify-center' : 'gap-3'} px-3 py-3 lg:py-2 rounded-lg text-sm font-medium transition-all duration-100 ${
-                    active ? 'bg-violet-600 text-white shadow-sm' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100'
-                  }`}
-                  title={collapsed ? link.label : undefined}
-                >
-                  {link.icon}
-                  {!collapsed && link.label}
-                </button>
-              );
-            })
-          ) : (
-            navLinks.map((link) => (
-              <NavLink
-                key={link.to}
-                to={link.to}
-                end={link.to === '/'}
-                onClick={handleNavClick}
-                className={({ isActive }) => {
-                  const moreChild = link.to === '/mas' && ['/equipo', '/rendimiento', '/planificacion', '/finanzas', '/compras', '/publicidad', '/analytics', '/configuracion'].some((path) => location.pathname.startsWith(path));
-                  return `flex items-center ${collapsed ? 'justify-center' : 'gap-3'} px-3 py-3 lg:py-2 rounded-lg text-sm font-medium transition-all duration-100 ${
-                    isActive || moreChild ? 'bg-violet-600 text-white shadow-sm' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100'
-                  }`
-                }}
-                title={collapsed ? link.label : undefined}
-              >
-                {link.icon}
-                {!collapsed && link.label}
-              </NavLink>
-            ))
-          )}
-
-          {false && !devSidebar && !isStaff && !isFree && hasRole('manager') && (
-            <NavLink
-              to="/analytics"
-              onClick={handleNavClick}
-              className={({ isActive }) =>
-                `flex items-center ${collapsed ? 'justify-center' : 'gap-3'} px-3 py-3 lg:py-2 rounded-lg text-sm font-medium transition-all duration-100 ${
-                  isActive ? 'bg-violet-600 text-white shadow-sm' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100'
-                }`
-              }
-              title={collapsed ? 'Estadísticas' : undefined}
-            >
-              <IconChartBar />
-              {!collapsed && 'Estadísticas'}
-            </NavLink>
-          )}
-
-          {false && !devSidebar && !isStaff && !isFree && hasRole('manager') && (
-            <NavLink
-              to="/publicidad"
-              onClick={handleNavClick}
-              className={({ isActive }) =>
-                `flex items-center ${collapsed ? 'justify-center' : 'gap-3'} px-3 py-3 lg:py-2 rounded-lg text-sm font-medium transition-all duration-100 ${
-                  isActive ? 'bg-violet-600 text-white shadow-sm' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100'
-                }`
-              }
-              title={collapsed ? 'Publicidad' : undefined}
-            >
-              <IconMegaphone />
-              {!collapsed && 'Publicidad'}
-            </NavLink>
-          )}
-        </div>
-      </nav>
-
-      <div className="px-3 pb-4 border-t border-slate-700/50 pt-3">
-        {false && !devSidebar && visibleConfigLinks.map((link) => (
-          <NavLink
-            key={link.to}
-            to={link.to}
-            onClick={handleNavClick}
-            className={({ isActive }) =>
-              `mb-2 flex items-center ${collapsed ? 'justify-center' : 'gap-3'} px-3 py-2 rounded-lg text-sm font-medium transition-all duration-100 ${
-                isActive
-                  ? 'bg-violet-600 text-white shadow-sm'
-                  : 'text-slate-300 hover:bg-slate-800 hover:text-slate-100'
-              }`
-            }
-            title={collapsed ? link.label : undefined}
-          >
-            {link.icon}
-            {!collapsed && link.label}
-          </NavLink>
-        ))}
-=======
       <nav className="flex-1 px-3 py-2 overflow-y-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {devSidebar ? (
           <button type="button" onClick={() => navigate('/dev')}
@@ -231,7 +101,6 @@ export default function Sidebar({ collapsed = false, onDesktopToggleCollapse, de
 
       <div className="px-3 pb-3 pt-2 border-t border-gray-100">
         {!devSidebar && account.filter((l) => l.to !== '/profile').map((l) => <Item key={l.to} {...l} collapsed={collapsed} />)}
->>>>>>> 1f9caddbdaece80755cdfd4a32b6a7e6aeaffa96
 
         <div ref={menuRef} className="relative mt-1">
           <button type="button" onClick={() => setMenuOpen((v) => !v)}

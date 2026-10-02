@@ -13,7 +13,6 @@ const chip = (on) => `shrink-0 rounded-xl border transition-colors ${on ? 'bg-gr
 function normalizePhone(raw) {
   return raw ? String(raw).replace(/\D/g, '') : '';
 }
-
 function Step({ n, title, aside, children }) {
   return (
     <section>
@@ -36,16 +35,9 @@ export default function ReservationForm({ reservation, onSave, onCancel, initial
   const todayStr = todayIn(tz);
   const isEdit = Boolean(reservation?._id);
   const theForkModuleEnabled = isModuleEnabled('thefork');
-<<<<<<< HEAD
-  const initialDate = reservation?.date || initialContext?.date || new Date().toISOString().slice(0, 10);
-  const [rooms, setRooms] = useState(initialContext?.rooms || []);
-  const [professionals, setProfessionals] = useState([]);
-  const [step, setStep] = useState(isEdit ? 4 : 1);
-=======
   const initialDate = reservation?.date || initialContext?.date || todayStr;
   const roomsQ = useData(['rooms'], () => api.get('/rooms').then((r) => r.data || []), { enabled: !initialContext?.rooms?.length, staleTime: 5 * 60000 });
   const rooms = initialContext?.rooms?.length ? initialContext.rooms : (roomsQ.data || []);
->>>>>>> 1f9caddbdaece80755cdfd4a32b6a7e6aeaffa96
   const [form, setForm] = useState({
     guestName: reservation?.guestName || '',
     guestPhone: reservation?.guestPhone || '',
@@ -57,8 +49,6 @@ export default function ReservationForm({ reservation, onSave, onCancel, initial
     status: reservation?.status || 'pending',
     thefork: Boolean(reservation?.thefork),
     notes: reservation?.notes || '',
-    professionalId: reservation?.professionalId?._id || reservation?.professionalId || '',
-    service: reservation?.service || {},
   });
   const [error, setError] = useState('');
   const [slots, setSlots] = useState(initialContext?.slots ?? null);
@@ -66,12 +56,6 @@ export default function ReservationForm({ reservation, onSave, onCancel, initial
   const skipInitialFetchRef = useRef(Boolean(initialContext && !isEdit && initialContext?.date === initialDate));
   const [showNotes, setShowNotes] = useState(Boolean(reservation?.notes));
 
-
-  useEffect(() => {
-    api.get('/staff/employees').then((r) => setProfessionals((r.data || []).filter((p) => (p.services || []).some((s) => s.active !== false)))).catch(() => setProfessionals([]));
-  }, []);
-
-  const selectedProfessional = professionals.find((p) => String(p._id) === String(form.professionalId));
 
   useEffect(() => {
     if (!form.date) return;
@@ -145,25 +129,9 @@ export default function ReservationForm({ reservation, onSave, onCancel, initial
     const guestName = (isEdit ? form.guestName : (selectedCustomer?.name || customerQuery)).trim();
     const guestPhone = String(form.guestPhone || '').trim();
     const guestEmail = String(form.guestEmail || '').trim();
-<<<<<<< HEAD
-
-    if (!guestName) {
-      setError('El nombre es obligatorio');
-      return;
-    }
-    if (!isEdit && !guestPhone) {
-      setError('El telefono es obligatorio');
-      return;
-    }
-    if (form.professionalId && !(form.service?.id || form.service?._id)) {
-      setError('Selecciona uno de los servicios del profesional');
-      return;
-    }
-=======
     if (!guestName) return setError('Escribe el nombre del cliente');
     if (!isEdit && !guestPhone) return setError('El teléfono es obligatorio');
     if (!form.time) return setError('Elige una hora');
->>>>>>> 1f9caddbdaece80755cdfd4a32b6a7e6aeaffa96
     setSaving(true);
     try {
       const payload = { ...form, guestName, guestPhone, guestEmail, roomId: form.roomId || null };
@@ -317,174 +285,7 @@ export default function ReservationForm({ reservation, onSave, onCancel, initial
             {saving ? 'Guardando…' : isEdit ? 'Guardar cambios' : 'Crear reserva'}
           </button>
         </div>
-<<<<<<< HEAD
-      )}
-
-      {step === 4 && (
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="rounded-xl bg-violet-50 border border-violet-100 px-3.5 py-2.5 text-sm text-violet-700 font-medium">
-            {form.date} · {form.time} · {form.people} {form.people === 1 ? 'persona' : 'personas'}
-          </div>
-
-          {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-3 py-2">{error}</div>}
-
-          {isEdit ? (
-            <div>
-              <label className={labelCls}>Nombre *</label>
-              <input required autoFocus value={form.guestName} onChange={(e) => setForm((f) => ({ ...f, guestName: e.target.value }))} className={inputCls} />
-            </div>
-          ) : (
-            <div>
-              <label className={labelCls}>Nombre *</label>
-              <input
-                required
-                autoFocus
-                value={customerQuery}
-                onChange={(e) => handleCustomerQueryChange(e.target.value)}
-                placeholder="Buscar por nombre o telefono"
-                className={inputCls}
-              />
-              {customersLoading && (
-                <p className="mt-2 text-xs text-gray-400">Cargando clientes...</p>
-              )}
-              {!customersLoading && showCustomerMatches && (
-                <div className="mt-2 rounded-xl border border-gray-200 bg-white max-h-52 overflow-auto">
-                  {customerMatches.map((customer) => (
-                    <button
-                      key={customer._id}
-                      type="button"
-                      onClick={() => selectCustomer(customer)}
-                      className="w-full text-left px-3.5 py-2.5 border-b border-gray-100 last:border-b-0 hover:bg-gray-50 transition-colors"
-                    >
-                      <p className="text-sm font-semibold text-gray-900">{customer.name}</p>
-                      <p className="text-xs text-gray-500">{customer.phone || customer.email || 'Sin contacto'}</p>
-                    </button>
-                  ))}
-                </div>
-              )}
-              {!customersLoading && showCreateCustomerCta && (
-                <div className="mt-2 flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setCreateCustomerMode(true);
-                      setSelectedCustomer(null);
-                      setForm((f) => ({ ...f, guestName: customerQuery }));
-                    }}
-                    className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-violet-50 text-violet-700 hover:bg-violet-100 transition-colors"
-                  >
-                    + Crear cliente nuevo
-                  </button>
-                  {createCustomerMode && customerMatches.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => setCreateCustomerMode(false)}
-                      className="text-xs font-medium text-gray-500 hover:text-gray-700"
-                    >
-                      Ver coincidencias
-                    </button>
-                  )}
-                </div>
-              )}
-              {selectedCustomer && (
-                <p className="mt-2 text-xs font-medium text-emerald-700 bg-emerald-50 border border-emerald-100 rounded-lg px-2.5 py-1.5 inline-block">
-                  Cliente existente seleccionado
-                </p>
-              )}
-              {!customersLoading && showInlineCreateFields && (
-                <p className="mt-2 text-xs text-gray-500">
-                  Completa telefono y email para crear el cliente nuevo al guardar la reserva.
-                </p>
-              )}
-            </div>
-          )}
-
-          {showContactFields && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className={labelCls}>
-                  Telefono {!isEdit && <span className="text-rose-500">*</span>}
-                </label>
-                <input
-                  required={!isEdit}
-                  value={form.guestPhone}
-                  onChange={(e) => setForm((f) => ({ ...f, guestPhone: e.target.value }))}
-                  className={inputCls}
-                />
-              </div>
-              <div>
-                <label className={labelCls}>Email <span className="text-gray-400 font-normal">(opc.)</span></label>
-                <input type="email" value={form.guestEmail} onChange={(e) => setForm((f) => ({ ...f, guestEmail: e.target.value }))} className={inputCls} />
-              </div>
-            </div>
-          )}
-
-          {isEdit && (
-            <div>
-              <label className={labelCls}>Estado</label>
-              <select value={form.status} onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))} className={inputCls}>
-                <option value="pending">Pendiente</option>
-                <option value="confirmed">Confirmada</option>
-                <option value="seated">Sentada</option>
-                <option value="cancelled">Cancelada</option>
-              </select>
-            </div>
-          )}
-
-          {professionals.length > 0 && (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className={labelCls}>Profesional <span className="text-gray-400 font-normal">(opc.)</span></label>
-                <select value={form.professionalId} onChange={(e) => setForm((f) => ({ ...f, professionalId: e.target.value, service: {} }))} className={inputCls}>
-                  <option value="">Sin asignar</option>
-                  {professionals.map((p) => <option key={p._id} value={p._id}>{`${p.firstName} ${p.lastName || ''}`.trim()}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className={labelCls}>Servicio</label>
-                <select disabled={!selectedProfessional} value={form.service?.id || form.service?._id || ''} onChange={(e) => setForm((f) => ({ ...f, service: { id: e.target.value } }))} className={`${inputCls} disabled:bg-gray-50`}>
-                  <option value="">Sin servicio</option>
-                  {(selectedProfessional?.services || []).filter((s) => s.active !== false).map((s) => <option key={s._id} value={s._id}>{s.name} · {s.duration} min · {Number(s.price || 0).toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}</option>)}
-                </select>
-              </div>
-            </div>
-          )}
-
-          <div>
-            <label className={labelCls}>Notas <span className="text-gray-400 font-normal">(opcional)</span></label>
-            <textarea value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} rows={2} className={`${inputCls} resize-none`} />
-          </div>
-
-          {theForkModuleEnabled && (
-            <label className="flex items-center gap-2.5 text-sm text-gray-700">
-              <input
-                type="checkbox"
-                checked={Boolean(form.thefork)}
-                onChange={(e) => setForm((f) => ({ ...f, thefork: e.target.checked }))}
-                className="w-4 h-4 rounded accent-violet-600"
-              />
-              TheFork
-            </label>
-          )}
-
-          <div className="flex gap-3 pt-1">
-            <button type="button" onClick={() => setStep(3)} className="px-4 py-2.5 rounded-xl text-sm font-medium text-gray-500 hover:bg-gray-100 transition-colors">
-              Atras
-            </button>
-            <button type="submit" disabled={saving} className="flex-1 bg-violet-600 hover:bg-violet-700 disabled:opacity-60 disabled:cursor-not-allowed text-white py-2.5 rounded-xl text-sm font-semibold transition-colors flex items-center justify-center gap-2">
-              {saving && <span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin shrink-0" />}
-              {isEdit ? 'Guardar cambios' : 'Crear reserva'}
-            </button>
-            <button type="button" onClick={onCancel} className="px-4 py-2.5 rounded-xl text-sm font-medium text-gray-500 hover:bg-gray-100 transition-colors">
-              Cancelar
-            </button>
-          </div>
-        </form>
-      )}
-    </div>
-=======
       </div>
     </form>
->>>>>>> 1f9caddbdaece80755cdfd4a32b6a7e6aeaffa96
   );
 }

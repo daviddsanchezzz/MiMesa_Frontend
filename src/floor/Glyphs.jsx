@@ -81,13 +81,18 @@ export function TableGlyph({
           fill: look.surface, stroke: look.edge, strokeWidth: look === LOOKS.plain || look === LOOKS.free ? 1.25 : 2,
           strokeDasharray: look.dashed ? '6 4' : undefined, filter: lifted ? 'url(#fp-lift)' : 'url(#fp-shadow)',
         })}
-        {progress != null && (
-          <g>
-            <rect x={-w / 2 + 14} y={h / 2 - 11} width={w - 28} height={3.5} rx={1.75} fill="rgba(15,23,42,0.08)" />
-            <rect x={-w / 2 + 14} y={h / 2 - 11} width={Math.max(3.5, (w - 28) * Math.min(1, progress))} height={3.5} rx={1.75}
-              fill={progress >= 1 ? '#f97316' : look.edge} />
-          </g>
-        )}
+        {progress != null && (() => {
+          // Along the bottom, inside the table (a chord for round ones).
+          const by = shape === 'circle' ? r * 0.62 : h / 2 - 11;
+          const bw = shape === 'circle' ? 2 * Math.sqrt(Math.max(0, r * r - by * by)) - 18 : w - 28;
+          return (
+            <g>
+              <rect x={-bw / 2} y={by - 1.75} width={bw} height={3.5} rx={1.75} fill="rgba(15,23,42,0.08)" />
+              <rect x={-bw / 2} y={by - 1.75} width={Math.max(3.5, bw * Math.min(1, progress))} height={3.5} rx={1.75}
+                fill={progress >= 1 ? '#f97316' : look.edge} />
+            </g>
+          );
+        })()}
       </g>
       <text textAnchor="middle" dominantBaseline="central" y={line2 ? -7 : 0}
         style={{ fontSize: nameSize, fontWeight: 650, letterSpacing: '-0.01em', fill: look.ink, pointerEvents: 'none', userSelect: 'none' }}>

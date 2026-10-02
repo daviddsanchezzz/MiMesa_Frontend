@@ -23,6 +23,8 @@ const Onboarding = lazy(() => import('./pages/Onboarding'));
 const Publicidad = lazy(() => import('./pages/Publicidad'));
 const Analytics = lazy(() => import('./pages/Analytics'));
 const Personal = lazy(() => import('./pages/Personal'));
+const Performance = lazy(() => import('./pages/Performance'));
+const More = lazy(() => import('./pages/More'));
 const Finanzas = lazy(() => import('./pages/Finanzas'));
 const Compras = lazy(() => import('./pages/Compras'));
 const PublicReservation = lazy(() => import('./pages/PublicReservation'));
@@ -301,11 +303,16 @@ export default function App() {
           <Route path="/configuracion" element={<RoleRoute minRole="manager"><PrivateLayout><Settings /></PrivateLayout></RoleRoute>} />
           <Route path="/settings"      element={<Navigate to="/configuracion" replace />} />
           <Route path="/profile"       element={<PrivateLayout><Profile /></PrivateLayout>} />
-          <Route path="/team"         element={<RoleRoute minRole="manager"><PrivateLayout><Team /></PrivateLayout></RoleRoute>} />
+          <Route path="/mas"           element={<RoleRoute minRole="manager"><PrivateLayout><More /></PrivateLayout></RoleRoute>} />
+          <Route path="/equipo"       element={<ModuleRoute moduleKey="staff"><RoleRoute minRole="manager"><PrivateLayout><Team /></PrivateLayout></RoleRoute></ModuleRoute>} />
+          <Route path="/equipo/:id"   element={<ModuleRoute moduleKey="staff"><RoleRoute minRole="manager"><PrivateLayout><Team /></PrivateLayout></RoleRoute></ModuleRoute>} />
+          <Route path="/team"         element={<Navigate to="/equipo" replace />} />
           <Route path="/analytics"    element={<RoleRoute minRole="manager"><PrivateLayout><Analytics /></PrivateLayout></RoleRoute>} />
           <Route path="/calendario"   element={<Navigate to="/reservations?view=calendar" replace />} />
           <Route path="/publicidad"   element={<RoleRoute minRole="manager"><PrivateLayout><Publicidad /></PrivateLayout></RoleRoute>} />
-          <Route path="/personal"     element={<ModuleRoute moduleKey="staff"><RoleRoute minRole="manager"><PrivateLayout><Personal /></PrivateLayout></RoleRoute></ModuleRoute>} />
+          <Route path="/rendimiento"  element={<ModuleRoute moduleKey="staff"><RoleRoute minRole="manager"><PrivateLayout><Performance /></PrivateLayout></RoleRoute></ModuleRoute>} />
+          <Route path="/personal"     element={<Navigate to="/rendimiento" replace />} />
+          <Route path="/planificacion" element={<ModuleRoute moduleKey="staff"><RoleRoute minRole="manager"><PrivateLayout><Personal /></PrivateLayout></RoleRoute></ModuleRoute>} />
           <Route path="/finanzas"     element={<ModuleRoute moduleKey="expenses"><RoleRoute minRole="owner"><PrivateLayout><Finanzas /></PrivateLayout></RoleRoute></ModuleRoute>} />
           <Route path="/compras"      element={<ModuleRoute moduleKey="purchases"><RoleRoute minRole="manager"><PrivateLayout><Compras /></PrivateLayout></RoleRoute></ModuleRoute>} />
           <Route path="*" element={<Navigate to="/" replace />} />
@@ -316,4 +323,3 @@ export default function App() {
     </ErrorBoundary>
   );
 }
-

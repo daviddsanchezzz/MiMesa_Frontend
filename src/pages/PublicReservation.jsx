@@ -193,11 +193,13 @@ export default function PublicReservation() {
   const [lang, setLang] = useState(() => localStorage.getItem('pr_lang') || 'es');
   const [business, setBusiness] = useState(null);
   const [rooms, setRooms] = useState([]);
+  const [professionals, setProfessionals] = useState([]);
   const [step, setStep] = useState(1);
   const [form, setForm] = useState({
     guestName: '', guestPhone: '', guestEmail: '',
     roomId: '', date: '', time: '', people: 2, notes: '', consent: false, marketing: false,
     promoCode: '',
+    professionalId: '', service: {},
   });
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
@@ -226,11 +228,12 @@ export default function PublicReservation() {
   useEffect(() => {
     (async () => {
       try {
-        const [bizRes, roomsRes, promoRes, paymentRes] = await Promise.all([
+        const [bizRes, roomsRes, promoRes, paymentRes, professionalsRes] = await Promise.all([
           publicApi.get(`/auth/public/business/${businessId}`),
           publicApi.get(`/rooms/public/${businessId}`),
           publicApi.get(`/promos/public/${businessId}/has-active`).catch(() => ({ data: { hasActive: false } })),
           publicApi.get(`/reservations/public/payment-config?businessId=${businessId}`).catch(() => ({ data: { mode: 'none' } })),
+          publicApi.get(`/staff/public/professionals?businessId=${businessId}`).catch(() => ({ data: [] })),
         ]);
         setBusiness(bizRes.data);
 
@@ -245,6 +248,7 @@ export default function PublicReservation() {
           }
         }
         setRooms(Array.isArray(roomsRes.data) ? roomsRes.data : roomsRes.data?.rooms || []);
+        setProfessionals(Array.isArray(professionalsRes.data) ? professionalsRes.data : []);
         setHasActivePromo(promoRes.data.hasActive);
       } catch {
         setError(tr.businessNotFound);
@@ -389,6 +393,7 @@ export default function PublicReservation() {
     if (!form.guestPhone.trim()) { setError(tr.errorPhone); return; }
     if (!form.guestEmail.trim()) { setError(tr.errorEmail); return; }
     if (!form.consent) { setError(tr.errorConsent); return; }
+    if (form.professionalId && !form.service?.id) { setError('Selecciona uno de los servicios del profesional.'); return; }
 
     // Si hay pago activo, ir al paso 5 en lugar de enviar directamente
     if (needsPayment) {
@@ -738,6 +743,10 @@ export default function PublicReservation() {
                         onChange={e => setForm(f => ({ ...f, guestEmail: e.target.value }))}
                         className={inputCls} placeholder="tu@email.com" />
                     </div>
+                    {professionals.length > 0 && <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Profesional</label><select value={form.professionalId} onChange={(e) => setForm((f) => ({ ...f, professionalId: e.target.value, service: {} }))} className={inputCls}><option value="">Cualquiera</option>{professionals.map((p) => <option key={p._id} value={p._id}>{`${p.firstName} ${p.lastName || ''}`.trim()}</option>)}</select></div>
+                      <div><label className="block text-sm font-medium text-gray-700 mb-1.5">Servicio</label><select disabled={!form.professionalId} value={form.service?.id || ''} onChange={(e) => setForm((f) => ({ ...f, service: { id: e.target.value } }))} className={`${inputCls} disabled:bg-gray-50`}><option value="">Selecciona</option>{(professionals.find((p) => p._id === form.professionalId)?.services || []).map((s) => <option key={s._id} value={s._id}>{s.name} · {s.duration} min · {Number(s.price || 0).toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}</option>)}</select></div>
+                    </div>}
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1.5">{tr.notes}</label>
                       <textarea value={form.notes} onChange={e => setForm(f => ({ ...f, notes: e.target.value }))}

@@ -102,10 +102,10 @@ export default function Sidebar({
       : links;
   const lowerLinks = isStaff || isFree
     ? []
-    : hasRole('manager') ? [{ to: '/team', label: 'Equipo', icon: <IconTeam /> }] : [];
+    : hasRole('manager') ? [{ to: '/equipo', label: 'Equipo', icon: <IconTeam /> }] : [];
   const visibleConfigLinks = hasRole('manager') ? configLinks : [];
   const personalLink = (isModuleEnabled('staff') && hasRole('manager'))
-    ? [{ to: '/personal', label: 'Personal', icon: <IconBriefcase /> }]
+    ? [{ to: '/rendimiento', label: 'Rendimiento', icon: <IconBriefcase /> }]
     : [];
   const finanzasLink = (isModuleEnabled('expenses') && hasRole('owner'))
     ? [{ to: '/finanzas', label: 'Finanzas', icon: <IconCurrencyEuro /> }]
@@ -117,10 +117,7 @@ export default function Sidebar({
     mainLinks[0],
     mainLinks[1],
     ...mainLinks.slice(2),
-    ...lowerLinks,
-    ...personalLink,
-    ...finanzasLink,
-    ...comprasLink,
+    ...(hasRole('manager') ? [{ to: '/mas', label: 'Más', icon: <IconBriefcase /> }] : []),
   ].filter(Boolean).filter((link) => !(isSmallScreen && link.to === '/tables'));
 
   const userName = session?.user?.name || business?.userName || business?.name || 'Usuario';
@@ -240,11 +237,12 @@ export default function Sidebar({
                 to={link.to}
                 end={link.to === '/'}
                 onClick={handleNavClick}
-                className={({ isActive }) =>
-                  `flex items-center ${collapsed ? 'justify-center' : 'gap-3'} px-3 py-3 lg:py-2 rounded-lg text-sm font-medium transition-all duration-100 ${
-                    isActive ? 'bg-violet-600 text-white shadow-sm' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100'
+                className={({ isActive }) => {
+                  const moreChild = link.to === '/mas' && ['/equipo', '/rendimiento', '/planificacion', '/finanzas', '/compras', '/publicidad', '/analytics', '/configuracion'].some((path) => location.pathname.startsWith(path));
+                  return `flex items-center ${collapsed ? 'justify-center' : 'gap-3'} px-3 py-3 lg:py-2 rounded-lg text-sm font-medium transition-all duration-100 ${
+                    isActive || moreChild ? 'bg-violet-600 text-white shadow-sm' : 'text-slate-400 hover:bg-slate-800 hover:text-slate-100'
                   }`
-                }
+                }}
                 title={collapsed ? link.label : undefined}
               >
                 {link.icon}
@@ -253,7 +251,7 @@ export default function Sidebar({
             ))
           )}
 
-          {!devSidebar && !isStaff && !isFree && hasRole('manager') && (
+          {false && !devSidebar && !isStaff && !isFree && hasRole('manager') && (
             <NavLink
               to="/analytics"
               onClick={handleNavClick}
@@ -269,7 +267,7 @@ export default function Sidebar({
             </NavLink>
           )}
 
-          {!devSidebar && !isStaff && !isFree && hasRole('manager') && (
+          {false && !devSidebar && !isStaff && !isFree && hasRole('manager') && (
             <NavLink
               to="/publicidad"
               onClick={handleNavClick}
@@ -288,7 +286,7 @@ export default function Sidebar({
       </nav>
 
       <div className="px-3 pb-4 border-t border-slate-700/50 pt-3">
-        {!devSidebar && visibleConfigLinks.map((link) => (
+        {false && !devSidebar && visibleConfigLinks.map((link) => (
           <NavLink
             key={link.to}
             to={link.to}

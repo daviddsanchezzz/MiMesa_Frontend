@@ -1,427 +1,98 @@
-﻿import { useState, useEffect, useCallback } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import api from '../services/api';
+import Modal from '../components/Modal';
 import { useAuth } from '../context/AuthContext';
+import { useSetMobileHeader } from '../context/MobileHeaderContext';
 
-/* Constants */
 const ROLE_LABELS = { owner: 'Propietario', manager: 'Encargado', staff: 'Personal' };
-
-const ROLE_STYLE = {
-  owner:   { pill: 'bg-violet-50 text-violet-700 ring-violet-200',   dot: 'bg-violet-500' },
-  manager: { pill: 'bg-amber-50  text-amber-700  ring-amber-200',    dot: 'bg-amber-500'  },
-  staff:   { pill: 'bg-gray-100  text-gray-600   ring-gray-200',     dot: 'bg-gray-400'   },
+const ROLE_HELP = {
+  owner: ['Acceso total al negocio', 'Gestiona equipo, roles y facturación'],
+  manager: ['Gestiona la operativa', 'Accede a las funciones permitidas por el negocio'],
+  staff: ['Ve la agenda', 'Gestiona sus citas', 'Realiza operaciones básicas'],
 };
+const DAYS = [['mon', 'Lunes'], ['tue', 'Martes'], ['wed', 'Miércoles'], ['thu', 'Jueves'], ['fri', 'Viernes'], ['sat', 'Sábado'], ['sun', 'Domingo']];
+const inputCls = 'w-full min-h-11 border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-violet-500';
+const money = (value, currency = 'EUR') => new Intl.NumberFormat('es-ES', { style: 'currency', currency }).format(Number(value) || 0);
+const fullName = (p) => `${p?.firstName || ''} ${p?.lastName || ''}`.trim();
 
-const AVATAR_PALETTE = [
-  'from-violet-500 to-violet-700',
-  'from-violet-500 to-purple-700',
-  'from-rose-500   to-pink-700',
-  'from-amber-500  to-orange-600',
-  'from-emerald-500 to-teal-700',
-  'from-cyan-500   to-blue-600',
-];
+function Avatar({ professional, large = false }) {
+  return <div className={`${large ? 'w-14 h-14 text-xl' : 'w-11 h-11 text-base'} rounded-full text-white font-bold flex items-center justify-center shrink-0`} style={{ backgroundColor: professional?.color || '#7C3AED' }}>{fullName(professional)[0]?.toUpperCase() || '?'}</div>;
+}
+function Loading() { return <div className="space-y-3"><div className="h-20 rounded-2xl bg-gray-100 animate-pulse" /><div className="h-36 rounded-2xl bg-gray-100 animate-pulse" /></div>; }
+function Empty({ onCreate }) { return <div className="bg-white border border-gray-200 rounded-2xl p-10 text-center shadow-sm"><div className="w-12 h-12 mx-auto mb-3 rounded-full bg-violet-50 text-violet-600 flex items-center justify-center text-2xl">+</div><h2 className="font-semibold text-gray-900">Añade tu primer profesional</h2><p className="text-sm text-gray-500 mt-1 mb-5">Podrá recibir reservas aunque no tenga acceso a Vetra.</p><button onClick={onCreate} className="min-h-11 px-4 rounded-xl bg-violet-600 text-white text-sm font-semibold">Crear profesional</button></div>; }
 
-function avatarGradient(str = '') {
-  let h = 0;
-  for (const c of str) h = c.charCodeAt(0) + ((h << 5) - h);
-  return AVATAR_PALETTE[Math.abs(h) % AVATAR_PALETTE.length];
+function ProfessionalForm({ professional, onClose, onSaved }) {
+  const { hasRole } = useAuth();
+  const [form, setForm] = useState({ firstName: professional?.firstName || '', lastName: professional?.lastName || '', color: professional?.color || '#7C3AED' });
+  const [access, setAccess] = useState({ enabled: false, email: '', role: 'staff' });
+  const [saving, setSaving] = useState(false); const [error, setError] = useState('');
+  const submit = async (e) => { e.preventDefault(); setSaving(true); setError(''); try { const res = professional?._id ? await api.put(`/staff/employees/${professional._id}`, form) : await api.post('/staff/employees', form); if (!professional && access.enabled) await api.post('/invitations', { name: `${form.firstName} ${form.lastName}`.trim(), email: access.email, role: access.role, professionalId: res.data._id }); onSaved(res.data); } catch (err) { setError(err.response?.data?.message || 'No se pudo guardar el profesional'); } finally { setSaving(false); } };
+  return <Modal title={professional ? 'Editar profesional' : 'Nuevo profesional'} onClose={onClose}><form onSubmit={submit} className="space-y-4">
+    {error && <p className="text-sm text-red-700 bg-red-50 rounded-xl px-3 py-2">{error}</p>}
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3"><label className="text-sm font-medium text-gray-700">Nombre<input autoFocus required value={form.firstName} onChange={(e) => setForm({ ...form, firstName: e.target.value })} className={`${inputCls} mt-1.5`} /></label><label className="text-sm font-medium text-gray-700">Apellidos<input value={form.lastName} onChange={(e) => setForm({ ...form, lastName: e.target.value })} className={`${inputCls} mt-1.5`} /></label></div>
+    <label className="block text-sm font-medium text-gray-700">Color del avatar<div className="mt-1.5 flex items-center gap-3"><input type="color" value={form.color} onChange={(e) => setForm({ ...form, color: e.target.value })} className="w-12 h-11 rounded-xl border border-gray-300 p-1 bg-white" /><span className="text-sm text-gray-500">Identifica su agenda rápidamente</span></div></label>
+    {!professional && <div className="border border-gray-200 rounded-xl p-3"><label className="min-h-11 flex items-center gap-3 text-sm font-semibold text-gray-800"><input type="checkbox" checked={access.enabled} onChange={(e) => setAccess({ ...access, enabled: e.target.checked })} className="w-5 h-5 accent-violet-600" />Dar acceso a Vetra</label><p className="text-xs text-gray-500 ml-8">Podrá iniciar sesión y gestionar las funciones permitidas por su rol.</p>{access.enabled && <div className="grid sm:grid-cols-2 gap-3 mt-3"><input required type="email" placeholder="email@ejemplo.com" value={access.email} onChange={(e) => setAccess({ ...access, email: e.target.value })} className={inputCls} /><select value={access.role} onChange={(e) => setAccess({ ...access, role: e.target.value })} className={inputCls}><option value="staff">Personal</option><option value="manager">Encargado</option>{hasRole('owner') && <option value="owner">Propietario</option>}</select></div>}</div>}
+    <div className="flex justify-end gap-2 pt-2"><button type="button" onClick={onClose} className="min-h-11 px-4 rounded-xl text-sm font-semibold text-gray-600 bg-gray-100">Cancelar</button><button disabled={saving} className="min-h-11 px-4 rounded-xl text-sm font-semibold text-white bg-violet-600 disabled:opacity-50">{saving ? 'Guardando…' : 'Guardar'}</button></div>
+  </form></Modal>;
 }
 
-/* Sub-components */
-function Avatar({ name, email, size = 'md' }) {
-  const initial = (name || email || '?')[0].toUpperCase();
-  const grad    = avatarGradient(name || email);
-  const sz      = size === 'lg' ? 'w-11 h-11 text-base' : 'w-9 h-9 text-sm';
-  return (
-    <div className={`${sz} rounded-full bg-gradient-to-br ${grad} flex items-center justify-center text-white font-semibold shrink-0 shadow-sm`}>
-      {initial}
-    </div>
-  );
+function TeamList({ professionals, members, onCreate }) {
+  const navigate = useNavigate();
+  const linkedMemberIds = new Set(professionals.map((p) => p.member?._id).filter(Boolean).map(String));
+  const unlinked = members.filter((m) => !linkedMemberIds.has(String(m._id)));
+  return <div className="space-y-5 max-w-4xl mx-auto"><div className="flex items-start justify-between gap-3"><div><h1 className="text-xl font-bold text-gray-900">Equipo</h1><p className="text-sm text-gray-500 mt-0.5">{professionals.length} {professionals.length === 1 ? 'profesional' : 'profesionales'}</p></div><button onClick={onCreate} className="min-h-11 shrink-0 px-4 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold shadow-sm">+ Profesional</button></div>
+    {professionals.length === 0 ? <Empty onCreate={onCreate} /> : <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm divide-y divide-gray-100">{professionals.map((p) => { const services = (p.services || []).filter((s) => s.active !== false).map((s) => s.name); return <button key={p._id} onClick={() => navigate(`/equipo/${p._id}`, { state: { from: '/equipo' } })} className="w-full min-h-[76px] p-4 flex items-center gap-3 text-left hover:bg-gray-50 transition-colors"><Avatar professional={p} /><div className="flex-1 min-w-0"><div className="flex items-center gap-2"><p className="font-semibold text-gray-900 truncate">{fullName(p)}</p>{p.status !== 'active' && <span className="text-[11px] rounded-full px-2 py-0.5 bg-gray-100 text-gray-500">Inactivo</span>}</div><p className="text-xs text-gray-500 truncate mt-0.5">{services.length ? services.join(', ') : 'Sin servicios asignados'}</p><p className="text-xs text-gray-400 mt-0.5">{p.scheduleMode === 'custom' ? 'Horario propio' : 'Horario del negocio'}</p></div><span className={`hidden sm:inline-flex text-[11px] font-semibold px-2.5 py-1 rounded-full ${p.member ? 'bg-emerald-50 text-emerald-700' : p.pendingInvitation ? 'bg-amber-50 text-amber-700' : 'bg-gray-100 text-gray-500'}`}>{p.member ? 'Con acceso' : p.pendingInvitation ? 'Invitación pendiente' : 'Sin acceso'}</span><span className="text-gray-300">›</span></button>; })}</div>}
+    {unlinked.length > 0 && <section><h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2 px-1">Usuarios sin profesional</h2><div className="bg-white border border-gray-200 rounded-2xl divide-y divide-gray-100">{unlinked.map((m) => <div key={m._id} className="px-4 py-3 flex items-center justify-between gap-3"><div className="min-w-0"><p className="text-sm font-semibold text-gray-800 truncate">{m.userName || m.userEmail}</p><p className="text-xs text-gray-400 truncate">{m.userEmail}</p></div><span className="text-xs text-gray-500">{ROLE_LABELS[m.role] || m.role}</span></div>)}</div></section>}
+  </div>;
 }
 
-function RolePill({ role }) {
-  const s = ROLE_STYLE[role] || ROLE_STYLE.staff;
-  return (
-    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ring-1 ${s.pill}`}>
-      <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
-      {ROLE_LABELS[role] || role}
-    </span>
-  );
+function GeneralTab({ professional, performance, onEdit, onSave }) {
+  const navigate = useNavigate(); const [editingSchedule, setEditingSchedule] = useState(false); const [scheduleMode, setScheduleMode] = useState(professional.scheduleMode || 'business'); const [weekly, setWeekly] = useState(professional.weeklySchedule || {}); const [vacations, setVacations] = useState(professional.vacations || []); const [vacationForm, setVacationForm] = useState({ startDate: '', endDate: '', reason: '' });
+  const toggleDay = (key) => setWeekly((w) => ({ ...w, [key]: w[key]?.enabled ? { ...w[key], enabled: false } : { enabled: true, start: w[key]?.start || '09:00', end: w[key]?.end || '18:00' } }));
+  const save = async () => { await onSave({ scheduleMode, weeklySchedule: weekly, vacations }); setEditingSchedule(false); };
+  const futureVacations = (professional.vacations || []).filter((v) => v.endDate >= new Date().toISOString().slice(0, 10));
+  return <div className="space-y-4"><section className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm flex items-center gap-3"><Avatar professional={professional} large /><div className="flex-1 min-w-0"><h2 className="text-lg font-bold text-gray-900 truncate">{fullName(professional)}</h2><span className={`text-xs font-semibold ${professional.status === 'active' ? 'text-emerald-600' : 'text-gray-400'}`}>● {professional.status === 'active' ? 'Activo' : 'Inactivo'}</span></div><button onClick={onEdit} className="min-h-11 px-3 text-sm font-semibold text-violet-700 rounded-xl hover:bg-violet-50">Editar</button></section>
+    <section className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm"><div className="flex justify-between items-start gap-3"><div><p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Horario</p><p className="text-sm font-semibold text-gray-900 mt-1">{professional.scheduleMode === 'custom' ? 'Tiene horario propio' : 'Sigue el horario del negocio'}</p></div><button onClick={() => setEditingSchedule(!editingSchedule)} className="min-h-11 px-3 text-sm font-semibold text-violet-700 rounded-xl hover:bg-violet-50">{editingSchedule ? 'Cerrar' : 'Editar'}</button></div>
+      {editingSchedule && <div className="mt-4 pt-4 border-t border-gray-100 space-y-3"><div className="grid grid-cols-1 sm:grid-cols-2 gap-2">{[['business', 'Horario del negocio'], ['custom', 'Horario propio y vacaciones']].map(([value, label]) => <button key={value} onClick={() => setScheduleMode(value)} className={`min-h-11 rounded-xl border px-3 text-sm font-semibold ${scheduleMode === value ? 'border-violet-500 bg-violet-50 text-violet-700' : 'border-gray-200 text-gray-600'}`}>{label}</button>)}</div>{scheduleMode === 'custom' && <><div className="space-y-2">{DAYS.map(([key, label]) => { const day = weekly[key] || {}; return <div key={key} className="min-h-11 flex items-center gap-2"><label className="flex items-center gap-2 w-28 text-sm font-medium"><input type="checkbox" checked={!!day.enabled} onChange={() => toggleDay(key)} />{label}</label>{day.enabled && <><input type="time" value={day.start || '09:00'} onChange={(e) => setWeekly({ ...weekly, [key]: { ...day, start: e.target.value } })} className="border rounded-lg px-2 py-2 text-sm min-w-0" /><span className="text-gray-400">–</span><input type="time" value={day.end || '18:00'} onChange={(e) => setWeekly({ ...weekly, [key]: { ...day, end: e.target.value } })} className="border rounded-lg px-2 py-2 text-sm min-w-0" /></>}</div>; })}</div><div className="pt-3 border-t border-gray-100"><p className="text-sm font-semibold text-gray-800 mb-2">Vacaciones</p>{vacations.map((v, i) => <div key={`${v.startDate}-${i}`} className="flex items-center gap-2 py-1 text-sm"><span className="flex-1">{v.startDate} – {v.endDate}{v.reason ? ` · ${v.reason}` : ''}</span><button onClick={() => setVacations(vacations.filter((_, idx) => idx !== i))} className="w-11 h-11 text-red-500" aria-label="Eliminar vacaciones">×</button></div>)}<div className="grid sm:grid-cols-3 gap-2"><input type="date" value={vacationForm.startDate} onChange={(e) => setVacationForm({ ...vacationForm, startDate: e.target.value })} className={inputCls} /><input type="date" min={vacationForm.startDate} value={vacationForm.endDate} onChange={(e) => setVacationForm({ ...vacationForm, endDate: e.target.value })} className={inputCls} /><button disabled={!vacationForm.startDate || !vacationForm.endDate} onClick={() => { setVacations([...vacations, vacationForm]); setVacationForm({ startDate: '', endDate: '', reason: '' }); }} className="min-h-11 rounded-xl border border-gray-200 text-sm font-semibold disabled:opacity-40">Añadir vacaciones</button></div></div></>}<button onClick={save} className="min-h-11 w-full sm:w-auto px-4 rounded-xl bg-violet-600 text-white text-sm font-semibold">Guardar horario</button></div>}
+    </section><section className="grid sm:grid-cols-2 gap-4"><div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm"><p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Agenda</p><p className="text-sm text-gray-900 mt-2"><b>{performance?.appointments || 0} citas</b> este mes · {money(performance?.generated || 0)}</p><button onClick={() => navigate(`/reservations?professional=${professional._id}`)} className="min-h-11 mt-2 text-sm font-semibold text-violet-700">Ver agenda →</button></div><div className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm"><p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Próximas vacaciones</p><p className="text-sm text-gray-900 mt-2">{futureVacations.length ? `${futureVacations[0].startDate} – ${futureVacations[0].endDate}` : 'Ninguna'}</p><p className="text-xs text-gray-400 mt-2">Las vacaciones propias se guardan en su ficha.</p></div></section>
+  </div>;
 }
 
-function ErrorBanner({ msg }) {
-  return msg ? (
-    <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3 mb-4">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 shrink-0">
-        <path fillRule="evenodd" d="M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14Zm-.75-9.5a.75.75 0 0 1 1.5 0v3.5a.75.75 0 0 1-1.5 0V5.5Zm.75 6.5a.875.875 0 1 1 0-1.75.875.875 0 0 1 0 1.75Z" clipRule="evenodd"/>
-      </svg>
-      {msg}
-    </div>
-  ) : null;
+function ServicesTab({ professional, onSave }) {
+  const [services, setServices] = useState(professional.services || []); const [saving, setSaving] = useState(false);
+  const update = (i, patch) => setServices(services.map((s, idx) => idx === i ? { ...s, ...patch } : s));
+  const save = async () => { setSaving(true); await onSave({ services: services.filter((s) => s.name.trim()).map((s) => ({ ...s, name: s.name.trim() })) }); setSaving(false); };
+  return <section className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden"><div className="p-4 border-b border-gray-100"><h2 className="font-semibold text-gray-900">Servicios de {professional.firstName}</h2><p className="text-sm text-gray-500 mt-1">Añade los servicios que realiza. Solo se le podrá reservar para estos servicios.</p></div><div className="p-4 space-y-3">{services.length === 0 && <p className="text-sm text-gray-400 text-center py-5">Todavía no tiene servicios asignados</p>}{services.map((service, i) => <div key={service._id || i} className="border border-gray-200 rounded-xl p-3"><div className="flex gap-2"><input aria-label="Servicio" placeholder="Ej. Manicura" value={service.name} onChange={(e) => update(i, { name: e.target.value })} className={`${inputCls} flex-1`} /><button onClick={() => setServices(services.filter((_, idx) => idx !== i))} className="w-11 h-11 rounded-xl text-red-500 hover:bg-red-50" aria-label="Eliminar servicio">×</button></div><div className="grid grid-cols-2 gap-2 mt-2"><label className="text-xs text-gray-500">Duración (min)<input type="number" min="5" step="5" value={service.duration} onChange={(e) => update(i, { duration: Number(e.target.value) })} className={`${inputCls} mt-1`} /></label><label className="text-xs text-gray-500">Precio (€)<input type="number" min="0" step="0.01" value={service.price} onChange={(e) => update(i, { price: Number(e.target.value) })} className={`${inputCls} mt-1`} /></label></div></div>)}<div className="flex flex-col sm:flex-row gap-2"><button onClick={() => setServices([...services, { name: '', duration: 30, price: 0, active: true }])} className="min-h-11 px-4 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700">+ Añadir servicio</button><button disabled={saving} onClick={save} className="min-h-11 px-4 rounded-xl bg-violet-600 text-white text-sm font-semibold sm:ml-auto disabled:opacity-50">{saving ? 'Guardando…' : 'Guardar servicios'}</button></div></div></section>;
 }
 
-/* Main page */
+function Metric({ label, value, note }) { return <div className="bg-gray-50 rounded-xl p-3"><p className="text-xs text-gray-500">{label}</p><p className="text-lg font-bold text-gray-900 mt-1">{value}</p>{note && <p className="text-[11px] text-gray-400 mt-0.5">{note}</p>}</div>; }
+function CompensationTab({ professional, performance, onRefresh }) {
+  const comp = professional.activeCompensation; const [editing, setEditing] = useState(!comp); const [form, setForm] = useState({ paymentType: comp?.paymentType || 'monthly_fixed', baseAmount: comp?.baseAmount || '', effectiveFrom: new Date().toISOString().slice(0, 10), currency: 'EUR' }); const [saving, setSaving] = useState(false);
+  const submit = async (e) => { e.preventDefault(); setSaving(true); await api.post(`/staff/employees/${professional._id}/compensations`, { ...form, baseAmount: Number(form.baseAmount) }); await onRefresh(); setEditing(false); setSaving(false); };
+  const compText = comp ? `${money(comp.baseAmount, comp.currency)} ${comp.paymentType === 'monthly_fixed' ? '/mes' : comp.paymentType === 'hourly' ? '/hora' : '/turno'}` : '';
+  return <div className="space-y-4"><section className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm"><div className="flex justify-between gap-3"><div><p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Cómo cobra</p>{comp ? <><p className="font-semibold text-gray-900 mt-2">{comp.paymentType === 'monthly_fixed' ? 'Sueldo fijo' : comp.paymentType === 'hourly' ? 'Por horas' : 'Por turno'}</p><p className="text-sm text-gray-500">{compText}</p></> : <p className="text-sm text-gray-600 mt-2">Sin definir cómo cobra</p>}</div><button onClick={() => setEditing(!editing)} className="min-h-11 px-3 text-sm font-semibold text-violet-700">{comp ? 'Cambiar' : 'Configurar remuneración'}</button></div>{editing && <form onSubmit={submit} className="mt-4 pt-4 border-t border-gray-100 grid sm:grid-cols-3 gap-3"><select value={form.paymentType} onChange={(e) => setForm({ ...form, paymentType: e.target.value })} className={inputCls}><option value="monthly_fixed">Sueldo mensual</option><option value="hourly">Por hora</option><option value="per_shift">Por turno</option></select><input required type="number" min="0" step="0.01" placeholder="Importe" value={form.baseAmount} onChange={(e) => setForm({ ...form, baseAmount: e.target.value })} className={inputCls} /><button disabled={saving} className="min-h-11 rounded-xl bg-violet-600 text-white text-sm font-semibold">Guardar</button></form>}</section><section className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm"><p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{new Date().toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}</p><div className="grid grid-cols-2 gap-3 mt-3"><Metric label="Ingresos generados" value={money(performance?.generated)} /><Metric label="Citas" value={performance?.appointments || 0} /><Metric label="Coste estimado" value={money(performance?.cost)} note="Según turnos y remuneración" /><Metric label="Margen para el negocio" value={money(performance?.margin)} /></div></section></div>;
+}
+
+function AccessTab({ professional, onRefresh }) {
+  const { hasRole } = useAuth(); const member = professional.member; const invite = professional.pendingInvitation; const [form, setForm] = useState({ email: professional.email || '', role: 'staff' }); const [error, setError] = useState(''); const [saving, setSaving] = useState(false);
+  const inviteUser = async (e) => { e.preventDefault(); setSaving(true); setError(''); try { await api.post('/invitations', { name: fullName(professional), ...form, professionalId: professional._id }); await onRefresh(); } catch (err) { setError(err.response?.data?.message || 'No se pudo enviar la invitación'); } finally { setSaving(false); } };
+  const changeRole = async (role) => { try { await api.put(`/members/${member._id}`, { role }); await onRefresh(); } catch (err) { setError(err.response?.data?.message || 'No se pudo cambiar el rol'); } };
+  const revoke = async () => { if (!confirm(`¿Revocar el acceso de ${professional.firstName}? El profesional, sus reservas y configuración se conservarán.`)) return; try { await api.delete(`/staff/employees/${professional._id}/access`); await onRefresh(); } catch (err) { setError(err.response?.data?.message || 'No se pudo revocar el acceso'); } };
+  return <section className="bg-white border border-gray-200 rounded-2xl p-4 shadow-sm"><h2 className="font-semibold text-gray-900">Acceso a Vetra</h2>{error && <p className="text-sm text-red-700 bg-red-50 rounded-xl px-3 py-2 mt-3">{error}</p>}{member ? <div className="mt-4"><p className="text-sm font-semibold text-emerald-700">✓ {professional.firstName} tiene acceso</p><p className="text-sm text-gray-500 mt-1">{member.userEmail}</p><label className="block text-xs font-semibold text-gray-500 mt-5">Rol<select value={member.role} disabled={!hasRole('owner') || member.role === 'owner'} onChange={(e) => changeRole(e.target.value)} className={`${inputCls} mt-1.5 max-w-sm disabled:bg-gray-50`}><option value="staff">Personal</option><option value="manager">Encargado</option><option value="owner">Propietario</option></select></label><ul className="mt-4 space-y-1">{ROLE_HELP[member.role]?.map((x) => <li key={x} className="text-sm text-gray-600">• {x}</li>)}</ul>{hasRole('owner') && member.role !== 'owner' && <button onClick={revoke} className="min-h-11 mt-5 px-3 rounded-xl text-sm font-semibold text-red-600 hover:bg-red-50">Revocar acceso</button>}</div> : invite ? <div className="mt-4"><p className="text-sm font-semibold text-amber-700">Invitación pendiente</p><p className="text-sm text-gray-500 mt-1">{invite.email} · {ROLE_LABELS[invite.role]}</p><p className="text-xs text-gray-400 mt-3">El acceso se vinculará automáticamente al aceptar la invitación.</p></div> : <div className="mt-4"><p className="text-sm text-gray-600">{professional.firstName} no tiene acceso a Vetra. Puede recibir citas igualmente.</p><form onSubmit={inviteUser} className="mt-5 space-y-3 max-w-md"><label className="block text-sm font-medium text-gray-700">Email<input required type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className={`${inputCls} mt-1.5`} /></label><label className="block text-sm font-medium text-gray-700">Rol<select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} className={`${inputCls} mt-1.5`}><option value="staff">Personal</option><option value="manager">Encargado</option>{hasRole('owner') && <option value="owner">Propietario</option>}</select></label><p className="text-xs text-gray-400">Podrá iniciar sesión y gestionar las funciones permitidas por su rol.</p><button disabled={saving} className="min-h-11 px-4 rounded-xl bg-violet-600 text-white text-sm font-semibold disabled:opacity-50">{saving ? 'Enviando…' : 'Invitar a Vetra'}</button></form></div>}</section>;
+}
+
+function ProfessionalDetail({ professionals, performance, onRefresh }) {
+  const { id } = useParams(); const navigate = useNavigate(); const location = useLocation(); const [params, setParams] = useSearchParams(); const professional = professionals.find((p) => String(p._id) === id); const [edit, setEdit] = useState(false); const tabs = ['general', 'servicios', 'remuneracion', 'acceso']; const active = tabs.includes(params.get('tab')) ? params.get('tab') : 'general';
+  if (!professional) return <div className="text-center py-16 text-gray-500">Profesional no encontrado</div>;
+  const row = performance?.rows?.find((r) => String(r.employeeId) === id); const save = async (payload) => { await api.put(`/staff/employees/${id}`, payload); await onRefresh(); };
+  return <div className="space-y-4 max-w-4xl mx-auto"><div className="flex items-center gap-3"><button onClick={() => navigate(location.state?.from || '/equipo')} className="w-11 h-11 rounded-xl hover:bg-gray-100 text-gray-600 text-xl" aria-label="Volver">‹</button><div className="min-w-0"><p className="text-xs text-gray-400">Equipo</p><h1 className="text-xl font-bold text-gray-900 truncate">{fullName(professional)}</h1></div></div><div className="overflow-x-auto [scrollbar-width:none] -mx-4 px-4"><div className="flex gap-1 bg-gray-100 p-1 rounded-xl min-w-max">{tabs.map((tab) => <button key={tab} onClick={() => setParams({ tab })} className={`min-h-11 px-4 rounded-lg text-sm font-semibold capitalize ${active === tab ? 'bg-white text-violet-700 shadow-sm' : 'text-gray-500'}`}>{tab === 'remuneracion' ? 'Remuneración' : tab}</button>)}</div></div>{active === 'general' && <GeneralTab professional={professional} performance={row} onEdit={() => setEdit(true)} onSave={save} />}{active === 'servicios' && <ServicesTab professional={professional} onSave={save} />}{active === 'remuneracion' && <CompensationTab professional={professional} performance={row} onRefresh={onRefresh} />}{active === 'acceso' && <AccessTab professional={professional} onRefresh={onRefresh} />}{edit && <ProfessionalForm professional={professional} onClose={() => setEdit(false)} onSaved={async () => { setEdit(false); await onRefresh(); }} />}</div>;
+}
+
 export default function Team() {
-  const { role: myRole, session, hasRole } = useAuth();
-  const myUserId = session?.user?.id;
-
-  const [members,     setMembers]     = useState([]);
-  const [invitations, setInvitations] = useState([]);
-  const [loading,     setLoading]     = useState(true);
-  const [pageError,   setPageError]   = useState('');
-
-  // Invite modal
-  const [showModal,   setShowModal]   = useState(false);
-  const [invForm,     setInvForm]     = useState({ name: '', email: '', role: 'staff' });
-  const [invError,    setInvError]    = useState('');
-  const [invLoading,  setInvLoading]  = useState(false);
-  const [invSent,     setInvSent]     = useState(false);
-
-  const isOwner   = hasRole('owner');
-  const isManager = hasRole('manager');
-
-  const fetchAll = useCallback(async () => {
-    try {
-      const [mRes, iRes] = await Promise.all([
-        api.get('/members'),
-        isManager ? api.get('/invitations') : Promise.resolve({ data: [] }),
-      ]);
-      setMembers(mRes.data);
-      setInvitations(iRes.data);
-    } catch {
-      setPageError('No se pudo cargar el equipo');
-    } finally {
-      setLoading(false);
-    }
-  }, [isManager]);
-
-  useEffect(() => { fetchAll(); }, [fetchAll]);
-
-  /* Send invitation */
-  const handleInvite = async (e) => {
-    e.preventDefault();
-    setInvError('');
-    setInvLoading(true);
-    try {
-      await api.post('/invitations', invForm);
-      setInvSent(true);
-      fetchAll();
-    } catch (err) {
-      setInvError(err.response?.data?.message || 'Error al enviar la invitación');
-    } finally {
-      setInvLoading(false);
-    }
-  };
-
-  const closeModal = () => {
-    setShowModal(false);
-    setInvSent(false);
-    setInvForm({ name: '', email: '', role: 'staff' });
-    setInvError('');
-  };
-
-  /* Role change */
-  const handleRoleChange = async (memberId, newRole) => {
-    try {
-      await api.put(`/members/${memberId}`, { role: newRole });
-      setMembers(prev => prev.map(m => m._id === memberId ? { ...m, role: newRole } : m));
-    } catch (err) {
-      alert(err.response?.data?.message || 'Error al cambiar el rol');
-    }
-  };
-
-  /* Remove member */
-  const handleRemove = async (memberId, name) => {
-    if (!confirm(`¿Eliminar a ${name || 'este miembro'} del equipo?`)) return;
-    try {
-      await api.delete(`/members/${memberId}`);
-      setMembers(prev => prev.filter(m => m._id !== memberId));
-    } catch (err) {
-      alert(err.response?.data?.message || 'Error al eliminar');
-    }
-  };
-
-  /* Cancel invitation */
-  const handleCancelInvite = async (id) => {
-    try {
-      await api.delete(`/invitations/${id}`);
-      setInvitations(prev => prev.filter(i => i._id !== id));
-    } catch {
-      alert('Error al cancelar la invitación');
-    }
-  };
-
-  /* Loading / error */
-  if (loading) return (
-    <div className="flex items-center justify-center h-48">
-      <div className="w-8 h-8 rounded-xl bg-violet-600 animate-pulse" />
-    </div>
-  );
-
-  return (
-    <>
-      <div className="space-y-6">
-
-        {/* Page header */}
-        <div className="flex items-start justify-between">
-          <div>
-            <h1 className="text-xl font-bold text-gray-900">Equipo</h1>
-            <p className="text-sm text-gray-500 mt-0.5">{members.length} {members.length === 1 ? 'persona' : 'personas'} en tu negocio</p>
-          </div>
-          {isManager && (
-            <button
-              onClick={() => setShowModal(true)}
-              className="flex items-center gap-2 bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors shadow-sm shadow-violet-200"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
-                <path d="M11 5a3 3 0 1 1-6 0 3 3 0 0 1 6 0ZM2.046 15.253c-.058.468.172.92.57 1.175A9.953 9.953 0 0 0 8 18c1.982 0 3.83-.573 5.384-1.573.398-.254.628-.707.57-1.175a7 7 0 0 0-13.908 0ZM15.75 7.5a.75.75 0 0 0-1.5 0v2.25H12a.75.75 0 0 0 0 1.5h2.25v2.25a.75.75 0 0 0 1.5 0v-2.25H18a.75.75 0 0 0 0-1.5h-2.25V7.5Z"/>
-              </svg>
-              Invitar persona
-            </button>
-          )}
-        </div>
-
-        <ErrorBanner msg={pageError} />
-
-        {/* Members list */}
-        <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
-          <div className="px-5 py-3.5 border-b border-gray-100">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Miembros activos</p>
-          </div>
-
-          {members.length === 0 ? (
-            <div className="py-16 text-center">
-              <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-6 h-6 text-gray-400">
-                  <path d="M10 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM6 8a2 2 0 1 1-4 0 2 2 0 0 1 4 0ZM1.49 15.326a.78.78 0 0 1-.358-.442 3 3 0 0 1 4.308-3.516 6.484 6.484 0 0 0-1.905 3.959c-.023.222-.014.442.025.654a4.97 4.97 0 0 1-2.07-.655ZM16.44 15.98a4.97 4.97 0 0 0 2.07-.654.78.78 0 0 0 .357-.442 3 3 0 0 0-4.308-3.517 6.484 6.484 0 0 1 1.907 3.96 2.32 2.32 0 0 1-.026.654ZM18 8a2 2 0 1 1-4 0 2 2 0 0 1 4 0ZM5.304 16.19a.844.844 0 0 1-.277-.71 5 5 0 0 1 9.947 0 .843.843 0 0 1-.277.71A6.975 6.975 0 0 1 10 18a6.974 6.974 0 0 1-4.696-1.81Z"/>
-                </svg>
-              </div>
-              <p className="text-sm text-gray-400">Aún no hay miembros en este negocio</p>
-            </div>
-          ) : (
-            <ul className="divide-y divide-gray-50">
-              {members.map((member) => {
-                const isMe      = member.userId === myUserId;
-                const isOwnerRow = member.role === 'owner';
-                const canEdit   = isOwner && !isMe && !isOwnerRow;
-
-                return (
-                  <li key={member._id} className="flex items-center gap-4 px-5 py-4 hover:bg-gray-50/50 transition-colors">
-                    <Avatar name={member.userName} email={member.userEmail} />
-
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <p className="text-sm font-semibold text-gray-900 truncate">
-                          {member.userName || '-'}
-                        </p>
-                        {isMe && (
-                          <span className="text-[11px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-md">tú</span>
-                        )}
-                      </div>
-                      <p className="text-xs text-gray-400 truncate mt-0.5">{member.userEmail || '-'}</p>
-                    </div>
-
-                    <div className="flex items-center gap-2 shrink-0">
-                      {canEdit ? (
-                        <select
-                          value={member.role}
-                          onChange={e => handleRoleChange(member._id, e.target.value)}
-                          className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-violet-400 cursor-pointer hover:border-gray-300 transition-colors"
-                        >
-                          <option value="staff">Personal</option>
-                          <option value="manager">Encargado</option>
-                          <option value="owner">Propietario</option>
-                        </select>
-                      ) : (
-                        <RolePill role={member.role} />
-                      )}
-                      {canEdit && (
-                        <button
-                          onClick={() => handleRemove(member._id, member.userName)}
-                          className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-300 hover:bg-red-50 hover:text-red-500 transition-colors"
-                          title="Eliminar miembro"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
-                            <path fillRule="evenodd" d="M5 3.25V4H2.75a.75.75 0 0 0 0 1.5h.3l.815 8.15A1.5 1.5 0 0 0 5.357 15h5.285a1.5 1.5 0 0 0 1.493-1.35l.815-8.15h.3a.75.75 0 0 0 0-1.5H11v-.75A2.25 2.25 0 0 0 8.75 1h-1.5A2.25 2.25 0 0 0 5 3.25Zm2.25-.75a.75.75 0 0 0-.75.75V4h3v-.75a.75.75 0 0 0-.75-.75h-1.5ZM6.05 6a.75.75 0 0 1 .787.713l.275 5.5a.75.75 0 0 1-1.498.075l-.275-5.5A.75.75 0 0 1 6.05 6Zm3.9 0a.75.75 0 0 1 .712.787l-.275 5.5a.75.75 0 0 1-1.498-.075l.275-5.5a.75.75 0 0 1 .786-.711Z" clipRule="evenodd"/>
-                          </svg>
-                        </button>
-                      )}
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </div>
-
-        {/* Pending invitations */}
-        {isManager && invitations.length > 0 && (
-          <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
-            <div className="px-5 py-3.5 border-b border-gray-100">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Invitaciones pendientes</p>
-            </div>
-            <ul className="divide-y divide-gray-50">
-              {invitations.map((inv) => (
-                <li key={inv._id} className="flex items-center gap-4 px-5 py-4">
-                  <div className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center shrink-0">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 text-gray-400">
-                      <path d="M3 4a2 2 0 0 0-2 2v1.161l8.441 4.221a1.25 1.25 0 0 0 1.118 0L19 7.162V6a2 2 0 0 0-2-2H3Z"/>
-                      <path d="m19 8.839-7.77 3.885a2.75 2.75 0 0 1-2.46 0L1 8.839V14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8.839Z"/>
-                    </svg>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-gray-900 truncate">{inv.name}</p>
-                    <p className="text-xs text-gray-400 truncate">{inv.email}</p>
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0">
-                    <RolePill role={inv.role} />
-                    <span className="text-[11px] text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full font-medium">Pendiente</span>
-                    {isOwner && (
-                      <button
-                        onClick={() => handleCancelInvite(inv._id)}
-                        className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-300 hover:bg-red-50 hover:text-red-500 transition-colors"
-                        title="Cancelar invitación"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
-                          <path d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z"/>
-                        </svg>
-                      </button>
-                    )}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-
-        {/* Role legend */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {[
-            { role: 'owner',   desc: 'Control total, usuarios y facturación' },
-            { role: 'manager', desc: 'Reservas, turnos, clientes y mesas' },
-            { role: 'staff',   desc: 'Solo lectura y operaciones básicas' },
-          ].map(({ role, desc }) => (
-            <div key={role} className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
-              <RolePill role={role} />
-              <p className="text-xs text-gray-400 mt-2 leading-relaxed">{desc}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Invite modal */}
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          {/* Backdrop */}
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={closeModal} />
-
-          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 animate-[fadeIn_150ms_ease]">
-            {invSent ? (
-              /* Success state */
-              <div className="text-center py-4">
-                <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-7 h-7 text-green-600">
-                    <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clipRule="evenodd"/>
-                  </svg>
-                </div>
-                <h3 className="text-lg font-bold text-gray-900 mb-1">Invitación enviada</h3>
-                <p className="text-sm text-gray-500 mb-2">
-                  Le hemos enviado un email a <strong>{invForm.email}</strong> con el enlace para activar su cuenta.
-                </p>
-                <button onClick={closeModal} className="mt-4 text-sm text-violet-600 font-medium hover:underline">
-                  Cerrar
-                </button>
-              </div>
-            ) : (
-              /* Form state */
-              <>
-                <div className="flex items-center justify-between mb-5">
-                  <h3 className="text-lg font-bold text-gray-900">Invitar al equipo</h3>
-                  <button onClick={closeModal} className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 transition-colors">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
-                      <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z"/>
-                    </svg>
-                  </button>
-                </div>
-
-                <ErrorBanner msg={invError} />
-
-                <form onSubmit={handleInvite} className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Nombre</label>
-                    <input
-                      required
-                      value={invForm.name}
-                      onChange={e => setInvForm(f => ({ ...f, name: e.target.value }))}
-                      placeholder="María García"
-                      className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
-                    <input
-                      type="email" required
-                      value={invForm.email}
-                      onChange={e => setInvForm(f => ({ ...f, email: e.target.value }))}
-                      placeholder="maria@email.com"
-                      className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Rol</label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {[
-                        { value: 'staff',   label: 'Personal',  sub: 'Acceso básico' },
-                        { value: 'manager', label: 'Encargado', sub: 'Gestión operativa' },
-                        ...(isOwner ? [{ value: 'owner', label: 'Propietario', sub: 'Control total del negocio' }] : []),
-                      ].map(opt => (
-                        <label
-                          key={opt.value}
-                          className={`flex flex-col gap-0.5 border rounded-xl px-4 py-3 cursor-pointer transition-all ${
-                            invForm.role === opt.value
-                              ? 'border-violet-500 bg-violet-50 ring-2 ring-violet-300'
-                              : 'border-gray-200 hover:border-gray-300'
-                          }`}
-                        >
-                          <input
-                            type="radio" name="role" value={opt.value}
-                            checked={invForm.role === opt.value}
-                            onChange={e => setInvForm(f => ({ ...f, role: e.target.value }))}
-                            className="sr-only"
-                          />
-                          <span className="text-sm font-semibold text-gray-900">{opt.label}</span>
-                          <span className="text-xs text-gray-400">{opt.sub}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-
-                  <p className="text-xs text-gray-400 leading-relaxed">
-                    Recibirá un email con un enlace para crear su cuenta y unirse al negocio. El enlace caduca en 7 días.
-                  </p>
-
-                  <div className="flex gap-2 pt-1">
-                    <button
-                      type="submit" disabled={invLoading}
-                      className="flex-1 bg-violet-600 hover:bg-violet-700 disabled:opacity-60 text-white text-sm font-semibold py-2.5 rounded-xl transition-colors"
-                    >
-                      {invLoading ? 'Enviando...' : 'Enviar invitación'}
-                    </button>
-                    <button
-                      type="button" onClick={closeModal}
-                      className="px-4 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
-                    >
-                      Cancelar
-                    </button>
-                  </div>
-                </form>
-              </>
-            )}
-          </div>
-        </div>
-      )}
-    </>
-  );
+  const { id } = useParams(); const [professionals, setProfessionals] = useState([]); const [members, setMembers] = useState([]); const [performance, setPerformance] = useState(null); const [loading, setLoading] = useState(true); const [error, setError] = useState(''); const [create, setCreate] = useState(false); const navigate = useNavigate(); const month = useMemo(() => new Date().toISOString().slice(0, 7), []);
+  useSetMobileHeader({ title: 'Equipo', actions: null });
+  const load = useCallback(async () => { try { setError(''); const [p, m, perf] = await Promise.all([api.get('/staff/employees?includeInactive=true'), api.get('/members'), api.get(`/staff/performance?month=${month}`)]); setProfessionals(p.data); setMembers(m.data); setPerformance(perf.data); } catch (err) { setError(err.response?.data?.message || 'No se pudo cargar el equipo'); } finally { setLoading(false); } }, [month]);
+  useEffect(() => { load(); }, [load]); if (loading) return <Loading />;
+  return <>{error && <div className="max-w-4xl mx-auto mb-4 text-sm text-red-700 bg-red-50 border border-red-200 rounded-xl px-4 py-3">{error}</div>}{id ? <ProfessionalDetail professionals={professionals} performance={performance} onRefresh={load} /> : <TeamList professionals={professionals} members={members} onCreate={() => setCreate(true)} />}{create && <ProfessionalForm onClose={() => setCreate(false)} onSaved={async (p) => { setCreate(false); await load(); navigate(`/equipo/${p._id}`); }} />}</>;
 }
-
-
-

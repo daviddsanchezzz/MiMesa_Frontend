@@ -78,6 +78,7 @@ export default function ReservationForm({ reservation, onSave, onCancel, initial
   const theForkModuleEnabled = isModuleEnabled('thefork');
   const initialDate = reservation?.date || initialContext?.date || new Date().toISOString().slice(0, 10);
   const [rooms, setRooms] = useState(initialContext?.rooms || []);
+  const [professionals, setProfessionals] = useState([]);
   const [step, setStep] = useState(isEdit ? 4 : 1);
   const [form, setForm] = useState({
     guestName: reservation?.guestName || '',
@@ -90,6 +91,8 @@ export default function ReservationForm({ reservation, onSave, onCancel, initial
     status: reservation?.status || 'pending',
     thefork: Boolean(reservation?.thefork),
     notes: reservation?.notes || '',
+    professionalId: reservation?.professionalId?._id || reservation?.professionalId || '',
+    service: reservation?.service || {},
   });
   const [error, setError] = useState('');
   const [slots, setSlots] = useState(initialContext?.slots ?? null);
@@ -104,6 +107,12 @@ export default function ReservationForm({ reservation, onSave, onCancel, initial
     if (rooms.length > 0) return;
     api.get('/rooms').then((r) => setRooms(r.data)).catch(() => setRooms([]));
   }, [rooms.length]);
+
+  useEffect(() => {
+    api.get('/staff/employees').then((r) => setProfessionals((r.data || []).filter((p) => (p.services || []).some((s) => s.active !== false)))).catch(() => setProfessionals([]));
+  }, []);
+
+  const selectedProfessional = professionals.find((p) => String(p._id) === String(form.professionalId));
 
   useEffect(() => {
     if (!form.date) return;
@@ -286,6 +295,10 @@ export default function ReservationForm({ reservation, onSave, onCancel, initial
     }
     if (!isEdit && !guestPhone) {
       setError('El telefono es obligatorio');
+      return;
+    }
+    if (form.professionalId && !(form.service?.id || form.service?._id)) {
+      setError('Selecciona uno de los servicios del profesional');
       return;
     }
     setSaving(true);
@@ -581,6 +594,25 @@ export default function ReservationForm({ reservation, onSave, onCancel, initial
                 <option value="seated">Sentada</option>
                 <option value="cancelled">Cancelada</option>
               </select>
+            </div>
+          )}
+
+          {professionals.length > 0 && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className={labelCls}>Profesional <span className="text-gray-400 font-normal">(opc.)</span></label>
+                <select value={form.professionalId} onChange={(e) => setForm((f) => ({ ...f, professionalId: e.target.value, service: {} }))} className={inputCls}>
+                  <option value="">Sin asignar</option>
+                  {professionals.map((p) => <option key={p._id} value={p._id}>{`${p.firstName} ${p.lastName || ''}`.trim()}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className={labelCls}>Servicio</label>
+                <select disabled={!selectedProfessional} value={form.service?.id || form.service?._id || ''} onChange={(e) => setForm((f) => ({ ...f, service: { id: e.target.value } }))} className={`${inputCls} disabled:bg-gray-50`}>
+                  <option value="">Sin servicio</option>
+                  {(selectedProfessional?.services || []).filter((s) => s.active !== false).map((s) => <option key={s._id} value={s._id}>{s.name} · {s.duration} min · {Number(s.price || 0).toLocaleString('es-ES', { style: 'currency', currency: 'EUR' })}</option>)}
+                </select>
+              </div>
             </div>
           )}
 

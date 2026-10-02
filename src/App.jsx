@@ -10,7 +10,6 @@ const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
 const ResetPassword = lazy(() => import('./pages/ResetPassword'));
 const VerifyEmail = lazy(() => import('./pages/VerifyEmail'));
 const RestaurantToday = lazy(() => import('./pages/today/RestaurantToday'));
-const Rooms = lazy(() => import('./pages/Rooms'));
 const Tables = lazy(() => import('./pages/Tables'));
 const Reservas = lazy(() => import('./pages/reservas/Reservas'));
 const Customers = lazy(() => import('./pages/clients/Customers'));
@@ -365,7 +364,7 @@ export default function App() {
           <Route path="/bienvenida" element={<RoleRoute minRole="manager"><SetupWizard /></RoleRoute>} />
           <Route path="/dev"        element={<DevRoute><DevLayout><DevDashboard /></DevLayout></DevRoute>} />
           <Route path="/"             element={<DevRedirect><PrivateLayout><HomeDashboard /></PrivateLayout></DevRedirect>} />
-          <Route path="/rooms"        element={<RestaurantRoute><RoleRoute minRole="manager"><PrivateLayout><Rooms /></PrivateLayout></RoleRoute></RestaurantRoute>} />
+          <Route path="/rooms"        element={<Navigate to="/tables" replace />} />
           <Route path="/tables"       element={<RestaurantRoute><RoleRoute minRole="manager"><FullBleedLayout><Tables /></FullBleedLayout></RoleRoute></RestaurantRoute>} />
           <Route path="/reservations" element={<RestaurantRoute><PrivateLayout><Reservas /></PrivateLayout></RestaurantRoute>} />
           <Route path="/customers"    element={<RoleRoute minRole="manager"><PrivateLayout><Customers /></PrivateLayout></RoleRoute>} />

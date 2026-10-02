@@ -1,9 +1,10 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useSetMobileHeader } from '../context/MobileHeaderContext';
-import FloorPlan from '../components/FloorPlan';
+import { queryClient, useData } from '../lib/query';
+import FloorEditor from '../floor/FloorEditor';
 import Modal from '../components/Modal';
 import Icon from '../ui/Icon';
 import { PageHeader, PrimaryButton, GhostButton, Segmented, Section } from '../ui/kit';
@@ -56,13 +57,11 @@ function buildPreview(ranges) {
 
 export default function Tables() {
   const { planLimit } = useAuth();
-  const limit = planLimit('maxTables'); // Infinity on Basic/Pro, 15 on Free
-
-  const [tables,  setTables]  = useState([]);
-  const [rooms,   setRooms]   = useState([]);
-  const [modal,   setModal]   = useState(null);
-  const [form,    setForm]    = useState({ name: '', capacity: 2, roomId: '', shape: 'square', angle: 0 });
-  const [error,   setError]   = useState('');
+  const limit = planLimit('maxTables'); // Infinity on Basic/Pro
+  const tablesQ = useData(['tables'], () => api.get('/tables').then((r) => r.data || []));
+  const roomsQ = useData(['rooms'], () => api.get('/rooms').then((r) => r.data || []));
+  const tables = tablesQ.data || [];
+  const rooms = roomsQ.data || [];
 
   const [quickOpen,    setQuickOpen]    = useState(false);
   const [ranges,       setRanges]       = useState([emptyRange()]);
@@ -79,63 +78,16 @@ export default function Tables() {
 
   const activeTables = tables.filter(t => !t.isLocked);
   const lockedTables = tables.filter(t => t.isLocked);
-  const atLimit      = limit !== Infinity && activeTables.length >= limit;
+  const atLimit      = limit !== Infinity && tables.length >= limit;
+  const seats = activeTables.reduce((s, t) => s + (Number(t.capacity) || 0), 0);
 
-  const load = async () => {
-    const [t, r] = await Promise.all([api.get('/tables'), api.get('/rooms')]);
-    setTables(t.data);
-    setRooms(r.data);
-  };
-  useEffect(() => { load(); }, []);
-
-  const openCreate = () => { setForm({ name: '', capacity: 2, roomId: '', shape: 'square', angle: 0 }); setError(''); setModal('create'); };
-  const openEdit   = (t) => {
-    setForm({
-      name: t.name,
-      capacity: t.capacity,
-      roomId: t.roomId?._id || '',
-      shape: resolveTableShape(t),
-      angle: resolveTableAngle(t),
-    });
-    setError('');
-    setModal(t);
-  };
-
-  useSetMobileHeader({ title: 'Mesas', action: atLimit ? false : { label: 'Mesa', onClick: openCreate } });
-
-  const handleSubmit = async (e) => {
-    e.preventDefault(); setError('');
-    try {
-      const resolvedShape = TABLE_SHAPE_OPTIONS.some(s => s.value === form.shape)
-        ? form.shape
-        : inferTableShape(Number(form.capacity) || 2);
-      const payload = {
-        ...form,
-        capacity: Number(form.capacity),
-        roomId: form.roomId || null,
-        shape: resolvedShape,
-        angle: (resolvedShape === 'rect' || resolvedShape === 'square') ? normalizeTableAngle(form.angle) : 0,
-      };
-      if (modal === 'create') await api.post('/tables', payload);
-      else                    await api.put(`/tables/${modal._id}`, payload);
-      await load(); setModal(null);
-    } catch (err) { setError(err.response?.data?.message || 'Error al guardar'); }
-  };
-
-  const handleDelete = async (id) => {
-    if (!confirm('¿Eliminar esta mesa?')) return;
-    await api.delete(`/tables/${id}`); load();
-  };
-
-  const handleStatusChange = async (id, status) => {
-    await api.put(`/tables/${id}`, { status }); load();
-  };
+  useSetMobileHeader({ title: 'Mesas y salas', action: atLimit ? false : { label: 'Varias', onClick: openQuick } });
 
   const handleQuickCreate = async () => {
     setQuickError('');
     if (preview.length === 0) { setQuickError('Define al menos un rango válido'); return; }
     if (preview.length > 200) { setQuickError('Máximo 200 mesas por operación'); return; }
-    const tables = [];
+    const list = [];
     for (const r of ranges) {
       const from = Number(r.from), to = Number(r.to);
       if (!from || !to || from > to) continue;
@@ -143,7 +95,7 @@ export default function Tables() {
         const resolvedShape = TABLE_SHAPE_OPTIONS.some(s => s.value === r.shape)
           ? r.shape
           : inferTableShape(Number(r.capacity) || 2);
-        tables.push({
+        list.push({
           name: `${r.prefix}${i}`,
           capacity: Number(r.capacity) || 2,
           roomId: r.roomId || null,
@@ -154,8 +106,8 @@ export default function Tables() {
     }
     try {
       setQuickLoading(true);
-      await api.post('/tables/bulk', { tables });
-      await load();
+      await api.post('/tables/bulk', { tables: list });
+      await queryClient.invalidateQueries({ queryKey: ['tables'] });
       setQuickOpen(false);
       setRanges([emptyRange()]);
     } catch (err) {
@@ -167,89 +119,40 @@ export default function Tables() {
 
   const quickLabel = quickLoading ? 'Creando…' : `Crear ${preview.length} mesa${preview.length !== 1 ? 's' : ''}`;
 
-  return (
-    <div className="h-full flex flex-col">
-      {/* Header */}
-      <div className="px-4 lg:px-8 pt-3 lg:pt-7 pb-3 lg:pb-4 shrink-0">
-        <PageHeader
-          title="Mesas"
-          subtitle={
-            <>
-              {activeTables.length}{limit !== Infinity ? ` / ${limit}` : ''} mesa{activeTables.length !== 1 ? 's' : ''} activa{activeTables.length !== 1 ? 's' : ''}
-              {lockedTables.length > 0 && <span className="text-amber-600"> · {lockedTables.length} bloqueada{lockedTables.length !== 1 ? 's' : ''}</span>}
-              {' · '}{rooms.length} sala{rooms.length !== 1 ? 's' : ''}
-            </>
-          }
-          mobileActions
-          actions={
-            <>
-              <GhostButton onClick={openQuick} disabled={atLimit}>
-                <span className="hidden sm:inline">Creación rápida</span><span className="sm:hidden">Crear varias</span>
-              </GhostButton>
-              <span className="hidden lg:inline-flex" title={atLimit ? `Límite de ${limit} mesas alcanzado` : undefined}>
-                <PrimaryButton onClick={openCreate} disabled={atLimit}>Nueva mesa</PrimaryButton>
-              </span>
-            </>
-          }
-        />
-      </div>
-
-      {/* Upgrade banner when at limit */}
+  const header = (
+    <>
+      <PageHeader
+        title="Mesas y salas"
+        subtitle={
+          <>
+            {activeTables.length}{limit !== Infinity ? ` de ${limit}` : ''} mesa{activeTables.length !== 1 ? 's' : ''} · {seats} plazas · {rooms.length} sala{rooms.length !== 1 ? 's' : ''}
+            {lockedTables.length > 0 && <span className="text-amber-600"> · {lockedTables.length} bloqueada{lockedTables.length !== 1 ? 's' : ''}</span>}
+          </>
+        }
+        actions={<GhostButton onClick={openQuick} disabled={atLimit}><Icon name="list" className="w-4 h-4" />Crear varias</GhostButton>}
+      />
       {atLimit && (
-        <div className="mx-4 lg:mx-8 mb-3 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl bg-amber-50 px-3 py-2 shrink-0">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl bg-amber-50 px-3 py-2">
           <p className="text-sm text-amber-900 flex-1 min-w-0">
             Has llegado al límite de <b className="font-semibold">{limit} mesas</b> de tu plan.
-            {lockedTables.length > 0 && <> {lockedTables.length} mesa{lockedTables.length !== 1 ? 's' : ''} están bloqueadas y no se usan en las reservas.</>}
+            {lockedTables.length > 0 && <> Las bloqueadas salen en gris y no se usan en las reservas.</>}
           </p>
-          <Link to="/configuracion?tab=suscripcion" className="text-[13px] font-semibold text-amber-900 underline hover:no-underline shrink-0">
-            Mejorar plan
-          </Link>
+          <Link to="/configuracion?tab=suscripcion" className="text-[13px] font-semibold text-amber-900 underline hover:no-underline shrink-0">Mejorar plan</Link>
         </div>
       )}
+    </>
+  );
 
-      {/* Floor plan — only active tables */}
-      <div className="flex-1 min-h-0 overflow-hidden border-t border-gray-100">
-        <FloorPlan
-          tables={activeTables}
-          rooms={rooms}
-          onStatusChange={handleStatusChange}
-          onRefresh={load}
-          fullHeight={true}
-          frameless
-        />
-      </div>
-
-      {/* Locked tables section */}
-      {lockedTables.length > 0 && (
-        <div className="shrink-0 border-t border-gray-100 px-4 lg:px-8 py-3 max-h-44 overflow-y-auto">
-          <Section title={`Bloqueadas por el plan · ${lockedTables.length}`}>
-            <div className="flex flex-wrap gap-1.5">
-              {lockedTables.map(t => (
-                <span key={t._id} className="inline-flex items-center gap-1.5 h-8 pl-3 pr-1 rounded-full bg-gray-100 text-[13px] text-gray-500">
-                  <span className="font-medium text-gray-700">{t.name}</span>
-                  <span className="tabular-nums">{t.capacity} pers.</span>
-                  <button
-                    type="button"
-                    onClick={() => handleDelete(t._id)}
-                    className="w-6 h-6 flex items-center justify-center rounded-full text-gray-400 hover:text-rose-600 hover:bg-white"
-                    title="Eliminar"
-                    aria-label={`Eliminar ${t.name}`}
-                  >
-                    <Icon name="x" className="w-3.5 h-3.5" strokeWidth={2} />
-                  </button>
-                </span>
-              ))}
-            </div>
-          </Section>
-        </div>
-      )}
+  return (
+    <div className="h-full flex flex-col">
+      <FloorEditor maxTables={limit} header={header} />
 
       {/* Quick creator modal */}
       {quickOpen && (
         <Modal
           size="lg"
-          title="Creación rápida"
-          subtitle="Define rangos y se crean todas las mesas de una vez"
+          title="Crear varias mesas"
+          subtitle="Por ejemplo Mesa 1 a Mesa 10, de 4 personas, en la Terraza"
           onClose={() => setQuickOpen(false)}
           footer={
             <div className="flex items-center justify-end gap-2">
@@ -340,64 +243,6 @@ export default function Tables() {
         </Modal>
       )}
 
-      {/* Create / edit modal */}
-      {modal && (
-        <Modal
-          title={modal === 'create' ? 'Nueva mesa' : 'Editar mesa'}
-          subtitle={modal !== 'create' ? modal.name : undefined}
-          onClose={() => setModal(null)}
-          footer={
-            <div className="flex items-center justify-end gap-2">
-              <button type="button" onClick={() => setModal(null)}
-                className="h-10 px-3.5 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-100">
-                Cancelar
-              </button>
-              <button type="submit" form="table-form"
-                className="inline-flex items-center justify-center h-10 px-4 rounded-xl bg-violet-600 text-white text-sm font-semibold hover:bg-violet-700">
-                {modal === 'create' ? 'Crear mesa' : 'Guardar'}
-              </button>
-            </div>
-          }
-        >
-          {error && (
-            <p className="rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700 mb-4">{error}</p>
-          )}
-          <form id="table-form" onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className={labelCls}>Nombre</label>
-              <input required value={form.name}
-                onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                placeholder="Mesa 1, Terraza A, Barra…"
-                className={inputCls} />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className={labelCls}>Personas</label>
-                <input type="number" required min="1" value={form.capacity}
-                  onChange={e => setForm(f => ({ ...f, capacity: e.target.value }))}
-                  className={inputCls} />
-              </div>
-              <div>
-                <label className={labelCls}>Sala</label>
-                <select value={form.roomId}
-                  onChange={e => setForm(f => ({ ...f, roomId: e.target.value }))}
-                  className={inputCls}>
-                  <option value="">Sin sala</option>
-                  {rooms.map(r => (
-                    <option key={r._id} value={r._id}>{r.name} (cap. {r.capacity})</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-            <ShapeFields
-              shape={form.shape}
-              angle={form.angle}
-              onShape={(v) => setForm(f => ({ ...f, shape: v }))}
-              onAngle={(v) => setForm(f => ({ ...f, angle: v }))}
-            />
-          </form>
-        </Modal>
-      )}
     </div>
   );
 }

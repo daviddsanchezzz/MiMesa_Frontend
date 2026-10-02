@@ -14,6 +14,7 @@ import PendingSheet from './PendingSheet';
 import { ReservationRow, groupByShift, live, peopleOf, plural } from './parts';
 
 const ReservationsLegacy = lazy(() => import('../Reservations'));
+const ServiceFloor = lazy(() => import('../../floor/ServiceFloor'));
 
 const isDate = (s) => /^\d{4}-\d{2}-\d{2}$/.test(s || '');
 
@@ -157,6 +158,13 @@ export default function Reservas() {
         <>
           <DayStrip date={date} today={today} counts={counts} onChange={setDate} />
           <DayList key={date} date={date} today={today} tz={tz} />
+        </>
+      ) : view === 'map' ? (
+        <>
+          <DayStrip date={date} today={today} counts={counts} onChange={setDate} />
+          <Suspense fallback={<p className="text-sm text-gray-400">Cargando…</p>}>
+            <ServiceFloor key={date} date={date} today={today} tz={tz} />
+          </Suspense>
         </>
       ) : (
         <Suspense fallback={<p className="text-sm text-gray-400">Cargando…</p>}>

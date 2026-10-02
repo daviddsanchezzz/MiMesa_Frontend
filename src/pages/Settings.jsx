@@ -3,8 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { confirmLeave } from '../lib/unsavedChanges';
 import { useAuth } from '../context/AuthContext';
 import { NegocioSection } from './settings/NegocioSection';
-import { SalasSection } from './settings/SalasSection';
-import { MesasSection } from './settings/MesasSection';
+import TablesSummary from './settings/TablesSummary';
 import { TurnosSection } from './settings/TurnosSection';
 import { VacacionesSection } from './settings/VacacionesSection';
 import { LimitesSection } from './settings/LimitesSection';
@@ -54,7 +53,7 @@ const GROUPS = {
 const ALIASES = { salas: 'mesas', vacaciones: 'turnos' };
 
 function TablesAndRooms() {
-  return <div className="space-y-10"><SalasSection /><MesasSection /></div>;
+  return <TablesSummary />;
 }
 function ShiftsAndClosures() {
   return <div className="space-y-10"><TurnosSection /><VacacionesSection /></div>;

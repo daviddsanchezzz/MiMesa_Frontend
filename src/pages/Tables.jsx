@@ -5,9 +5,11 @@ import { useAuth } from '../context/AuthContext';
 import { useSetMobileHeader } from '../context/MobileHeaderContext';
 import FloorPlan from '../components/FloorPlan';
 import Modal from '../components/Modal';
+import Icon from '../ui/Icon';
+import { PageHeader, PrimaryButton, GhostButton, Segmented, Section } from '../ui/kit';
 
 const inputCls = 'w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent';
-const labelCls = 'block text-sm font-medium text-gray-700 mb-1.5';
+const labelCls = 'block text-xs font-semibold text-gray-500 mb-1.5';
 const TABLE_SHAPE_OPTIONS = [
   { value: 'circle', label: 'Circular' },
   { value: 'square', label: 'Cuadrada' },
@@ -53,7 +55,6 @@ function buildPreview(ranges) {
 }
 
 export default function Tables() {
-  useSetMobileHeader({ title: 'Mesas' });
   const { planLimit } = useAuth();
   const limit = planLimit('maxTables'); // Infinity on Basic/Pro, 15 on Free
 
@@ -74,6 +75,7 @@ export default function Tables() {
   const removeRange = (i) => setRanges(rs => rs.filter((_, idx) => idx !== i));
 
   const preview = buildPreview(ranges);
+  const openQuick = () => { setRanges([emptyRange()]); setQuickError(''); setQuickOpen(true); };
 
   const activeTables = tables.filter(t => !t.isLocked);
   const lockedTables = tables.filter(t => t.isLocked);
@@ -98,6 +100,8 @@ export default function Tables() {
     setError('');
     setModal(t);
   };
+
+  useSetMobileHeader({ title: 'Mesas', action: atLimit ? false : { label: 'Mesa', onClick: openCreate } });
 
   const handleSubmit = async (e) => {
     e.preventDefault(); setError('');
@@ -161,214 +165,177 @@ export default function Tables() {
     }
   };
 
+  const quickLabel = quickLoading ? 'Creando…' : `Crear ${preview.length} mesa${preview.length !== 1 ? 's' : ''}`;
+
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
-      <div className="flex items-center justify-between gap-3 px-4 lg:px-6 py-3 bg-white border-b border-gray-200 shrink-0">
-        <div>
-          <h2 className="hidden lg:block text-lg font-bold text-gray-900">Mesas</h2>
-          <p className="text-xs text-gray-400 lg:mt-0.5">
-            {activeTables.length}{limit !== Infinity ? ` / ${limit}` : ''} mesa{activeTables.length !== 1 ? 's' : ''} activa{activeTables.length !== 1 ? 's' : ''}
-            {lockedTables.length > 0 && <span className="text-amber-500 ml-1">· {lockedTables.length} bloqueada{lockedTables.length !== 1 ? 's' : ''}</span>}
-            {' · '}{rooms.length} sala{rooms.length !== 1 ? 's' : ''}
-          </p>
-        </div>
-        <div className="flex items-center gap-2 shrink-0">
-          <button
-            onClick={() => { setRanges([emptyRange()]); setQuickError(''); setQuickOpen(true); }}
-            disabled={atLimit}
-            title={atLimit ? `Límite de ${limit} mesas alcanzado` : undefined}
-            className="flex items-center gap-1.5 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 px-3.5 py-2 rounded-xl text-sm font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 text-violet-500">
-              <path d="M2 2.75A.75.75 0 0 1 2.75 2h10.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 2.75ZM2 8a.75.75 0 0 1 .75-.75h10.5a.75.75 0 0 1 0 1.5H2.75A.75.75 0 0 1 2 8Zm0 5.25a.75.75 0 0 1 .75-.75h4.5a.75.75 0 0 1 0 1.5h-4.5a.75.75 0 0 1-.75-.75Z" />
-            </svg>
-            <span className="hidden sm:inline">Creación rápida</span><span className="sm:hidden">Varias</span>
-          </button>
-          <button
-            onClick={openCreate}
-            disabled={atLimit}
-            title={atLimit ? `Límite de ${limit} mesas alcanzado` : undefined}
-            className="flex items-center gap-1.5 bg-violet-600 hover:bg-violet-700 text-white px-3.5 py-2 rounded-xl text-sm font-semibold transition-colors shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
-              <path d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z" />
-            </svg>
-            <span className="hidden sm:inline">Nueva mesa</span><span className="sm:hidden">Mesa</span>
-          </button>
-        </div>
+      <div className="px-4 lg:px-8 pt-3 lg:pt-7 pb-3 lg:pb-4 shrink-0">
+        <PageHeader
+          title="Mesas"
+          subtitle={
+            <>
+              {activeTables.length}{limit !== Infinity ? ` / ${limit}` : ''} mesa{activeTables.length !== 1 ? 's' : ''} activa{activeTables.length !== 1 ? 's' : ''}
+              {lockedTables.length > 0 && <span className="text-amber-600"> · {lockedTables.length} bloqueada{lockedTables.length !== 1 ? 's' : ''}</span>}
+              {' · '}{rooms.length} sala{rooms.length !== 1 ? 's' : ''}
+            </>
+          }
+          mobileActions
+          actions={
+            <>
+              <GhostButton onClick={openQuick} disabled={atLimit}>
+                <span className="hidden sm:inline">Creación rápida</span><span className="sm:hidden">Crear varias</span>
+              </GhostButton>
+              <span className="hidden lg:inline-flex" title={atLimit ? `Límite de ${limit} mesas alcanzado` : undefined}>
+                <PrimaryButton onClick={openCreate} disabled={atLimit}>Nueva mesa</PrimaryButton>
+              </span>
+            </>
+          }
+        />
       </div>
 
       {/* Upgrade banner when at limit */}
       {atLimit && (
-        <div className="mx-6 mt-3 flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 shrink-0">
-          <svg className="w-4 h-4 text-amber-500 shrink-0" fill="currentColor" viewBox="0 0 16 16">
-            <path fillRule="evenodd" d="M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14Zm-.75-9.5a.75.75 0 0 1 1.5 0v3.5a.75.75 0 0 1-1.5 0V5.5Zm.75 6.5a.875.875 0 1 1 0-1.75.875.875 0 0 1 0 1.75Z" clipRule="evenodd" />
-          </svg>
-          <p className="text-sm text-amber-800 flex-1">
-            Has llegado al límite de <strong>{limit} mesas</strong> de tu plan actual.
+        <div className="mx-4 lg:mx-8 mb-3 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-xl bg-amber-50 px-3 py-2 shrink-0">
+          <p className="text-sm text-amber-900 flex-1 min-w-0">
+            Has llegado al límite de <b className="font-semibold">{limit} mesas</b> de tu plan.
             {lockedTables.length > 0 && <> {lockedTables.length} mesa{lockedTables.length !== 1 ? 's' : ''} están bloqueadas y no se usan en las reservas.</>}
           </p>
-          <Link to="/configuracion?tab=suscripcion" className="text-xs font-semibold text-amber-700 underline hover:no-underline shrink-0">
-            Actualiza tu plan
+          <Link to="/configuracion?tab=suscripcion" className="text-[13px] font-semibold text-amber-900 underline hover:no-underline shrink-0">
+            Mejorar plan
           </Link>
         </div>
       )}
 
       {/* Floor plan — only active tables */}
-      <div className="flex-1 overflow-hidden">
+      <div className="flex-1 min-h-0 overflow-hidden border-t border-gray-100">
         <FloorPlan
           tables={activeTables}
           rooms={rooms}
           onStatusChange={handleStatusChange}
           onRefresh={load}
           fullHeight={true}
+          frameless
         />
       </div>
 
       {/* Locked tables section */}
       {lockedTables.length > 0 && (
-        <div className="shrink-0 border-t border-gray-200 bg-gray-50 px-6 py-4">
-          <div className="flex items-center gap-2 mb-3">
-            <svg className="w-4 h-4 text-gray-400" fill="currentColor" viewBox="0 0 16 16">
-              <path fillRule="evenodd" d="M8 1a3.5 3.5 0 0 0-3.5 3.5V7A1.5 1.5 0 0 0 3 8.5v5A1.5 1.5 0 0 0 4.5 15h7a1.5 1.5 0 0 0 1.5-1.5v-5A1.5 1.5 0 0 0 11.5 7V4.5A3.5 3.5 0 0 0 8 1Zm-2 6V4.5a2 2 0 1 1 4 0V7H6Z" clipRule="evenodd" />
-            </svg>
-            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-              Mesas bloqueadas ({lockedTables.length}) — plan actual
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {lockedTables.map(t => (
-              <div key={t._id} className="flex items-center gap-2 bg-white border border-gray-200 rounded-xl px-3 py-2 opacity-60">
-                <svg className="w-3.5 h-3.5 text-gray-400 shrink-0" fill="currentColor" viewBox="0 0 16 16">
-                  <path fillRule="evenodd" d="M8 1a3.5 3.5 0 0 0-3.5 3.5V7A1.5 1.5 0 0 0 3 8.5v5A1.5 1.5 0 0 0 4.5 15h7a1.5 1.5 0 0 0 1.5-1.5v-5A1.5 1.5 0 0 0 11.5 7V4.5A3.5 3.5 0 0 0 8 1Zm-2 6V4.5a2 2 0 1 1 4 0V7H6Z" clipRule="evenodd" />
-                </svg>
-                <span className="text-xs text-gray-600 font-medium">{t.name}</span>
-                <span className="text-xs text-gray-400">{t.capacity} px</span>
-                <button
-                  onClick={() => handleDelete(t._id)}
-                  className="ml-1 text-gray-300 hover:text-red-400 transition-colors"
-                  title="Eliminar"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
-                    <path d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z" />
-                  </svg>
-                </button>
-              </div>
-            ))}
-          </div>
+        <div className="shrink-0 border-t border-gray-100 px-4 lg:px-8 py-3 max-h-44 overflow-y-auto">
+          <Section title={`Bloqueadas por el plan · ${lockedTables.length}`}>
+            <div className="flex flex-wrap gap-1.5">
+              {lockedTables.map(t => (
+                <span key={t._id} className="inline-flex items-center gap-1.5 h-8 pl-3 pr-1 rounded-full bg-gray-100 text-[13px] text-gray-500">
+                  <span className="font-medium text-gray-700">{t.name}</span>
+                  <span className="tabular-nums">{t.capacity} pers.</span>
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(t._id)}
+                    className="w-6 h-6 flex items-center justify-center rounded-full text-gray-400 hover:text-rose-600 hover:bg-white"
+                    title="Eliminar"
+                    aria-label={`Eliminar ${t.name}`}
+                  >
+                    <Icon name="x" className="w-3.5 h-3.5" strokeWidth={2} />
+                  </button>
+                </span>
+              ))}
+            </div>
+          </Section>
         </div>
       )}
 
       {/* Quick creator modal */}
       {quickOpen && (
         <Modal
-          title="Creación rápida de mesas"
-          subtitle="Define rangos numéricos y se crearán todas de golpe"
+          size="lg"
+          title="Creación rápida"
+          subtitle="Define rangos y se crean todas las mesas de una vez"
           onClose={() => setQuickOpen(false)}
-        >
-          <div className="space-y-3 max-h-[55vh] overflow-y-auto pr-1">
-            {ranges.map((r, i) => (
-              <div key={i} className="bg-gray-50 border border-gray-200 rounded-xl p-3 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Rango {i + 1}</span>
-                  {ranges.length > 1 && (
-                    <button onClick={() => removeRange(i)} className="text-gray-400 hover:text-red-500 transition-colors">
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
-                        <path d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z" />
-                      </svg>
-                    </button>
-                  )}
-                </div>
-                <div className="grid grid-cols-3 gap-2">
-                  <div className="col-span-1">
-                    <label className={labelCls}>Prefijo</label>
-                    <input value={r.prefix} onChange={e => updateRange(i, 'prefix', e.target.value)}
-                      placeholder="Mesa " className={inputCls} />
-                  </div>
-                  <div>
-                    <label className={labelCls}>Desde</label>
-                    <input type="number" min="1" value={r.from} onChange={e => updateRange(i, 'from', e.target.value)}
-                      className={inputCls} />
-                  </div>
-                  <div>
-                    <label className={labelCls}>Hasta</label>
-                    <input type="number" min="1" value={r.to} onChange={e => updateRange(i, 'to', e.target.value)}
-                      className={inputCls} />
-                  </div>
-                </div>
-                <div className="grid grid-cols-4 gap-2">
-                  <div>
-                    <label className={labelCls}>Capacidad</label>
-                    <input type="number" min="1" value={r.capacity} onChange={e => updateRange(i, 'capacity', e.target.value)}
-                      className={inputCls} />
-                  </div>
-                  <div>
-                    <label className={labelCls}>Forma</label>
-                    <select value={r.shape} onChange={e => updateRange(i, 'shape', e.target.value)} className={inputCls}>
-                      {TABLE_SHAPE_OPTIONS.map(shape => (
-                        <option key={shape.value} value={shape.value}>{shape.label}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className={labelCls}>Orientación</label>
-                    <select
-                      value={normalizeTableAngle(r.angle)}
-                      onChange={e => updateRange(i, 'angle', Number(e.target.value))}
-                      disabled={r.shape !== 'rect' && r.shape !== 'square'}
-                      className={inputCls}
-                    >
-                      {TABLE_ANGLE_OPTIONS.map(angle => (
-                        <option key={angle.value} value={angle.value}>{angle.label}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div>
-                    <label className={labelCls}>Sala</label>
-                    <select value={r.roomId} onChange={e => updateRange(i, 'roomId', e.target.value)} className={inputCls}>
-                      <option value="">Sin sala</option>
-                      {rooms.map(rm => <option key={rm._id} value={rm._id}>{rm.name}</option>)}
-                    </select>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <button onClick={addRange}
-            className="w-full mt-3 border border-dashed border-violet-300 text-violet-600 hover:bg-violet-50 py-2 rounded-xl text-sm font-medium transition-colors">
-            + Añadir otro rango
-          </button>
-
-          {preview.length > 0 && (
-            <div className="mt-3 bg-violet-50 border border-violet-100 rounded-xl p-3">
-              <p className="text-xs font-semibold text-violet-700 mb-2">
-                Vista previa — {preview.length} mesa{preview.length !== 1 ? 's' : ''}
-              </p>
-              <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto">
-                {preview.map((name, i) => (
-                  <span key={i} className="bg-white border border-violet-200 text-violet-700 text-xs px-2 py-0.5 rounded-lg">
-                    {name}
-                  </span>
-                ))}
-              </div>
+          footer={
+            <div className="flex items-center justify-end gap-2">
+              <button type="button" onClick={() => setQuickOpen(false)}
+                className="h-10 px-3.5 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-100">
+                Cancelar
+              </button>
+              <PrimaryButton onClick={handleQuickCreate} disabled={quickLoading || preview.length === 0} icon={null}>
+                {quickLabel}
+              </PrimaryButton>
             </div>
-          )}
+          }
+        >
+          <div className="space-y-6">
+            <div className="divide-y divide-gray-100">
+              {ranges.map((r, i) => (
+                <div key={i} className="py-4 first:pt-0 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-[13px] font-semibold uppercase tracking-wide text-gray-400">Rango {i + 1}</h4>
+                    {ranges.length > 1 && (
+                      <button type="button" onClick={() => removeRange(i)} className="text-[13px] font-semibold text-rose-600 hover:text-rose-700">
+                        Quitar
+                      </button>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div>
+                      <label className={labelCls}>Prefijo</label>
+                      <input value={r.prefix} onChange={e => updateRange(i, 'prefix', e.target.value)}
+                        placeholder="Mesa " className={inputCls} />
+                    </div>
+                    <div>
+                      <label className={labelCls}>Desde</label>
+                      <input type="number" min="1" value={r.from} onChange={e => updateRange(i, 'from', e.target.value)}
+                        className={inputCls} />
+                    </div>
+                    <div>
+                      <label className={labelCls}>Hasta</label>
+                      <input type="number" min="1" value={r.to} onChange={e => updateRange(i, 'to', e.target.value)}
+                        className={inputCls} />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div>
+                      <label className={labelCls}>Personas</label>
+                      <input type="number" min="1" value={r.capacity} onChange={e => updateRange(i, 'capacity', e.target.value)}
+                        className={inputCls} />
+                    </div>
+                    <div>
+                      <label className={labelCls}>Sala</label>
+                      <select value={r.roomId} onChange={e => updateRange(i, 'roomId', e.target.value)} className={inputCls}>
+                        <option value="">Sin sala</option>
+                        {rooms.map(rm => <option key={rm._id} value={rm._id}>{rm.name}</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  <ShapeFields
+                    shape={r.shape}
+                    angle={r.angle}
+                    onShape={(v) => updateRange(i, 'shape', v)}
+                    onAngle={(v) => updateRange(i, 'angle', v)}
+                  />
+                </div>
+              ))}
+            </div>
 
-          {quickError && (
-            <div className="mt-3 bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-3 py-2">{quickError}</div>
-          )}
+            <button type="button" onClick={addRange}
+              className="inline-flex items-center gap-1 text-[13px] font-semibold text-violet-700 hover:text-violet-900">
+              <Icon name="plus" className="w-4 h-4" strokeWidth={2} />Añadir otro rango
+            </button>
 
-          <div className="flex gap-3 mt-4">
-            <button onClick={handleQuickCreate} disabled={quickLoading || preview.length === 0}
-              className="flex-1 bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white py-2.5 rounded-xl text-sm font-semibold transition-colors">
-              {quickLoading ? 'Creando...' : `Crear ${preview.length} mesa${preview.length !== 1 ? 's' : ''}`}
-            </button>
-            <button onClick={() => setQuickOpen(false)}
-              className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-2.5 rounded-xl text-sm font-medium transition-colors">
-              Cancelar
-            </button>
+            {preview.length > 0 && (
+              <Section title={`Se crearán ${preview.length} mesa${preview.length !== 1 ? 's' : ''}`}>
+                <div className="flex flex-wrap gap-1.5 max-h-24 overflow-y-auto">
+                  {preview.map((name, i) => (
+                    <span key={i} className="text-[11px] font-semibold px-1.5 py-px rounded bg-violet-50 text-violet-800">
+                      {name}
+                    </span>
+                  ))}
+                </div>
+              </Section>
+            )}
+
+            {quickError && (
+              <p className="rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700">{quickError}</p>
+            )}
           </div>
         </Modal>
       )}
@@ -377,47 +344,38 @@ export default function Tables() {
       {modal && (
         <Modal
           title={modal === 'create' ? 'Nueva mesa' : 'Editar mesa'}
-          subtitle={modal !== 'create' ? modal.name : 'Añade una nueva mesa'}
+          subtitle={modal !== 'create' ? modal.name : undefined}
           onClose={() => setModal(null)}
+          footer={
+            <div className="flex items-center justify-end gap-2">
+              <button type="button" onClick={() => setModal(null)}
+                className="h-10 px-3.5 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-100">
+                Cancelar
+              </button>
+              <button type="submit" form="table-form"
+                className="inline-flex items-center justify-center h-10 px-4 rounded-xl bg-violet-600 text-white text-sm font-semibold hover:bg-violet-700">
+                {modal === 'create' ? 'Crear mesa' : 'Guardar'}
+              </button>
+            </div>
+          }
         >
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-3 py-2 mb-4">{error}</div>
+            <p className="rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700 mb-4">{error}</p>
           )}
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form id="table-form" onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className={labelCls}>Nombre *</label>
+              <label className={labelCls}>Nombre</label>
               <input required value={form.name}
                 onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                placeholder="Mesa 1, Terraza A, Barra..."
+                placeholder="Mesa 1, Terraza A, Barra…"
                 className={inputCls} />
             </div>
-            <div className="grid grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className={labelCls}>Capacidad *</label>
+                <label className={labelCls}>Personas</label>
                 <input type="number" required min="1" value={form.capacity}
                   onChange={e => setForm(f => ({ ...f, capacity: e.target.value }))}
                   className={inputCls} />
-              </div>
-              <div>
-                <label className={labelCls}>Forma *</label>
-                <select value={form.shape}
-                  onChange={e => setForm(f => ({ ...f, shape: e.target.value }))}
-                  className={inputCls}>
-                  {TABLE_SHAPE_OPTIONS.map(shape => (
-                    <option key={shape.value} value={shape.value}>{shape.label}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className={labelCls}>Orientación</label>
-                <select value={normalizeTableAngle(form.angle)}
-                  disabled={form.shape !== 'rect' && form.shape !== 'square'}
-                  onChange={e => setForm(f => ({ ...f, angle: Number(e.target.value) }))}
-                  className={inputCls}>
-                  {TABLE_ANGLE_OPTIONS.map(angle => (
-                    <option key={angle.value} value={angle.value}>{angle.label}</option>
-                  ))}
-                </select>
               </div>
               <div>
                 <label className={labelCls}>Sala</label>
@@ -431,18 +389,33 @@ export default function Tables() {
                 </select>
               </div>
             </div>
-            <div className="flex gap-3 pt-1">
-              <button type="submit"
-                className="flex-1 bg-violet-600 hover:bg-violet-700 text-white py-2.5 rounded-xl text-sm font-semibold transition-colors">
-                {modal === 'create' ? 'Crear mesa' : 'Guardar cambios'}
-              </button>
-              <button type="button" onClick={() => setModal(null)}
-                className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-2.5 rounded-xl text-sm font-medium transition-colors">
-                Cancelar
-              </button>
-            </div>
+            <ShapeFields
+              shape={form.shape}
+              angle={form.angle}
+              onShape={(v) => setForm(f => ({ ...f, shape: v }))}
+              onAngle={(v) => setForm(f => ({ ...f, angle: v }))}
+            />
           </form>
         </Modal>
+      )}
+    </div>
+  );
+}
+
+/** Forma (and orientation when it applies) as segmented pills. */
+function ShapeFields({ shape, angle, onShape, onAngle }) {
+  const oriented = shape === 'rect' || shape === 'square';
+  return (
+    <div className="flex flex-wrap gap-x-4 gap-y-3">
+      <div>
+        <label className={labelCls}>Forma</label>
+        <Segmented value={shape} onChange={onShape} options={TABLE_SHAPE_OPTIONS.map(o => [o.value, o.label])} />
+      </div>
+      {oriented && (
+        <div>
+          <label className={labelCls}>Orientación</label>
+          <Segmented value={normalizeTableAngle(angle)} onChange={(v) => onAngle(Number(v))} options={TABLE_ANGLE_OPTIONS.map(o => [o.value, o.label])} />
+        </div>
       )}
     </div>
   );

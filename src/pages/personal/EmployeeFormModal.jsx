@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import api from '../../services/api';
 import Modal from '../../components/Modal';
-import { inputCls, labelCls } from './shared';
+import Icon from '../../ui/Icon';
+import { Notice, SheetFooter, inputCls, labelCls } from './shared';
 
 export function EmployeeFormModal({ employee, positions, onClose, onSaved }) {
   const [positionQuery, setPositionQuery] = useState('');
@@ -54,45 +55,45 @@ export function EmployeeFormModal({ employee, positions, onClose, onSaved }) {
     }
   };
   return (
-    <Modal title={employee?._id ? 'Editar empleado' : 'Nuevo empleado'} onClose={onClose}>
-      <form onSubmit={submit} className="space-y-3">
-        {error && <div className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</div>}
+    <Modal title={employee?._id ? 'Editar empleado' : 'Nuevo empleado'} onClose={onClose}
+      footer={<SheetFooter onCancel={onClose} saving={saving} form="employee-form" />}>
+      <form id="employee-form" onSubmit={submit} className="space-y-4">
+        <Notice>{error}</Notice>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div><label className={labelCls}>Nombre *</label><input className={inputCls} value={form.firstName} onChange={(e) => setForm((f) => ({ ...f, firstName: e.target.value }))} required /></div>
+          <div><label className={labelCls}>Nombre</label><input className={inputCls} value={form.firstName} onChange={(e) => setForm((f) => ({ ...f, firstName: e.target.value }))} required /></div>
           <div><label className={labelCls}>Apellidos</label><input className={inputCls} value={form.lastName} onChange={(e) => setForm((f) => ({ ...f, lastName: e.target.value }))} /></div>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div><label className={labelCls}>Teléfono</label><input className={inputCls} value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} /></div>
+          <div><label className={labelCls}>Teléfono</label><input className={inputCls} inputMode="tel" value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} /></div>
           <div><label className={labelCls}>Email</label><input className={inputCls} type="email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} /></div>
         </div>
-        <div className="space-y-2">
+        <div>
           <label className={labelCls}>Puestos</label>
           <div className="relative" ref={positionDropdownRef}>
             <button
               type="button"
               onClick={() => setPositionOpen((v) => !v)}
-              className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm bg-white text-left flex items-center justify-between gap-2"
+              className="w-full rounded-xl border border-gray-300 px-3.5 py-2.5 text-sm bg-white text-left flex items-center justify-between gap-2 focus:outline-none focus:ring-2 focus:ring-violet-500"
             >
-              <div className="flex flex-wrap gap-1.5 min-h-6">
+              <div className="flex flex-wrap gap-1.5 min-h-5">
                 {selectedPositions.length > 0 ? selectedPositions.map((position) => (
-                  <span key={position._id} className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-semibold border border-gray-200 bg-gray-50 text-gray-700">
-                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: position.color || '#64748B' }} />
+                  <span key={position._id} className="inline-flex items-center px-2 py-px rounded-full text-xs font-medium" style={{ backgroundColor: `${position.color || '#64748B'}22`, color: position.color || '#64748B' }}>
                     {position.name}
                   </span>
-                )) : <span className="text-gray-400">Selecciona uno o varios puestos...</span>}
+                )) : <span className="text-gray-400">Elige uno o varios</span>}
               </div>
-              <span className="text-gray-400 text-xs">{positionOpen ? '▲' : '▼'}</span>
+              <Icon name="down" className={`w-4 h-4 text-gray-400 shrink-0 transition-transform ${positionOpen ? 'rotate-180' : ''}`} />
             </button>
 
             {positionOpen && (
-              <div className="absolute z-20 left-0 right-0 mt-2 border border-gray-200 rounded-xl bg-white shadow-lg p-2 space-y-2">
+              <div className="absolute z-20 left-0 right-0 mt-1 border border-gray-200 rounded-xl bg-white shadow-lg p-2 space-y-1">
                 <input
-                  className={inputCls}
-                  placeholder="Buscar puesto..."
+                  className="w-full rounded-full bg-gray-100 border border-transparent px-3.5 py-2 text-sm focus:outline-none focus:bg-white focus:border-gray-300"
+                  placeholder="Buscar puesto…"
                   value={positionQuery}
                   onChange={(e) => setPositionQuery(e.target.value)}
                 />
-                <div className="max-h-44 overflow-auto space-y-1">
+                <div className="max-h-52 overflow-auto">
                   {filteredPositions.map((position) => {
                     const id = String(position._id);
                     const checked = form.positionIds.includes(id);
@@ -108,31 +109,23 @@ export function EmployeeFormModal({ employee, positions, onClose, onSaved }) {
                               : [...prev.positionIds, id],
                           }));
                         }}
-                        className={`w-full text-left flex items-center justify-between gap-2 px-2 py-1.5 rounded-lg ${
-                          checked ? 'bg-violet-50 text-violet-700' : 'hover:bg-gray-50 text-gray-700'
-                        }`}
+                        className="w-full text-left flex items-center justify-between gap-2 px-2.5 py-2 rounded-lg hover:bg-gray-50 text-sm text-gray-700"
                       >
-                        <span className="inline-flex items-center gap-2 text-sm">
+                        <span className="inline-flex items-center gap-2">
                           <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: position.color || '#64748B' }} />
-                          {position.name}
+                          <span className={checked ? 'font-semibold text-gray-900' : ''}>{position.name}</span>
                         </span>
-                        <span className={`text-xs font-semibold ${checked ? 'text-violet-600' : 'text-gray-300'}`}>
-                          {checked ? '✓' : ''}
-                        </span>
+                        {checked && <Icon name="check" className="w-4 h-4 text-violet-600" strokeWidth={2} />}
                       </button>
                     );
                   })}
-                  {filteredPositions.length === 0 && <p className="text-xs text-gray-400 px-1 py-2">No hay puestos para ese filtro</p>}
+                  {filteredPositions.length === 0 && <p className="text-xs text-gray-400 px-2.5 py-2">{positions.length ? 'No hay puestos con ese nombre' : 'Todavía no hay puestos. Créalos en Empleados › Puestos.'}</p>}
                 </div>
               </div>
             )}
           </div>
         </div>
         <div><label className={labelCls}>Notas</label><textarea rows={3} className={inputCls} value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} /></div>
-        <div className="flex items-center justify-end gap-2">
-          <button type="button" onClick={onClose} className="px-3 py-2 rounded-lg text-sm bg-gray-100 hover:bg-gray-200">Cancelar</button>
-          <button type="submit" disabled={saving} className="px-3 py-2 rounded-lg text-sm bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-60">{saving ? 'Guardando...' : 'Guardar'}</button>
-        </div>
       </form>
     </Modal>
   );

@@ -1,5 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from 'react';
 import api from '../services/api';
+import Icon from '../ui/Icon';
+import { Segmented, GhostButton, PrimaryButton } from '../ui/kit';
 
 // ─── World & grid ───────────────────────────────────────────────────────────
 const WORLD_W  = 2400;
@@ -337,7 +339,7 @@ function autoArrange(tables) {
 }
 
 // ─── Main component ───────────────────────────────────────────────────────────
-export default function FloorPlan({ tables, rooms, onStatusChange, onRefresh, editOnly = false, showStatus = true }) {
+export default function FloorPlan({ tables, rooms, onStatusChange, onRefresh, editOnly = false, showStatus = true, frameless = false }) {
   const viewportRef  = useRef(null);
   const dragRef      = useRef(null);
   const panDragRef   = useRef(null);
@@ -624,82 +626,66 @@ export default function FloorPlan({ tables, rooms, onStatusChange, onRefresh, ed
   const editPreview = tableGeometry(Number(editForm.capacity) || 2, editShape, editAngle);
 
   return (
-    <div className="flex flex-col h-full bg-white rounded-2xl border border-gray-200 overflow-hidden">
+    <div className={`flex flex-col h-full bg-white overflow-hidden ${frameless ? '' : 'rounded-2xl border border-gray-200'}`}>
 
       {/* ── Toolbar ─────────────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between gap-3 px-4 py-2.5 border-b border-gray-100 shrink-0">
+      <div className={`flex flex-wrap items-center justify-between gap-2 ${frameless ? 'px-4 lg:px-8' : 'px-3'} py-2.5 border-b border-gray-100 shrink-0`}>
         {/* Room tabs */}
-        <div className="flex-1 min-w-0 overflow-x-auto">
-          <div className="flex gap-1 bg-gray-100 rounded-xl p-1 w-max">
-            {roomTabs.map(tab => (
-              <button
-                key={tab.id}
-                onClick={() => changeRoom(tab.id)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all whitespace-nowrap ${
-                  roomFilter === tab.id ? 'bg-white shadow-sm text-gray-900' : 'text-gray-500 hover:text-gray-700'
-                }`}
-              >
+        <div className={`flex-1 min-w-0 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${editMode ? 'basis-full sm:basis-0' : ''}`}>
+          <Segmented
+            value={roomFilter}
+            onChange={changeRoom}
+            options={roomTabs.map(tab => [tab.id, (
+              <span className="inline-flex items-center gap-1.5 whitespace-nowrap">
                 {tab.label}
-                <span className={`text-[10px] px-1.5 py-0.5 rounded-md font-semibold ${
-                  roomFilter === tab.id ? 'bg-violet-100 text-violet-700' : 'bg-gray-200 text-gray-500'
-                }`}>{tab.count}</span>
-              </button>
-            ))}
-          </div>
+                <span className={`text-[11px] tabular-nums ${roomFilter === tab.id ? 'text-violet-600' : 'text-gray-400'}`}>{tab.count}</span>
+              </span>
+            )])}
+          />
         </div>
 
         {/* Right actions */}
-        <div className="flex items-center gap-1.5 shrink-0">
+        <div className="flex items-center gap-1.5 shrink-0 ml-auto">
           {editMode ? (
             <>
-              <button onClick={handleAutoArrange}
-                className="flex items-center gap-1.5 text-xs font-medium text-gray-500 hover:text-violet-600 px-3 py-1.5 rounded-lg hover:bg-violet-50 border border-gray-200 hover:border-violet-200 transition-all">
-                <svg viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
+              <GhostButton onClick={handleAutoArrange} className="px-2.5 sm:px-3.5">
+                <svg viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5" aria-hidden="true">
                   <path fillRule="evenodd" d="M3 3a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1V4a1 1 0 0 0-1-1H3Zm0 6a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1H3Zm6-6a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1V4a1 1 0 0 0-1-1H9Zm0 6a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1v-2a1 1 0 0 0-1-1H9Z" clipRule="evenodd" />
                 </svg>
-                Auto-organizar
-              </button>
+                <span className="hidden sm:inline">Auto-organizar</span>
+              </GhostButton>
               {!editOnly && (
-                <button onClick={cancelEditMode}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-gray-200 bg-white text-gray-600 hover:bg-gray-50 transition-all">
+                <button type="button" onClick={cancelEditMode}
+                  className="h-9 px-2.5 rounded-full text-[13px] font-semibold text-gray-500 hover:text-gray-900 hover:bg-gray-100">
                   Cancelar
                 </button>
               )}
               <button
+                type="button"
                 onClick={saveAllPositions}
                 disabled={saving}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white transition-all"
+                className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-full bg-violet-600 hover:bg-violet-700 disabled:opacity-60 text-white text-[13px] font-semibold"
               >
-                <svg viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
-                  <path fillRule="evenodd" d="M12.416 3.376a.75.75 0 0 1 .208 1.04l-5 7.5a.75.75 0 0 1-1.154.114l-3-3a.75.75 0 0 1 1.06-1.06l2.353 2.353 4.493-6.74a.75.75 0 0 1 1.04-.207Z" clipRule="evenodd" />
-                </svg>
-                {saving ? 'Guardando...' : 'Guardar disposición'}
+                <Icon name="check" className="w-4 h-4" strokeWidth={2} />
+                {saving ? 'Guardando…' : <><span className="sm:hidden">Guardar</span><span className="hidden sm:inline">Guardar disposición</span></>}
               </button>
             </>
           ) : (
-            <button
-              onClick={enterEditMode}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-gray-200 bg-white text-gray-600 hover:border-violet-300 hover:text-violet-600 transition-all"
-            >
-              <svg viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
+            <GhostButton onClick={enterEditMode} className="px-3 sm:px-3.5">
+              <svg viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5" aria-hidden="true">
                 <path d="M13.488 2.513a1.75 1.75 0 0 0-2.475 0L6.75 6.774a2.75 2.75 0 0 0-.596.892l-.848 2.047a.75.75 0 0 0 .98.98l2.047-.848a2.75 2.75 0 0 0 .892-.596l4.261-4.263a1.75 1.75 0 0 0 0-2.474Z" />
               </svg>
-              Editar disposición
-            </button>
+              <span className="sm:hidden">Editar</span><span className="hidden sm:inline">Editar disposición</span>
+            </GhostButton>
           )}
         </div>
       </div>
 
       {/* ── Edit mode hint ───────────────────────────────────────────────────── */}
       {editMode && (
-        <div className="flex items-center gap-2 bg-violet-50 border-b border-violet-100 px-4 py-2 shrink-0">
-          <svg viewBox="0 0 16 16" fill="#6366f1" className="w-3.5 h-3.5 shrink-0">
-            <path fillRule="evenodd" d="M15 8A7 7 0 1 1 1 8a7 7 0 0 1 14 0ZM9 5a1 1 0 1 1-2 0 1 1 0 0 1 2 0ZM6.75 8a.75.75 0 0 0 0 1.5h.75v1.75a.75.75 0 0 0 1.5 0v-2.5A.75.75 0 0 0 8.25 8h-1.5Z" clipRule="evenodd" />
-          </svg>
-          <p className="text-xs text-violet-700 font-medium">
-            Modo edición — <strong>arrastra</strong> para mover mesas · <strong>clic</strong> para editar nombre/personas/forma · arrastra el fondo para mover la vista
-          </p>
-        </div>
+        <p className={`bg-violet-50 ${frameless ? 'px-4 lg:px-8' : 'px-3'} py-2 text-xs text-violet-800 shrink-0`}>
+          <b className="font-semibold">Editando la disposición.</b> Arrastra las mesas para moverlas, toca una para cambiar nombre, personas o forma, y arrastra el fondo para mover la vista.
+        </p>
       )}
 
       {/* ── Viewport ─────────────────────────────────────────────────────────── */}
@@ -766,64 +752,62 @@ export default function FloorPlan({ tables, rooms, onStatusChange, onRefresh, ed
         {/* ── Table edit panel ────────────────────────────────────────────── */}
         {editingTable && (
           <div
-            className="absolute top-4 right-4 w-80 bg-white rounded-2xl border border-gray-200 shadow-xl overflow-hidden"
+            className="absolute top-3 inset-x-3 sm:inset-x-auto sm:top-4 sm:right-4 sm:w-80 max-h-[calc(100%-1.5rem)] overflow-y-auto bg-white rounded-2xl border border-gray-200 shadow-xl z-[310]"
             onPointerDown={e => e.stopPropagation()}
             onClick={e => e.stopPropagation()}
           >
-            {/* Header */}
-            <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-lg bg-violet-100 flex items-center justify-center">
-                  <svg viewBox="0 0 14 14" fill="#6366f1" className="w-3.5 h-3.5">
-                    <path fillRule="evenodd" d="M1 2.75A.75.75 0 0 1 1.75 2h10.5a.75.75 0 0 1 0 1.5H12v5.75A2.75 2.75 0 0 1 9.25 12H4.75A2.75 2.75 0 0 1 2 9.25V3.5h-.25A.75.75 0 0 1 1 2.75Z" clipRule="evenodd" />
-                  </svg>
-                </div>
-                <span className="text-sm font-semibold text-gray-800">Editar mesa</span>
+            <div className="flex items-start justify-between gap-3 px-4 pt-4 pb-3 border-b border-gray-100">
+              <div className="min-w-0">
+                <h3 className="text-[15px] font-semibold text-gray-900">Editar mesa</h3>
+                <p className="text-xs text-gray-400 truncate">{editingTable.name}</p>
               </div>
               <button
+                type="button"
+                aria-label="Cerrar"
                 onClick={() => setEditingTable(null)}
-                className="w-6 h-6 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+                className="w-8 h-8 -mr-1 flex items-center justify-center rounded-full text-gray-400 hover:text-gray-600 hover:bg-gray-100"
               >
-                <svg viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
-                  <path d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z" />
-                </svg>
+                <Icon name="x" className="w-4 h-4" strokeWidth={2} />
               </button>
             </div>
 
-            {/* Form */}
-            <div className="p-4 space-y-4">
+            <div className="px-4 py-4 space-y-4">
               <div>
-                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#6b7280', marginBottom: 6 }}>Nombre</label>
+                <label className="block text-xs font-semibold text-gray-500 mb-1.5">Nombre</label>
                 <input
                   value={editForm.name}
                   onChange={e => setEditForm(f => ({ ...f, name: e.target.value }))}
                   onKeyDown={e => e.key === 'Enter' && handleEditSave()}
-                  className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                  className="w-full rounded-xl border border-gray-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
                   placeholder="Mesa 1, Terraza A..."
                 />
               </div>
               <div>
-                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#6b7280', marginBottom: 6 }}>Personas</label>
+                <label className="block text-xs font-semibold text-gray-500 mb-1.5">Personas</label>
                 <div className="flex items-center gap-2">
                   <button
+                    type="button"
+                    aria-label="Una persona menos"
                     onClick={() => setEditForm(f => ({ ...f, capacity: Math.max(1, Number(f.capacity) - 1) }))}
-                    className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 hover:bg-gray-100 text-gray-600 font-bold text-lg transition-colors"
+                    className="w-10 h-10 shrink-0 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 text-lg font-semibold"
                   >−</button>
                   <input
                     type="number" min="1" max="20"
                     value={editForm.capacity}
                     onChange={e => setEditForm(f => ({ ...f, capacity: e.target.value }))}
-                    className="flex-1 border border-gray-300 rounded-xl px-3 py-2 text-sm text-center font-semibold focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
+                    className="flex-1 min-w-0 rounded-xl border border-gray-300 px-3 py-2.5 text-sm text-center font-semibold tabular-nums focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
                   />
                   <button
+                    type="button"
+                    aria-label="Una persona más"
                     onClick={() => setEditForm(f => ({ ...f, capacity: Math.min(20, Number(f.capacity) + 1) }))}
-                    className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 hover:bg-gray-100 text-gray-600 font-bold text-lg transition-colors"
+                    className="w-10 h-10 shrink-0 flex items-center justify-center rounded-full bg-gray-100 hover:bg-gray-200 text-gray-700 text-lg font-semibold"
                   >+</button>
                 </div>
               </div>
 
               <div>
-                <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#6b7280', marginBottom: 8 }}>Forma</label>
+                <label className="block text-xs font-semibold text-gray-500 mb-1.5">Forma</label>
                 <div className="grid grid-cols-3 gap-2">
                   {Object.entries(TABLE_SHAPES).map(([shapeId, shapeCfg]) => {
                     const active = editShape === shapeId;
@@ -832,9 +816,9 @@ export default function FloorPlan({ tables, rooms, onStatusChange, onRefresh, ed
                         key={shapeId}
                         type="button"
                         onClick={() => setEditForm(f => ({ ...f, shape: shapeId }))}
-                        className={`rounded-xl border px-2 py-2 text-xs font-semibold transition-all ${
+                        className={`rounded-xl border px-2 py-2 text-xs font-semibold transition-colors ${
                           active
-                            ? 'border-violet-400 bg-violet-50 text-violet-700'
+                            ? 'border-violet-500 bg-violet-50 text-violet-800'
                             : 'border-gray-200 bg-white text-gray-500 hover:bg-gray-50'
                         }`}
                       >
@@ -852,78 +836,53 @@ export default function FloorPlan({ tables, rooms, onStatusChange, onRefresh, ed
 
               {(editShape === 'rect' || editShape === 'square') && (
                 <div>
-                  <label style={{ display: 'block', fontSize: 11, fontWeight: 600, color: '#6b7280', marginBottom: 8 }}>Orientación</label>
-                  <div className="grid grid-cols-2 gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setEditForm(f => ({ ...f, angle: 0 }))}
-                      className={`rounded-xl border px-2 py-2 text-xs font-semibold transition-all ${
-                        editAngle === 0
-                          ? 'border-violet-400 bg-violet-50 text-violet-700'
-                          : 'border-gray-200 bg-white text-gray-500 hover:bg-gray-50'
-                      }`}
-                    >
-                      Horizontal
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setEditForm(f => ({ ...f, angle: 90 }))}
-                      className={`rounded-xl border px-2 py-2 text-xs font-semibold transition-all ${
-                        editAngle === 90
-                          ? 'border-violet-400 bg-violet-50 text-violet-700'
-                          : 'border-gray-200 bg-white text-gray-500 hover:bg-gray-50'
-                      }`}
-                    >
-                      Vertical
-                    </button>
-                  </div>
+                  <label className="block text-xs font-semibold text-gray-500 mb-1.5">Orientación</label>
+                  <Segmented
+                    value={editAngle}
+                    onChange={(v) => setEditForm(f => ({ ...f, angle: v }))}
+                    options={[[0, 'Horizontal'], [90, 'Vertical']]}
+                  />
                 </div>
               )}
 
-              <div className="rounded-xl border border-gray-200 bg-gray-50 p-3">
-                <p className="text-[11px] font-semibold text-gray-600 mb-2">Vista previa</p>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div
-                      style={{
-                        width: Math.max(34, Math.min(56, Math.round(editPreview.w * 0.34))),
-                        height: Math.max(34, Math.min(56, Math.round(editPreview.h * 0.34))),
-                        borderRadius: editPreview.shape === 'circle' ? '999px' : editPreview.shape === 'square' ? 10 : 8,
-                        backgroundColor: '#ffffff',
-                        border: '2px solid #cbd5e1',
-                        boxShadow: '0 1px 2px rgba(15, 23, 42, 0.1)',
-                      }}
-                    />
-                    <div>
-                      <p className="text-xs font-semibold text-gray-700">{TABLE_SHAPES[editShape].label}</p>
-                      <p className="text-[11px] text-gray-500">
-                        {Number(editForm.capacity) || 0} personas
-                        {(editShape === 'rect' || editShape === 'square') ? ` · ${editAngle === 90 ? 'Vertical' : 'Horizontal'}` : ''}
-                      </p>
-                    </div>
+              <div className="flex items-center justify-between gap-3 pt-3 border-t border-gray-100">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div
+                    style={{
+                      width: Math.max(34, Math.min(56, Math.round(editPreview.w * 0.34))),
+                      height: Math.max(34, Math.min(56, Math.round(editPreview.h * 0.34))),
+                      borderRadius: editPreview.shape === 'circle' ? '999px' : editPreview.shape === 'square' ? 10 : 8,
+                      backgroundColor: '#ffffff',
+                      border: '2px solid #cbd5e1',
+                      flexShrink: 0,
+                    }}
+                  />
+                  <div className="min-w-0">
+                    <p className="text-[13px] font-medium text-gray-900">{TABLE_SHAPES[editShape].label}</p>
+                    <p className="text-xs text-gray-500">
+                      {Number(editForm.capacity) || 0} personas
+                      {(editShape === 'rect' || editShape === 'square') ? ` · ${editAngle === 90 ? 'Vertical' : 'Horizontal'}` : ''}
+                    </p>
                   </div>
-                  <p className="text-[11px] text-gray-400">{editPreview.w}×{editPreview.h}</p>
                 </div>
+                <p className="text-[11px] text-gray-400 tabular-nums">{editPreview.w}×{editPreview.h}</p>
               </div>
 
               {editError && (
-                <p className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">{editError}</p>
+                <p className="rounded-xl bg-rose-50 px-3 py-2 text-xs text-rose-700">{editError}</p>
               )}
 
-              <div className="flex gap-2 pt-1">
+              <div className="flex items-center justify-end gap-2 pt-1">
                 <button
-                  onClick={handleEditSave}
-                  disabled={editSaving}
-                  className="flex-1 bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white py-2 rounded-xl text-xs font-semibold transition-colors"
-                >
-                  {editSaving ? 'Guardando...' : 'Guardar'}
-                </button>
-                <button
+                  type="button"
                   onClick={() => setEditingTable(null)}
-                  className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 rounded-xl text-xs font-medium transition-colors"
+                  className="h-10 px-3.5 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-100"
                 >
                   Cancelar
                 </button>
+                <PrimaryButton onClick={handleEditSave} disabled={editSaving} icon={null}>
+                  {editSaving ? 'Guardando…' : 'Guardar'}
+                </PrimaryButton>
               </div>
             </div>
           </div>
@@ -931,15 +890,15 @@ export default function FloorPlan({ tables, rooms, onStatusChange, onRefresh, ed
 
         {/* ── Zoom controls (bottom-right) ────────────────────────────────── */}
         <div
-          className="absolute bottom-4 right-4 flex items-center gap-1 bg-white/90 backdrop-blur-sm border border-gray-200 rounded-xl shadow-sm p-1"
+          className="absolute bottom-3 right-3 sm:bottom-4 sm:right-4 flex items-center gap-0.5 bg-white/95 backdrop-blur-sm border border-gray-200 rounded-full shadow-sm p-1"
           onPointerDown={e => e.stopPropagation()}
           onClick={e => e.stopPropagation()}
         >
-          <button onClick={() => zoom(1/1.25)} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-600 transition-colors text-sm font-bold">−</button>
-          <span className="text-xs font-semibold text-gray-500 w-10 text-center">{pct}%</span>
-          <button onClick={() => zoom(1.25)} className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-600 transition-colors text-sm font-bold">+</button>
+          <button type="button" aria-label="Alejar" onClick={() => zoom(1/1.25)} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-700 text-base font-semibold">−</button>
+          <span className="hidden sm:inline text-xs font-semibold text-gray-500 w-10 text-center tabular-nums">{pct}%</span>
+          <button type="button" aria-label="Acercar" onClick={() => zoom(1.25)} className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-700 text-base font-semibold">+</button>
           <div className="w-px h-4 bg-gray-200 mx-0.5" />
-          <button onClick={fitToScreen} title="Ajustar a pantalla" className="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-600 transition-colors">
+          <button type="button" onClick={fitToScreen} title="Ajustar a pantalla" aria-label="Ajustar a pantalla" className="w-8 h-8 flex items-center justify-center rounded-full hover:bg-gray-100 text-gray-600">
             <svg viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
               <path d="M2.5 3.5a1 1 0 0 1 1-1H5a.5.5 0 0 0 0-1H3.5A2 2 0 0 0 1.5 3.5V5a.5.5 0 0 0 1 0V3.5ZM11 2a.5.5 0 0 0 0 1h1.5a1 1 0 0 1 1 1V5a.5.5 0 0 0 1 0V3.5A2 2 0 0 0 12.5 1.5H11ZM1.5 11a.5.5 0 0 0-1 0V12.5A2 2 0 0 0 2.5 14.5H4a.5.5 0 0 0 0-1H2.5a1 1 0 0 1-1-1V11ZM14 11a.5.5 0 0 0 1 0V12.5A2 2 0 0 0 13 14.5H11.5a.5.5 0 0 0 0 1H13A2 2 0 0 0 15 12.5V11Z" />
             </svg>
@@ -949,13 +908,13 @@ export default function FloorPlan({ tables, rooms, onStatusChange, onRefresh, ed
         {/* ── Legend (bottom-left) — only in operational view ─────────────── */}
         {showStatus && (
           <div
-            className="absolute bottom-4 left-4 flex items-center gap-4 bg-white/90 backdrop-blur-sm border border-gray-200 rounded-xl shadow-sm px-3 py-2"
+            className="absolute bottom-3 left-3 sm:bottom-4 sm:left-4 flex items-center gap-3 bg-white/95 backdrop-blur-sm border border-gray-200 rounded-full shadow-sm h-10 px-3.5"
             onPointerDown={e => e.stopPropagation()}
           >
             {Object.entries(STATUS).map(([, cfg]) => (
               <div key={cfg.label} className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: cfg.accent }} />
-                <span className="text-xs text-gray-500 font-medium">{cfg.label}</span>
+                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: cfg.accent }} />
+                <span className="text-xs text-gray-600 font-medium">{cfg.label}</span>
               </div>
             ))}
           </div>

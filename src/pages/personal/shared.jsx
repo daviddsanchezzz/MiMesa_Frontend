@@ -1,8 +1,35 @@
 
 
-export const inputCls = 'w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white';
+export const inputCls = 'w-full rounded-xl border border-gray-300 px-3.5 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent';
 
-export const labelCls = 'block text-xs font-semibold text-gray-600 mb-1';
+export const labelCls = 'block text-xs font-medium text-gray-600 mb-1.5';
+
+/** Error / notice line inside a screen or sheet (no border). */
+export function Notice({ children, tone = 'error' }) {
+  if (!children) return null;
+  const cls = tone === 'error' ? 'bg-rose-50 text-rose-700' : 'bg-amber-50 text-amber-900';
+  return <p className={`rounded-xl px-3 py-2 text-sm ${cls}`}>{children}</p>;
+}
+
+/** Cancel + main button for the bottom of a sheet. Pass `form` to submit a form that lives in the body. */
+export function SheetFooter({ onCancel, onSave, saving, label = 'Guardar', form, disabled, cancelLabel = 'Cancelar', aside }) {
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <div className="min-w-0 text-xs text-gray-500">{aside}</div>
+      <div className="flex items-center gap-2 shrink-0">
+        <button type="button" onClick={onCancel} disabled={saving}
+          className="h-10 px-4 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-100 disabled:opacity-50">{cancelLabel}</button>
+        <button type={form ? 'submit' : 'button'} form={form} onClick={form ? undefined : onSave} disabled={saving || disabled}
+          className="inline-flex items-center justify-center h-10 px-4 rounded-xl bg-violet-600 text-white text-sm font-semibold hover:bg-violet-700 disabled:opacity-50">
+          {saving ? 'Guardando…' : label}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** Initials of a person's name (max two letters). */
+export const initialsOf = (name) => String(name || '').split(' ').filter(Boolean).map((n) => n[0]).slice(0, 2).join('').toUpperCase();
 
 export const todayIso = () => new Date().toISOString().slice(0, 10);
 

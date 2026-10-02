@@ -3,61 +3,56 @@ import api from '../services/api';
 import { bookingsApi } from '../services/bookingsApi';
 import { useAuth } from '../context/AuthContext';
 import { useSetMobileHeader } from '../context/MobileHeaderContext';
+import Modal from '../components/Modal';
+import Icon from '../ui/Icon';
+import { PageHeader, PrimaryButton, Section, MenuButton, Empty, Segmented } from '../ui/kit';
 
 /* Constants */
 const ROLE_LABELS = { owner: 'Propietario', manager: 'Encargado', staff: 'Personal' };
+const ROLE_DOT = { owner: 'bg-violet-500', manager: 'bg-amber-500', staff: 'bg-gray-400' };
 
-const ROLE_STYLE = {
-  owner:   { pill: 'bg-violet-50 text-violet-700 ring-violet-200',   dot: 'bg-violet-500' },
-  manager: { pill: 'bg-amber-50  text-amber-700  ring-amber-200',    dot: 'bg-amber-500'  },
-  staff:   { pill: 'bg-gray-100  text-gray-600   ring-gray-200',     dot: 'bg-gray-400'   },
-};
-
-const AVATAR_PALETTE = [
-  'from-violet-500 to-violet-700',
-  'from-violet-500 to-purple-700',
-  'from-rose-500   to-pink-700',
-  'from-amber-500  to-orange-600',
-  'from-emerald-500 to-teal-700',
-  'from-cyan-500   to-blue-600',
+const AVATAR_TINTS = [
+  'bg-violet-100 text-violet-700',
+  'bg-rose-100 text-rose-700',
+  'bg-amber-100 text-amber-800',
+  'bg-emerald-100 text-emerald-700',
+  'bg-sky-100 text-sky-700',
+  'bg-gray-100 text-gray-700',
 ];
 
-function avatarGradient(str = '') {
+function avatarTint(str = '') {
   let h = 0;
   for (const c of str) h = c.charCodeAt(0) + ((h << 5) - h);
-  return AVATAR_PALETTE[Math.abs(h) % AVATAR_PALETTE.length];
+  return AVATAR_TINTS[Math.abs(h) % AVATAR_TINTS.length];
 }
 
+const inputCls = 'w-full rounded-xl border border-gray-300 bg-white px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500';
+
 /* Sub-components */
-function Avatar({ name, email, size = 'md' }) {
+function Avatar({ name, email }) {
   const initial = (name || email || '?')[0].toUpperCase();
-  const grad    = avatarGradient(name || email);
-  const sz      = size === 'lg' ? 'w-11 h-11 text-base' : 'w-9 h-9 text-sm';
   return (
-    <div className={`${sz} rounded-full bg-gradient-to-br ${grad} flex items-center justify-center text-white font-semibold shrink-0 shadow-sm`}>
+    <span className={`w-10 h-10 rounded-full ${avatarTint(name || email)} flex items-center justify-center text-sm font-semibold shrink-0`}>
       {initial}
-    </div>
+    </span>
   );
 }
 
-function RolePill({ role }) {
-  const s = ROLE_STYLE[role] || ROLE_STYLE.staff;
+function RoleText({ role }) {
   return (
-    <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ring-1 ${s.pill}`}>
-      <span className={`w-1.5 h-1.5 rounded-full ${s.dot}`} />
+    <span className="inline-flex items-center gap-1.5 text-[13px] font-medium text-gray-700">
+      <span className={`w-2 h-2 rounded-full shrink-0 ${ROLE_DOT[role] || ROLE_DOT.staff}`} />
       {ROLE_LABELS[role] || role}
     </span>
   );
 }
 
-function ErrorBanner({ msg }) {
+function ErrorBanner({ msg, className = '' }) {
   return msg ? (
-    <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3 mb-4">
-      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 shrink-0">
-        <path fillRule="evenodd" d="M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14Zm-.75-9.5a.75.75 0 0 1 1.5 0v3.5a.75.75 0 0 1-1.5 0V5.5Zm.75 6.5a.875.875 0 1 1 0-1.75.875.875 0 0 1 0 1.75Z" clipRule="evenodd"/>
-      </svg>
+    <p className={`flex items-center gap-2 rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700 ${className}`}>
+      <Icon name="alert" className="w-4 h-4 shrink-0" />
       {msg}
-    </div>
+    </p>
   ) : null;
 }
 
@@ -179,309 +174,237 @@ export default function Team() {
     </div>
   );
 
+  const showAgenda = isAppointments && pros.length > 0;
+  const roleOptions = [
+    { value: 'staff',   label: 'Personal',  sub: isAppointments ? 'Ve su agenda y cobra sus citas.' : 'Acceso básico: consulta y operaciones del día.' },
+    { value: 'manager', label: 'Encargado', sub: isAppointments ? 'Agenda de todo el equipo, clientes, caja y cierres.' : 'Reservas, turnos, clientes y mesas.' },
+    ...(isOwner ? [{ value: 'owner', label: 'Propietario', sub: 'Control total del negocio, usuarios y facturación.' }] : []),
+  ];
+  const roleHelp = [
+    { role: 'owner',   desc: 'Control total, usuarios y facturación' },
+    { role: 'manager', desc: isAppointments ? 'Agenda de todo el equipo, clientes, caja y cierres' : 'Reservas, turnos, clientes y mesas' },
+    { role: 'staff',   desc: isAppointments ? 'Ve su agenda (si está vinculado a un profesional) y cobra sus citas' : 'Solo lectura y operaciones básicas' },
+  ];
+
   return (
     <>
-      <div className="space-y-6">
-
-        {/* Page header */}
-        <div className="flex items-start justify-between">
-          <div>
-            <h1 className="hidden lg:block text-xl font-bold text-gray-900">Equipo</h1>
-            <p className="text-sm text-gray-500 mt-0.5">{members.length} {members.length === 1 ? 'persona' : 'personas'} en tu negocio</p>
-          </div>
-          {isManager && (
-            <button
-              onClick={() => setShowModal(true)}
-              className="hidden lg:flex items-center gap-2 bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors shadow-sm shadow-violet-200"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
-                <path d="M11 5a3 3 0 1 1-6 0 3 3 0 0 1 6 0ZM2.046 15.253c-.058.468.172.92.57 1.175A9.953 9.953 0 0 0 8 18c1.982 0 3.83-.573 5.384-1.573.398-.254.628-.707.57-1.175a7 7 0 0 0-13.908 0ZM15.75 7.5a.75.75 0 0 0-1.5 0v2.25H12a.75.75 0 0 0 0 1.5h2.25v2.25a.75.75 0 0 0 1.5 0v-2.25H18a.75.75 0 0 0 0-1.5h-2.25V7.5Z"/>
-              </svg>
-              Invitar persona
-            </button>
-          )}
-        </div>
+      <div className="w-full space-y-8">
+        <PageHeader
+          title="Equipo"
+          subtitle={`${members.length} ${members.length === 1 ? 'persona' : 'personas'} en tu negocio`}
+          actions={isManager && <PrimaryButton onClick={() => setShowModal(true)}>Invitar persona</PrimaryButton>}
+        />
 
         <ErrorBanner msg={pageError} />
 
-        {/* Members list */}
-        <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
-          <div className="px-5 py-3.5 border-b border-gray-100">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Miembros activos</p>
-          </div>
-
+        {/* Members */}
+        <Section title="Miembros">
           {members.length === 0 ? (
-            <div className="py-16 text-center">
-              <div className="w-12 h-12 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-6 h-6 text-gray-400">
-                  <path d="M10 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM6 8a2 2 0 1 1-4 0 2 2 0 0 1 4 0ZM1.49 15.326a.78.78 0 0 1-.358-.442 3 3 0 0 1 4.308-3.516 6.484 6.484 0 0 0-1.905 3.959c-.023.222-.014.442.025.654a4.97 4.97 0 0 1-2.07-.655ZM16.44 15.98a4.97 4.97 0 0 0 2.07-.654.78.78 0 0 0 .357-.442 3 3 0 0 0-4.308-3.517 6.484 6.484 0 0 1 1.907 3.96 2.32 2.32 0 0 1-.026.654ZM18 8a2 2 0 1 1-4 0 2 2 0 0 1 4 0ZM5.304 16.19a.844.844 0 0 1-.277-.71 5 5 0 0 1 9.947 0 .843.843 0 0 1-.277.71A6.975 6.975 0 0 1 10 18a6.974 6.974 0 0 1-4.696-1.81Z"/>
-                </svg>
-              </div>
-              <p className="text-sm text-gray-400">Aún no hay miembros en este negocio</p>
-            </div>
+            <Empty>Aún no hay miembros en este negocio</Empty>
           ) : (
-            <ul className="divide-y divide-gray-50">
-              {members.map((member) => {
-                const isMe      = member.userId === myUserId;
-                const isOwnerRow = member.role === 'owner';
-                const canEdit   = isOwner && !isMe && !isOwnerRow;
+            <>
+              <div className="hidden md:grid grid-cols-12 gap-4 px-2 pb-2 border-b border-gray-200 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                <span className={showAgenda ? 'col-span-6' : 'col-span-9'}>Persona</span>
+                {showAgenda && <span className="col-span-3">Agenda</span>}
+                <span className="col-span-3 text-right pr-10">Rol</span>
+              </div>
+              <ul className="divide-y divide-gray-100">
+                {members.map((member) => {
+                  const isMe      = member.userId === myUserId;
+                  const isOwnerRow = member.role === 'owner';
+                  const canEdit   = isOwner && !isMe && !isOwnerRow;
+                  const pro       = showAgenda ? proOfUser(member.userId) : null;
 
-                return (
-                  <li key={member._id} className="flex flex-wrap sm:flex-nowrap items-center gap-x-4 gap-y-2 px-5 py-4 hover:bg-gray-50/50 transition-colors">
-                    <Avatar name={member.userName} email={member.userEmail} />
+                  return (
+                    <li key={member._id} className="flex items-center gap-3 px-2 py-3 rounded-xl hover:bg-gray-50 md:grid md:grid-cols-12 md:gap-4">
+                      <div className={`flex items-center gap-3 min-w-0 flex-1 ${showAgenda ? 'md:col-span-6' : 'md:col-span-9'}`}>
+                        <Avatar name={member.userName} email={member.userEmail} />
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <p className="text-[15px] font-medium text-gray-900 truncate">{member.userName || '-'}</p>
+                            {isMe && <span className="text-[11px] font-semibold px-1.5 py-px rounded bg-gray-100 text-gray-600">tú</span>}
+                          </div>
+                          <p className="text-[13px] text-gray-500 truncate">
+                            {member.userEmail || '-'}
+                          </p>
+                          {showAgenda && <p className="md:hidden text-[13px] text-gray-400 truncate">{pro ? `Agenda de ${pro.name}` : 'Sin agenda propia'}</p>}
+                        </div>
+                      </div>
 
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <p className="text-sm font-semibold text-gray-900 truncate">
-                          {member.userName || '-'}
+                      {showAgenda && (
+                        <p className={`hidden md:block md:col-span-3 text-[13px] truncate ${pro ? 'text-gray-700' : 'text-gray-400'}`}>
+                          {pro ? `Agenda de ${pro.name}` : 'Sin agenda propia'}
                         </p>
-                        {isMe && (
-                          <span className="text-[11px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-md">tú</span>
+                      )}
+
+                      <div className="flex items-center justify-end gap-1 shrink-0 md:col-span-3">
+                        {canEdit ? (
+                          <>
+                            <MenuButton ariaLabel="Cambiar rol" className="h-8 pl-2.5 pr-2"
+                              items={['staff', 'manager', 'owner'].map((r) => ({
+                                label: ROLE_LABELS[r], active: member.role === r,
+                                onClick: () => { if (r !== member.role) handleRoleChange(member._id, r); },
+                              }))}>
+                              <RoleText role={member.role} />
+                              <Icon name="down" className="w-3.5 h-3.5 text-gray-400" strokeWidth={2} />
+                            </MenuButton>
+                            <MenuButton ariaLabel="Más opciones" className="w-8 h-8 justify-center text-lg leading-none text-gray-500"
+                              items={[{ label: 'Quitar del equipo', onClick: () => handleRemove(member._id, member.userName) }]}>
+                              ⋯
+                            </MenuButton>
+                          </>
+                        ) : (
+                          <span className="pr-10"><RoleText role={member.role} /></span>
                         )}
                       </div>
-                      <p className="text-xs text-gray-400 truncate mt-0.5">{member.userEmail || '-'}</p>
-                      {isAppointments && pros.length > 0 && (
-                        proOfUser(member.userId)
-                          ? <p className="text-xs text-violet-700 mt-0.5 truncate">Agenda de {proOfUser(member.userId).name}</p>
-                          : <p className="text-xs text-gray-400 mt-0.5">Sin agenda propia</p>
-                      )}
-                    </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </>
+          )}
+        </Section>
 
-                    <div className={`flex items-center gap-2 shrink-0 ${canEdit ? 'w-full sm:w-auto pl-14 sm:pl-0' : ''}`}>
-                      {canEdit ? (
-                        <select
-                          value={member.role}
-                          onChange={e => handleRoleChange(member._id, e.target.value)}
-                          className="text-xs border border-gray-200 rounded-lg px-2.5 py-1.5 bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-violet-400 cursor-pointer hover:border-gray-300 transition-colors"
-                        >
-                          <option value="staff">Personal</option>
-                          <option value="manager">Encargado</option>
-                          <option value="owner">Propietario</option>
-                        </select>
-                      ) : (
-                        <RolePill role={member.role} />
-                      )}
-                      {canEdit && (
-                        <button
-                          onClick={() => handleRemove(member._id, member.userName)}
-                          className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-300 hover:bg-red-50 hover:text-red-500 transition-colors"
-                          title="Eliminar miembro"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
-                            <path fillRule="evenodd" d="M5 3.25V4H2.75a.75.75 0 0 0 0 1.5h.3l.815 8.15A1.5 1.5 0 0 0 5.357 15h5.285a1.5 1.5 0 0 0 1.493-1.35l.815-8.15h.3a.75.75 0 0 0 0-1.5H11v-.75A2.25 2.25 0 0 0 8.75 1h-1.5A2.25 2.25 0 0 0 5 3.25Zm2.25-.75a.75.75 0 0 0-.75.75V4h3v-.75a.75.75 0 0 0-.75-.75h-1.5ZM6.05 6a.75.75 0 0 1 .787.713l.275 5.5a.75.75 0 0 1-1.498.075l-.275-5.5A.75.75 0 0 1 6.05 6Zm3.9 0a.75.75 0 0 1 .712.787l-.275 5.5a.75.75 0 0 1-1.498-.075l.275-5.5a.75.75 0 0 1 .786-.711Z" clipRule="evenodd"/>
-                          </svg>
-                        </button>
-                      )}
+        {/* Pending invitations */}
+        {isManager && invitations.length > 0 && (
+          <Section title="Invitaciones pendientes">
+            <ul className="divide-y divide-gray-100">
+              {invitations.map((inv) => {
+                const pro = inv.links?.resourceId ? proById(inv.links.resourceId) : null;
+                return (
+                  <li key={inv._id} className="flex items-center gap-3 px-2 py-3 rounded-xl hover:bg-gray-50">
+                    <span className="w-10 h-10 rounded-full border-[1.5px] border-dashed border-gray-300 text-gray-400 flex items-center justify-center shrink-0">
+                      <Icon name="inbox" className="w-[18px] h-[18px]" />
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[15px] font-medium text-gray-900 truncate">{inv.name}</p>
+                      <p className="text-[13px] text-gray-500 truncate">
+                        {inv.email} · {ROLE_LABELS[inv.role] || inv.role}
+                        {pro && <> · será {pro.name} en la agenda</>}
+                      </p>
                     </div>
+                    <span className="hidden sm:inline-flex items-center gap-1.5 text-xs font-medium text-amber-700 shrink-0">
+                      <span className="w-2 h-2 rounded-full border-[1.5px] border-dashed border-amber-500" />
+                      Pendiente
+                    </span>
+                    {isOwner && (
+                      <button type="button" onClick={() => handleCancelInvite(inv._id)}
+                        className="shrink-0 ml-2 text-[13px] font-semibold text-rose-600 hover:text-rose-800">
+                        Cancelar
+                      </button>
+                    )}
                   </li>
                 );
               })}
             </ul>
-          )}
-        </div>
-
-        {/* Pending invitations */}
-        {isManager && invitations.length > 0 && (
-          <div className="bg-white border border-gray-200 rounded-2xl overflow-hidden shadow-sm">
-            <div className="px-5 py-3.5 border-b border-gray-100">
-              <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Invitaciones pendientes</p>
-            </div>
-            <ul className="divide-y divide-gray-50">
-              {invitations.map((inv) => (
-                <li key={inv._id} className="flex flex-wrap sm:flex-nowrap items-center gap-x-4 gap-y-2 px-5 py-4">
-                  <div className="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center shrink-0">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 text-gray-400">
-                      <path d="M3 4a2 2 0 0 0-2 2v1.161l8.441 4.221a1.25 1.25 0 0 0 1.118 0L19 7.162V6a2 2 0 0 0-2-2H3Z"/>
-                      <path d="m19 8.839-7.77 3.885a2.75 2.75 0 0 1-2.46 0L1 8.839V14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8.839Z"/>
-                    </svg>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-gray-900 truncate">{inv.name}</p>
-                    <p className="text-xs text-gray-400 truncate">{inv.email}</p>
-                    {inv.links?.resourceId && proById(inv.links.resourceId) && (
-                      <p className="text-xs text-violet-700 truncate">Será {proById(inv.links.resourceId).name} en la agenda</p>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 shrink-0 w-full sm:w-auto pl-[52px] sm:pl-0">
-                    <RolePill role={inv.role} />
-                    <span className="text-[11px] text-amber-600 bg-amber-50 border border-amber-200 px-2 py-0.5 rounded-full font-medium">Pendiente</span>
-                    {isOwner && (
-                      <button
-                        onClick={() => handleCancelInvite(inv._id)}
-                        className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-300 hover:bg-red-50 hover:text-red-500 transition-colors"
-                        title="Cancelar invitación"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
-                          <path d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z"/>
-                        </svg>
-                      </button>
-                    )}
-                  </div>
-                </li>
-              ))}
-            </ul>
-          </div>
+          </Section>
         )}
 
-        {/* Role legend */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          {[
-            { role: 'owner',   desc: 'Control total, usuarios y facturación' },
-            { role: 'manager', desc: isAppointments ? 'Agenda de todo el equipo, clientes, caja y cierres' : 'Reservas, turnos, clientes y mesas' },
-            { role: 'staff',   desc: isAppointments ? 'Ve su agenda (si está vinculado a un profesional) y cobra sus citas' : 'Solo lectura y operaciones básicas' },
-          ].map(({ role, desc }) => (
-            <div key={role} className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm">
-              <RolePill role={role} />
-              <p className="text-xs text-gray-400 mt-2 leading-relaxed">{desc}</p>
-            </div>
-          ))}
-        </div>
+        {/* Role help */}
+        <Section title="Qué puede hacer cada rol">
+          <dl className="space-y-1.5 px-2 pt-1">
+            {roleHelp.map(({ role, desc }) => (
+              <div key={role} className="flex flex-col sm:flex-row sm:items-baseline gap-x-4">
+                <dt className="sm:w-32 shrink-0"><RoleText role={role} /></dt>
+                <dd className="text-[13px] text-gray-500 pl-3.5 sm:pl-0">{desc}</dd>
+              </div>
+            ))}
+          </dl>
+        </Section>
       </div>
 
       {/* Invite modal */}
       {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-          {/* Backdrop */}
-          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={closeModal} />
-
-          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 animate-[fadeIn_150ms_ease]">
-            {invSent ? (
-              /* Success state */
-              <div className="text-center py-4">
-                <div className="w-14 h-14 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-7 h-7 text-green-600">
-                    <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clipRule="evenodd"/>
-                  </svg>
-                </div>
-                <h3 className="text-lg font-bold text-gray-900 mb-1">Invitación enviada</h3>
-                <p className="text-sm text-gray-500 mb-2">
-                  Le hemos enviado un email a <strong>{invForm.email}</strong> con el enlace para activar su cuenta.
-                </p>
-                <button onClick={closeModal} className="mt-4 text-sm text-violet-600 font-medium hover:underline">
-                  Cerrar
+        invSent ? (
+          <Modal title="Invitación enviada" onClose={closeModal}
+            footer={<div className="flex justify-end"><PrimaryButton icon={null} onClick={closeModal}>Hecho</PrimaryButton></div>}>
+            <div className="flex items-start gap-3">
+              <span className="w-9 h-9 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
+                <Icon name="check" className="w-[18px] h-[18px]" strokeWidth={2} />
+              </span>
+              <p className="text-sm text-gray-600 leading-relaxed">
+                Le hemos enviado un email a <span className="font-semibold text-gray-900">{invForm.email}</span> con el enlace para activar su cuenta.
+              </p>
+            </div>
+          </Modal>
+        ) : (
+          <Modal title="Invitar al equipo" subtitle="Recibirá un email para crear su cuenta" size="md" onClose={closeModal}
+            footer={(
+              <div className="flex items-center justify-end gap-2">
+                <button type="button" onClick={closeModal}
+                  className="h-10 px-4 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-100">
+                  Cancelar
+                </button>
+                <button type="submit" form="invite-form" disabled={invLoading}
+                  className="inline-flex items-center justify-center h-10 px-4 rounded-xl bg-violet-600 text-white text-sm font-semibold hover:bg-violet-700 disabled:opacity-60">
+                  {invLoading ? 'Enviando…' : 'Enviar invitación'}
                 </button>
               </div>
-            ) : (
-              /* Form state */
-              <>
-                <div className="flex items-center justify-between mb-5">
-                  <h3 className="text-lg font-bold text-gray-900">Invitar al equipo</h3>
-                  <button onClick={closeModal} className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400 hover:bg-gray-100 transition-colors">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
-                      <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z"/>
-                    </svg>
-                  </button>
-                </div>
+            )}>
+            <ErrorBanner msg={invError} className="mb-4" />
 
-                <ErrorBanner msg={invError} />
+            <form id="invite-form" onSubmit={handleInvite} className="space-y-5">
+              <div className="space-y-3">
+                <label className="block">
+                  <span className="block text-[13px] font-medium text-gray-700 mb-1.5">Nombre</span>
+                  <input required value={invForm.name}
+                    onChange={e => setInvForm(f => ({ ...f, name: e.target.value }))}
+                    placeholder="María García" className={inputCls} />
+                </label>
+                <label className="block">
+                  <span className="block text-[13px] font-medium text-gray-700 mb-1.5">Email</span>
+                  <input type="email" required value={invForm.email}
+                    onChange={e => setInvForm(f => ({ ...f, email: e.target.value }))}
+                    placeholder="maria@email.com" className={inputCls} />
+                </label>
+              </div>
 
-                <form onSubmit={handleInvite} className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Nombre</label>
-                    <input
-                      required
-                      value={invForm.name}
-                      onChange={e => setInvForm(f => ({ ...f, name: e.target.value }))}
-                      placeholder="María García"
-                      className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
-                    <input
-                      type="email" required
-                      value={invForm.email}
-                      onChange={e => setInvForm(f => ({ ...f, email: e.target.value }))}
-                      placeholder="maria@email.com"
-                      className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1.5">Rol</label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {[
-                        { value: 'staff',   label: 'Personal',  sub: 'Acceso básico' },
-                        { value: 'manager', label: 'Encargado', sub: 'Gestión operativa' },
-                        ...(isOwner ? [{ value: 'owner', label: 'Propietario', sub: 'Control total del negocio' }] : []),
-                      ].map(opt => (
-                        <label
-                          key={opt.value}
-                          className={`flex flex-col gap-0.5 border rounded-xl px-4 py-3 cursor-pointer transition-all ${
-                            invForm.role === opt.value
-                              ? 'border-violet-500 bg-violet-50 ring-2 ring-violet-300'
-                              : 'border-gray-200 hover:border-gray-300'
-                          }`}
-                        >
-                          <input
-                            type="radio" name="role" value={opt.value}
-                            checked={invForm.role === opt.value}
-                            onChange={e => setInvForm(f => ({ ...f, role: e.target.value }))}
-                            className="sr-only"
-                          />
-                          <span className="text-sm font-semibold text-gray-900">{opt.label}</span>
-                          <span className="text-xs text-gray-400">{opt.sub}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
+              <div>
+                <p className="text-[13px] font-medium text-gray-700 mb-1.5">Rol</p>
+                <Segmented value={invForm.role} options={roleOptions.map((o) => [o.value, o.label])}
+                  onChange={(v) => setInvForm(f => ({ ...f, role: v }))} />
+                <p className="text-[13px] text-gray-500 mt-2">{roleOptions.find((o) => o.value === invForm.role)?.sub}</p>
+              </div>
 
-                  {isAppointments && pros.length > 0 && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1.5">¿Es uno de tus profesionales?</label>
-                      <select
-                        value={invForm.resourceId}
-                        onChange={(e) => {
-                          const id = e.target.value;
-                          const pro = proById(id);
-                          setInvForm((f) => ({ ...f, resourceId: id, name: f.name.trim() ? f.name : (pro?.name || '') }));
-                        }}
-                        className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white"
-                      >
-                        <option value="">No, no atiende citas</option>
-                        {pros.map((r) => {
-                          const busy = proBusy(r);
-                          return (
-                            <option key={r._id} value={r._id} disabled={!!busy}>
-                              {r.name}{busy ? ` (${busy})` : ''}
-                            </option>
-                          );
-                        })}
-                      </select>
-                      <p className="text-xs text-gray-400 mt-1.5">
-                        {invForm.resourceId
-                          ? `Al entrar verá la agenda de ${proById(invForm.resourceId)?.name || 'ese profesional'} y podrá bloquear su tiempo.`
-                          : 'Si ya lo has creado en la agenda, elígelo para que al entrar vea sus citas.'}
-                      </p>
-                    </div>
-                  )}
-
-                  <p className="text-xs text-gray-400 leading-relaxed">
-                    Recibirá un email con un enlace para crear su cuenta y unirse al negocio. El enlace caduca en 7 días.
+              {isAppointments && pros.length > 0 && (
+                <div>
+                  <p className="text-[13px] font-medium text-gray-700">¿Es uno de tus profesionales?</p>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    {invForm.resourceId
+                      ? `Al entrar verá la agenda de ${proById(invForm.resourceId)?.name || 'ese profesional'} y podrá bloquear su tiempo.`
+                      : 'Si ya lo has creado en la agenda, elígelo para que al entrar vea sus citas.'}
                   </p>
+                  <ul className="mt-2 divide-y divide-gray-100 border-y border-gray-100" role="radiogroup">
+                    {[{ _id: '', name: 'No, no atiende citas' }, ...pros].map((r) => {
+                      const busy = r._id ? proBusy(r) : '';
+                      const selected = String(invForm.resourceId) === String(r._id);
+                      return (
+                        <li key={r._id || 'none'}>
+                          <button type="button" role="radio" aria-checked={selected} disabled={!!busy}
+                            onClick={() => {
+                              const id = r._id ? String(r._id) : '';
+                              const pro = proById(id);
+                              setInvForm((f) => ({ ...f, resourceId: id, name: f.name.trim() ? f.name : (pro?.name || '') }));
+                            }}
+                            className="w-full flex items-center gap-3 py-2.5 text-left disabled:cursor-not-allowed">
+                            <span className={`w-4 h-4 rounded-full shrink-0 flex items-center justify-center ${selected ? 'border-[5px] border-violet-600' : 'border-[1.5px] border-gray-300'}`} />
+                            <span className={`text-sm ${busy ? 'text-gray-400' : 'text-gray-900'}`}>{r.name}</span>
+                            {busy && <span className="text-xs text-gray-400 truncate">{busy}</span>}
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              )}
 
-                  <div className="flex gap-2 pt-1">
-                    <button
-                      type="submit" disabled={invLoading}
-                      className="flex-1 bg-violet-600 hover:bg-violet-700 disabled:opacity-60 text-white text-sm font-semibold py-2.5 rounded-xl transition-colors"
-                    >
-                      {invLoading ? 'Enviando...' : 'Enviar invitación'}
-                    </button>
-                    <button
-                      type="button" onClick={closeModal}
-                      className="px-4 py-2.5 rounded-xl border border-gray-200 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
-                    >
-                      Cancelar
-                    </button>
-                  </div>
-                </form>
-              </>
-            )}
-          </div>
-        </div>
+              <p className="text-xs text-gray-400 leading-relaxed">
+                El enlace para unirse al negocio caduca en 7 días.
+              </p>
+            </form>
+          </Modal>
+        )
       )}
     </>
   );
 }
-
-
-

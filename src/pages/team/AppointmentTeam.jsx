@@ -5,11 +5,13 @@ import { useSetMobileHeader } from '../../context/MobileHeaderContext';
 import { bookingsApi, apiError } from '../../services/bookingsApi';
 import Modal from '../../components/Modal';
 import StaffAvatar from '../agenda/StaffAvatar';
-import { DEFAULT_TZ, btnPrimary, btnSecondary, inputCls, labelCls, staffColors, todayIn } from '../agenda/utils';
+import { DEFAULT_TZ, inputCls, labelCls, staffColors, todayIn } from '../agenda/utils';
+import { BigFigure, Empty, FigureLine, GhostButton, PageHeader, PrimaryButton, RowAction, Section, SectionLink } from '../../ui/kit';
 
 const MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 const eur = (n) => `${(n || 0).toLocaleString('es-ES', { minimumFractionDigits: Number.isInteger(n || 0) ? 0 : 2, maximumFractionDigits: 2, useGrouping: 'always' })} €`;
-const card = 'bg-white rounded-2xl border border-gray-200';
+const citas = (n) => `${n || 0} ${n === 1 ? 'cita' : 'citas'}`;
+const num = (n) => (n || 0).toLocaleString('es-ES', { maximumFractionDigits: 1 });
 
 const PAY_OPTIONS = [
   { key: 'monthly', label: 'Sueldo fijo', hint: 'Un importe al mes', unit: '€ al mes' },
@@ -40,6 +42,16 @@ const shiftMonth = (ym, n) => {
   return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`;
 };
 
+/** Cancel + main button for the bottom of a sheet. */
+function SheetFooter({ onCancel, onSave, saving, label }) {
+  return (
+    <div className="flex items-center justify-end gap-2">
+      <button type="button" onClick={onCancel} className="h-10 px-4 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-100">Cancelar</button>
+      <PrimaryButton icon={null} onClick={onSave} disabled={saving}>{saving ? 'Guardando…' : label}</PrimaryButton>
+    </div>
+  );
+}
+
 function PayModal({ person, onClose, onSaved }) {
   const pay = person.pay;
   const [type, setType] = useState(TYPE_FROM_API[pay?.type] || 'commission');
@@ -69,17 +81,27 @@ function PayModal({ person, onClose, onSaved }) {
   }
 
   return (
-    <Modal title={`Cómo cobra ${person.name}`} subtitle="Se usa para calcular su coste y lo que deja al negocio." onClose={onClose}>
-      <div className="space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-          {PAY_OPTIONS.map((o) => (
-            <button key={o.key} type="button" onClick={() => setType(o.key)}
-              className={`text-left rounded-xl border px-3 py-2.5 transition-colors ${type === o.key ? 'border-violet-600 bg-violet-50 ring-1 ring-violet-600' : 'border-gray-200 hover:bg-gray-50'}`}>
-              <span className="block text-sm font-semibold text-gray-900">{o.label}</span>
-              <span className="block text-xs text-gray-500">{o.hint}</span>
-            </button>
-          ))}
-        </div>
+    <Modal title={`Cómo cobra ${person.name}`} subtitle="Se usa para calcular su coste y lo que deja al negocio." onClose={onClose}
+      footer={<SheetFooter onCancel={onClose} onSave={save} saving={saving} label="Guardar" />}>
+      <div className="space-y-6">
+        <Section title="Tipo de pago">
+          <ul className="divide-y divide-gray-100" role="radiogroup">
+            {PAY_OPTIONS.map((o) => (
+              <li key={o.key}>
+                <button type="button" role="radio" aria-checked={type === o.key} onClick={() => setType(o.key)}
+                  className="w-full flex items-center gap-3 py-2.5 text-left">
+                  <span className={`w-[18px] h-[18px] rounded-full shrink-0 flex items-center justify-center border-2 ${type === o.key ? 'border-violet-600' : 'border-gray-300'}`}>
+                    {type === o.key && <span className="w-2 h-2 rounded-full bg-violet-600" />}
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-[15px] font-medium text-gray-900">{o.label}</span>
+                    <span className="block text-[13px] text-gray-500">{o.hint}</span>
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </Section>
         {opt.unit && (
           <div>
             <label className={labelCls}>Importe ({opt.unit})</label>
@@ -87,22 +109,20 @@ function PayModal({ person, onClose, onSaved }) {
             {type === 'hourly' && <p className="text-xs text-gray-500 mt-1">Las horas salen de su horario en la agenda.</p>}
           </div>
         )}
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className={labelCls}>Comisión servicios (%)</label>
-            <input className={`${inputCls} text-right tabular-nums`} inputMode="decimal" value={commission} onChange={(e) => setCommission(e.target.value)} placeholder="0" />
+        <Section title="Comisión">
+          <div className="grid grid-cols-2 gap-3 pt-1">
+            <div>
+              <label className={labelCls}>Servicios (%)</label>
+              <input className={`${inputCls} text-right tabular-nums`} inputMode="decimal" value={commission} onChange={(e) => setCommission(e.target.value)} placeholder="0" />
+            </div>
+            <div>
+              <label className={labelCls}>Productos (%)</label>
+              <input className={`${inputCls} text-right tabular-nums`} inputMode="decimal" value={productCommission} onChange={(e) => setProductCommission(e.target.value)} placeholder="0" />
+            </div>
           </div>
-          <div>
-            <label className={labelCls}>Comisión productos (%)</label>
-            <input className={`${inputCls} text-right tabular-nums`} inputMode="decimal" value={productCommission} onChange={(e) => setProductCommission(e.target.value)} placeholder="0" />
-          </div>
-        </div>
-        <p className="text-xs text-gray-500">Si un servicio tiene su propio % de comisión, se usa ese para ese servicio.</p>
-        {error && <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</p>}
-        <div className="flex justify-end gap-2">
-          <button type="button" className={btnSecondary} onClick={onClose}>Cancelar</button>
-          <button type="button" className={btnPrimary} onClick={save} disabled={saving}>{saving ? 'Guardando…' : 'Guardar'}</button>
-        </div>
+          <p className="text-xs text-gray-500 mt-2">Si un servicio tiene su propio % de comisión, se usa ese para ese servicio.</p>
+        </Section>
+        {error && <p className="text-sm text-rose-700 rounded-xl bg-rose-50 px-3 py-2">{error}</p>}
       </div>
     </Modal>
   );
@@ -126,21 +146,50 @@ function PaymentModal({ person, onClose, onSaved }) {
     }
   }
   return (
-    <Modal title={`Pago a ${person.name}`} onClose={onClose}>
-      <div className="space-y-3">
+    <Modal title={`Pago a ${person.name}`} subtitle={`Pendiente este mes: ${eur(person.toPay)}`} onClose={onClose}
+      footer={<SheetFooter onCancel={onClose} onSave={save} saving={saving} label="Registrar pago" />}>
+      <div className="space-y-4">
         <div>
           <label className={labelCls}>Importe (€)</label>
           <input autoFocus className={`${inputCls} text-right tabular-nums`} inputMode="decimal" value={amount} onChange={(e) => setAmount(e.target.value)} />
-          <p className="text-xs text-gray-500 mt-1">Pendiente en este periodo: {eur(person.toPay)} (sueldo + comisión + propinas − ya pagado)</p>
+          <p className="text-xs text-gray-500 mt-1">Sueldo + comisión + propinas − ya pagado.</p>
         </div>
-        <input className={inputCls} placeholder="Nota (nómina, adelanto, propinas…)" value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={300} />
-        {error && <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</p>}
-        <div className="flex justify-end gap-2">
-          <button type="button" className={btnSecondary} onClick={onClose}>Cancelar</button>
-          <button type="button" className={btnPrimary} onClick={save} disabled={saving}>{saving ? 'Guardando…' : 'Registrar pago'}</button>
+        <div>
+          <label className={labelCls}>Nota</label>
+          <input className={inputCls} placeholder="Nómina, adelanto, propinas…" value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={300} />
         </div>
+        {error && <p className="text-sm text-rose-700 rounded-xl bg-rose-50 px-3 py-2">{error}</p>}
       </div>
     </Modal>
+  );
+}
+
+/** The month's money for one professional, line by line (opens under the row). */
+function Breakdown({ p, onPay, onEdit }) {
+  const line = (label, value, cls = 'text-gray-900') => (
+    <div className="flex justify-between gap-3 py-2"><dt className="text-gray-600">{label}</dt><dd className={`tabular-nums ${cls}`}>{value}</dd></div>
+  );
+  return (
+    <div className="pb-4 md:pl-[52px] grid grid-cols-1 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-x-10">
+      <dl className="text-sm divide-y divide-gray-100">
+        {line('Servicios', eur(p.billed))}
+        {p.products > 0 && line('Productos vendidos', eur(p.products))}
+        {line('Sueldo', p.salary ? `−${eur(p.salary)}` : '—', p.salary ? 'text-rose-600' : 'text-gray-300')}
+        {line('Comisión', p.commission ? `−${eur(p.commission)}` : '—', p.commission ? 'text-rose-600' : 'text-gray-300')}
+        {line('Deja al negocio', eur(p.leaves), `font-semibold ${p.leaves >= 0 ? 'text-emerald-600' : 'text-rose-600'}`)}
+      </dl>
+      <div>
+        <dl className="text-sm divide-y divide-gray-100">
+          {p.tips > 0 && line('Propinas (son suyas)', eur(p.tips), 'text-gray-500')}
+          {line('Pagado', eur(p.paid))}
+          {line('Pendiente', eur(p.toPay), `font-semibold ${p.toPay > 0 ? 'text-amber-700' : 'text-gray-900'}`)}
+        </dl>
+        <div className="flex flex-wrap gap-2 pt-3">
+          <GhostButton onClick={onEdit}>Cambiar cómo cobra</GhostButton>
+          <GhostButton onClick={onPay}>Registrar pago</GhostButton>
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -158,6 +207,7 @@ export default function AppointmentTeam() {
   const [error, setError] = useState('');
   const [editing, setEditing] = useState(null);
   const [paying, setPaying] = useState(null);
+  const [open, setOpen] = useState(null);
 
   useSetMobileHeader({ title: 'Personal' });
 
@@ -174,89 +224,96 @@ export default function AppointmentTeam() {
   const t = data?.totals;
 
   return (
-    <div className="space-y-5">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h2 className="hidden lg:block text-xl font-bold text-gray-900">Personal</h2>
-          <p className="text-sm text-gray-500 lg:mt-0.5">Cómo cobra cada profesional y lo que deja al negocio.</p>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <button type="button" className={`${btnSecondary} !px-3`} onClick={() => setMonth(shiftMonth(month, -1))} aria-label="Mes anterior">‹</button>
-          <span className="px-3 text-sm font-semibold text-gray-900 capitalize min-w-[9rem] text-center">{MONTHS[m - 1]} {y}</span>
-          <button type="button" className={`${btnSecondary} !px-3`} onClick={() => setMonth(shiftMonth(month, 1))} disabled={month >= today.slice(0, 7)} aria-label="Mes siguiente">›</button>
-        </div>
-      </div>
+    <div className="w-full space-y-8">
+      <PageHeader title="Personal" subtitle="Cómo cobra cada profesional y lo que deja al negocio." mobileActions
+        actions={(
+          <div className="flex items-center gap-1">
+            <button type="button" className="w-9 h-9 rounded-full hover:bg-gray-100 text-gray-600" onClick={() => setMonth(shiftMonth(month, -1))} aria-label="Mes anterior">‹</button>
+            <span className="px-1 text-sm font-semibold text-gray-900 capitalize min-w-[8.5rem] text-center">{MONTHS[m - 1]} {y}</span>
+            <button type="button" className="w-9 h-9 rounded-full hover:bg-gray-100 text-gray-600 disabled:text-gray-300 disabled:hover:bg-transparent" onClick={() => setMonth(shiftMonth(month, 1))} disabled={month >= today.slice(0, 7)} aria-label="Mes siguiente">›</button>
+          </div>
+        )} />
 
-      {error && <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</p>}
+      {error && <p className="text-sm text-rose-700 rounded-xl bg-rose-50 px-3 py-2">{error}</p>}
       {!data && !error && <p className="text-sm text-gray-400">Cargando…</p>}
 
       {data && (
         <>
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-            {[
-              ['Facturado por el equipo', eur(t.billed + t.products), `${t.appointments || 0} citas${t.products ? ` · ${eur(t.products)} en productos` : ''}`],
-              ['Coste del equipo', eur(t.cost), `${eur(t.salary)} sueldos · ${eur(t.commission)} comisiones`],
-              ['Deja al negocio', eur(t.leaves), 'facturado − coste del equipo', (t.leaves || 0) >= 0 ? 'text-emerald-600' : 'text-rose-600'],
-              ['Pendiente de pagar', eur(t.toPay), `${eur(t.paid)} ya pagado${t.tips ? ` · ${eur(t.tips)} propinas` : ''}`],
-            ].map(([label, value, hint, tone]) => (
-              <div key={label} className={`${card} px-4 py-3.5`}>
-                <p className="text-xs text-gray-500">{label}</p>
-                <p className={`text-2xl font-bold tabular-nums mt-1 ${tone || 'text-gray-900'}`}>{value}</p>
-                <p className="text-xs text-gray-400 mt-0.5 truncate">{hint}</p>
-              </div>
-            ))}
-          </div>
+          <section className="space-y-4">
+            <BigFigure label="Deja al negocio" value={eur(t.leaves)} tone={(t.leaves || 0) >= 0 ? 'good' : 'bad'}
+              sub={`Facturado menos ${eur(t.cost)} de coste del equipo`} />
+            <FigureLine items={[
+              { label: `facturado · ${citas(t.appointments)}`, value: eur(t.billed + t.products) },
+              t.products ? { label: 'en productos', value: eur(t.products) } : null,
+              { label: 'sueldos', value: eur(t.salary) },
+              { label: 'comisiones', value: eur(t.commission) },
+              { label: 'pendiente de pagar', value: eur(t.toPay), tone: t.toPay > 0 ? 'warn' : undefined },
+              { label: 'ya pagado', value: eur(t.paid) },
+              t.tips ? { label: 'propinas', value: eur(t.tips) } : null,
+            ]} />
+          </section>
 
-          {data.staff.length === 0 ? (
-            <div className={`${card} p-8 text-center`}>
-              <p className="text-sm text-gray-500">Todavía no hay profesionales.</p>
-              <Link to="/configuracion?tab=profesionales" className="text-sm font-semibold text-violet-700">Añadirlos en Configuración</Link>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-              {data.staff.map((p) => (
-                <section key={p.id} className={`${card} p-5 space-y-4`}>
-                  <div className="flex items-start gap-3">
-                    <StaffAvatar name={p.name} photo={p.photo} color={colors[p.id]} size={44} />
-                    <div className="min-w-0 flex-1">
-                      <p className="text-base font-semibold text-gray-900 truncate">{p.name}{!p.active && <span className="ml-2 text-xs font-normal text-gray-400">(desactivada)</span>}</p>
-                      <button type="button" onClick={() => setEditing(p)} className={`text-sm text-left ${p.pay ? 'text-gray-600 hover:text-violet-700' : 'text-amber-700 font-semibold'}`}>
-                        {payText(p.pay)} · <span className="text-violet-700">Cambiar</span>
-                      </button>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <p className="text-[11px] text-gray-500">Deja al negocio</p>
-                      <p className={`text-xl font-bold tabular-nums ${p.leaves >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{eur(p.leaves)}</p>
-                    </div>
-                  </div>
-
-                  <dl className="grid grid-cols-3 gap-2 text-center">
-                    <div className="rounded-xl bg-gray-50 py-2"><dt className="text-[11px] text-gray-500">Citas</dt><dd className="text-base font-bold text-gray-900 tabular-nums">{p.appointments}</dd></div>
-                    <div className="rounded-xl bg-gray-50 py-2"><dt className="text-[11px] text-gray-500">Facturado</dt><dd className="text-base font-bold text-gray-900 tabular-nums">{eur(p.billed + p.products)}</dd></div>
-                    <div className="rounded-xl bg-gray-50 py-2"><dt className="text-[11px] text-gray-500">Horas en agenda</dt><dd className="text-base font-bold text-gray-900 tabular-nums">{p.hours}</dd></div>
-                  </dl>
-
-                  <div className="text-sm space-y-1.5">
-                    <div className="flex justify-between"><span className="text-gray-600">Servicios</span><span className="tabular-nums">{eur(p.billed)}</span></div>
-                    {p.products > 0 && <div className="flex justify-between"><span className="text-gray-600">Productos vendidos</span><span className="tabular-nums">{eur(p.products)}</span></div>}
-                    <div className="flex justify-between"><span className="text-gray-600">Sueldo</span>{p.salary ? <span className="tabular-nums text-rose-600">−{eur(p.salary)}</span> : <span className="text-gray-300">—</span>}</div>
-                    <div className="flex justify-between"><span className="text-gray-600">Comisión</span>{p.commission ? <span className="tabular-nums text-rose-600">−{eur(p.commission)}</span> : <span className="text-gray-300">—</span>}</div>
-                    {p.tips > 0 && <div className="flex justify-between"><span className="text-gray-600">Propinas (son suyas)</span><span className="tabular-nums text-gray-500">{eur(p.tips)}</span></div>}
-                  </div>
-
-                  <div className="flex items-center justify-between gap-3 pt-3 border-t border-gray-100">
-                    <p className="text-sm text-gray-600">
-                      Pagado <b className="text-gray-900 tabular-nums">{eur(p.paid)}</b>
-                      {p.toPay > 0 && <> · pendiente <b className="text-amber-700 tabular-nums">{eur(p.toPay)}</b></>}
-                    </p>
-                    <button type="button" className={btnSecondary} onClick={() => setPaying(p)}>Registrar pago</button>
-                  </div>
-                </section>
-              ))}
-            </div>
-          )}
+          <Section title="Profesionales">
+            {data.staff.length === 0 ? (
+              <Empty action={<SectionLink to="/configuracion?tab=profesionales">Añadirlos en Configuración</SectionLink>}>Todavía no hay profesionales.</Empty>
+            ) : (
+              <>
+                <div className="hidden md:grid grid-cols-12 gap-4 px-2 pb-2 border-b border-gray-200 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                  <span className="col-span-4">Profesional</span>
+                  <span className="col-span-1 text-right">Citas</span>
+                  <span className="col-span-1 text-right">Horas</span>
+                  <span className="col-span-2 text-right">Facturado</span>
+                  <span className="col-span-1 text-right">Coste</span>
+                  <span className="col-span-1 text-right">Deja</span>
+                  <span className="col-span-2 text-right">Pendiente</span>
+                </div>
+                <ul className="divide-y divide-gray-100">
+                  {data.staff.map((p) => {
+                    const isOpen = open === p.id;
+                    const cost = (p.salary || 0) + (p.commission || 0);
+                    return (
+                      <li key={p.id}>
+                        <div role="button" tabIndex={0} aria-expanded={isOpen}
+                          onClick={() => setOpen(isOpen ? null : p.id)}
+                          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOpen(isOpen ? null : p.id); } }}
+                          className="flex items-center gap-3 md:grid md:grid-cols-12 md:gap-4 px-2 py-3 rounded-xl cursor-pointer hover:bg-gray-50">
+                          <div className="md:col-span-4 flex items-center gap-3 min-w-0 flex-1">
+                            <StaffAvatar name={p.name} photo={p.photo} color={colors[p.id]} size={40} />
+                            <div className="min-w-0">
+                              <p className="text-[15px] font-medium text-gray-900 truncate">
+                                {p.name}{!p.active && <span className="ml-1.5 text-[11px] font-semibold px-1.5 py-px rounded bg-gray-100 text-gray-500 align-middle">Desactivada</span>}
+                              </p>
+                              <button type="button" onClick={(e) => { e.stopPropagation(); setEditing(p); }}
+                                className={`text-[13px] text-left truncate max-w-full ${p.pay ? 'text-gray-500 hover:text-violet-700' : 'text-amber-700 font-semibold'}`}>
+                                {payText(p.pay)}
+                              </button>
+                              <p className="md:hidden text-[13px] text-gray-500 tabular-nums">{citas(p.appointments)} · {eur(p.billed + p.products)}</p>
+                            </div>
+                          </div>
+                          <span className="hidden md:block col-span-1 text-right text-sm tabular-nums text-gray-700">{p.appointments}</span>
+                          <span className="hidden md:block col-span-1 text-right text-sm tabular-nums text-gray-700">{num(p.hours)}</span>
+                          <span className="hidden md:block col-span-2 text-right text-sm tabular-nums text-gray-900">{eur(p.billed + p.products)}</span>
+                          <span className="hidden md:block col-span-1 text-right text-sm tabular-nums text-gray-700">{cost ? eur(cost) : <span className="text-gray-300">—</span>}</span>
+                          <span className={`hidden md:block col-span-1 text-right text-sm font-semibold tabular-nums ${p.leaves >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{eur(p.leaves)}</span>
+                          <div className="hidden md:flex col-span-2 items-center justify-end gap-2">
+                            <span className={`text-sm tabular-nums ${p.toPay > 0 ? 'font-semibold text-amber-700' : 'text-gray-400'}`}>{eur(p.toPay)}</span>
+                            <RowAction onClick={() => setPaying(p)}>Pagar</RowAction>
+                          </div>
+                          <div className="md:hidden text-right shrink-0">
+                            <p className={`text-[15px] font-semibold tabular-nums ${p.leaves >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{eur(p.leaves)}</p>
+                            <p className="text-[11px] text-gray-400">{p.toPay > 0 ? <span className="text-amber-700">{eur(p.toPay)} pendiente</span> : 'deja'}</p>
+                          </div>
+                        </div>
+                        {isOpen && <Breakdown p={p} onPay={() => setPaying(p)} onEdit={() => setEditing(p)} />}
+                      </li>
+                    );
+                  })}
+                </ul>
+              </>
+            )}
+          </Section>
           <p className="text-xs text-gray-400">
-            Datos del 1 al {Number(to.slice(8))} de {MONTHS[m - 1]}. Las horas salen del horario de cada profesional en la agenda
+            Datos del 1 al {Number(to.slice(8))} de {MONTHS[m - 1]}. Toca un profesional para ver el detalle. Las horas salen del horario de cada profesional en la agenda
             (<Link to="/configuracion?tab=profesionales" className="text-violet-700">cambiar horarios</Link>). Sueldos y comisiones aparecen también en Finanzas.
           </p>
         </>

@@ -139,7 +139,7 @@ export function Segmented({ value, options, onChange, size = 'md' }) {
     <div className="inline-flex p-0.5 rounded-full bg-gray-100" role="tablist">
       {options.map(([key, label]) => (
         <button key={key} type="button" role="tab" aria-selected={value === key} onClick={() => onChange(key)}
-          className={`${size === 'sm' ? 'px-3 py-1 text-xs' : 'px-3.5 py-1.5 text-[13px]'} rounded-full font-semibold transition-colors ${value === key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}>
+          className={`${size === 'sm' ? 'px-3 py-1 text-xs' : 'px-3.5 py-1.5 text-[13px]'} rounded-full font-semibold whitespace-nowrap transition-colors ${value === key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}>
           {label}
         </button>
       ))}
@@ -178,5 +178,73 @@ export function MenuButton({ children, items, align = 'right', className = '', a
         </>
       )}
     </div>
+  );
+}
+
+/**
+ * Top of a screen: the title (desktop only — on the phone the header bar
+ * already shows it), one line of context and, on desktop, the main actions.
+ * On the phone the main action goes in the header bar (useSetMobileHeader).
+ */
+export function PageHeader({ title, subtitle, actions, mobileActions = false, className = '' }) {
+  return (
+    <div className={`flex flex-wrap items-end justify-between gap-3 ${className}`}>
+      <div className="min-w-0">
+        <h1 className="hidden lg:block text-2xl font-semibold tracking-tight text-gray-900">{title}</h1>
+        {subtitle && <p className="text-sm text-gray-500 lg:mt-0.5">{subtitle}</p>}
+      </div>
+      {actions && <div className={`${mobileActions ? 'flex' : 'hidden lg:flex'} items-center gap-2 shrink-0`}>{actions}</div>}
+    </div>
+  );
+}
+
+/** The violet main button (desktop page actions, sheet footers). */
+export function PrimaryButton({ children, onClick, type = 'button', disabled, icon = 'plus', className = '' }) {
+  return (
+    <button type={type} onClick={onClick} disabled={disabled}
+      className={`inline-flex items-center justify-center gap-1.5 h-10 px-4 rounded-xl bg-violet-600 text-white text-sm font-semibold hover:bg-violet-700 disabled:opacity-60 ${className}`}>
+      {icon && <Icon name={icon} className="w-4 h-4" strokeWidth={2} />}{children}
+    </button>
+  );
+}
+
+/** Quiet secondary button (Exportar, Copiar semana…). */
+export function GhostButton({ children, onClick, disabled, className = '' }) {
+  return (
+    <button type="button" onClick={onClick} disabled={disabled}
+      className={`inline-flex items-center justify-center gap-1.5 h-9 px-3.5 rounded-full border border-gray-200 text-[13px] font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-50 ${className}`}>
+      {children}
+    </button>
+  );
+}
+
+/** Sections of a screen (Pedidos · Productos · Proveedores): Segmented that scrolls on the phone. */
+export function Tabs({ value, options, onChange }) {
+  return (
+    <div className="-mx-4 px-4 lg:mx-0 lg:px-0 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <Segmented value={value} options={options} onChange={onChange} />
+    </div>
+  );
+}
+
+/** One big number with its label above and a line of context below (Caja, Finanzas). */
+export function BigFigure({ label, value, sub, tone }) {
+  const color = tone === 'good' ? 'text-emerald-600' : tone === 'bad' ? 'text-rose-600' : tone === 'warn' ? 'text-amber-600' : 'text-gray-900';
+  return (
+    <div className="min-w-0">
+      <p className="text-[13px] font-semibold uppercase tracking-wide text-gray-400">{label}</p>
+      <p className={`text-3xl lg:text-4xl font-semibold tracking-tight tabular-nums ${color}`}>{value}</p>
+      {sub && <p className="text-[13px] text-gray-500 mt-0.5">{sub}</p>}
+    </div>
+  );
+}
+
+/** On/off switch. */
+export function Toggle({ on, onChange, label, disabled }) {
+  return (
+    <button type="button" role="switch" aria-checked={!!on} aria-label={label} disabled={disabled} onClick={() => onChange(!on)}
+      className={`relative w-11 h-6 rounded-full shrink-0 transition-colors disabled:opacity-50 ${on ? 'bg-violet-600' : 'bg-gray-200'}`}>
+      <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${on ? 'translate-x-5' : ''}`} />
+    </button>
   );
 }

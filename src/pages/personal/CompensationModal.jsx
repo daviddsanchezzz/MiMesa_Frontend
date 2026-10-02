@@ -1,7 +1,10 @@
 import { useState } from 'react';
 import api from '../../services/api';
 import Modal from '../../components/Modal';
-import { inputCls, labelCls, todayIso } from './shared';
+import { Segmented } from '../../ui/kit';
+import { Notice, SheetFooter, inputCls, labelCls, todayIso } from './shared';
+
+const PAY_TYPES = [['hourly', 'Por hora'], ['per_shift', 'Por turno'], ['monthly_fixed', 'Mensual']];
 
 export function CompensationModal({ employee, onClose, onSaved }) {
   const [form, setForm] = useState({
@@ -26,22 +29,20 @@ export function CompensationModal({ employee, onClose, onSaved }) {
       setSaving(false);
     }
   };
+  const unit = form.paymentType === 'hourly' ? 'la hora' : form.paymentType === 'per_shift' ? 'por turno' : 'al mes';
   return (
-    <Modal title={`Condiciones de pago - ${employee.firstName}`} onClose={onClose}>
-      <form onSubmit={submit} className="space-y-3">
-        {error && <div className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</div>}
+    <Modal title={`Cómo cobra ${employee.firstName}`} subtitle="Se usa para calcular los costes de personal." onClose={onClose}
+      footer={<SheetFooter onCancel={onClose} saving={saving} form="compensation-form" />}>
+      <form id="compensation-form" onSubmit={submit} className="space-y-4">
+        <Notice>{error}</Notice>
         <div>
           <label className={labelCls}>Tipo de pago</label>
-          <select className={inputCls} value={form.paymentType} onChange={(e) => setForm((f) => ({ ...f, paymentType: e.target.value }))}>
-            <option value="hourly">Por hora</option>
-            <option value="per_shift">Por turno</option>
-            <option value="monthly_fixed">Precio mensual</option>
-          </select>
+          <Segmented value={form.paymentType} options={PAY_TYPES} onChange={(v) => setForm((f) => ({ ...f, paymentType: v }))} />
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <div className="sm:col-span-2">
-            <label className={labelCls}>Importe base</label>
-            <input className={inputCls} type="number" min="0" step="0.01" value={form.baseAmount} onChange={(e) => setForm((f) => ({ ...f, baseAmount: e.target.value }))} required />
+        <div className="grid grid-cols-3 gap-3">
+          <div className="col-span-2">
+            <label className={labelCls}>Importe {unit}</label>
+            <input className={`${inputCls} text-right tabular-nums`} type="number" min="0" step="0.01" value={form.baseAmount} onChange={(e) => setForm((f) => ({ ...f, baseAmount: e.target.value }))} required />
           </div>
           <div>
             <label className={labelCls}>Moneda</label>
@@ -49,16 +50,12 @@ export function CompensationModal({ employee, onClose, onSaved }) {
           </div>
         </div>
         <div>
-          <label className={labelCls}>Vigencia desde</label>
+          <label className={labelCls}>Desde</label>
           <input className={inputCls} type="date" value={form.effectiveFrom} onChange={(e) => setForm((f) => ({ ...f, effectiveFrom: e.target.value }))} required />
         </div>
         <div>
           <label className={labelCls}>Observaciones</label>
           <textarea rows={3} className={inputCls} value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} />
-        </div>
-        <div className="flex items-center justify-end gap-2">
-          <button type="button" onClick={onClose} className="px-3 py-2 rounded-lg text-sm bg-gray-100 hover:bg-gray-200">Cancelar</button>
-          <button type="submit" disabled={saving} className="px-3 py-2 rounded-lg text-sm bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-60">{saving ? 'Guardando...' : 'Guardar'}</button>
         </div>
       </form>
     </Modal>

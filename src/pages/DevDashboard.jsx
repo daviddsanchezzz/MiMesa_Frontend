@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { useSetMobileHeader } from '../context/MobileHeaderContext';
 import NewClientModal, { InviteLink } from './dev/NewClientModal';
 import Icon from '../ui/Icon';
-import { Empty, FigureLine, RowAction, Section, SectionLink, Segmented } from '../ui/kit';
+import { Empty, FigureLine, RowAction, Section, SectionLink, Segmented, Toggle } from '../ui/kit';
 
 /*
  * Vetra panel: every client business in one list (owner, team, activity,
@@ -174,15 +174,6 @@ function PersonRow({ p, onImpersonate, onDelete, busy }) {
         </button>
       )}
     </li>
-  );
-}
-
-function Toggle({ on, onChange, label }) {
-  return (
-    <button type="button" role="switch" aria-checked={on} aria-label={label} onClick={() => onChange(!on)}
-      className={`relative w-11 h-6 rounded-full shrink-0 transition-colors ${on ? 'bg-violet-600' : 'bg-gray-200'}`}>
-      <span className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform ${on ? 'translate-x-5' : ''}`} />
-    </button>
   );
 }
 

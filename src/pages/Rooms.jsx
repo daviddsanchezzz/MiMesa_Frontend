@@ -2,63 +2,51 @@ import { useState, useEffect } from 'react';
 import api from '../services/api';
 import Modal from '../components/Modal';
 import { useSetMobileHeader } from '../context/MobileHeaderContext';
+import Icon from '../ui/Icon';
+import { PageHeader, PrimaryButton, MenuButton, Empty, SectionLink } from '../ui/kit';
 
-function RoomCard({ room, onEdit, onDelete }) {
+function RoomRow({ room, onEdit, onDelete }) {
   const pct = room.capacity > 0 ? Math.min(100, Math.round((room.tableCount / room.capacity) * 100)) : 0;
-
+  const tables = `${room.tableCount} ${room.tableCount === 1 ? 'mesa' : 'mesas'}`;
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition-shadow duration-200 overflow-hidden">
-      {/* Capacity bar */}
-      <div className="h-1.5 bg-gray-100">
-        <div
-          className={`h-full transition-all duration-500 ${pct >= 90 ? 'bg-rose-400' : pct >= 60 ? 'bg-amber-400' : 'bg-emerald-400'}`}
-          style={{ width: `${pct}%` }}
-        />
-      </div>
-
-      <div className="p-5">
-        <div className="flex items-start justify-between mb-3">
-          <div className="w-10 h-10 rounded-xl bg-violet-50 flex items-center justify-center text-violet-600 shrink-0">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
-              <path fillRule="evenodd" d="M1 2.75A.75.75 0 0 1 1.75 2h16.5a.75.75 0 0 1 0 1.5H18v8.75A2.75 2.75 0 0 1 15.25 15h-1.072l.798 3.06a.75.75 0 0 1-1.452.38L13.41 18H6.59l-.114.44a.75.75 0 0 1-1.452-.38L5.823 15H4.75A2.75 2.75 0 0 1 2 12.25V3.5h-.25A.75.75 0 0 1 1 2.75Z" clipRule="evenodd" />
-            </svg>
-          </div>
-          <div className="text-right">
-            <p className="text-xs text-gray-400">Capacidad</p>
-            <p className="text-lg font-bold text-gray-900">{room.capacity} <span className="text-sm font-normal text-gray-400">px</span></p>
-          </div>
-        </div>
-
-        <h3 className="font-semibold text-gray-900 text-base">{room.name}</h3>
-        {room.description && <p className="text-xs text-gray-400 mt-0.5 line-clamp-2">{room.description}</p>}
-
-        <div className="mt-3 flex items-center gap-2">
-          <span className="text-xs bg-slate-100 text-slate-600 px-2.5 py-1 rounded-full font-medium">
-            {room.tableCount} {room.tableCount === 1 ? 'mesa' : 'mesas'} asignadas
+    <li>
+      <div role="button" tabIndex={0} onClick={() => onEdit(room)}
+        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onEdit(room); } }}
+        className="flex md:grid md:grid-cols-12 md:gap-4 items-center gap-3 px-2 py-3 rounded-xl cursor-pointer hover:bg-gray-50 active:bg-gray-100">
+        <div className="md:col-span-6 flex items-center gap-3 min-w-0 flex-1">
+          <span className="w-10 h-10 rounded-xl bg-gray-100 text-gray-600 flex items-center justify-center shrink-0">
+            <Icon name="map" className="w-[18px] h-[18px]" />
           </span>
+          <div className="min-w-0">
+            <p className="text-[15px] font-medium text-gray-900 truncate">{room.name}</p>
+            <p className="text-[13px] text-gray-500 truncate">
+              <span className="md:hidden">{tables}{room.description ? ' · ' : ''}</span>{room.description || <span className="hidden md:inline text-gray-300">Sin descripción</span>}
+            </p>
+          </div>
+        </div>
+        <div className="hidden md:block md:col-span-2 text-sm text-gray-700 tabular-nums">{tables}</div>
+        <div className="md:col-span-3 text-right md:text-left shrink-0">
+          <p className="text-sm font-semibold text-gray-900 tabular-nums">{room.capacity} <span className="font-normal text-gray-500">pers.</span></p>
+          <div className="hidden md:block mt-1 h-1 w-24 rounded-full bg-gray-100 overflow-hidden" title={`${pct}% de la capacidad en mesas`}>
+            <div className={`h-full ${pct >= 90 ? 'bg-rose-400' : pct >= 60 ? 'bg-amber-400' : 'bg-emerald-400'}`} style={{ width: `${pct}%` }} />
+          </div>
+        </div>
+        <div className="md:col-span-1 flex justify-end shrink-0" onClick={(e) => e.stopPropagation()}>
+          <MenuButton ariaLabel={`Opciones de ${room.name}`} className="w-9 h-9 justify-center"
+            items={[
+              { label: 'Editar', onClick: () => onEdit(room) },
+              { label: 'Eliminar', onClick: () => onDelete(room._id) },
+            ]}>
+            <svg viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4"><circle cx="4" cy="10" r="1.5" /><circle cx="10" cy="10" r="1.5" /><circle cx="16" cy="10" r="1.5" /></svg>
+          </MenuButton>
         </div>
       </div>
-
-      <div className="px-4 pb-4 flex gap-2">
-        <button
-          onClick={() => onEdit(room)}
-          className="flex-1 text-xs py-1.5 rounded-lg bg-gray-50 hover:bg-violet-50 hover:text-violet-600 text-gray-500 font-medium transition-colors"
-        >
-          Editar
-        </button>
-        <button
-          onClick={() => onDelete(room._id)}
-          className="flex-1 text-xs py-1.5 rounded-lg bg-gray-50 hover:bg-rose-50 hover:text-rose-600 text-gray-500 font-medium transition-colors"
-        >
-          Eliminar
-        </button>
-      </div>
-    </div>
+    </li>
   );
 }
 
 const inputCls = 'w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent';
-const labelCls = 'block text-sm font-medium text-gray-700 mb-1.5';
+const labelCls = 'block text-xs font-semibold text-gray-500 mb-1.5';
 
 export default function Rooms() {
   useSetMobileHeader({ title: 'Salas', action: { label: 'Sala', onClick: () => openCreate() } });
@@ -91,49 +79,39 @@ export default function Rooms() {
   };
 
   const handleDelete = async (id) => {
-    if (!confirm('¿Eliminar esta sala? Las mesas asignadas quedarán sin sala.')) return;
+    if (!confirm('¿Eliminar esta sala? Las mesas asignadas quedarán sin sala.')) return false;
     await api.delete(`/rooms/${id}`);
     load();
+    return true;
   };
 
   const totalCapacity = rooms.reduce((acc, r) => acc + r.capacity, 0);
 
   return (
-    <div className="space-y-5">
-      {/* Header */}
-      <div className="flex items-start justify-between">
-        <div>
-          <h2 className="hidden lg:block text-2xl font-bold text-gray-900">Salas</h2>
-          <p className="text-sm text-gray-400 mt-0.5">
-            {rooms.length} sala{rooms.length !== 1 ? 's' : ''} · {totalCapacity} personas de capacidad total
-          </p>
-        </div>
-        <button
-          onClick={openCreate}
-          className="hidden lg:flex items-center gap-2 bg-violet-600 hover:bg-violet-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors shadow-sm"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
-            <path d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z" />
-          </svg>
-          Nueva sala
-        </button>
-      </div>
+    <div className="w-full space-y-6">
+      <PageHeader
+        title="Salas"
+        subtitle={`${rooms.length} sala${rooms.length !== 1 ? 's' : ''} · ${totalCapacity} personas de capacidad total`}
+        actions={<PrimaryButton onClick={openCreate}>Nueva sala</PrimaryButton>}
+      />
 
-      {/* Grid */}
       {rooms.length === 0 ? (
-        <div className="text-center py-20 bg-white rounded-2xl border border-gray-200 border-dashed">
-          <div className="text-5xl mb-4">🏛️</div>
-          <p className="text-gray-500 font-medium">Sin salas todavía</p>
-          <p className="text-gray-400 text-sm mt-1">Crea una sala para organizar tus mesas</p>
-          <button onClick={openCreate} className="mt-4 text-sm text-violet-600 hover:underline font-medium">
-            Crear la primera sala →
-          </button>
-        </div>
+        <Empty action={<SectionLink onClick={openCreate}>Crear la primera sala</SectionLink>}>
+          Todavía no hay salas. Crea una para organizar tus mesas.
+        </Empty>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {rooms.map(r => (
-            <RoomCard key={r._id} room={r} onEdit={openEdit} onDelete={handleDelete} />
-          ))}
+        <div>
+          <div className="hidden md:grid grid-cols-12 gap-4 px-2 pb-2 border-b border-gray-200 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+            <span className="col-span-6">Sala</span>
+            <span className="col-span-2">Mesas</span>
+            <span className="col-span-3">Capacidad</span>
+            <span className="col-span-1" />
+          </div>
+          <ul className="divide-y divide-gray-100">
+            {rooms.map(r => (
+              <RoomRow key={r._id} room={r} onEdit={openEdit} onDelete={handleDelete} />
+            ))}
+          </ul>
         </div>
       )}
 
@@ -141,52 +119,60 @@ export default function Rooms() {
       {modal && (
         <Modal
           title={modal === 'create' ? 'Nueva sala' : 'Editar sala'}
-          subtitle={modal !== 'create' ? modal.name : 'Define el nombre y la capacidad máxima'}
+          subtitle={modal !== 'create' ? modal.name : undefined}
           onClose={closeModal}
+          footer={
+            <div className="flex items-center justify-between gap-2">
+              {modal !== 'create' ? (
+                <button type="button" onClick={async () => { if (await handleDelete(modal._id)) closeModal(); }}
+                  className="text-sm font-semibold text-rose-600 hover:text-rose-700">
+                  Eliminar
+                </button>
+              ) : <span />}
+              <div className="flex items-center gap-2">
+                <button type="button" onClick={closeModal}
+                  className="h-10 px-3.5 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-100">
+                  Cancelar
+                </button>
+                <button type="submit" form="room-form"
+                  className="inline-flex items-center justify-center h-10 px-4 rounded-xl bg-violet-600 text-white text-sm font-semibold hover:bg-violet-700">
+                  {modal === 'create' ? 'Crear sala' : 'Guardar'}
+                </button>
+              </div>
+            </div>
+          }
         >
           {error && (
-            <div className="flex items-center gap-2 bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-3 py-2 mb-4">
-              {error}
-            </div>
+            <p className="rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700 mb-4">{error}</p>
           )}
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form id="room-form" onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className={labelCls}>Nombre de la sala *</label>
+              <label className={labelCls}>Nombre</label>
               <input
                 required value={form.name}
                 onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                placeholder="Salón principal, Terraza, Privado..."
+                placeholder="Salón principal, Terraza, Privado…"
                 className={inputCls}
               />
             </div>
             <div>
-              <label className={labelCls}>Capacidad máxima (personas) *</label>
+              <label className={labelCls}>Capacidad máxima</label>
               <input
                 type="number" required min="1" value={form.capacity}
                 onChange={e => setForm(f => ({ ...f, capacity: e.target.value }))}
                 placeholder="Ej: 40"
                 className={inputCls}
               />
-              <p className="text-xs text-gray-400 mt-1">Número máximo de personas que caben en esta sala</p>
+              <p className="text-xs text-gray-400 mt-1">Personas que caben en la sala como máximo.</p>
             </div>
             <div>
-              <label className={labelCls}>Descripción <span className="text-gray-400 font-normal">(opcional)</span></label>
+              <label className={labelCls}>Descripción <span className="font-normal text-gray-400">(opcional)</span></label>
               <textarea
                 value={form.description}
                 onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
-                rows={2} placeholder="Ej: Sala interior con climatización, vista al jardín..."
+                rows={2} placeholder="Ej: interior con climatización, vista al jardín…"
                 className={`${inputCls} resize-none`}
               />
-            </div>
-            <div className="flex gap-3 pt-1">
-              <button type="submit"
-                className="flex-1 bg-violet-600 hover:bg-violet-700 text-white py-2.5 rounded-xl text-sm font-semibold transition-colors">
-                {modal === 'create' ? 'Crear sala' : 'Guardar cambios'}
-              </button>
-              <button type="button" onClick={closeModal}
-                className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-2.5 rounded-xl text-sm font-medium transition-colors">
-                Cancelar
-              </button>
             </div>
           </form>
         </Modal>

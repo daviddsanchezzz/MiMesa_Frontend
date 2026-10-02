@@ -1,6 +1,6 @@
 import StaffAvatar from './StaffAvatar';
 import { absenceSpan, absenceText, timeInTz, toHHMM, minutesInTz } from './utils';
-import { lineFor, nextBookingId, LineLegend } from './lineColors';
+import { lineFor, nextBookingId } from './lineColors';
 import { TimeRow } from '../../ui/kit';
 
 const PARTS = [
@@ -42,7 +42,6 @@ export default function ListView({ tz, date, bookings, absences = [], staffById,
   }
 
   const nextId = nextBookingId(sorted, isToday, now);
-  const shown = new Set(sorted.map((b) => lineFor(b)));
 
   const row = (it) => {
     if (it.kind === 'away') {
@@ -93,7 +92,6 @@ export default function ListView({ tz, date, bookings, absences = [], staffById,
           <ul className="divide-y divide-gray-100">{g.items.map(row)}</ul>
         </section>
       ))}
-      <LineLegend kinds={shown} />
     </div>
   );
 }

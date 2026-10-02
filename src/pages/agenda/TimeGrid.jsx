@@ -181,8 +181,8 @@ export default function TimeGrid({ columns, startMin, endMin, tz, minColWidth = 
 
   return (
     <div className={`bg-white border-t border-gray-200 overflow-hidden ${fill ? 'h-full flex flex-col' : ''}`}>
-      <div ref={scrollRef} data-page-scroll className={fill ? 'flex-1 min-h-0 overflow-auto overscroll-contain' : 'overflow-x-auto'}
-        style={snapX ? { scrollSnapType: 'x proximity', scrollPaddingLeft: labelWidth === 'w-11' ? '2.75rem' : '3.5rem' } : undefined}>
+      <div ref={scrollRef} data-page-scroll className={fill ? 'flex-1 min-h-0 overflow-auto overscroll-none' : 'overflow-x-auto overscroll-none'}
+        style={snapX ? { scrollSnapType: 'x mandatory', scrollPaddingLeft: labelWidth === 'w-11' ? '2.75rem' : '3.5rem' } : undefined}>
         <div className="flex min-w-full w-max">
           {/* Hour labels */}
           <div ref={labelRef} className={`sticky left-0 z-30 bg-white border-r border-gray-100 ${labelWidth} shrink-0`}>
@@ -207,7 +207,7 @@ export default function TimeGrid({ columns, startMin, endMin, tz, minColWidth = 
             const closed = closedGaps(col.windows, startMin, endMin);
             const showGhost = ghost && ghost.col === col.key && col.onEmpty;
             return (
-              <div key={col.key} className="flex-1 border-r border-gray-100 last:border-r-0" style={{ minWidth: col.fillView && viewW ? viewW : minColWidth, scrollSnapAlign: snapX ? 'start' : undefined }}>
+              <div key={col.key} className="flex-1 border-r border-gray-100 last:border-r-0" style={{ minWidth: (snapX || col.fillView) && viewW ? viewW : minColWidth, scrollSnapAlign: snapX ? 'start' : undefined, scrollSnapStop: snapX ? 'always' : undefined }}>
                 <div className={`${headerHeight} border-b border-gray-100 flex items-center justify-center px-2 sticky top-0 z-[25] ${col.isToday ? 'bg-violet-50' : 'bg-white'}`}>
                   {col.header}
                 </div>

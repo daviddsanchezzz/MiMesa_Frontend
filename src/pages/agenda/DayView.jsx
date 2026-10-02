@@ -103,7 +103,7 @@ export default function DayView({ date, tz, staff, bookings, absences = [], onAb
       </div>
     );
   }
-  // Phones: one person per screen (the next one peeks in), slide sideways to the others.
+  // Phones: TimeGrid measures the available width and snaps to one full person.
   const minColWidth = compact ? (columns.length === 1 ? '0px' : 'calc(100vw - 6.75rem)') : '11rem';
   return (
     <div className={fill ? 'h-full flex flex-col gap-2' : 'space-y-2'}>

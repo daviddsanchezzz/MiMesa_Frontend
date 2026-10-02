@@ -163,7 +163,7 @@ export default function Agenda() {
 
   const openNew = (resourceId = '', time = '', d = null) => setCreating({ resourceId, time, date: d });
 
-  const views = isMobile ? [['list', 'Lista'], ['day', 'Día']] : [['day', 'Día'], ['week', 'Semana']];
+  const views = isMobile ? [['list', 'Lista'], ['day', 'Calendario']] : [['day', 'Calendario'], ['week', 'Semana']];
 
   // Day/week: the page fits the screen and only the grid scrolls.
   const ready = !loading && staff.length > 0 && services.length > 0;
@@ -209,7 +209,7 @@ export default function Agenda() {
 
   return (
     <div className="flex flex-1 min-h-0 flex-col gap-3">
-      <div className="flex items-center gap-3 shrink-0">
+      <div className="flex flex-wrap items-center gap-2 shrink-0">
         <h1 className="hidden lg:block text-2xl font-semibold tracking-tight text-gray-900 mr-auto">Agenda</h1>
         <Segmented value={activeView} onChange={chooseView} options={views} />
         {ready && (
@@ -265,7 +265,7 @@ export default function Agenda() {
 
           {!expanded && grid(false)}
           {activeView === 'list' && (
-            <div key={`${date}-${scopeId}`} data-page-scroll className="flex-1 min-h-0 overflow-y-auto overscroll-contain pb-6">
+            <div key={`${date}-${scopeId}`} data-page-scroll className="flex-1 min-h-0 min-w-0 overflow-y-auto overflow-x-hidden overscroll-none touch-pan-y pb-6">
             <ListView tz={tz} date={date} bookings={dayBookings} absences={shownAbsences} onAbsenceClick={setSelectedAbsence} staffById={byId} colors={colors} isToday={date === today}
               onBookingClick={setSelected} onNew={() => openNew('', '', date)} />
             </div>

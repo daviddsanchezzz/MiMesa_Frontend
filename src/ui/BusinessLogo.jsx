@@ -56,7 +56,7 @@ function trimLogo(url) {
   return p;
 }
 
-/** The business logo in a tile (or its initial on the business colour). */
+/** Unframed business logo (or its initial on the business colour). */
 export default function BusinessLogo({ business, size = 32, className = '' }) {
   const url = business?.logoUrl || null;
   const [src, setSrc] = useState(null);
@@ -78,7 +78,7 @@ export default function BusinessLogo({ business, size = 32, className = '' }) {
     );
   }
   return (
-    <span className={`${radius} shrink-0 overflow-hidden bg-white ring-1 ring-gray-200 ${className}`} style={style}>
+    <span className={`shrink-0 inline-flex ${className}`} style={style}>
       {src && <img src={src} alt="" draggable={false} className="w-full h-full object-contain" />}
     </span>
   );

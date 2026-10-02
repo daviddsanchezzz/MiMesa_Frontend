@@ -157,9 +157,11 @@ function TeamContent() {
   );
   const active = resources.filter((r) => r.active !== false);
   return (
-    <div className="w-full max-w-5xl space-y-6">
+    <div
+      className={`w-full max-w-5xl ${params.get('pro') ? 'flex flex-1 min-h-0 flex-col overflow-hidden' : 'space-y-4'}`}
+    >
       {error && (
-        <p role="alert" className="text-sm text-rose-700">
+        <p role="alert" className="shrink-0 text-sm text-rose-700">
           {error}
           <button className="ml-3 underline" onClick={reload}>
             Reintentar
@@ -167,55 +169,62 @@ function TeamContent() {
         </p>
       )}
       {notice && (
-        <p role="status" className="text-sm text-emerald-700">
+        <p role="status" className="shrink-0 text-sm text-emerald-700">
           {notice}
         </p>
       )}
       {params.get('pro') ? (
         resource ? (
           <>
-            <Link
-              to={back}
-              onClick={(e) => {
-                if (!confirmLeave()) e.preventDefault();
-              }}
-              className="inline-flex min-h-11 items-center text-sm font-medium text-violet-700"
-            >
-              ‹{' '}
-              {params.get('from') === 'rendimiento' ? 'Rendimiento' : 'Equipo'}
-            </Link>
-            <div className="flex items-center gap-3">
-              <ProfessionalAvatar
-                name={resource.name}
-                photo={resource.photo}
-                color={colors[resource._id]}
-                size={56}
-              />
-              <div className="min-w-0">
-                <h1 className="text-2xl font-semibold break-words">
-                  {resource.name}
-                </h1>
-                <p className="text-sm text-gray-500">
-                  {resource.active !== false ? 'Activo' : 'Inactivo'}
-                </p>
+            <div className="shrink-0 bg-white">
+              <Link
+                to={back}
+                onClick={(e) => {
+                  if (!confirmLeave()) e.preventDefault();
+                }}
+                className="inline-flex min-h-11 items-center text-sm font-medium text-violet-700"
+              >
+                ‹{' '}
+                {params.get('from') === 'rendimiento'
+                  ? 'Rendimiento'
+                  : 'Equipo'}
+              </Link>
+              <div className="flex items-center gap-3 py-2">
+                <ProfessionalAvatar
+                  name={resource.name}
+                  photo={resource.photo}
+                  color={colors[resource._id]}
+                  size={44}
+                />
+                <div className="min-w-0">
+                  <h1 className="text-xl font-semibold break-words">
+                    {resource.name}
+                  </h1>
+                  <p className="text-sm text-gray-500">
+                    {resource.active !== false ? 'Activo' : 'Inactivo'}
+                  </p>
+                </div>
               </div>
+              <nav
+                aria-label="Secciones del profesional"
+                className="flex overflow-x-auto border-b border-gray-200"
+              >
+                {tabs.map(([key, label]) => (
+                  <button
+                    key={key}
+                    onClick={() => selectTab(key)}
+                    aria-current={key === tab ? 'page' : undefined}
+                    className={`shrink-0 min-h-11 px-4 text-sm font-medium border-b-2 ${key === tab ? 'border-violet-600 text-violet-700' : 'border-transparent text-gray-500'}`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </nav>
             </div>
-            <nav
-              aria-label="Secciones del profesional"
-              className="flex overflow-x-auto border-b border-gray-200"
+            <div
+              key={`${resource._id}-${tab}`}
+              className="flex-1 min-h-0 overflow-y-auto overscroll-contain pt-5 pb-6"
             >
-              {tabs.map(([key, label]) => (
-                <button
-                  key={key}
-                  onClick={() => selectTab(key)}
-                  aria-current={key === tab ? 'page' : undefined}
-                  className={`shrink-0 min-h-11 px-4 text-sm font-medium border-b-2 ${key === tab ? 'border-violet-600 text-violet-700' : 'border-transparent text-gray-500'}`}
-                >
-                  {label}
-                </button>
-              ))}
-            </nav>
-            <div key={`${resource._id}-${tab}`}>
               {tab === 'general' && (
                 <ProfessionalGeneral
                   resource={resource}
@@ -289,18 +298,18 @@ function TeamContent() {
                 const pending = invitations.some(
                   (i) => String(i.links?.resourceId) === String(r._id),
                 );
-                const schedule = data.schedules[r._id];
+                const serviceCount = servicesOf(r, services).length;
                 return (
                   <li key={r._id}>
                     <button
-                      className="w-full text-left flex items-center gap-3 py-4 min-h-11 hover:bg-gray-50 rounded-xl"
+                      className="w-full text-left flex items-center gap-3 py-3 min-h-11 hover:bg-gray-50 rounded-xl"
                       onClick={() => open(r)}
                     >
                       <ProfessionalAvatar
                         name={r.name}
                         photo={r.photo}
                         color={colors[r._id]}
-                        size={44}
+                        size={40}
                       />
                       <div className="min-w-0 flex-1">
                         <p className="font-semibold text-gray-900">
@@ -311,27 +320,28 @@ function TeamContent() {
                             </span>
                           )}
                         </p>
-                        <p className="text-sm text-gray-500 line-clamp-2">
-                          {servicesOf(r, services)
-                            .map((s) => s.name)
-                            .join(', ') || 'Sin servicios asignados'}
-                        </p>
-                        <p className="text-xs text-gray-500 mt-1">
-                          {!schedule
-                            ? 'Horario no disponible'
-                            : schedule._id
-                              ? 'Horario propio'
-                              : 'Horario del negocio'}
-                        </p>
-                        <span
-                          className={`inline-block mt-2 rounded-full px-2 py-0.5 text-xs ${member ? 'bg-emerald-50 text-emerald-700' : pending ? 'bg-amber-50 text-amber-700' : 'bg-gray-100 text-gray-500'}`}
-                        >
-                          {member
-                            ? 'Con acceso'
-                            : pending
-                              ? 'Invitación pendiente'
-                              : 'Sin acceso'}
-                        </span>
+                        <div className="flex flex-wrap items-center gap-x-2 text-xs text-gray-500 mt-1">
+                          <span>
+                            {serviceCount}{' '}
+                            {serviceCount === 1 ? 'servicio' : 'servicios'}
+                          </span>
+                          <span aria-hidden="true">·</span>
+                          <span
+                            className={
+                              member
+                                ? 'text-emerald-700'
+                                : pending
+                                  ? 'text-amber-700'
+                                  : 'text-gray-500'
+                            }
+                          >
+                            {member
+                              ? 'Con acceso'
+                              : pending
+                                ? 'Invitación pendiente'
+                                : 'Sin acceso'}
+                          </span>
+                        </div>
                       </div>
                       <span className="text-gray-400" aria-hidden="true">
                         ›

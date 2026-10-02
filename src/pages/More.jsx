@@ -44,7 +44,8 @@ export default function More() {
   return (
     <div className="w-full space-y-6">
       <div className="flex items-center gap-3 px-1">
-        <BusinessLogo business={business} size={56} />
+        {/* The header already shows the logo; repeat it only on desktop or when there is none. */}
+        <BusinessLogo business={business} size={56} className={business?.logoUrl ? 'hidden lg:flex' : ''} />
         <div className="min-w-0">
           <p className="text-lg font-semibold text-gray-900 truncate">{business?.name}</p>
           <p className="text-sm text-gray-500 truncate">{userName}{userEmail && ` · ${userEmail}`}</p>

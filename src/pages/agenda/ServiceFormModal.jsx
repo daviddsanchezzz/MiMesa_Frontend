@@ -13,7 +13,6 @@ function toForm(service) {
     bufferAfterMin: service?.bufferAfterMin ?? 0,
     slotIntervalMin: service?.slotIntervalMin ?? 15,
     price: service ? String((service.price?.amount || 0) / 100) : '',
-    taxRate: service?.tax?.rate ?? 21,
     staffIds: (staffReq?.resourceIds || []).map(String),
     customerCanChoose: staffReq ? !!staffReq.customerCanChoose : true,
     needsSpace: !!spaceReq,
@@ -35,7 +34,6 @@ function toApi(f, original) {
     bufferAfterMin: Number(f.bufferAfterMin),
     slotIntervalMin: Number(f.slotIntervalMin),
     price: { amount: Math.round(Number(String(f.price).replace(',', '.') || 0) * 100) },
-    tax: { rate: Number(f.taxRate) },
     ...(isPool ? {} : {
       requirements: [
         { kind: 'staff', resourceIds: f.staffIds, customerCanChoose: f.customerCanChoose },
@@ -111,15 +109,6 @@ export default function ServiceFormModal({ service, staff, onClose, onSaved }) {
             <label className={labelCls}>Horas que se ofrecen cada</label>
             <select className={inputCls} value={f.slotIntervalMin} onChange={(e) => set({ slotIntervalMin: e.target.value })}>
               {[5, 10, 15, 20, 30, 60].map((m) => <option key={m} value={m}>{m} min</option>)}
-            </select>
-          </div>
-          <div>
-            <label className={labelCls}>IVA</label>
-            <select className={inputCls} value={f.taxRate} onChange={(e) => set({ taxRate: e.target.value })}>
-              <option value={21}>21 %</option>
-              <option value={10}>10 %</option>
-              <option value={4}>4 %</option>
-              <option value={0}>Exento (0 %)</option>
             </select>
           </div>
         </div>

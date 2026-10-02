@@ -17,7 +17,7 @@ import Icon from '../../ui/Icon';
 import StaffAvatar from '../agenda/StaffAvatar';
 import { DEFAULT_TZ, dateInTz, euros, initials, pluralize, staffColors, timeInTz, todayIn, waLink } from '../agenda/utils';
 import { placeText } from '../reservas/useRestaurantDay';
-import { avatarColor, everyText, relDays, shortDateTime } from './format';
+import { avatarColor, everyText, phoneText, relDays, shortDateTime } from './format';
 
 const btn = 'inline-flex items-center justify-center gap-1.5 h-10 px-4 rounded-xl text-sm font-semibold transition-colors';
 
@@ -187,7 +187,7 @@ export default function CustomerFile() {
             <button type="button" onClick={toggleVip} title={customer.vip ? 'Quitar VIP' : 'Marcar como VIP'} aria-label="VIP"
               className={`text-xl leading-none ${customer.vip ? 'text-amber-400' : 'text-gray-300 hover:text-amber-300'}`}>★</button>
           </div>
-          <p className="text-sm text-gray-500 truncate">{[customer.phone, customer.email].filter(Boolean).join(' · ') || 'Sin teléfono ni email'}</p>
+          <p className="text-sm text-gray-500 truncate">{[customer.phone && phoneText(customer.phone), customer.email].filter(Boolean).join(' · ') || 'Sin teléfono ni email'}</p>
           <p className="text-xs text-gray-400 mt-0.5">Cliente desde {new Date(customer.createdAt).toLocaleDateString('es-ES', { month: 'long', year: 'numeric' })}</p>
         </div>
         <div className="flex flex-wrap gap-2 w-full sm:w-auto">

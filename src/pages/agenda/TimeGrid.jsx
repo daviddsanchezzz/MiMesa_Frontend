@@ -90,7 +90,7 @@ function StateBlock({ booking, segment, kind, isNext, tz, top, height, left, wid
       type="button"
       onClick={(e) => { e.stopPropagation(); onClick?.(booking); }}
       title={`${timeInTz(segment.start, tz)}–${timeInTz(segment.end, tz)} · ${booking.guestName} · ${segment.serviceName} · ${l.label}`}
-      className={`absolute z-10 rounded-lg text-left overflow-hidden transition-shadow hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-gray-400 flex flex-col justify-start items-stretch ${dense ? 'px-1.5 py-0.5' : height < 34 ? 'px-2 py-0.5 justify-center' : 'px-2 py-1.5'} ${isNext ? 'ring-2 ring-violet-400 ring-offset-1' : ''}`}
+      className={`absolute z-10 rounded-lg text-left overflow-hidden transition-shadow hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-gray-400 flex flex-col justify-start items-stretch ${dense ? 'px-1.5 py-0.5' : height < 44 ? 'px-2 py-0.5 justify-center' : 'px-2 py-1.5'} ${isNext ? 'ring-2 ring-violet-400 ring-offset-1' : ''}`}
       style={{
         top, height, left, width,
         backgroundColor: bg,
@@ -103,7 +103,7 @@ function StateBlock({ booking, segment, kind, isNext, tz, top, height, left, wid
     >
       {dense ? (
         <p className={`text-[11px] font-semibold leading-tight truncate ${lost ? 'text-gray-400 line-through' : 'text-gray-900'}`}>{booking.guestName.split(' ')[0]}</p>
-      ) : height < 34 ? (
+      ) : height < 44 ? (
         <p className={`text-[12px] font-semibold leading-tight truncate ${lost ? 'text-gray-400 line-through' : 'text-gray-900'}`}>
           <span className="tabular-nums font-medium text-gray-500">{timeInTz(segment.start, tz)}</span> {booking.guestName}
         </p>
@@ -111,10 +111,10 @@ function StateBlock({ booking, segment, kind, isNext, tz, top, height, left, wid
         <>
           <p className={`text-[13px] font-semibold leading-tight truncate ${lost ? 'text-gray-400 line-through' : 'text-gray-900'}`}>{booking.guestName}</p>
           <p className={`text-[12px] leading-tight truncate mt-0.5 ${lost ? 'text-gray-400' : 'text-gray-600'}`}>
-            <span className="tabular-nums">{timeInTz(segment.start, tz)}–{timeInTz(segment.end, tz)}</span>{height < 52 ? ` · ${segment.serviceName}` : ''}
+            <span className="tabular-nums">{timeInTz(segment.start, tz)}–{timeInTz(segment.end, tz)}</span>{height < 62 ? ` · ${segment.serviceName}` : ''}
           </p>
-          {height >= 52 && <p className={`text-[12px] leading-tight truncate mt-0.5 ${lost ? 'text-gray-400' : 'text-gray-700'}`}>{segment.serviceName}</p>}
-          {height >= 76 && (
+          {height >= 62 && <p className={`text-[12px] leading-tight truncate mt-0.5 ${lost ? 'text-gray-400' : 'text-gray-700'}`}>{segment.serviceName}</p>}
+          {height >= 84 && (
             <p className="mt-1 flex items-center gap-1.5 text-[11px] text-gray-500">
               {segment.price > 0 && <span className="font-semibold tabular-nums text-gray-700">{euros(segment.price)}</span>}
               {kind === 'pending' && <span className="font-semibold text-amber-700">Por confirmar</span>}
@@ -142,6 +142,14 @@ export default function TimeGrid({ columns, startMin, endMin, tz, minColWidth = 
   const scrollRef = useRef(null);
   const scrolledFor = useRef(null);
   const [ghost, setGhost] = useState(null); // { col, lane, minute }
+  const labelRef = useRef(null);
+  const [viewW, setViewW] = useState(0); // room for columns (scroller width minus the hour labels)
+  useEffect(() => {
+    const el = scrollRef.current; if (!el) return undefined;
+    const ro = new ResizeObserver(() => setViewW(el.clientWidth - (labelRef.current?.offsetWidth || 0)));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
   const anyToday = columns.some((c) => c.isToday);
   const nowMin = useNowMinute(tz, anyToday);
   const height = (endMin - startMin) * PPM;
@@ -177,7 +185,7 @@ export default function TimeGrid({ columns, startMin, endMin, tz, minColWidth = 
         style={snapX ? { scrollSnapType: 'x proximity', scrollPaddingLeft: labelWidth === 'w-11' ? '2.75rem' : '3.5rem' } : undefined}>
         <div className="flex min-w-full w-max">
           {/* Hour labels */}
-          <div className={`sticky left-0 z-30 bg-white border-r border-gray-100 ${labelWidth} shrink-0`}>
+          <div ref={labelRef} className={`sticky left-0 z-30 bg-white border-r border-gray-100 ${labelWidth} shrink-0`}>
             <div className={`${headerHeight} border-b border-gray-100 sticky top-0 z-10 bg-white`} />
             <div className="relative" style={{ height: height + TOP_PAD }}>
               {hours.map((m) => (
@@ -199,7 +207,7 @@ export default function TimeGrid({ columns, startMin, endMin, tz, minColWidth = 
             const closed = closedGaps(col.windows, startMin, endMin);
             const showGhost = ghost && ghost.col === col.key && col.onEmpty;
             return (
-              <div key={col.key} className="flex-1 border-r border-gray-100 last:border-r-0" style={{ minWidth: minColWidth, scrollSnapAlign: snapX ? 'start' : undefined }}>
+              <div key={col.key} className="flex-1 border-r border-gray-100 last:border-r-0" style={{ minWidth: col.fillView && viewW ? viewW : minColWidth, scrollSnapAlign: snapX ? 'start' : undefined }}>
                 <div className={`${headerHeight} border-b border-gray-100 flex items-center justify-center px-2 sticky top-0 z-[25] ${col.isToday ? 'bg-violet-50' : 'bg-white'}`}>
                   {col.header}
                 </div>

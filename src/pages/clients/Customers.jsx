@@ -16,7 +16,7 @@ import Icon from '../../ui/Icon';
 import { MenuButton } from '../../ui/kit';
 import { DEFAULT_TZ, euros, initials, pluralize, staffColors, todayIn } from '../agenda/utils';
 import { dayLabel } from '../../lib/dates';
-import { avatarColor, relDays, shortDateTime } from './format';
+import { avatarColor, relDays, shortDateTime, phoneText } from './format';
 
 /**
  * Clientes, the same screen for citas and restaurante. What changes is what
@@ -210,7 +210,7 @@ export default function Customers() {
                       <Avatar name={c.name} vip={c.vip} />
                       <div className="min-w-0">
                         <p className="text-[15px] font-medium text-gray-900 truncate">{c.name}</p>
-                        <p className="text-[13px] text-gray-500 truncate">{c.phone || c.email || 'Sin contacto'}</p>
+                        <p className="text-[13px] text-gray-500 truncate">{c.phone ? phoneText(c.phone) : c.email || 'Sin contacto'}</p>
                         <div className="flex flex-wrap items-center gap-1.5 mt-1 md:hidden">
                           {r.due && <span className="text-[10px] font-semibold px-1.5 py-px rounded bg-emerald-50 text-emerald-800">Le toca volver</span>}
                           {r.nextText && <span className="text-[10px] font-semibold px-1.5 py-px rounded bg-violet-50 text-violet-800">{r.nextText}</span>}

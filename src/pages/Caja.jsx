@@ -97,7 +97,7 @@ export default function Caja() {
               </div>
             )}
             <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1.5">
-              {PAY_METHODS.map((m) => (
+              {PAY_METHODS.filter((m) => t[m.key] > 0 || (!t.total && m.key === 'cash')).map((m) => (
                 <span key={m.key} className="inline-flex items-center gap-2 text-sm">
                   <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: METHOD_COLOR[m.key] }} />
                   <span className="text-gray-500">{m.label}</span>

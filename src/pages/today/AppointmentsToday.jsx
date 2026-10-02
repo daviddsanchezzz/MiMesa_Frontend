@@ -228,11 +228,12 @@ export default function AppointmentsToday() {
                     const ids = staffIdsOf(b, staffById);
                     const person = staffById[ids[0]];
                     const startMs = new Date(b.start).getTime();
-                    const current = startMs <= now;
+                    const current = startMs <= now && ['confirmed', 'checked_in'].includes(b.status);
                     let action = null;
                     if (b.status === 'checked_in') action = <RowAction tone="neutral" onClick={() => setSelectedId(b._id)}>Cobrar</RowAction>;
+                    else if (b.status === 'pending') action = <RowAction tone="warn" onClick={() => bookingsApi.setStatus(b._id, 'confirmed').then(load).catch(() => {})}>Aceptar</RowAction>;
                     else if (b.status === 'confirmed' && startMs - now <= 20 * 60000) {
-                      action = <RowAction tone="good" onClick={() => bookingsApi.setStatus(b._id, 'checked_in').then(load).catch(() => {})}>Ha llegado</RowAction>;
+                      action = <RowAction tone="neutral" onClick={() => bookingsApi.setStatus(b._id, 'checked_in').then(load).catch(() => {})}>Llegó</RowAction>;
                     }
                     return (
                       <TimeRow key={b._id}
@@ -241,7 +242,7 @@ export default function AppointmentsToday() {
                         highlight={i === 0}
                         title={b.guestName}
                         badge={current && <span className="shrink-0 text-[10px] font-bold uppercase tracking-wide text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">En curso</span>}
-                        subtitle={`${b.segments.map((seg) => seg.serviceName).join(' + ')}${person ? ` · ${ids.map((id) => staffById[id]?.name).join(', ')}` : ''}`}
+                        subtitle={`${person ? `${ids.map((id) => staffById[id]?.name).join(', ')} · ` : ''}${b.segments.map((seg) => seg.serviceName).join(' + ')}`}
                         trailing={<>{action}{person && <span className="hidden sm:block"><StaffAvatar name={person.name} photo={person.photo} color={colors[person._id]} size={28} /></span>}</>}
                         onClick={() => setSelectedId(b._id)}
                       />

@@ -109,7 +109,10 @@ export default function DayView({ date, tz, staff, bookings, absences = [], onAb
   return (
     <div className={fill ? 'h-full flex flex-col gap-2' : 'space-y-2'}>
       <div className={fill ? 'flex-1 min-h-0' : ''}>
-        <TimeGrid columns={columns} startMin={startMin} endMin={endMin} tz={tz} fill={fill} minColWidth={minColWidth}
+        <TimeGrid columns={compact && columns.length > 1
+          // The last person fills the screen too, so sliding to her leaves no sliver of the previous one.
+          ? columns.map((c, i) => (i === columns.length - 1 ? { ...c, fillView: true } : c))
+          : columns} startMin={startMin} endMin={endMin} tz={tz} fill={fill} minColWidth={minColWidth}
           pxPerMin={ppm} snapX={compact && columns.length > 1} labelWidth={compact ? 'w-11' : 'w-14'} />
       </div>
       <div className="shrink-0"><LineLegend kinds={kinds} /></div>

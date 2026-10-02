@@ -27,3 +27,13 @@ export function everyText(days) {
   const weeks = Math.round(days / 7);
   return weeks < 9 ? `cada ${weeks} semanas` : `cada ${Math.round(days / 30)} meses`;
 }
+
+/** «685292717» → «685 29 27 17»; «+34685292717» → «+34 685 29 27 17». Other formats stay as typed. */
+export function phoneText(raw) {
+  const t = String(raw || '').trim();
+  const d = t.replace(/\D/g, '');
+  const es = d.length === 11 && d.startsWith('34') ? d.slice(2) : d.length === 9 ? d : null;
+  if (!es) return t;
+  const pretty = `${es.slice(0, 3)} ${es.slice(3, 5)} ${es.slice(5, 7)} ${es.slice(7)}`;
+  return d.length === 11 ? `+34 ${pretty}` : pretty;
+}

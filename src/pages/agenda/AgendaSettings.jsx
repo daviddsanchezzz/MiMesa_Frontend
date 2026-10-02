@@ -275,6 +275,7 @@ function LinkUserModal({ resource, members, onClose, onSaved }) {
 }
 
 function Resources({ resources, services, reload }) {
+  const [adding, setAdding] = useState(false);
   const [name, setName] = useState('');
   const [kind, setKind] = useState('staff');
   const [error, setError] = useState('');
@@ -307,6 +308,7 @@ function Resources({ resources, services, reload }) {
     try {
       await bookingsApi.createResource({ kind, name: name.trim() });
       setName('');
+      setAdding(false);
       reload();
     } catch (err) { setError(apiError(err)); }
   }
@@ -337,7 +339,11 @@ function Resources({ resources, services, reload }) {
   });
 
   return (
-    <Card subtitle={`${resources.length} ${resources.length === 1 ? 'persona o espacio' : 'personas o espacios'}`}>
+    <Card subtitle={`${resources.length} ${resources.length === 1 ? 'persona o espacio' : 'personas o espacios'}`}
+      action={!adding && (
+        <button type="button" onClick={() => setAdding(true)}
+          className="h-9 px-3.5 rounded-full bg-violet-600 text-white text-[13px] font-semibold hover:bg-violet-700">+ Nuevo</button>
+      )}>
       <ul className="divide-y divide-gray-100 border-y border-gray-100">
         {resources.length === 0 && <li className="py-4 text-sm text-gray-400">Todavía no hay ninguno.</li>}
         {resources.map((r) => {
@@ -391,13 +397,21 @@ function Resources({ resources, services, reload }) {
           );
         })}
       </ul>
-      <form onSubmit={add} className="flex gap-2">
-        <input className={`${inputCls} !py-2 min-w-0 flex-1`} placeholder="Nuevo: nombre" value={name} onChange={(e) => setName(e.target.value)} required maxLength={100} />
-        <select className={`${inputCls} !py-2 !w-[9.5rem] shrink-0`} value={kind} onChange={(e) => setKind(e.target.value)} aria-label="Tipo">
-          {Object.entries(KIND_LABEL).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
-        </select>
-        <button type="submit" className="shrink-0 h-10 w-10 rounded-xl bg-gray-900 text-white text-xl leading-none hover:bg-black" aria-label="Añadir">+</button>
-      </form>
+      {adding && (
+        <form onSubmit={add} className="rounded-2xl bg-gray-50 p-3 space-y-3">
+          <input autoFocus className={inputCls} placeholder="Nombre (Ana, Cabina 2…)" value={name} onChange={(e) => setName(e.target.value)} required maxLength={100} />
+          <div className="flex flex-wrap gap-1.5">
+            {Object.entries(KIND_LABEL).map(([k, l]) => (
+              <button key={k} type="button" onClick={() => setKind(k)}
+                className={`h-8 px-3 rounded-full text-[13px] font-semibold border ${kind === k ? 'bg-gray-900 border-gray-900 text-white' : 'bg-white border-gray-200 text-gray-700'}`}>{l}</button>
+            ))}
+          </div>
+          <div className="flex justify-end gap-2">
+            <button type="button" onClick={() => { setAdding(false); setName(''); }} className="h-9 px-3.5 rounded-full text-[13px] font-semibold text-gray-600 hover:bg-gray-100">Cancelar</button>
+            <button type="submit" className="h-9 px-4 rounded-full bg-violet-600 text-white text-[13px] font-semibold hover:bg-violet-700">Añadir</button>
+          </div>
+        </form>
+      )}
       {business?.effectivePlan === 'pro' && business?.hasSubscription && !business?.legacyAccess
         && staff.filter((r) => r.active !== false).length >= PRICES.proIncluded && (
         <p className="text-xs text-gray-500">
@@ -420,6 +434,17 @@ function Resources({ resources, services, reload }) {
       )}
     </Card>
   );
+}
+
+// Services by category, in the order categories first appear (no category last).
+function serviceGroups(services) {
+  const map = new Map();
+  for (const s of services) {
+    const k = (s.category || '').trim();
+    if (!map.has(k)) map.set(k, []);
+    map.get(k).push(s);
+  }
+  return [...map.entries()].sort((a, b) => (a[0] === '') - (b[0] === ''));
 }
 
 function Services({ services, staff, reload }) {
@@ -449,11 +474,16 @@ function Services({ services, staff, reload }) {
     <Card subtitle={`${services.length} ${services.length === 1 ? 'servicio' : 'servicios'}`}
       action={(
         <button type="button" onClick={() => setEditing(null)}
-          className="h-9 px-3.5 rounded-full bg-gray-900 text-white text-[13px] font-semibold hover:bg-black">+ Nuevo</button>
+          className="h-9 px-3.5 rounded-full bg-violet-600 text-white text-[13px] font-semibold hover:bg-violet-700">+ Nuevo</button>
       )}>
+      {services.length === 0 && <p className="py-4 text-sm text-gray-400 border-y border-gray-100">Todavía no hay servicios.</p>}
+      {serviceGroups(services).map(([category, list]) => (
+      <section key={category || '_'}>
+        {(serviceGroups(services).length > 1 || category) && (
+          <h4 className="pt-2 pb-1.5 text-[12px] font-semibold uppercase tracking-wide text-gray-400">{category || 'Sin categoría'} · {list.length}</h4>
+        )}
       <ul className="divide-y divide-gray-100 border-y border-gray-100">
-        {services.length === 0 && <li className="py-4 text-sm text-gray-400">Todavía no hay servicios.</li>}
-        {services.map((s) => {
+        {list.map((s) => {
           const req = (s.requirements || []).find((r) => r.kind === 'staff');
           const who = !req ? '' : (req.resourceIds || []).length
             ? req.resourceIds.map((id) => staff.find((x) => x._id === id)?.name).filter(Boolean).join(', ')
@@ -476,6 +506,8 @@ function Services({ services, staff, reload }) {
           );
         })}
       </ul>
+      </section>
+      ))}
       {inactive === null ? (
         <button type="button" className="text-xs font-medium text-gray-500 hover:text-gray-800" onClick={showInactive}>Ver servicios desactivados</button>
       ) : inactive.length === 0 ? (

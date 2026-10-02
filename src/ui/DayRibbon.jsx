@@ -56,7 +56,7 @@ export default function DayRibbon({ lanes, from, to, now = null, onEmpty }) {
         ))}
       </div>
       <div className="relative ml-[38px] h-5 mt-1">
-        {hours.filter((m) => !showNow || Math.abs(m - now) > span * 0.06).map((m) => (
+        {hours.filter((m) => !showNow || Math.abs(m - now) > span * 0.11).map((m) => (
           <span key={m} className="absolute -translate-x-1/2 text-[10px] text-gray-400 tabular-nums" style={{ left: pct(m) }}>{toHHMM(m)}</span>
         ))}
         {showNow && (

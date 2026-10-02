@@ -496,8 +496,8 @@ export default function Calendar() {
                 <path fillRule="evenodd" d="M9.78 4.22a.75.75 0 0 1 0 1.06L7.06 8l2.72 2.72a.75.75 0 1 1-1.06 1.06L5.47 8.53a.75.75 0 0 1 0-1.06l3.25-3.25a.75.75 0 0 1 1.06 0Z" clipRule="evenodd" />
               </svg>
             </NavButton>
-            <div className="text-center min-w-[160px]">
-              <p className="text-sm font-bold text-gray-900 capitalize">{dateLabel}</p>
+            <div className="text-center min-w-0 sm:min-w-[160px]">
+              <p className="text-sm font-semibold text-gray-900 whitespace-nowrap">{dateLabel.charAt(0).toUpperCase() + dateLabel.slice(1)}</p>
               {!isToday && (
                 <button onClick={() => setDate(today)} className="text-[11px] text-violet-600 hover:text-violet-700 font-medium transition-colors">
                   Volver a hoy
@@ -512,12 +512,13 @@ export default function Calendar() {
           </div>
 
           <div className="flex items-center gap-2">
-            <input
-              type="date"
-              value={date}
-              onChange={e => e.target.value && setDate(e.target.value)}
-              className="text-xs border border-gray-200 rounded-lg px-2 py-1.5 text-gray-600 focus:outline-none focus:ring-2 focus:ring-violet-500"
-            />
+            {/* Calendar icon: opens the phone's date picker (no big date box). */}
+            <label className="relative w-9 h-9 rounded-full flex items-center justify-center text-gray-600 hover:bg-gray-100 cursor-pointer" title="Elegir fecha" aria-label="Elegir fecha">
+              <svg viewBox="0 0 20 20" className="w-[18px] h-[18px]" fill="none" stroke="currentColor" strokeWidth="1.6"><rect x="3" y="4.5" width="14" height="12" rx="2" /><path d="M3 8.5h14M7 3v3M13 3v3" strokeLinecap="round" /></svg>
+              <input type="date" value={date} onChange={e => e.target.value && setDate(e.target.value)}
+                onClick={(e) => { try { e.currentTarget.showPicker?.(); } catch { /* ignore */ } }}
+                className="absolute inset-0 opacity-0 cursor-pointer" />
+            </label>
           </div>
         </div>
 

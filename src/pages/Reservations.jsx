@@ -6,6 +6,7 @@ import Modal from '../components/Modal';
 import { useAuth } from '../context/AuthContext';
 import { statusConfig, Avatar, TableCell } from '../components/ReservationCard';
 import Calendar from './Calendar';
+import { useSetMobileHeader } from '../context/MobileHeaderContext';
 
 const MAP_WORLD_W = 2400;
 const MAP_CHAIR_W = 18;
@@ -15,18 +16,19 @@ const MAP_CHAIR_GAP = 7;
 const MAP_STATUS = {
   free: { tableBg: '#ffffff', tableBorder: '#cbd5e1', text: '#0f172a', chipBg: '#334155', chipText: '#f8fafc', chair: '#94a3b8', accent: '#cbd5e1' },
   pending: { tableBg: '#fffbeb', tableBorder: '#fcd34d', text: '#78350f', chipBg: '#92400e', chipText: '#fff7ed', chair: '#f59e0b', accent: '#f59e0b' },
-  confirmed: { tableBg: '#ecfeff', tableBorder: '#67e8f9', text: '#155e75', chipBg: '#0e7490', chipText: '#ecfeff', chair: '#22d3ee', accent: '#06b6d4' },
-  seated: { tableBg: '#f5f3ff', tableBorder: '#c4b5fd', text: '#5b21b6', chipBg: '#6d28d9', chipText: '#f5f3ff', chair: '#a78bfa', accent: '#8b5cf6' },
+  // Same colours as everywhere (lib/status): confirmed violet, seated green.
+  confirmed: { tableBg: '#f5f3ff', tableBorder: '#c4b5fd', text: '#5b21b6', chipBg: '#6d28d9', chipText: '#f5f3ff', chair: '#a78bfa', accent: '#8b5cf6' },
+  seated: { tableBg: '#ecfdf5', tableBorder: '#6ee7b7', text: '#065f46', chipBg: '#047857', chipText: '#ecfdf5', chair: '#34d399', accent: '#10b981' },
   no_show: { tableBg: '#fff1f2', tableBorder: '#fda4af', text: '#9f1239', chipBg: '#be123c', chipText: '#ffe4e6', chair: '#fb7185', accent: '#f43f5e' },
   cancelled: { tableBg: '#f1f5f9', tableBorder: '#cbd5e1', text: '#475569', chipBg: '#64748b', chipText: '#f8fafc', chair: '#94a3b8', accent: '#94a3b8' },
 };
 
 const MAP_STATUS_LABELS = {
   free: 'Libre',
-  pending: 'Pendiente',
+  pending: 'Por confirmar',
   confirmed: 'Confirmada',
   seated: 'Sentada',
-  no_show: 'No-show',
+  no_show: 'No vino',
   cancelled: 'Cancelada',
 };
 
@@ -229,7 +231,8 @@ function MobileRow({ r, tables, onEdit, onCancel, onDelete, onAssign, onQuickSta
   );
 }
 
-export default function Reservations() {
+export default function Reservations({ hideTabs = false }) {
+  useSetMobileHeader({ title: 'Reservas' });
   const { hasRole } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const initialView = (() => {
@@ -844,7 +847,7 @@ export default function Reservations() {
   if (viewMode === 'calendar') {
     return (
       <div className="space-y-4">
-        <ReservationsViewTabs viewMode={viewMode} onChange={changeViewMode} />
+        {!hideTabs && <ReservationsViewTabs viewMode={viewMode} onChange={changeViewMode} />}
         <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden h-[78vh]">
           <Calendar />
         </div>
@@ -874,7 +877,7 @@ export default function Reservations() {
     })();
     return (
       <div className="space-y-4">
-        <ReservationsViewTabs viewMode={viewMode} onChange={changeViewMode} />
+        {!hideTabs && <ReservationsViewTabs viewMode={viewMode} onChange={changeViewMode} />}
         <div className="rounded-2xl border border-gray-200 bg-white shadow-sm overflow-hidden">
           <div className="px-4 py-3 border-b border-gray-100 bg-gray-50/80 space-y-2.5">
             <div className="flex items-center gap-2 overflow-x-auto pb-1">
@@ -1030,7 +1033,7 @@ export default function Reservations() {
 
   return (
     <div className="space-y-4">
-      <ReservationsViewTabs viewMode={viewMode} onChange={changeViewMode} />
+      {!hideTabs && <ReservationsViewTabs viewMode={viewMode} onChange={changeViewMode} />}
       {/* MOBILE HEADER */}      <div className="sm:hidden">
         <div className="flex items-center gap-2 flex-wrap justify-end max-w-full">
           <select
@@ -1101,7 +1104,7 @@ export default function Reservations() {
 
       {/* DESKTOP HEADER */}      <div className="hidden sm:flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-xl font-bold text-gray-900">Reservas</h2>
+          <h2 className="hidden lg:block text-xl font-bold text-gray-900">Reservas</h2>
           <p className="text-sm text-gray-400 mt-0.5">
             {reservations.length} reserva{reservations.length !== 1 ? 's' : ''}
             {(filterMode === 'today' || filterMode === 'day') ? `  ${labelDate}` : ''}

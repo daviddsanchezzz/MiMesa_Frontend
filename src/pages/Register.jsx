@@ -3,6 +3,9 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { authClient } from '../lib/authClient';
 import PasswordInput from '../components/PasswordInput';
+import RequestAccess from './RequestAccess';
+import { LegalConsent } from './AcceptInvite';
+import { useSignupMode } from '../lib/signupMode';
 
 export default function Register() {
   const { register } = useAuth();
@@ -10,6 +13,8 @@ export default function Register() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [verificationSent, setVerificationSent] = useState(false);
+  const [legal, setLegal] = useState(false);
+  const mode = useSignupMode();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -27,6 +32,7 @@ export default function Register() {
 
   const handleGoogle = async () => {
     setError('');
+    if (!legal) { setError('Acepta las condiciones de uso y la política de privacidad para continuar.'); return; }
     try {
       await authClient.signIn.social({
         provider: 'google',
@@ -48,16 +54,17 @@ export default function Register() {
           <img src="/logo.svg" alt="Vetra" className="w-16 h-16 mx-auto mb-8" />
           <h1 className="text-4xl font-bold text-white mb-3">Vetra</h1>
           <p className="text-violet-300 text-lg font-light leading-relaxed max-w-xs mx-auto">
-            Empieza a gestionar tu restaurante en menos de 2 minutos
+            Reservas, agenda, clientes y caja para tu negocio
           </p>
         </div>
       </div>
 
       <div className="flex-1 flex items-center justify-center px-6 py-12 bg-gray-50">
         <div className="w-full max-w-sm">
+          {mode === 'loading' ? <div className="h-40" /> : mode === 'invite' ? <RequestAccess /> : (<>
           <div className="mb-8">
             <h2 className="text-2xl font-bold text-gray-900">Crear cuenta</h2>
-            <p className="text-gray-500 text-sm mt-1">Registra tu restaurante gratis</p>
+            <p className="text-gray-500 text-sm mt-1">Prueba Vetra 14 días gratis, sin tarjeta</p>
           </div>
 
           {error && (
@@ -71,7 +78,7 @@ export default function Register() {
 
           {verificationSent && (
             <div className="bg-emerald-50 border border-emerald-200 text-emerald-800 text-sm rounded-xl px-4 py-3 mb-6">
-              Te hemos enviado un correo de verificacion a <strong>{form.email}</strong>. Verifica tu cuenta antes de iniciar sesion.
+              Te hemos enviado un correo de verificación a <strong>{form.email}</strong>. Verifica tu cuenta antes de iniciar sesión.
             </div>
           )}
 
@@ -115,24 +122,25 @@ export default function Register() {
                 value={form.email}
                 onChange={field('email')}
                 disabled={verificationSent}
-                placeholder="info@restaurante.com"
+                placeholder="tu@email.com"
                 className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-white"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Contrasena *</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Contraseña *</label>
               <PasswordInput
                 required
                 minLength={8}
                 value={form.password}
                 onChange={field('password')}
                 disabled={verificationSent}
-                placeholder="Minimo 8 caracteres"
+                placeholder="Mínimo 8 caracteres"
               />
             </div>
+            <LegalConsent documents={['terms', 'privacy']} checked={legal} onChange={setLegal} />
             <button
               type="submit"
-              disabled={loading || verificationSent}
+              disabled={loading || verificationSent || !legal}
               className="w-full bg-violet-600 hover:bg-violet-700 active:bg-violet-800 disabled:opacity-60 text-white py-2.5 rounded-xl text-sm font-semibold transition-colors shadow-sm shadow-violet-200 mt-2"
             >
               {loading ? 'Creando cuenta...' : (verificationSent ? 'Correo enviado' : 'Crear cuenta')}
@@ -141,13 +149,14 @@ export default function Register() {
 
           <p className="text-center text-sm text-gray-500 mt-6">
             Ya tienes cuenta?{' '}
-            <Link to="/login" className="text-violet-600 hover:text-violet-700 font-semibold">Inicia sesion</Link>
+            <Link to="/login" className="text-violet-600 hover:text-violet-700 font-semibold">Inicia sesión</Link>
           </p>
           {verificationSent && (
             <p className="text-center text-xs text-gray-400 mt-3">
-              Cuando verifiques el email, podras iniciar sesion y continuar con el onboarding.
+              Cuando verifiques el email, podrás iniciar sesión y continuar con el onboarding.
             </p>
           )}
+          </>)}
         </div>
       </div>
     </div>

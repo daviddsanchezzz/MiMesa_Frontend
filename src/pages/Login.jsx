@@ -1,10 +1,12 @@
 import { useState } from 'react';
+import { useSignupMode } from '../lib/signupMode';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { authClient } from '../lib/authClient';
 import PasswordInput from '../components/PasswordInput';
 
 export default function Login() {
+  const signupMode = useSignupMode();
   const { login } = useAuth();
   const navigate  = useNavigate();
   const [form, setForm]     = useState({ email: '', password: '' });
@@ -43,24 +45,51 @@ export default function Login() {
       <div className="hidden lg:flex w-1/2 bg-gradient-to-br from-slate-900 via-violet-950 to-slate-900 items-center justify-center p-12 relative overflow-hidden">
         <div className="absolute -top-32 -left-32 w-96 h-96 bg-violet-600/20 rounded-full blur-3xl" />
         <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-violet-500/10 rounded-full blur-3xl" />
-        <div className="relative z-10 text-center">
-          <img src="/logo.svg" alt="Vetra" className="w-16 h-16 mx-auto mb-8" />
-          <h1 className="text-4xl font-bold text-white mb-3">Vetra</h1>
-          <p className="text-violet-300 text-lg font-light leading-relaxed max-w-xs mx-auto">
-            Gestiona tu restaurante de forma sencilla y eficiente
+        <div className="relative z-10 w-full max-w-md">
+          <div className="flex items-center gap-3 mb-10">
+            <img src="/logo.svg" alt="" className="w-11 h-11" />
+            <span className="text-2xl font-bold text-white tracking-tight">Vetra</span>
+          </div>
+          <h1 className="text-4xl font-bold text-white leading-tight">Tu negocio,<br />bien organizado.</h1>
+          <p className="text-violet-200/90 text-base leading-relaxed mt-4 max-w-sm">
+            Reservas, agenda, clientes y caja en un solo sitio. Para restaurantes, peluquerías y cualquier negocio que trabaje con cita.
           </p>
-          <div className="mt-12 grid grid-cols-3 gap-6">
+
+          {/* A glimpse of the app: one day, both kinds of business */}
+          <div className="mt-10 rounded-2xl bg-white/[0.06] border border-white/10 backdrop-blur-sm p-4 space-y-2.5">
+            <div className="flex items-center justify-between px-1 pb-1">
+              <p className="text-xs font-semibold text-violet-200">Hoy</p>
+              <p className="text-[11px] text-violet-300/80">3 reservadas online</p>
+            </div>
             {[
-              { n: 'Mesas',    desc: 'Control total' },
-              { n: 'Reservas', desc: 'En tiempo real' },
-              { n: 'Clientes', desc: 'Historial completo' },
-            ].map(f => (
-              <div key={f.n} className="text-center">
-                <p className="text-white font-semibold text-sm">{f.n}</p>
-                <p className="text-violet-400 text-xs mt-0.5">{f.desc}</p>
+              { time: '10:30', name: 'Laia Font', what: 'Corte y color · con Marta', line: '#10b981', tag: 'Cobrada' },
+              { time: '13:45', name: 'Mesa 6 · 4 personas', what: 'Terraza · cumpleaños', line: '#7c3aed', tag: 'Siguiente' },
+              { time: '17:00', name: 'Jordi Puig', what: 'Fisioterapia · 45 min', line: '#d1d5db', tag: '' },
+            ].map((r) => (
+              <div key={r.time} className="flex items-center gap-3 rounded-xl bg-white px-3.5 py-2.5 shadow-sm">
+                <span className="text-sm font-bold text-gray-900 tabular-nums w-11">{r.time}</span>
+                <span className="w-1 self-stretch rounded-full" style={{ backgroundColor: r.line }} />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-gray-900 truncate">{r.name}</p>
+                  <p className="text-xs text-gray-500 truncate">{r.what}</p>
+                </div>
+                {r.tag && <span className="text-[10px] font-semibold text-gray-500">{r.tag}</span>}
               </div>
             ))}
           </div>
+
+          <ul className="mt-8 grid grid-cols-3 gap-4 text-sm">
+            {[
+              ['Reserva online', 'Tus clientes reservan 24 h'],
+              ['Recordatorios', 'Menos citas perdidas'],
+              ['Clientes y caja', 'Historial y cierres del día'],
+            ].map(([t, d]) => (
+              <li key={t}>
+                <p className="font-semibold text-white">{t}</p>
+                <p className="text-violet-300/80 text-xs mt-0.5 leading-snug">{d}</p>
+              </li>
+            ))}
+          </ul>
         </div>
       </div>
 
@@ -74,7 +103,7 @@ export default function Login() {
           </div>
 
           <div className="mb-8">
-            <h2 className="text-2xl font-bold text-gray-900">Bienvenido</h2>
+            <h2 className="text-2xl font-bold text-gray-900">Hola de nuevo</h2>
             <p className="text-gray-500 text-sm mt-1">Inicia sesión en tu cuenta</p>
           </div>
 
@@ -113,7 +142,7 @@ export default function Login() {
               <input
                 type="email" required value={form.email}
                 onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
-                placeholder="restaurante@email.com"
+                placeholder="tu@email.com"
                 className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-white transition-shadow"
               />
             </div>
@@ -140,8 +169,8 @@ export default function Login() {
           </form>
 
           <p className="text-center text-sm text-gray-500 mt-6">
-            ¿No tienes cuenta?{' '}
-            <Link to="/register" className="text-violet-600 hover:text-violet-700 font-semibold">Regístrate gratis</Link>
+            {signupMode === 'open' ? '¿No tienes cuenta?' : '¿Quieres usar Vetra?'}{' '}
+            <Link to="/register" className="text-violet-600 hover:text-violet-700 font-semibold">{signupMode === 'open' ? 'Pruébalo 14 días gratis' : 'Solicita acceso'}</Link>
           </p>
 
         </div>

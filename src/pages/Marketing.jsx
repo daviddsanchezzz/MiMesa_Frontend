@@ -1,10 +1,15 @@
 import { useState, useEffect } from 'react';
 import api from '../services/api';
+import { useSetMobileHeader } from '../context/MobileHeaderContext';
+import Icon from '../ui/Icon';
+import { Section, SectionLink, FigureLine, Empty } from '../ui/kit';
 
-const inputCls = 'w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent';
-const labelCls = 'block text-xs font-medium text-gray-600 mb-1.5';
+const inputCls = 'w-full rounded-xl border border-gray-300 bg-white px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500';
+const labelCls = 'block text-[13px] font-medium text-gray-700 mb-1.5';
+const SUBS_PREVIEW = 8;
 
 export default function Marketing() {
+  useSetMobileHeader({ title: 'Publicidad', action: false });
   const [subscribers,  setSubscribers]  = useState([]);
   const [campaigns,    setCampaigns]    = useState([]);
   const [subject,      setSubject]      = useState('');
@@ -12,7 +17,7 @@ export default function Marketing() {
   const [sending,      setSending]      = useState(false);
   const [result,       setResult]       = useState(null);
   const [error,        setError]        = useState('');
-  const [view,         setView]         = useState('compose');
+  const [showAllSubs,  setShowAllSubs]  = useState(false);
 
   const load = async () => {
     const [s, c] = await Promise.all([
@@ -47,111 +52,122 @@ export default function Marketing() {
   }).length;
   const remaining = Math.max(0, 3 - recentCampaigns);
 
+  const plural = subscribers.length !== 1;
+  const shownSubs = showAllSubs ? subscribers : subscribers.slice(0, SUBS_PREVIEW);
+
   return (
-    <div className="space-y-5 max-w-3xl">
-      <div>
-        <h2 className="text-xl font-bold text-gray-900">Email marketing</h2>
-        <p className="text-sm text-gray-400 mt-0.5">
-          {subscribers.length} suscriptor{subscribers.length !== 1 ? 'es' : ''} activo{subscribers.length !== 1 ? 's' : ''} · {remaining}/3 envíos disponibles este mes
-        </p>
-      </div>
+    <div className="space-y-8">
+      <FigureLine items={[
+        { label: `suscriptor${plural ? 'es' : ''} activo${plural ? 's' : ''}`, value: subscribers.length },
+        { label: 'de 3 envíos disponibles este mes', value: remaining, tone: remaining === 0 ? 'warn' : undefined },
+      ]} />
 
-      <div className="flex gap-2 overflow-x-auto pb-0.5">
-        {['compose', 'history', 'subscribers'].map(v => (
-          <button key={v} onClick={() => setView(v)}
-            className={`text-xs px-3 py-2 rounded-lg font-medium transition-colors whitespace-nowrap shrink-0 ${view === v ? 'bg-violet-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
-            {v === 'compose' ? 'Redactar' : v === 'history' ? 'Historial' : 'Suscriptores'}
-          </button>
-        ))}
-      </div>
-
-      <div className="bg-violet-50 border border-violet-100 rounded-xl p-4 text-xs text-violet-700 leading-relaxed">
-        <strong>Aviso legal:</strong> Solo puedes enviar emails a clientes que aceptaron explícitamente recibir comunicaciones.
-        Cada email incluye un enlace de baja automático. El límite es de 3 campañas por mes.
-        Tú eres el responsable del tratamiento de estos datos según el RGPD.
-      </div>
-
-      {view === 'compose' && (
-        <div className="bg-white border border-gray-200 rounded-2xl p-6 space-y-4">
-          {result && (
-            <div className="bg-emerald-50 border border-emerald-200 text-emerald-700 text-sm rounded-xl px-4 py-3">
-              ✓ Enviado a {result.sent} suscriptores{result.errors?.length > 0 ? ` (${result.errors.length} fallidos)` : ''}.
-            </div>
-          )}
-          {error && <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-4 py-3">{error}</div>}
-
-          {subscribers.length === 0 ? (
-            <div className="text-center py-10 text-gray-400 text-sm">
-              Aún no tienes suscriptores. Aparecerán aquí cuando los clientes acepten recibir comunicaciones al reservar.
-            </div>
-          ) : (
-            <>
-              <div>
-                <label className={labelCls}>Asunto *</label>
-                <input value={subject} onChange={e => setSubject(e.target.value)}
-                  placeholder="Ej: ¡Menú especial este fin de semana!"
-                  className={inputCls} />
-              </div>
-              <div>
-                <label className={labelCls}>Mensaje *</label>
-                <textarea value={body} onChange={e => setBody(e.target.value)}
-                  rows={8} placeholder="Escribe tu mensaje aquí. El saludo personalizado y el pie con enlace de baja se añaden automáticamente."
-                  className={`${inputCls} resize-y min-h-[160px]`} />
-                <p className="text-xs text-gray-400 mt-1">El pie con «Darse de baja» se añade automáticamente en cada email.</p>
-              </div>
-              <div className="flex flex-col sm:flex-row sm:items-center gap-3 pt-1">
-                <p className="text-xs text-gray-400 flex-1">
-                  {remaining === 0
-                    ? 'Has alcanzado el límite de 3 campañas este mes.'
-                    : `Se enviará a ${subscribers.length} suscriptor${subscribers.length !== 1 ? 'es' : ''}.`}
-                </p>
-                <button onClick={handleSend} disabled={sending || remaining === 0}
-                  className="w-full sm:w-auto bg-violet-600 hover:bg-violet-700 disabled:opacity-50 text-white px-5 py-3 rounded-xl text-sm font-semibold transition-colors">
-                  {sending ? 'Enviando...' : 'Enviar campaña'}
-                </button>
-              </div>
-            </>
-          )}
-        </div>
-      )}
-
-      {view === 'history' && (
-        <div className="bg-white border border-gray-200 rounded-2xl divide-y divide-gray-100">
-          {campaigns.length === 0 ? (
-            <div className="text-center py-10 text-gray-400 text-sm">Sin campañas enviadas todavía.</div>
-          ) : campaigns.map(c => (
-            <div key={c._id} className="px-4 py-3 flex items-start justify-between gap-3">
-              <p className="text-sm text-gray-800 font-medium leading-snug flex-1 min-w-0 truncate">{c.subject}</p>
-              <div className="text-right shrink-0">
-                <p className="text-xs text-gray-500 font-medium">{c.recipientCount} env.</p>
-                <p className="text-xs text-gray-400 whitespace-nowrap">
-                  {new Date(c.sentAt).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-
-      {view === 'subscribers' && (
-        <div className="bg-white border border-gray-200 rounded-2xl divide-y divide-gray-100">
-          {subscribers.length === 0 ? (
-            <div className="text-center py-10 text-gray-400 text-sm">Sin suscriptores todavía.</div>
-          ) : subscribers.map(s => (
-            <div key={s._id} className="px-4 py-3 flex items-start justify-between gap-3">
-              <div className="flex-1 min-w-0">
-                <p className="text-sm text-gray-800 font-medium truncate">{s.name}</p>
-                <p className="text-xs text-gray-500 truncate">{s.email}</p>
-              </div>
-              <p className="text-xs text-gray-400 shrink-0 whitespace-nowrap pt-0.5">
-                {s.marketingSubscribedAt
-                  ? new Date(s.marketingSubscribedAt).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })
-                  : '—'}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-x-12 gap-y-9 items-start">
+        {/* Composer */}
+        <Section title="Nueva campaña" className="lg:col-span-7">
+          <div className="space-y-4 pt-1">
+            {result && (
+              <p className="flex items-center gap-2 rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
+                <Icon name="check" className="w-4 h-4" strokeWidth={2} />
+                Enviado a {result.sent} suscriptores{result.errors?.length > 0 ? ` (${result.errors.length} fallidos)` : ''}.
               </p>
-            </div>
-          ))}
+            )}
+            {error && <p className="rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>}
+
+            {subscribers.length === 0 ? (
+              <Empty>Aún no tienes suscriptores. Aparecerán aquí cuando los clientes acepten recibir comunicaciones al reservar.</Empty>
+            ) : (
+              <>
+                <div>
+                  <label className={labelCls} htmlFor="mk-subject">Asunto</label>
+                  <input id="mk-subject" value={subject} onChange={e => setSubject(e.target.value)}
+                    placeholder="Ej: ¡Menú especial este fin de semana!"
+                    className={inputCls} />
+                </div>
+                <div>
+                  <label className={labelCls} htmlFor="mk-body">Mensaje</label>
+                  <textarea id="mk-body" value={body} onChange={e => setBody(e.target.value)}
+                    rows={8} placeholder="Escribe tu mensaje aquí. El saludo personalizado y el pie con enlace de baja se añaden automáticamente."
+                    className={`${inputCls} resize-y min-h-[160px]`} />
+                  <p className="text-xs text-gray-400 mt-1.5">El pie con «Darse de baja» se añade automáticamente en cada email.</p>
+                </div>
+                <div className="flex flex-col-reverse sm:flex-row sm:items-center gap-3">
+                  <p className={`text-[13px] flex-1 ${remaining === 0 ? 'text-amber-700' : 'text-gray-500'}`}>
+                    {remaining === 0
+                      ? 'Has alcanzado el límite de 3 campañas este mes.'
+                      : `Se enviará a ${subscribers.length} suscriptor${plural ? 'es' : ''}.`}
+                  </p>
+                  <button type="button" onClick={handleSend} disabled={sending || remaining === 0}
+                    className="inline-flex items-center justify-center gap-1.5 h-10 px-4 rounded-xl bg-violet-600 text-white text-sm font-semibold hover:bg-violet-700 disabled:opacity-50">
+                    {sending ? 'Enviando…' : 'Enviar campaña'}
+                  </button>
+                </div>
+              </>
+            )}
+
+            <p className="text-xs text-gray-400 leading-relaxed pt-2">
+              Solo se envía a clientes que aceptaron explícitamente recibir comunicaciones. Cada email incluye un enlace
+              de baja automático y el límite es de 3 campañas al mes. Tú eres el responsable del tratamiento de estos datos según el RGPD.
+            </p>
+          </div>
+        </Section>
+
+        <div className="lg:col-span-5 space-y-9">
+          {/* History */}
+          <Section title="Enviadas">
+            {campaigns.length === 0 ? (
+              <p className="py-3 text-sm text-gray-500">Sin campañas enviadas todavía.</p>
+            ) : (
+              <ul className="divide-y divide-gray-100">
+                {campaigns.map(c => (
+                  <li key={c._id} className="flex items-center gap-3 py-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[15px] font-medium text-gray-900 truncate">{c.subject}</p>
+                      <p className="text-[13px] text-gray-500">
+                        {new Date(c.sentAt).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </p>
+                    </div>
+                    <p className="shrink-0 text-sm text-gray-900 tabular-nums">
+                      {c.recipientCount} <span className="text-[13px] text-gray-500">envíos</span>
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Section>
+
+          {/* Subscribers */}
+          <Section title="Suscriptores"
+            aside={subscribers.length > SUBS_PREVIEW && (
+              <SectionLink onClick={() => setShowAllSubs(v => !v)}>
+                {showAllSubs ? 'Ver menos' : `Ver los ${subscribers.length}`}
+              </SectionLink>
+            )}>
+            {subscribers.length === 0 ? (
+              <p className="py-3 text-sm text-gray-500">Sin suscriptores todavía.</p>
+            ) : (
+              <ul className="divide-y divide-gray-100">
+                {shownSubs.map(s => (
+                  <li key={s._id} className="flex items-center gap-3 py-3">
+                    <span className="w-9 h-9 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center text-sm font-semibold shrink-0">
+                      {(s.name || s.email || '?')[0].toUpperCase()}
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[15px] font-medium text-gray-900 truncate">{s.name}</p>
+                      <p className="text-[13px] text-gray-500 truncate">{s.email}</p>
+                    </div>
+                    <p className="shrink-0 text-[13px] text-gray-400 whitespace-nowrap">
+                      {s.marketingSubscribedAt
+                        ? `desde ${new Date(s.marketingSubscribedAt).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })}`
+                        : '—'}
+                    </p>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Section>
         </div>
-      )}
+      </div>
     </div>
   );
 }

@@ -9,6 +9,7 @@ import {
   setImpersonationOriginalToken,
   clearImpersonationState,
 } from '../lib/authClient';
+import { clearCache } from '../lib/query';
 import api, { setActiveBusinessId } from '../services/api';
 
 const AuthContext = createContext(null);
@@ -70,9 +71,9 @@ export function AuthProvider({ children }) {
         msg.includes('failed to fetch') ||
         msg.includes('networkerror')
       ) {
-        throw new Error('Error de conexion con el servidor. Revisa la red y la configuracion del dominio.');
+        throw new Error('Error de conexión con el servidor. Revisa la red y la configuración del dominio.');
       }
-      throw new Error(err?.message || 'Error al iniciar sesion');
+      throw new Error(err?.message || 'Error al iniciar sesión');
     }
     const { data, error } = result;
     if (error) {
@@ -80,7 +81,7 @@ export function AuthProvider({ children }) {
         throw new Error('Debes verificar tu email antes de iniciar sesión. Revisa tu bandeja de entrada.');
       }
       if (String(error.code || '').includes('TWO_FACTOR')) {
-        throw new Error('Esta cuenta requiere verificacion en dos pasos y esta pantalla aun no la gestiona.');
+        throw new Error('Esta cuenta requiere verificación en dos pasos y esta pantalla aún no la gestiona.');
       }
       throw new Error(error.message || 'Credenciales incorrectas');
     }
@@ -102,6 +103,7 @@ export function AuthProvider({ children }) {
 
   // Logout
   const logout = async () => {
+    clearCache();
     await authClient.signOut().catch(() => {});
     setStoredToken(null);
     setBusiness(null);
@@ -112,9 +114,10 @@ export function AuthProvider({ children }) {
   };
 
   const startImpersonation = async ({ token, user }) => {
+    clearCache();
     const currentToken = getStoredToken();
-    if (!currentToken) throw new Error('No hay sesion activa para iniciar impersonacion');
-    if (!token) throw new Error('Token de impersonacion no valido');
+    if (!currentToken) throw new Error('No hay sesión activa para iniciar suplantación');
+    if (!token) throw new Error('Token de suplantación no válido');
 
     if (!getImpersonationOriginalToken()) {
       setImpersonationOriginalToken(currentToken);
@@ -135,6 +138,7 @@ export function AuthProvider({ children }) {
   };
 
   const stopImpersonation = async () => {
+    clearCache();
     const impersonatedToken = getStoredToken();
     const originalToken = getImpersonationOriginalToken();
     let restoredToken = originalToken || null;
@@ -189,10 +193,17 @@ export function AuthProvider({ children }) {
   const trialEndsAt        = business?.trialEndsAt  ?? null;
   const currentPeriodEnd   = business?.currentPeriodEnd ?? null;
   const cancelAtPeriodEnd  = business?.cancelAtPeriodEnd ?? false;
+  // 'restaurant' (table reservations) or 'appointments' (salons, therapists...)
+  const businessType       = business?.businessType ?? 'restaurant';
+  const isAppointments     = businessType === 'appointments';
 
   const HIERARCHY = { owner: 3, manager: 2, staff: 1 };
   const hasRole   = (minRole) => (HIERARCHY[role] ?? 0) >= (HIERARCHY[minRole] ?? 0);
-  const isSubscribed = subscriptionStatus === 'active' || subscriptionStatus === 'trialing';
+  // Has a paid plan or a running trial right now (the backend decides: effectivePlan)
+  const isSubscribed = business?.effectivePlan
+    ? ['basic', 'pro'].includes(business.effectivePlan)
+    : subscriptionStatus === 'active' || subscriptionStatus === 'trialing';
+  const isReadOnly = business?.effectivePlan === 'expired';
 
   /**
    * Plan capabilities come from the backend (/auth/me) so there is a single source of truth.
@@ -222,7 +233,8 @@ export function AuthProvider({ children }) {
       impersonation, startImpersonation, stopImpersonation,
       isDev, role, plan, subscriptionStatus,
       trialEndsAt, currentPeriodEnd, cancelAtPeriodEnd,
-      hasRole, isSubscribed, canUse, planLimit,
+      businessType, isAppointments,
+      hasRole, isSubscribed, isReadOnly, canUse, planLimit,
       moduleAccess, isModuleEnabled,
       session,
     }}>

@@ -1,1326 +1,38 @@
-﻿import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
-import Modal from '../components/Modal';
 import { useAuth } from '../context/AuthContext';
 import { useSetMobileHeader } from '../context/MobileHeaderContext';
+import Icon from '../ui/Icon';
+import { BigFigure, Empty, FigureLine, GhostButton, MenuButton, PageHeader, PrimaryButton, RowAction, Section, Segmented, Tabs } from '../ui/kit';
+import { Notice, addDays, compTypeLabel, compareShiftTime, formatMoney, mondayOf, normalizeDateOnly, shiftAppliesToDate, todayIso, weekDays } from './personal/shared';
+import { ShiftStaffChips, assignPersonColors } from './personal/ShiftStaffChips';
+import { EmployeeRow, MoreIcon, StateText } from './personal/MobileEmployeeRow';
+import { EmployeeFormModal } from './personal/EmployeeFormModal';
+import { PositionFormModal } from './personal/PositionFormModal';
+import { CompensationModal } from './personal/CompensationModal';
+import { ShiftEditorModal } from './personal/ShiftEditorModal';
+import { EmployeeAssignmentsModal } from './personal/EmployeeAssignmentsModal';
 
-const inputCls = 'w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white';
-const labelCls = 'block text-xs font-semibold text-gray-600 mb-1';
-
-const tabs = [
-  {
-    key: 'planner', label: 'Planificacion',
-    icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4"><path fillRule="evenodd" d="M4 1.75a.75.75 0 0 1 1.5 0V3h5V1.75a.75.75 0 0 1 1.5 0V3h.25A2.75 2.75 0 0 1 15 5.75v7.5A2.75 2.75 0 0 1 12.25 16H3.75A2.75 2.75 0 0 1 1 13.25v-7.5A2.75 2.75 0 0 1 3.75 3H4V1.75ZM3.75 4.5c-.69 0-1.25.56-1.25 1.25V7h11V5.75c0-.69-.56-1.25-1.25-1.25H3.75ZM2.5 8.5v4.75c0 .69.56 1.25 1.25 1.25h8.5c.69 0 1.25-.56 1.25-1.25V8.5h-11Z" clipRule="evenodd" /></svg>,
-  },
-  {
-    key: 'employees', label: 'Empleados',
-    icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4"><path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM12.735 14c.618 0 1.093-.561.872-1.139a6.002 6.002 0 0 0-11.215 0c-.22.578.254 1.139.872 1.139h9.47Z" /></svg>,
-  },
-  {
-    key: 'costs', label: 'Costes',
-    icon: <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" className="w-4 h-4" aria-hidden="true"><text x="1" y="13" fontSize="13" fontWeight="700" fill="currentColor" fontFamily="system-ui,-apple-system,sans-serif">€</text></svg>,
-  },
-];
-
-const todayIso = () => new Date().toISOString().slice(0, 10);
-const mondayOf = (dateStr) => {
-  const d = new Date(`${dateStr}T12:00:00`);
-  const day = d.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  d.setDate(d.getDate() + diff);
-  return d.toISOString().slice(0, 10);
-};
-const addDays = (dateStr, n) => {
-  const d = new Date(`${dateStr}T12:00:00`);
-  d.setDate(d.getDate() + n);
-  return d.toISOString().slice(0, 10);
-};
-const normalizeDateOnly = (value) => {
-  const text = String(value || '');
-  return text.length >= 10 ? text.slice(0, 10) : '';
-};
-const toDayOfWeek = (isoDate) => new Date(`${isoDate}T12:00:00`).getDay();
-const weekDays = (weekStart) => [...Array(7)].map((_, i) => {
-  const date = addDays(weekStart, i);
-  const ui = new Date(`${date}T12:00:00`);
-  return {
-    date,
-    short: ui.toLocaleDateString('es-ES', { weekday: 'short' }),
-    day: ui.toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit' }),
-    fullLabel: ui.toLocaleDateString('es-ES', { weekday: 'long', day: '2-digit', month: '2-digit' }),
-  };
-});
-const compareShiftTime = (a, b) => (a.startTime || '').localeCompare(b.startTime || '');
-const shiftAppliesToDate = (shift, date) => {
-  const day = toDayOfWeek(date);
-  if (!Array.isArray(shift.days) || !shift.days.includes(day)) return false;
-  if (shift.startDate && date < shift.startDate) return false;
-  if (shift.endDate && date > shift.endDate) return false;
-  return true;
+const TAB_LABELS = { planner: 'Planificación', employees: 'Empleados', costs: 'Costes' };
+const TAB_ORDER = ['planner', 'employees', 'costs'];
+const SUBTITLES = {
+  planner: 'Quién trabaja en cada turno de la semana.',
+  employees: 'Tu equipo, sus puestos y cómo cobra cada uno.',
+  costs: 'Lo que cuesta el personal y lo que queda por pagar.',
 };
 
-const formatMoney = (value, currency = 'EUR') => {
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed)) return '';
-  try {
-    return new Intl.NumberFormat('es-ES', {
-      style: 'currency',
-      currency,
-      currencyDisplay: 'narrowSymbol',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(parsed);
-  } catch {
-    return `${parsed.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}`;
-  }
-};
-
-const currencySymbol = (currency = 'EUR') => {
-  const sample = formatMoney(0, currency);
-  const symbol = sample.replace(/[0-9\s.,-]/g, '').trim();
-  return symbol || currency;
-};
-
-const compLabel = (comp) => {
-  if (!comp) return null;
-  const suffix = comp.paymentType === 'hourly' ? '/h' : comp.paymentType === 'per_shift' ? '/turno' : '/mes';
-  return `${formatMoney(comp.baseAmount, comp.currency)}${suffix}`;
-};
-
-const compTypeLabel = (type) => {
-  if (type === 'hourly') return 'Por hora';
-  if (type === 'per_shift') return 'Por turno';
-  if (type === 'monthly_fixed') return 'Precio mensual';
-  return type || '-';
-};
-
-function MobileEmployeeRow({ employee, onEdit, onPago, onToggle }) {
-  const [open, setOpen] = useState(false);
-  const fullName = `${employee.firstName} ${employee.lastName || ''}`.trim();
-  const comp = employee.activeCompensation;
-
+function NavArrow({ dir, onClick, label }) {
   return (
-    <div className="border-b border-gray-100 last:border-0">
-      <button
-        className="w-full text-left px-4 py-3 flex items-center gap-3 active:bg-gray-50 transition-colors"
-        onClick={() => setOpen((v) => !v)}
-      >
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-gray-900 truncate">{fullName}</p>
-          <p className="text-xs text-gray-500 truncate mt-0.5">
-            {employee.email || employee.phone || 'Sin contacto'}
-          </p>
-        </div>
-        <div className="flex items-center gap-1.5 shrink-0">
-          {(employee.positions || []).slice(0, 3).map((pos) => (
-            <span key={pos._id} className="w-2.5 h-2.5 rounded-full border border-white shadow-sm" style={{ backgroundColor: pos.color || '#64748B' }} title={pos.name} />
-          ))}
-          <span className={`text-[11px] border px-2 py-0.5 rounded-full font-semibold ${
-            employee.status === 'active'
-              ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-              : 'bg-gray-50 text-gray-500 border-gray-200'
-          }`}>
-            {employee.status === 'active' ? 'Activo' : 'Inact.'}
-          </span>
-        </div>
-      </button>
-      {open && (
-        <div className="px-4 pb-3 pt-2 bg-gray-50/80 border-t border-gray-100 space-y-2">
-          {(employee.positions || []).length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
-              {(employee.positions || []).map((pos) => (
-                <span key={pos._id} className="inline-flex items-center gap-1.5 text-xs font-semibold rounded-full px-2.5 py-0.5 border border-gray-200 bg-white">
-                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: pos.color || '#64748B' }} />
-                  {pos.name}
-                </span>
-              ))}
-            </div>
-          )}
-          {comp ? (
-            <p className="text-xs text-gray-600 font-medium">{compLabel(comp)} · {compTypeLabel(comp.paymentType)}</p>
-          ) : (
-            <p className="text-xs text-amber-600">Sin condiciones de pago</p>
-          )}
-          {employee.notes && (
-            <p className="text-xs text-gray-500 italic bg-white border border-gray-200 rounded-lg px-2.5 py-2">
-              "{employee.notes}"
-            </p>
-          )}
-          <div className="flex gap-2">
-            <button onClick={onPago} className="flex-1 text-center text-xs font-semibold py-2 rounded-xl bg-violet-50 text-violet-700 active:bg-violet-100 transition-colors">
-              Pago
-            </button>
-            <button onClick={onEdit} className="flex-1 text-center text-xs font-semibold py-2 rounded-xl bg-gray-100 text-gray-700 active:bg-gray-200 transition-colors">
-              Editar
-            </button>
-            <button onClick={onToggle} className={`px-3 py-2 rounded-xl text-xs font-semibold transition-colors ${
-              employee.status === 'active' ? 'bg-rose-50 text-rose-600 active:bg-rose-100' : 'bg-emerald-50 text-emerald-700 active:bg-emerald-100'
-            }`}>
-              {employee.status === 'active' ? 'Desactivar' : 'Activar'}
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
+    <button type="button" onClick={onClick} aria-label={label}
+      className="w-9 h-9 rounded-full hover:bg-gray-100 text-gray-600 flex items-center justify-center">
+      <Icon name={dir} className="w-4 h-4" strokeWidth={2} />
+    </button>
   );
 }
 
-function EmployeeFormModal({ employee, positions, onClose, onSaved }) {
-  const [positionQuery, setPositionQuery] = useState('');
-  const [positionOpen, setPositionOpen] = useState(false);
-  const positionDropdownRef = useRef(null);
-  const [form, setForm] = useState({
-    firstName: employee?.firstName || '',
-    lastName: employee?.lastName || '',
-    phone: employee?.phone || '',
-    email: employee?.email || '',
-    positionIds: Array.isArray(employee?.positionIds)
-      ? employee.positionIds.map(String)
-      : employee?.positionId
-        ? [String(employee.positionId)]
-        : [],
-    notes: employee?.notes || '',
-  });
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-  const selectedPositions = useMemo(
-    () => positions.filter((position) => form.positionIds.includes(String(position._id))),
-    [positions, form.positionIds],
-  );
-  const filteredPositions = useMemo(() => {
-    const q = positionQuery.trim().toLowerCase();
-    if (!q) return positions;
-    return positions.filter((position) => (position.name || '').toLowerCase().includes(q));
-  }, [positions, positionQuery]);
-  useEffect(() => {
-    if (!positionOpen) return undefined;
-    const onClickOutside = (event) => {
-      if (!positionDropdownRef.current) return;
-      if (!positionDropdownRef.current.contains(event.target)) setPositionOpen(false);
-    };
-    document.addEventListener('mousedown', onClickOutside);
-    return () => document.removeEventListener('mousedown', onClickOutside);
-  }, [positionOpen]);
-  const submit = async (e) => {
-    e.preventDefault();
-    setSaving(true);
-    setError('');
-    try {
-      if (employee?._id) await api.put(`/staff/employees/${employee._id}`, form);
-      else await api.post('/staff/employees', form);
-      onSaved();
-    } catch (err) {
-      setError(err?.response?.data?.message || 'No se pudo guardar el empleado');
-    } finally {
-      setSaving(false);
-    }
-  };
-  return (
-    <Modal title={employee?._id ? 'Editar empleado' : 'Nuevo empleado'} onClose={onClose}>
-      <form onSubmit={submit} className="space-y-3">
-        {error && <div className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</div>}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div><label className={labelCls}>Nombre *</label><input className={inputCls} value={form.firstName} onChange={(e) => setForm((f) => ({ ...f, firstName: e.target.value }))} required /></div>
-          <div><label className={labelCls}>Apellidos</label><input className={inputCls} value={form.lastName} onChange={(e) => setForm((f) => ({ ...f, lastName: e.target.value }))} /></div>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div><label className={labelCls}>Telefono</label><input className={inputCls} value={form.phone} onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))} /></div>
-          <div><label className={labelCls}>Email</label><input className={inputCls} type="email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} /></div>
-        </div>
-        <div className="space-y-2">
-          <label className={labelCls}>Puestos</label>
-          <div className="relative" ref={positionDropdownRef}>
-            <button
-              type="button"
-              onClick={() => setPositionOpen((v) => !v)}
-              className="w-full border border-gray-300 rounded-xl px-3 py-2 text-sm bg-white text-left flex items-center justify-between gap-2"
-            >
-              <div className="flex flex-wrap gap-1.5 min-h-6">
-                {selectedPositions.length > 0 ? selectedPositions.map((position) => (
-                  <span key={position._id} className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-semibold border border-gray-200 bg-gray-50 text-gray-700">
-                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: position.color || '#64748B' }} />
-                    {position.name}
-                  </span>
-                )) : <span className="text-gray-400">Selecciona uno o varios puestos...</span>}
-              </div>
-              <span className="text-gray-400 text-xs">{positionOpen ? '▲' : '▼'}</span>
-            </button>
-
-            {positionOpen && (
-              <div className="absolute z-20 left-0 right-0 mt-2 border border-gray-200 rounded-xl bg-white shadow-lg p-2 space-y-2">
-                <input
-                  className={inputCls}
-                  placeholder="Buscar puesto..."
-                  value={positionQuery}
-                  onChange={(e) => setPositionQuery(e.target.value)}
-                />
-                <div className="max-h-44 overflow-auto space-y-1">
-                  {filteredPositions.map((position) => {
-                    const id = String(position._id);
-                    const checked = form.positionIds.includes(id);
-                    return (
-                      <button
-                        key={id}
-                        type="button"
-                        onClick={() => {
-                          setForm((prev) => ({
-                            ...prev,
-                            positionIds: checked
-                              ? prev.positionIds.filter((value) => value !== id)
-                              : [...prev.positionIds, id],
-                          }));
-                        }}
-                        className={`w-full text-left flex items-center justify-between gap-2 px-2 py-1.5 rounded-lg ${
-                          checked ? 'bg-violet-50 text-violet-700' : 'hover:bg-gray-50 text-gray-700'
-                        }`}
-                      >
-                        <span className="inline-flex items-center gap-2 text-sm">
-                          <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: position.color || '#64748B' }} />
-                          {position.name}
-                        </span>
-                        <span className={`text-xs font-semibold ${checked ? 'text-violet-600' : 'text-gray-300'}`}>
-                          {checked ? '✓' : ''}
-                        </span>
-                      </button>
-                    );
-                  })}
-                  {filteredPositions.length === 0 && <p className="text-xs text-gray-400 px-1 py-2">No hay puestos para ese filtro</p>}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-        <div><label className={labelCls}>Notas</label><textarea rows={3} className={inputCls} value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} /></div>
-        <div className="flex items-center justify-end gap-2">
-          <button type="button" onClick={onClose} className="px-3 py-2 rounded-lg text-sm bg-gray-100 hover:bg-gray-200">Cancelar</button>
-          <button type="submit" disabled={saving} className="px-3 py-2 rounded-lg text-sm bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-60">{saving ? 'Guardando...' : 'Guardar'}</button>
-        </div>
-      </form>
-    </Modal>
-  );
-}
-
-function CompensationModal({ employee, onClose, onSaved }) {
-  const [form, setForm] = useState({
-    paymentType: employee?.activeCompensation?.paymentType || 'hourly',
-    baseAmount: employee?.activeCompensation?.baseAmount ?? 0,
-    currency: employee?.activeCompensation?.currency || 'EUR',
-    effectiveFrom: todayIso(),
-    notes: '',
-  });
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-  const submit = async (e) => {
-    e.preventDefault();
-    setSaving(true);
-    setError('');
-    try {
-      await api.post(`/staff/employees/${employee._id}/compensations`, { ...form, baseAmount: Number(form.baseAmount || 0) });
-      onSaved();
-    } catch (err) {
-      setError(err?.response?.data?.message || 'No se pudo guardar la condicion de pago');
-    } finally {
-      setSaving(false);
-    }
-  };
-  return (
-    <Modal title={`Condiciones de pago - ${employee.firstName}`} onClose={onClose}>
-      <form onSubmit={submit} className="space-y-3">
-        {error && <div className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</div>}
-        <div>
-          <label className={labelCls}>Tipo de pago</label>
-          <select className={inputCls} value={form.paymentType} onChange={(e) => setForm((f) => ({ ...f, paymentType: e.target.value }))}>
-            <option value="hourly">Por hora</option>
-            <option value="per_shift">Por turno</option>
-            <option value="monthly_fixed">Precio mensual</option>
-          </select>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <div className="sm:col-span-2">
-            <label className={labelCls}>Importe base</label>
-            <input className={inputCls} type="number" min="0" step="0.01" value={form.baseAmount} onChange={(e) => setForm((f) => ({ ...f, baseAmount: e.target.value }))} required />
-          </div>
-          <div>
-            <label className={labelCls}>Moneda</label>
-            <input className={inputCls} value={form.currency} onChange={(e) => setForm((f) => ({ ...f, currency: e.target.value.toUpperCase() }))} />
-          </div>
-        </div>
-        <div>
-          <label className={labelCls}>Vigencia desde</label>
-          <input className={inputCls} type="date" value={form.effectiveFrom} onChange={(e) => setForm((f) => ({ ...f, effectiveFrom: e.target.value }))} required />
-        </div>
-        <div>
-          <label className={labelCls}>Observaciones</label>
-          <textarea rows={3} className={inputCls} value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} />
-        </div>
-        <div className="flex items-center justify-end gap-2">
-          <button type="button" onClick={onClose} className="px-3 py-2 rounded-lg text-sm bg-gray-100 hover:bg-gray-200">Cancelar</button>
-          <button type="submit" disabled={saving} className="px-3 py-2 rounded-lg text-sm bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-60">{saving ? 'Guardando...' : 'Guardar'}</button>
-        </div>
-      </form>
-    </Modal>
-  );
-}
-
-function ShiftEditorModal({ day, shift, assignments, activeEmployees, positions, onClose, onRefresh }) {
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-  const [reservationStats, setReservationStats] = useState(null); // { count, covers }
-
-  useEffect(() => {
-    api.get(`/reservations?from=${day.date}&to=${day.date}`)
-      .then(({ data }) => {
-        const inShift = (data || []).filter((r) => {
-          if (!['confirmed', 'seated'].includes(r.status)) return false;
-          if (!r.time || !shift.startTime || !shift.endTime) return false;
-          return r.time >= shift.startTime && r.time < shift.endTime;
-        });
-        setReservationStats({
-          count: inShift.length,
-          covers: inShift.reduce((s, r) => s + (r.people || 0), 0),
-        });
-      })
-      .catch(() => {});
-  }, [day.date, shift.startTime, shift.endTime]);
-  const [selectedPositionId, setSelectedPositionId] = useState('');
-  const [selectedEmployeeId, setSelectedEmployeeId] = useState('');
-  const [employeeQuery, setEmployeeQuery] = useState('');
-  const [employeePickerOpen, setEmployeePickerOpen] = useState(false);
-  const [employeePickerMenuStyle, setEmployeePickerMenuStyle] = useState(null);
-  const [draftAssignments, setDraftAssignments] = useState(assignments || []);
-  const employeePickerRef = useRef(null);
-  const employeePickerMenuRef = useRef(null);
-
-  useEffect(() => {
-    setDraftAssignments(assignments || []);
-  }, [assignments]);
-
-  const activePositions = useMemo(
-    () => (positions || []).filter((position) => position.status === 'active'),
-    [positions],
-  );
-
-  const employeeById = useMemo(() => {
-    const map = new Map();
-    (activeEmployees || []).forEach((employee) => map.set(String(employee._id), employee));
-    return map;
-  }, [activeEmployees]);
-
-  const initialAssignmentIds = useMemo(
-    () => new Set((assignments || []).map((assignment) => String(assignment._id))),
-    [assignments],
-  );
-
-  const assignmentsByPosition = useMemo(() => {
-    const base = activePositions.map((position) => ({
-      key: String(position._id),
-      label: position.name,
-      color: position.color || '#64748B',
-      assignments: [],
-    }));
-    const byKey = new Map(base.map((column) => [column.key, column]));
-    const byName = new Map(base.map((column) => [column.label, column]));
-
-    draftAssignments.forEach((assignment) => {
-      const employee = assignment.employeeId || {};
-      const roleMatch = assignment.roleLabel ? byName.get(assignment.roleLabel) : null;
-      const legacyKey = employee?.positionId ? String(employee.positionId) : null;
-      const column = roleMatch || (legacyKey ? byKey.get(legacyKey) : null);
-      if (!column) return;
-      column.assignments.push(assignment);
-    });
-
-    return base;
-  }, [activePositions, draftAssignments]);
-
-  const assignedEmployeeIds = useMemo(
-    () => new Set(draftAssignments.map((assignment) => String(assignment.employeeId?._id || assignment.employeeId))),
-    [draftAssignments],
-  );
-
-  const availableEmployees = useMemo(
-    () => activeEmployees.filter((employee) => !assignedEmployeeIds.has(String(employee._id))),
-    [activeEmployees, assignedEmployeeIds],
-  );
-
-  const eligibleEmployeesForSelectedPosition = useMemo(() => {
-    if (!selectedPositionId) return [];
-    return availableEmployees.filter((employee) => {
-      const ids = Array.isArray(employee?.positionIds) && employee.positionIds.length
-        ? employee.positionIds.map(String)
-        : employee?.positionId
-          ? [String(employee.positionId)]
-          : [];
-      return ids.length === 0 || ids.includes(String(selectedPositionId));
-    });
-  }, [availableEmployees, selectedPositionId]);
-  const filteredEligibleEmployees = useMemo(() => {
-    const q = employeeQuery.trim().toLowerCase();
-    if (!q) return eligibleEmployeesForSelectedPosition;
-    return eligibleEmployeesForSelectedPosition.filter((employee) => {
-      const fullName = `${employee.firstName || ''} ${employee.lastName || ''}`.trim().toLowerCase();
-      return fullName.includes(q);
-    });
-  }, [eligibleEmployeesForSelectedPosition, employeeQuery]);
-  const selectedEmployee = useMemo(
-    () => filteredEligibleEmployees.find((employee) => String(employee._id) === String(selectedEmployeeId))
-      || eligibleEmployeesForSelectedPosition.find((employee) => String(employee._id) === String(selectedEmployeeId))
-      || null,
-    [filteredEligibleEmployees, eligibleEmployeesForSelectedPosition, selectedEmployeeId],
-  );
-  const noPositionPersonColors = useMemo(() => {
-    if (activePositions.length > 0) return null;
-    const names = (activeEmployees || [])
-      .map((employee) => `${employee.firstName || ''} ${employee.lastName || ''}`.trim())
-      .filter(Boolean);
-    return assignPersonColors(names);
-  }, [activeEmployees, activePositions.length]);
-
-  const addEmployeeDirectly = (position, employee) => {
-    if (assignedEmployeeIds.has(String(employee._id))) return;
-    const tempId = `tmp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-    setDraftAssignments((prev) => [...prev, {
-      _id: tempId,
-      __temp: true,
-      date: day.date,
-      shiftId: shift,
-      roleLabel: position?.name || '',
-      employeeId: employee,
-    }]);
-    setEmployeeQuery('');
-  };
-
-  const totalAssigned = draftAssignments.length;
-  const hasChanges = useMemo(() => {
-    if ((assignments || []).length !== draftAssignments.length) return true;
-    const currentSet = new Set(draftAssignments.filter((assignment) => assignment._id).map((assignment) => String(assignment._id)));
-    if (currentSet.size !== initialAssignmentIds.size) return true;
-    for (const id of initialAssignmentIds) {
-      if (!currentSet.has(id)) return true;
-    }
-    return draftAssignments.some((assignment) => !assignment._id);
-  }, [assignments, draftAssignments, initialAssignmentIds]);
-
-  const addToDraft = () => {
-    if (!selectedPositionId || !selectedEmployeeId) return;
-    const position = activePositions.find((item) => String(item._id) === String(selectedPositionId));
-    const employee = employeeById.get(String(selectedEmployeeId));
-    if (!position || !employee) return;
-    const employeeId = String(employee._id);
-    if (assignedEmployeeIds.has(employeeId)) return;
-
-    const tempId = `tmp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
-    setDraftAssignments((prev) => [
-      ...prev,
-      {
-        _id: tempId,
-        __temp: true,
-        date: day.date,
-        shiftId: shift,
-        roleLabel: position?.name || '',
-        employeeId: employee,
-      },
-    ]);
-    setSelectedEmployeeId('');
-    setEmployeeQuery('');
-    setEmployeePickerOpen(false);
-  };
-
-  const removeFromDraft = (assignmentId) => {
-    setDraftAssignments((prev) => prev.filter((assignment) => String(assignment._id) !== String(assignmentId)));
-  };
-  useEffect(() => {
-    if (!employeePickerOpen) return undefined;
-    const handleClickOutside = (event) => {
-      const inTrigger = employeePickerRef.current && employeePickerRef.current.contains(event.target);
-      const inMenu = employeePickerMenuRef.current && employeePickerMenuRef.current.contains(event.target);
-      if (!inTrigger && !inMenu) setEmployeePickerOpen(false);
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [employeePickerOpen]);
-  useEffect(() => {
-    if (!employeePickerOpen || !selectedPositionId) return undefined;
-    const updateMenuPosition = () => {
-      if (!employeePickerRef.current) return;
-      const rect = employeePickerRef.current.getBoundingClientRect();
-      const vv = window.visualViewport;
-      const viewportLeft = vv ? vv.offsetLeft : 0;
-      const viewportTop = vv ? vv.offsetTop : 0;
-      const viewportWidth = vv ? vv.width : window.innerWidth;
-      const viewportHeight = vv ? vv.height : window.innerHeight;
-      const viewportRight = viewportLeft + viewportWidth;
-      const viewportBottom = viewportTop + viewportHeight;
-      const safeMargin = 8;
-      const menuGap = 8;
-
-      const desiredWidth = Math.min(Math.max(rect.width + 8, 220), Math.max(220, viewportWidth - safeMargin * 2));
-      const left = Math.min(
-        Math.max(rect.left - 4, viewportLeft + safeMargin),
-        viewportRight - desiredWidth - safeMargin,
-      );
-
-      const estimatedHeight = Math.min(320, Math.max(120, filteredEligibleEmployees.length * 42 + 12));
-      const spaceBelow = viewportBottom - (rect.bottom + menuGap) - safeMargin;
-      const spaceAbove = (rect.top - menuGap) - (viewportTop + safeMargin);
-      const openUp = spaceBelow < Math.min(estimatedHeight, 180) && spaceAbove > spaceBelow;
-      const maxHeight = Math.max(120, Math.min(320, openUp ? spaceAbove : spaceBelow));
-      const top = openUp
-        ? Math.max(viewportTop + safeMargin, rect.top - Math.min(estimatedHeight, maxHeight) - menuGap)
-        : Math.min(rect.bottom + menuGap, viewportBottom - maxHeight - safeMargin);
-
-      setEmployeePickerMenuStyle({
-        top,
-        left,
-        width: desiredWidth,
-        maxHeight,
-      });
-    };
-    updateMenuPosition();
-    window.addEventListener('resize', updateMenuPosition);
-    window.addEventListener('scroll', updateMenuPosition, true);
-    window.visualViewport?.addEventListener('resize', updateMenuPosition);
-    window.visualViewport?.addEventListener('scroll', updateMenuPosition);
-    return () => {
-      window.removeEventListener('resize', updateMenuPosition);
-      window.removeEventListener('scroll', updateMenuPosition, true);
-      window.visualViewport?.removeEventListener('resize', updateMenuPosition);
-      window.visualViewport?.removeEventListener('scroll', updateMenuPosition);
-    };
-  }, [employeePickerOpen, selectedPositionId, filteredEligibleEmployees.length]);
-
-  const saveChanges = async () => {
-    if (!hasChanges) {
-      onClose();
-      return;
-    }
-    setSaving(true);
-    setError('');
-    try {
-      const persistedNow = draftAssignments.filter((assignment) => assignment._id && !String(assignment._id).startsWith('tmp_'));
-      const persistedIdsNow = new Set(persistedNow.map((assignment) => String(assignment._id)));
-      const toDeleteIds = [...initialAssignmentIds].filter((id) => !persistedIdsNow.has(id));
-      const toCreate = draftAssignments.filter((assignment) => String(assignment._id).startsWith('tmp_'));
-
-      await Promise.all(toDeleteIds.map((id) => api.delete(`/staff/assignments/${id}`)));
-      await Promise.all(toCreate.map((assignment) => api.post('/staff/assignments', {
-        employeeId: assignment.employeeId?._id || assignment.employeeId,
-        date: day.date,
-        shiftId: shift._id,
-        roleLabel: assignment.roleLabel || '',
-      })));
-
-      await onRefresh();
-      onClose();
-    } catch (err) {
-      setError(err?.response?.data?.message || 'No se pudieron guardar los cambios del turno');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <Modal
-      title={shift.name}
-      subtitle={
-        <span>
-          {day.fullLabel} · {shift.startTime}–{shift.endTime}
-          {reservationStats && reservationStats.count > 0 && (
-            <span className="ml-2 text-violet-600 font-semibold">
-              · {reservationStats.count} {reservationStats.count === 1 ? 'reserva' : 'reservas'}, {reservationStats.covers} {reservationStats.covers === 1 ? 'comensal' : 'comensales'}
-            </span>
-          )}
-        </span>
-      }
-      onClose={onClose}
-      size="lg"
-      bodyClassName="overflow-visible"
-    >
-      <div className="divide-y divide-gray-100">
-        {error && (
-          <div className="px-5 pb-4">
-            <div className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-4 py-3">{error}</div>
-          </div>
-        )}
-
-        {/* ── Assigned list ── */}
-        <div className="px-5 py-4 space-y-5">
-          {totalAssigned === 0 && (
-            <p className="text-sm text-gray-300 text-center py-2">Sin personal asignado</p>
-          )}
-          {activePositions.length === 0 ? (
-            <div className="space-y-0.5">
-              {draftAssignments.map((assignment) => {
-                const emp = assignment.employeeId || {};
-                const name = emp?.firstName ? `${emp.firstName} ${emp.lastName || ''}`.trim() : 'Empleado';
-                const initials = name.split(' ').filter(Boolean).map((n) => n[0]).slice(0, 2).join('').toUpperCase();
-                const personColor = noPositionPersonColors?.get(name) || '#64748B';
-                return (
-                  <div key={assignment._id} className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-gray-50 group transition-colors">
-                    <div
-                      className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
-                      style={{ backgroundColor: personColor }}
-                    >
-                      {initials}
-                    </div>
-                    <span className="text-sm font-medium text-gray-800 flex-1">{name}</span>
-                    <button onClick={() => removeFromDraft(assignment._id)} disabled={saving}
-                      className="w-7 h-7 rounded-full hover:bg-rose-50 flex items-center justify-center text-gray-300 hover:text-rose-500 sm:opacity-0 sm:group-hover:opacity-100 opacity-100 transition-all shrink-0 disabled:cursor-not-allowed">
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
-                        <path d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z" />
-                      </svg>
-                    </button>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            assignmentsByPosition.filter((col) => col.assignments.length > 0).map((column) => (
-              <div key={column.key}>
-                <div className="flex items-center gap-2 mb-2">
-                  <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: column.color }} />
-                  <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400">{column.label}</p>
-                </div>
-                <div className="space-y-0.5">
-                  {column.assignments.map((assignment) => {
-                    const emp = assignment.employeeId || {};
-                    const name = emp?.firstName ? `${emp.firstName} ${emp.lastName || ''}`.trim() : 'Empleado';
-                    const initials = name.split(' ').filter(Boolean).map((n) => n[0]).slice(0, 2).join('').toUpperCase();
-                    return (
-                      <div key={assignment._id} className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-gray-50 group transition-colors">
-                        <div className="w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0" style={{ backgroundColor: column.color }}>
-                          {initials}
-                        </div>
-                        <span className="text-sm font-medium text-gray-800 flex-1">{name}</span>
-                        <button onClick={() => removeFromDraft(assignment._id)} disabled={saving}
-                          className="w-7 h-7 rounded-full hover:bg-rose-50 flex items-center justify-center text-gray-300 hover:text-rose-500 sm:opacity-0 sm:group-hover:opacity-100 opacity-100 transition-all shrink-0 disabled:cursor-not-allowed">
-                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
-                            <path d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z" />
-                          </svg>
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-
-        {/* ── Add section ── */}
-        <div className="px-5 py-4 space-y-3 bg-gray-50/50">
-          <p className="text-[11px] font-bold uppercase tracking-widest text-gray-400">Añadir personal</p>
-
-          {activePositions.length === 0 ? (
-            /* No positions configured — show all employees directly */
-            <div className="space-y-2">
-              <div className="relative">
-                <input
-                  className="w-full border border-gray-200 rounded-xl pl-9 pr-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-violet-400 transition-colors"
-                  value={employeeQuery}
-                  onChange={(e) => setEmployeeQuery(e.target.value)}
-                  placeholder="Buscar..."
-                />
-                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M9 3.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11ZM2 9a7 7 0 1 1 12.452 4.391l3.328 3.329a.75.75 0 1 1-1.06 1.06l-3.329-3.328A7 7 0 0 1 2 9Z" clipRule="evenodd" />
-                </svg>
-              </div>
-              {(() => {
-                const q = employeeQuery.trim().toLowerCase();
-                const list = availableEmployees.filter((e) => !q || `${e.firstName} ${e.lastName || ''}`.toLowerCase().includes(q));
-                if (list.length === 0) return <p className="text-xs text-gray-400 text-center py-3">{q ? 'Sin resultados' : 'Sin empleados disponibles'}</p>;
-                return (
-                  <div className="grid grid-cols-2 gap-1.5">
-                    {list.map((emp) => {
-                      const name = `${emp.firstName || ''} ${emp.lastName || ''}`.trim();
-                      const initials = name.split(' ').filter(Boolean).map((n) => n[0]).slice(0, 2).join('').toUpperCase();
-                      const personColor = noPositionPersonColors?.get(name) || '#64748B';
-                      return (
-                        <button key={emp._id} onClick={() => addEmployeeDirectly(null, emp)} disabled={saving}
-                          className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-white border border-gray-100 hover:border-violet-200 hover:bg-violet-50/40 text-left transition-all">
-                          <div
-                            className="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold text-white shrink-0"
-                            style={{ backgroundColor: personColor }}
-                          >
-                            {initials}
-                          </div>
-                          <span className="text-sm font-medium text-gray-700 truncate">{emp.firstName}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                );
-              })()}
-            </div>
-          ) : (
-            <>
-          {/* Position pills */}
-          <div className="flex flex-wrap gap-1.5">
-            {activePositions.map((position) => {
-              const isSelected = String(selectedPositionId) === String(position._id);
-              return (
-                <button
-                  key={position._id}
-                  onClick={() => {
-                    setSelectedPositionId(isSelected ? '' : String(position._id));
-                    setSelectedEmployeeId('');
-                    setEmployeeQuery('');
-                  }}
-                  disabled={saving}
-                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border transition-all ${
-                    isSelected ? 'border-transparent text-white shadow-sm' : 'border-gray-200 bg-white text-gray-600 hover:border-gray-300'
-                  }`}
-                  style={isSelected ? { backgroundColor: position.color || '#7c3aed' } : {}}
-                >
-                  <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: isSelected ? 'rgba(255,255,255,0.7)' : (position.color || '#64748B') }} />
-                  {position.name}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Employee search + grid */}
-          {selectedPositionId && (
-            <div className="space-y-2">
-              <div className="relative">
-                <input
-                  className="w-full border border-gray-200 rounded-xl pl-9 pr-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-violet-400 transition-colors"
-                  value={employeeQuery}
-                  onChange={(e) => setEmployeeQuery(e.target.value)}
-                  placeholder="Buscar..."
-                  // eslint-disable-next-line jsx-a11y/no-autofocus
-                  autoFocus
-                />
-                <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M9 3.5a5.5 5.5 0 1 0 0 11 5.5 5.5 0 0 0 0-11ZM2 9a7 7 0 1 1 12.452 4.391l3.328 3.329a.75.75 0 1 1-1.06 1.06l-3.329-3.328A7 7 0 0 1 2 9Z" clipRule="evenodd" />
-                </svg>
-              </div>
-
-              {filteredEligibleEmployees.length === 0 ? (
-                <p className="text-xs text-gray-400 text-center py-3">
-                  {employeeQuery ? 'Sin resultados' : 'Sin empleados disponibles para este puesto'}
-                </p>
-              ) : (
-                <div className="grid grid-cols-2 gap-1.5">
-                  {filteredEligibleEmployees.map((emp) => {
-                    const name = `${emp.firstName || ''} ${emp.lastName || ''}`.trim();
-                    const initials = name.split(' ').filter(Boolean).map((n) => n[0]).slice(0, 2).join('').toUpperCase();
-                    const pos = activePositions.find((p) => String(p._id) === String(selectedPositionId));
-                    return (
-                      <button
-                        key={emp._id}
-                        onClick={() => addEmployeeDirectly(pos, emp)}
-                        disabled={saving}
-                        className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl bg-white border border-gray-100 hover:border-violet-200 hover:bg-violet-50/40 text-left transition-all"
-                      >
-                        <div
-                          className="w-7 h-7 rounded-full flex items-center justify-center text-[11px] font-bold text-white shrink-0"
-                          style={{ backgroundColor: pos?.color || '#64748B' }}
-                        >
-                          {initials}
-                        </div>
-                        <span className="text-sm font-medium text-gray-700 truncate">{emp.firstName}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          )}
-            </>
-          )}
-        </div>
-
-        {/* ── Footer ── */}
-        <div className="px-5 py-3.5 flex items-center justify-between gap-3">
-          <p className="text-xs text-gray-400">{totalAssigned} {totalAssigned === 1 ? 'persona asignada' : 'personas asignadas'}</p>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={onClose}
-              disabled={saving}
-              className="px-4 py-2 rounded-xl text-sm text-gray-600 hover:bg-gray-100 disabled:opacity-50 transition-colors"
-            >
-              Cerrar
-            </button>
-            <button
-              type="button"
-              onClick={saveChanges}
-              disabled={saving || !hasChanges}
-              className="px-4 py-2 rounded-xl text-sm font-semibold bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-40 transition-colors"
-            >
-              {saving ? 'Guardando...' : 'Guardar'}
-            </button>
-          </div>
-        </div>
-      </div>
-    </Modal>
-  );
-}
-
-function EmployeeAssignmentsModal({ employee, onClose, onDeleted }) {
-  const [assignments, setAssignments] = useState([]);
-  const [loadingList, setLoadingList] = useState(true);
-  const [deletingId, setDeletingId] = useState(null);
-  const [savingPriceId, setSavingPriceId] = useState(null);
-  const [editingAssignmentId, setEditingAssignmentId] = useState(null);
-  const [editingPriceValue, setEditingPriceValue] = useState('');
-  const [errorMsg, setErrorMsg] = useState('');
-
-  const compensation = employee?.activeCompensation || null;
-  const currency = compensation?.currency || 'EUR';
-  const currencySign = currencySymbol(currency);
-
-  const assignmentMinutes = (assignment) => {
-    const shift = assignment?.shiftId || {};
-    const start = assignment?.startTime || shift?.startTime;
-    const end = assignment?.endTime || shift?.endTime;
-    if (!start || !end) return 0;
-    const [sh, sm] = String(start).split(':').map(Number);
-    const [ehRaw, emRaw] = String(end).split(':').map(Number);
-    if (Number.isNaN(sh) || Number.isNaN(sm) || Number.isNaN(ehRaw) || Number.isNaN(emRaw)) return 0;
-    const startMin = sh * 60 + sm;
-    let endMin = ehRaw * 60 + emRaw;
-    if (endMin <= startMin) endMin += 24 * 60;
-    return Math.max(endMin - startMin, 0);
-  };
-
-  const autoPriceForAssignment = (assignment) => {
-    if (!compensation) return null;
-    if (compensation.paymentType === 'per_shift') return Number(compensation.baseAmount || 0);
-    if (compensation.paymentType === 'hourly') {
-      const hours = assignmentMinutes(assignment) / 60;
-      return Number((hours * Number(compensation.baseAmount || 0)).toFixed(2));
-    }
-    return null;
-  };
-
-  const formattedPrice = (value) => {
-    if (value === null || value === undefined || Number.isNaN(Number(value))) return '';
-    return Number(value).toFixed(2);
-  };
-
-  useEffect(() => {
-    api.get(`/staff/employees/${employee._id}/assignments`)
-      .then((r) => {
-        const rows = r.data?.assignments || [];
-        setAssignments(rows);
-      })
-      .catch(() => setErrorMsg('No se pudieron cargar los turnos'))
-      .finally(() => setLoadingList(false));
-  }, [employee._id]);
-
-  const deleteAssignment = async (id) => {
-    setDeletingId(id);
-    setErrorMsg('');
-    try {
-      await api.delete(`/staff/assignments/${id}`);
-      setAssignments((prev) => prev.filter((a) => a._id !== id));
-      if (editingAssignmentId === id) {
-        setEditingAssignmentId(null);
-        setEditingPriceValue('');
-      }
-      onDeleted?.();
-    } catch (err) {
-      setErrorMsg(err?.response?.data?.message || 'No se pudo eliminar el turno');
-    } finally {
-      setDeletingId(null);
-    }
-  };
-
-  const startEditingPrice = (assignment) => {
-    const effective = assignment.customPrice ?? autoPriceForAssignment(assignment);
-    setEditingAssignmentId(assignment._id);
-    setEditingPriceValue(effective === null ? '' : formattedPrice(effective));
-  };
-
-  const cancelEditingPrice = () => {
-    setEditingAssignmentId(null);
-    setEditingPriceValue('');
-  };
-
-  const saveAssignmentPrice = async (assignmentId, rawValue) => {
-    const assignment = assignments.find((item) => item._id === assignmentId);
-    if (!assignment) return;
-    const raw = String(rawValue ?? '').trim();
-    let customPrice = null;
-    if (raw !== '') {
-      const parsed = Number(raw.replace(',', '.'));
-      if (!Number.isFinite(parsed) || parsed < 0) {
-        setErrorMsg('El precio debe ser un numero mayor o igual a 0');
-        return;
-      }
-      customPrice = Number(parsed.toFixed(2));
-    }
-
-    if ((assignment.customPrice ?? null) === customPrice) {
-      cancelEditingPrice();
-      return;
-    }
-
-    setSavingPriceId(assignmentId);
-    setErrorMsg('');
-    try {
-      const res = await api.put(`/staff/assignments/${assignmentId}`, { customPrice });
-      const updated = res.data;
-      setAssignments((prev) => prev.map((row) => (row._id === assignmentId ? { ...row, ...updated } : row)));
-      cancelEditingPrice();
-      onDeleted?.();
-    } catch (err) {
-      setErrorMsg(err?.response?.data?.message || 'No se pudo actualizar el precio');
-    } finally {
-      setSavingPriceId(null);
-    }
-  };
-
-  const fullName = `${employee.firstName} ${employee.lastName || ''}`.trim();
-
-  return (
-    <Modal title={`Turnos — ${fullName}`} subtitle={`${assignments.length} turnos en total`} onClose={onClose} size="lg">
-      <div className="space-y-2">
-        {errorMsg && <div className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{errorMsg}</div>}
-        {loadingList && <div className="h-16 rounded-xl bg-gray-100 animate-pulse" />}
-        {!loadingList && assignments.length === 0 && (
-          <p className="text-sm text-gray-400 text-center py-8">Sin turnos registrados</p>
-        )}
-        {!loadingList && assignments.length > 0 && (
-          <div className="overflow-y-auto max-h-[60vh]">
-            <table className="w-full text-sm">
-              <thead className="sticky top-0 bg-white z-10">
-                <tr className="border-b border-gray-100">
-                  <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Fecha</th>
-                  <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Turno</th>
-                  <th className="text-left px-3 py-2.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Precio</th>
-                  <th className="px-3 py-2.5" />
-                </tr>
-              </thead>
-              <tbody>
-                {assignments.map((a, i) => {
-                  const shift = a.shiftId;
-                  const dateLabel = new Date(`${a.date}T12:00:00`).toLocaleDateString('es-ES', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' });
-                  const autoPrice = autoPriceForAssignment(a);
-                  const isSavingPrice = savingPriceId === a._id;
-                  const isEditingPrice = editingAssignmentId === a._id;
-                  const effectivePrice = a.customPrice ?? autoPrice;
-                  return (
-                    <tr key={a._id} className={`hover:bg-gray-50/60 transition-colors ${i < assignments.length - 1 ? 'border-b border-gray-50' : ''}`}>
-                      <td className="px-3 py-2.5 text-gray-700 capitalize">{dateLabel}</td>
-                      <td className="px-3 py-2.5 font-medium text-gray-800">{shift?.name || '—'}</td>
-                      <td className="px-3 py-2.5">
-                        {!isEditingPrice ? (
-                          <div>
-                            <span className="text-sm text-gray-800">
-                              {effectivePrice === null ? '—' : formatMoney(effectivePrice, currency)}
-                            </span>
-                            {a.customPrice === null && autoPrice !== null && (
-                              <p className="text-[11px] text-gray-400">Automático</p>
-                            )}
-                          </div>
-                        ) : (
-                          <div className="space-y-1">
-                            <div className="flex items-center gap-2">
-                              <input
-                                type="number"
-                                min="0"
-                                step="0.01"
-                                value={editingPriceValue}
-                                onChange={(e) => setEditingPriceValue(e.target.value)}
-                                disabled={isSavingPrice}
-                                className="w-24 border border-gray-300 rounded-lg px-2 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-violet-500"
-                              />
-                              <span className="text-xs text-gray-500">{currencySign}</span>
-                            </div>
-                            {autoPrice !== null && (
-                              <button
-                                type="button"
-                                onClick={() => saveAssignmentPrice(a._id, null)}
-                                disabled={isSavingPrice}
-                                className="text-[11px] text-violet-600 hover:underline disabled:opacity-50"
-                              >
-                                Usar automático
-                              </button>
-                            )}
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-3 py-2.5 text-right">
-                        <div className="inline-flex items-center gap-2">
-                          {!isEditingPrice ? (
-                            <button
-                              onClick={() => startEditingPrice(a)}
-                              disabled={isSavingPrice || deletingId === a._id}
-                              className="text-xs text-gray-600 hover:text-gray-800 hover:underline disabled:opacity-40 transition-colors"
-                            >
-                              Editar
-                            </button>
-                          ) : (
-                            <>
-                              <button
-                                onClick={() => saveAssignmentPrice(a._id, editingPriceValue)}
-                                disabled={isSavingPrice}
-                                className="text-xs text-violet-600 hover:text-violet-700 hover:underline disabled:opacity-40 transition-colors"
-                              >
-                                Guardar
-                              </button>
-                              <button
-                                onClick={cancelEditingPrice}
-                                disabled={isSavingPrice}
-                                className="text-xs text-gray-500 hover:text-gray-700 hover:underline disabled:opacity-40 transition-colors"
-                              >
-                                Cancelar
-                              </button>
-                            </>
-                          )}
-                          <button
-                            onClick={() => deleteAssignment(a._id)}
-                            disabled={deletingId === a._id || isSavingPrice}
-                            className="text-xs text-rose-500 hover:text-rose-700 hover:underline disabled:opacity-40 transition-colors"
-                          >
-                            Eliminar
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
-    </Modal>
-  );
-}
-
-function PositionFormModal({ position, onClose, onSaved }) {
-  const [form, setForm] = useState({ name: position?.name || '', color: position?.color || '#64748B' });
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-
-  const submit = async (e) => {
-    e.preventDefault();
-    setSaving(true);
-    setError('');
-    try {
-      if (position?._id) await api.put(`/staff/positions/${position._id}`, form);
-      else await api.post('/staff/positions', form);
-      await onSaved();
-      onClose();
-    } catch (err) {
-      setError(err?.response?.data?.message || 'No se pudo guardar el puesto');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <Modal title={position?._id ? 'Editar puesto' : 'Nuevo puesto'} onClose={onClose} size="md">
-      <div className="space-y-4">
-        {error && <div className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</div>}
-        <form onSubmit={submit} className="space-y-3">
-          <div>
-            <label className={labelCls}>Nombre del puesto *</label>
-            <input
-              className={inputCls}
-              placeholder="Ej: Camarero, Cocinero..."
-              value={form.name}
-              onChange={(e) => setForm((v) => ({ ...v, name: e.target.value }))}
-              required
-            />
-          </div>
-          <div className="rounded-xl border border-gray-200 bg-gray-50 p-3 space-y-2">
-            <label className={labelCls}>Color identificativo</label>
-            <div className="flex items-center gap-3">
-              <input
-                className="h-10 w-16 rounded-lg border border-gray-300 cursor-pointer p-1"
-                type="color"
-                value={form.color}
-                onChange={(e) => setForm((v) => ({ ...v, color: e.target.value.toUpperCase() }))}
-              />
-              <span className="text-sm text-gray-600 font-mono">{form.color}</span>
-              <span className="inline-flex items-center gap-1.5 text-xs font-semibold rounded-full px-3 py-1 border border-gray-200 bg-white">
-                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: form.color }} />
-                Vista previa
-              </span>
-            </div>
-          </div>
-          <div className="flex items-center justify-end gap-2 pt-1">
-            <button type="button" onClick={onClose} className="px-3 py-2 rounded-lg text-sm bg-gray-100 hover:bg-gray-200">Cancelar</button>
-            <button type="submit" disabled={saving} className="px-3 py-2 rounded-lg text-sm bg-violet-600 text-white hover:bg-violet-700 disabled:opacity-60">
-              {position?._id ? 'Guardar cambios' : 'Crear puesto'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </Modal>
-  );
-}
-
-const CHIP_LIMIT = 8;
-
-const PERSON_COLORS = [
-  '#6366f1', // indigo
-  '#f43f5e', // rose
-  '#10b981', // emerald
-  '#f59e0b', // amber
-  '#3b82f6', // blue
-  '#a855f7', // purple
-  '#14b8a6', // teal
-  '#ef4444', // red
-  '#84cc16', // lime
-  '#ec4899', // pink
-  '#06b6d4', // cyan
-  '#f97316', // orange
-  '#8b5cf6', // violet
-  '#22c55e', // green
-  '#0ea5e9', // sky
-  '#d946ef', // fuchsia
-  '#eab308', // yellow
-  '#64748b', // slate
-  '#0891b2', // dark cyan
-  '#e11d48', // crimson
-];
-
-const hslToHex = (h, s, l) => {
-  const sat = s / 100;
-  const lig = l / 100;
-  const c = (1 - Math.abs(2 * lig - 1)) * sat;
-  const x = c * (1 - Math.abs((h / 60) % 2 - 1));
-  const m = lig - c / 2;
-  let r = 0;
-  let g = 0;
-  let b = 0;
-
-  if (h < 60) [r, g, b] = [c, x, 0];
-  else if (h < 120) [r, g, b] = [x, c, 0];
-  else if (h < 180) [r, g, b] = [0, c, x];
-  else if (h < 240) [r, g, b] = [0, x, c];
-  else if (h < 300) [r, g, b] = [x, 0, c];
-  else [r, g, b] = [c, 0, x];
-
-  const toHex = (v) => Math.round((v + m) * 255).toString(16).padStart(2, '0');
-  return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
-};
-
-const colorFromSlot = (slot) => {
-  if (slot < PERSON_COLORS.length) return PERSON_COLORS[slot];
-  const hue = Math.round((slot * 137.508) % 360); // golden-angle distribution
-  return hslToHex(hue, 72, 48);
-};
-
-function assignPersonColors(names) {
-  const usedSlots = new Set();
-  const result = new Map();
-  for (const name of [...new Set(names)].sort((a, b) => a.localeCompare(b))) {
-    let h = 0;
-    for (let i = 0; i < name.length; i++) { h = name.charCodeAt(i) + ((h << 5) - h); h |= 0; }
-    let slot = Math.abs(h) % 2048;
-    while (usedSlots.has(slot)) slot += 1;
-    usedSlots.add(slot);
-    result.set(name, colorFromSlot(slot));
-  }
-  return result;
-}
-
-function ShiftStaffChips({ groups, personColorByName, size = 'default' }) {
-  const [expanded, setExpanded] = useState(false);
-  const isExport = size === 'export';
-
-  const wrapGapCls = isExport ? 'gap-2' : 'gap-1';
-  const chipCls = isExport
-    ? 'inline-flex items-center px-3.5 py-1.5 rounded-lg text-sm md:text-base font-semibold leading-6'
-    : 'inline-flex items-center px-2.5 py-1 md:px-2 md:py-0.5 rounded-md text-xs md:text-[11px] font-medium leading-5';
-  const overflowBtnCls = isExport
-    ? 'inline-flex items-center px-3.5 py-1.5 rounded-lg bg-violet-100 text-violet-700 text-sm md:text-base font-semibold leading-6 hover:bg-violet-200 transition-colors'
-    : 'inline-flex items-center px-2.5 py-1 md:px-2 md:py-0.5 rounded-md bg-violet-100 text-violet-700 text-xs md:text-[11px] font-semibold leading-5 hover:bg-violet-200 transition-colors';
-  const groupTitleCls = isExport
-    ? 'text-xs md:text-sm font-bold uppercase tracking-wider mb-2 pb-1 border-b inline-block'
-    : 'text-[10px] font-bold uppercase tracking-wider mb-1 pb-0.5 border-b inline-block';
-  const expandedWrapCls = isExport ? 'space-y-3' : 'space-y-2';
-  const collapseBtnCls = isExport
-    ? 'text-xs md:text-sm text-gray-400 hover:text-gray-500 transition-colors'
-    : 'text-[10px] text-gray-400 hover:text-gray-500 transition-colors';
-
-  const noPos = groups.length === 1 && groups[0].roleName === 'Sin puesto';
-  const personColors = noPos
-    ? (personColorByName || assignPersonColors(groups[0].names))
-    : null;
-
-  const allPeople = groups.flatMap((g) =>
-    g.names.map((name) => ({
-      name,
-      roleColor: noPos ? (personColors.get(name) || '#64748B') : g.roleColor,
-      roleName: g.roleName,
-    }))
-  );
-
-  if (allPeople.length === 0) return null;
-
-  const overflow = allPeople.length - CHIP_LIMIT;
-  const showOverflow = !expanded && overflow > 0;
-  const visible = expanded ? allPeople : allPeople.slice(0, CHIP_LIMIT);
-
-  if (!expanded) {
-    return (
-      <div className={`flex flex-wrap ${wrapGapCls}`}>
-        {visible.map((p, i) => (
-          <span key={i}
-            className={chipCls}
-            style={{ backgroundColor: p.roleColor + '20', color: p.roleColor }}
-          >
-            {p.name.split(' ')[0]}
-          </span>
-        ))}
-        {showOverflow && (
-          <button
-            onClick={(e) => { e.stopPropagation(); setExpanded(true); }}
-            className={overflowBtnCls}
-          >
-            +{overflow}
-          </button>
-        )}
-      </div>
-    );
-  }
-
-  return (
-    <div className={expandedWrapCls}>
-      {groups.map((group, gi) => {
-        const groupNoPos = group.roleName === 'Sin puesto';
-        return (
-          <div key={gi}>
-            {!groupNoPos && (
-              <p className={groupTitleCls} style={{ color: group.roleColor, borderColor: group.roleColor }}>
-                {group.roleName}
-              </p>
-            )}
-            <div className={`flex flex-wrap ${wrapGapCls}`}>
-              {group.names.map((name, ni) => {
-                const c = groupNoPos ? (personColors?.get(name) || '#64748B') : group.roleColor;
-                return (
-                <span key={ni}
-                  className={chipCls}
-                  style={{ backgroundColor: c + '22', color: c }}
-                >
-                  {name.split(' ')[0]}
-                </span>
-                );
-              })}
-            </div>
-          </div>
-        );
-      })}
-      <button
-        onClick={(e) => { e.stopPropagation(); setExpanded(false); }}
-        className={collapseBtnCls}
-      >
-        Ver menos
-      </button>
-    </div>
-  );
-}
+const tableHead = 'hidden md:grid grid-cols-12 gap-4 px-2 pb-2 border-b border-gray-200 text-[11px] font-semibold uppercase tracking-wide text-gray-400';
 
 export default function Personal() {
   const { role, business } = useAuth();
@@ -1338,26 +50,6 @@ export default function Personal() {
   }, [role]);
 
   const [tab, setTab] = useState('planner');
-
-  useSetMobileHeader({
-    title: 'Personal',
-    actions: allowedTabs.length > 1 ? (
-      <div className="flex items-center gap-1">
-        {tabs.filter((item) => allowedTabs.includes(item.key)).map((item) => (
-          <button
-            key={item.key}
-            onClick={() => setTab(item.key)}
-            className={`w-9 h-9 flex items-center justify-center rounded-xl transition-colors ${tab === item.key ? 'bg-violet-600 text-white' : 'text-gray-500 hover:bg-gray-100'}`}
-            title={item.label}
-          >
-            {item.icon}
-          </button>
-        ))}
-      </div>
-    ) : null,
-  });
-  
-  
 
   const [weekStart, setWeekStart] = useState(mondayOf(todayIso()));
   const [mobileDayIndex, setMobileDayIndex] = useState(() => {
@@ -1389,14 +81,20 @@ export default function Personal() {
   const [assignmentsModal, setAssignmentsModal] = useState(null); // employee object
   const [isExporting, setIsExporting] = useState(false);
   const [isCopyingWeek, setIsCopyingWeek] = useState(false);
-  const [exportMenuOpen, setExportMenuOpen] = useState(false);
   const plannerGridRef = useRef(null);
-  const exportMenuDesktopRef = useRef(null);
-  const exportMenuMobileRef = useRef(null);
   const mobileDayButtonRefs = useRef({});
   const mobileDayScrollerRef = useRef(null);
   const weekDataRequestSeqRef = useRef(0);
   const EMPTY_COSTS = { employeeCosts: [], totalsByCurrency: {}, monthlyEstimateByCurrency: {} };
+
+  const tabOptions = TAB_ORDER.filter((key) => allowedTabs.includes(key)).map((key) => [key, TAB_LABELS[key]]);
+  const newEmployeeOrPosition = () => (employeeSubTab === 'employees' ? setEmployeeModal({}) : setPositionModal({}));
+  useSetMobileHeader({
+    title: 'Personal',
+    action: tab === 'employees' && allowedTabs.includes('employees')
+      ? { label: employeeSubTab === 'employees' ? 'Empleado' : 'Puesto', onClick: newEmployeeOrPosition }
+      : false,
+  });
 
   const loadCore = async ({ silent = false } = {}) => {
     if (!silent) setLoading(true);
@@ -1649,20 +347,7 @@ export default function Personal() {
 
   const currentMobileDay = days[mobileDayIndex] || days[0];
 
-  // Close export menu on outside click
-  useEffect(() => {
-    if (!exportMenuOpen) return;
-    const handler = (e) => {
-      const inDesktop = exportMenuDesktopRef.current?.contains(e.target);
-      const inMobile = exportMenuMobileRef.current?.contains(e.target);
-      if (!inDesktop && !inMobile) setExportMenuOpen(false);
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [exportMenuOpen]);
-
   const exportPlanner = async (format) => {
-    setExportMenuOpen(false);
     setIsExporting(true);
     try {
       // Wait until the off-screen export portal is mounted and has a ref.
@@ -1824,12 +509,8 @@ export default function Personal() {
     }
   };
 
-  const renderShiftCard = (day, shift, cardKey) => {
-    const key = `${day.date}__${shift._id}`;
-    const rawList = assignmentsByDayShift[key] || [];
-
-
-
+  const shiftGroups = (day, shift) => {
+    const rawList = assignmentsByDayShift[`${day.date}__${shift._id}`] || [];
     const grouped = rawList.reduce((acc, assignment) => {
       const employee = assignment.employeeId || {};
       const roleName = assignment.roleLabel || employee.position || 'Sin puesto';
@@ -1840,584 +521,231 @@ export default function Personal() {
       acc[groupKey].names.push(employeeName);
       return acc;
     }, {});
+    const groups = Object.values(grouped)
+      .sort((a, b) => {
+        const oa = positionOrderByName.get(a.roleName) ?? 999;
+        const ob = positionOrderByName.get(b.roleName) ?? 999;
+        return oa !== ob ? oa - ob : a.roleName.localeCompare(b.roleName);
+      })
+      .map((g) => ({ ...g, names: [...g.names].sort((a, b) => a.localeCompare(b)) }));
+    return { count: rawList.length, groups };
+  };
 
+  // One shift of one day: name and hours, then who works (chips). Tap to edit.
+  const renderShiftCell = (day, shift, cardKey) => {
+    const { count, groups } = shiftGroups(day, shift);
     return (
-      <div
+      <button
         key={cardKey}
+        type="button"
         onClick={() => setSlotEditor({ day, shift })}
-        className="bg-white rounded-xl border border-gray-200 p-3 flex flex-col gap-2 h-full lg:cursor-default cursor-pointer lg:hover:border-gray-200 hover:border-violet-300 transition-colors"
+        className="group w-full h-full text-left rounded-lg px-2 py-2 hover:bg-gray-50 transition-colors flex flex-col gap-1.5"
       >
-        {/* Shift header */}
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <p className="text-sm font-bold text-gray-900 truncate">{shift.name}</p>
-            <p className="text-xs text-gray-400 whitespace-nowrap">{shift.startTime}–{shift.endTime}</p>
-          </div>
-          <button
-            onClick={(e) => { e.stopPropagation(); setSlotEditor({ day, shift }); }}
-            className="shrink-0 w-6 h-6 hidden lg:flex items-center justify-center rounded-full text-gray-300 hover:text-violet-600 hover:bg-violet-50 transition-colors"
-            title="Asignar personal"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
-              <path d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z" />
-            </svg>
-          </button>
-        </div>
-        
-
-        {/* Staff chips — w-0 min-w-full prevents chips from inflating column's intrinsic width */}
-        {rawList.length === 0 ? (
-          <p className="text-xs text-gray-300 italic">Sin empleados asignados</p>
+        <span className="flex items-baseline justify-between gap-2 min-w-0">
+          <span className="text-[13px] font-semibold text-gray-900 truncate">{shift.name}</span>
+          <span className="text-[11px] text-gray-400 tabular-nums whitespace-nowrap">{shift.startTime}–{shift.endTime}</span>
+        </span>
+        {count === 0 ? (
+          <span className="inline-flex items-center gap-1 text-xs text-gray-400 group-hover:text-violet-700">
+            <Icon name="plus" className="w-3.5 h-3.5" strokeWidth={2} />Asignar
+          </span>
         ) : (
-          <div className="w-0 min-w-full">
-            <ShiftStaffChips
-              personColorByName={staffColorByName}
-              groups={Object.values(grouped)
-                .sort((a, b) => {
-                  const oa = positionOrderByName.get(a.roleName) ?? 999;
-                  const ob = positionOrderByName.get(b.roleName) ?? 999;
-                  return oa !== ob ? oa - ob : a.roleName.localeCompare(b.roleName);
-                })
-                .map((g) => ({ ...g, names: [...g.names].sort((a, b) => a.localeCompare(b)) }))}
-            />
-          </div>
+          // w-0 min-w-full keeps chips from widening the column
+          <span className="block w-0 min-w-full">
+            <ShiftStaffChips personColorByName={staffColorByName} groups={groups} />
+          </span>
         )}
-      </div>
+      </button>
     );
   };
 
-  
-  return (
-    <div className="space-y-5">
-      <div className="hidden lg:flex items-center justify-between gap-3">
-        <div>
-          <h2 className="text-xl font-bold text-gray-900">Personal</h2>
-          <p className="text-sm text-gray-500">Gestion de empleados, planificacion semanal y costes estimados.</p>
-        </div>
-        {allowedTabs.length > 1 && (
-          <div className="flex items-center gap-1.5">
-            {tabs.filter((item) => allowedTabs.includes(item.key)).map((item) => (
-              <button
-                key={item.key}
-                onClick={() => setTab(item.key)}
-                className={`shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-semibold transition-colors ${tab === item.key ? 'bg-violet-600 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'}`}
-                title={item.label}
-              >
-                {item.icon}
-                {item.label}
-              </button>
-            ))}
-          </div>
-        )}
-      </div>
+  const movePosition = async (fromIdx, toIdx) => {
+    if (toIdx < 0 || toIdx >= positions.length) return;
+    const reordered = [...positions];
+    const [moved] = reordered.splice(fromIdx, 1);
+    reordered.splice(toIdx, 0, moved);
+    // Optimistic update
+    setPositions(reordered);
+    try {
+      await api.patch('/staff/positions/reorder', { ids: reordered.map((p) => p._id) });
+    } catch {
+      await loadCore({ silent: true });
+    }
+  };
 
-      {error && <div className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-4 py-3">{error}</div>}
+  const canEditWeek = role === 'owner' || role === 'manager';
+  const plannerMenuItems = [
+    canEditWeek && !isCopyingWeek && { label: 'Copiar semana anterior', onClick: copyPreviousWeekAssignments },
+    canEditWeek && !isCopyingWeek && visibleWeekAssignments.length > 0 && { label: 'Borrar semana', onClick: clearWeekAssignments },
+    !isExporting && { label: 'Descargar PNG', onClick: () => exportPlanner('png') },
+    !isExporting && { label: 'Descargar PDF', onClick: () => exportPlanner('pdf') },
+  ].filter(Boolean);
+  const fmtDate = (d) => new Date(d).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
+  const moneyByCurrency = (totals) => {
+    const entries = Object.entries(totals || {});
+    return entries.length ? entries.map(([cur, val]) => formatMoney(val, cur)).join(' · ') : formatMoney(0);
+  };
+
+  const headerAction = tab === 'employees' && allowedTabs.includes('employees')
+    ? <PrimaryButton onClick={newEmployeeOrPosition}>{employeeSubTab === 'employees' ? 'Nuevo empleado' : 'Nuevo puesto'}</PrimaryButton>
+    : null;
+
+  return (
+    <div className="w-full space-y-6">
+      <PageHeader title="Personal" subtitle={SUBTITLES[tab]} actions={headerAction} />
+
+      {tabOptions.length > 1 && <Tabs value={tab} options={tabOptions} onChange={setTab} />}
+
+      <Notice>{error}</Notice>
       {loading && <div className="h-28 rounded-2xl bg-gray-100 animate-pulse" />}
 
-      {/* -- EMPLEADOS TAB -- */}
-      {!loading && tab === 'employees' && allowedTabs.includes('employees') && (
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-          {/* Sub-tab header */}
-          <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setEmployeeSubTab('employees')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${employeeSubTab === 'employees' ? 'bg-violet-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-              >
-                Empleados
-              </button>
-              <button
-                onClick={() => setEmployeeSubTab('positions')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${employeeSubTab === 'positions' ? 'bg-violet-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-              >
-                Puestos
-              </button>
-            </div>
-            <div>
-              {employeeSubTab === 'employees' ? (
-                <button
-                  onClick={() => setEmployeeModal({})}
-                  className="w-9 h-9 sm:w-auto sm:h-auto sm:px-3 sm:py-2 sm:gap-1.5 flex items-center justify-center rounded-lg bg-violet-600 text-white hover:bg-violet-700 font-semibold"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 shrink-0">
-                    <path d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z" />
-                  </svg>
-                  <span className="hidden sm:inline text-sm">Nuevo empleado</span>
-                </button>
-              ) : (
-                <button
-                  onClick={() => setPositionModal({})}
-                  className="w-9 h-9 sm:w-auto sm:h-auto sm:px-3 sm:py-2 sm:gap-1.5 flex items-center justify-center rounded-lg bg-violet-600 text-white hover:bg-violet-700 font-semibold"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 shrink-0">
-                    <path d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z" />
-                  </svg>
-                  <span className="hidden sm:inline text-sm">Nuevo puesto</span>
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* -- EMPLOYEES SUB-TAB -- */}
-          {employeeSubTab === 'employees' && (
-            <>
-              {/* Stats bar */}
-              <div className="px-4 py-3 border-b border-gray-100 space-y-2">
-                <div className="grid grid-cols-2 sm:flex sm:flex-wrap sm:items-center gap-2">
-                  <button
-                    onClick={() => setStatusFilter('all')}
-                    className={`text-xs font-semibold px-3 py-1.5 rounded-xl border transition-colors ${statusFilter === 'all' ? 'bg-violet-50 border-violet-200 text-violet-700' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}
-                  >
-                    {employeeStats.total} total
-                  </button>
-                  <button
-                    onClick={() => setStatusFilter('active')}
-                    className={`text-xs font-semibold px-3 py-1.5 rounded-xl border transition-colors ${statusFilter === 'active' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}
-                  >
-                    {employeeStats.active} activos
-                  </button>
-                  <button
-                    onClick={() => setStatusFilter('inactive')}
-                    className={`text-xs font-semibold px-3 py-1.5 rounded-xl border transition-colors ${statusFilter === 'inactive' ? 'bg-gray-100 border-gray-300 text-gray-700' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}
-                  >
-                    {employeeStats.inactive} inactivos
-                  </button>
-                  {employeeStats.noPay > 0 && (
-                    <button
-                      onClick={() => setStatusFilter('no_pay')}
-                      className={`text-xs font-semibold px-3 py-1.5 rounded-xl border transition-colors ${statusFilter === 'no_pay' ? 'bg-amber-50 border-amber-200 text-amber-700' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'}`}
-                    >
-                      {employeeStats.noPay} sin pago
-                    </button>
-                  )}
-                  {/* Search — inline on desktop, full-width on mobile */}
-                  <div className="relative hidden sm:block ml-auto">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
-                      <path fillRule="evenodd" d="M9.965 11.026a5 5 0 1 1 1.06-1.06l2.755 2.754a.75.75 0 1 1-1.06 1.06l-2.755-2.754ZM10.5 7a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0Z" clipRule="evenodd" />
-                    </svg>
-                    <input
-                      value={search}
-                      onChange={(e) => setSearch(e.target.value)}
-                      placeholder="Buscar empleado..."
-                      className="border border-gray-300 rounded-xl pl-9 pr-4 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white w-52"
-                    />
-                  </div>
-                </div>
-                {/* Search full-width on mobile */}
-                <div className="relative sm:hidden">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 text-gray-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none">
-                    <path fillRule="evenodd" d="M9.965 11.026a5 5 0 1 1 1.06-1.06l2.755 2.754a.75.75 0 1 1-1.06 1.06l-2.755-2.754ZM10.5 7a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0Z" clipRule="evenodd" />
-                  </svg>
-                  <input
-                    value={search}
-                    onChange={(e) => setSearch(e.target.value)}
-                    placeholder="Buscar empleado..."
-                    className="w-full border border-gray-300 rounded-xl pl-9 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white"
-                  />
-                </div>
-              </div>
-
-              {/* Mobile list */}
-              <div className="sm:hidden divide-y divide-gray-100">
-                {filteredEmployees.length === 0 && (
-                  <div className="py-12 text-center text-sm text-gray-400">Sin empleados</div>
-                )}
-                {filteredEmployees.map((employee) => (
-                  <MobileEmployeeRow
-                    key={employee._id}
-                    employee={employee}
-                    onEdit={() => setEmployeeModal(employee)}
-                    onPago={() => setCompModalEmployee(employee)}
-                    onToggle={() => toggleEmployeeStatus(employee)}
-                  />
-                ))}
-              </div>
-
-              {/* Desktop table */}
-              <div className="hidden sm:block overflow-x-auto">
-                {filteredEmployees.length === 0 ? (
-                  <div className="py-16 text-center text-sm text-gray-400">
-                    {search ? 'No hay resultados para tu búsqueda' : 'Sin empleados'}
-                  </div>
-                ) : (
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-gray-100">
-                        <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Empleado</th>
-                        <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Puestos</th>
-                        <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Pago activo</th>
-                        <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Estado</th>
-                        <th className="px-4 py-3.5" />
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredEmployees.map((employee, i) => {
-                        const fullName = `${employee.firstName} ${employee.lastName || ''}`.trim();
-                        const comp = employee.activeCompensation;
-                        return (
-                          <tr
-                            key={employee._id}
-                            className={`hover:bg-gray-50/60 transition-colors ${i < filteredEmployees.length - 1 ? 'border-b border-gray-50' : ''}`}
-                          >
-                            <td className="px-5 py-3.5">
-                              <div>
-                                <p className="font-semibold text-gray-900 leading-tight">{fullName}</p>
-                                <p className="text-xs text-gray-400 mt-0.5">
-                                  {employee.email || employee.phone || 'Sin contacto'}
-                                </p>
-                              </div>
-                            </td>
-                            <td className="px-4 py-3.5">
-                              <div className="flex flex-wrap gap-1.5">
-                                {(employee.positions || []).map((position) => (
-                                  <span key={position._id} className="inline-flex items-center gap-1.5 text-xs font-semibold rounded-full px-2.5 py-1 border border-gray-200">
-                                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: position.color || '#64748B' }} />
-                                    {position.name}
-                                  </span>
-                                ))}
-                                {(!employee.positions || employee.positions.length === 0) && (
-                                  <span className="text-xs text-gray-300">Sin puesto</span>
-                                )}
-                              </div>
-                            </td>
-                            <td className="px-4 py-3.5">
-                              {comp ? (
-                                <div>
-                                  <p className="text-sm font-semibold text-gray-800">{compLabel(comp)}</p>
-                                  <p className="text-xs text-gray-400">{compTypeLabel(comp.paymentType)}</p>
-                                </div>
-                              ) : (
-                                <span className="inline-flex items-center text-xs font-medium px-2 py-1 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
-                                  Sin definir
-                                </span>
-                              )}
-                            </td>
-                            <td className="px-4 py-3.5">
-                              <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${employee.status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>
-                                {employee.status === 'active' ? 'Activo' : 'Inactivo'}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3.5">
-                              <div className="flex items-center justify-end gap-1.5">
-                                <button
-                                  onClick={() => setCompModalEmployee(employee)}
-                                  className="text-xs px-2.5 py-1.5 rounded-lg bg-violet-50 text-violet-700 hover:bg-violet-100 font-medium transition-colors"
-                                >
-                                  Pago
-                                </button>
-                                <button
-                                  onClick={() => setEmployeeModal(employee)}
-                                  className="text-xs px-2.5 py-1.5 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 font-medium transition-colors"
-                                >
-                                  Editar
-                                </button>
-                                <button
-                                  onClick={() => toggleEmployeeStatus(employee)}
-                                  className="text-xs px-2.5 py-1.5 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 font-medium transition-colors"
-                                >
-                                  {employee.status === 'active' ? 'Desactivar' : 'Activar'}
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                )}
-              </div>
-            </>
-          )}
-
-          {/* -- POSITIONS SUB-TAB -- */}
-          {employeeSubTab === 'positions' && (
-            <>
-              {/* Position stats */}
-              <div className="px-4 py-3 border-b border-gray-100 flex items-center gap-3">
-                <span className="text-xs text-gray-500 font-semibold">
-                  {positions.filter((p) => p.status === 'active').length} puestos activos
-                </span>
-                {positions.filter((p) => p.status === 'inactive').length > 0 && (
-                  <span className="text-xs text-gray-400">
-                    · {positions.filter((p) => p.status === 'inactive').length} inactivos
-                  </span>
-                )}
-              </div>
-              <div className="overflow-x-auto">
-                {positions.length === 0 ? (
-                  <div className="py-16 text-center text-sm text-gray-400">Sin puestos definidos</div>
-                ) : (
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-gray-100">
-                        <th className="text-left px-5 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Puesto</th>
-                        <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Color</th>
-                        <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Empleados activos</th>
-                        <th className="text-left px-4 py-3.5 text-xs font-semibold text-gray-400 uppercase tracking-wide">Estado</th>
-                        <th className="px-4 py-3.5" />
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {positions.map((position, i) => {
-                        const count = employeeCountByPosition.get(String(position._id)) || 0;
-                        const movePosition = async (fromIdx, toIdx) => {
-                          if (toIdx < 0 || toIdx >= positions.length) return;
-                          const reordered = [...positions];
-                          const [moved] = reordered.splice(fromIdx, 1);
-                          reordered.splice(toIdx, 0, moved);
-                          // Optimistic update
-                          setPositions(reordered);
-                          try {
-                            await api.patch('/staff/positions/reorder', { ids: reordered.map((p) => p._id) });
-                          } catch {
-                            await loadCore({ silent: true });
-                          }
-                        };
-                        return (
-                          <tr
-                            key={position._id}
-                            className={`hover:bg-gray-50/60 transition-colors ${i < positions.length - 1 ? 'border-b border-gray-50' : ''}`}
-                          >
-                            <td className="px-5 py-3.5">
-                              <div className="flex items-center gap-3">
-                                <span
-                                  className="w-8 h-8 rounded-xl shrink-0 shadow-sm border border-white"
-                                  style={{ backgroundColor: position.color || '#64748B' }}
-                                />
-                                <p className="font-semibold text-gray-900">{position.name}</p>
-                              </div>
-                            </td>
-                            <td className="px-4 py-3.5">
-                              <span className="text-xs font-mono text-gray-500">{position.color || '#64748B'}</span>
-                            </td>
-                            <td className="px-4 py-3.5">
-                              {count > 0 ? (
-                                <span className="inline-flex items-center gap-1 text-xs font-semibold px-2.5 py-1 rounded-full bg-violet-50 text-violet-700">
-                                  {count} {count === 1 ? 'empleado' : 'empleados'}
-                                </span>
-                              ) : (
-                                <span className="text-xs text-gray-300">Sin empleados</span>
-                              )}
-                            </td>
-                            <td className="px-4 py-3.5">
-                              <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${position.status === 'active' ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>
-                                {position.status === 'active' ? 'Activo' : 'Inactivo'}
-                              </span>
-                            </td>
-                            <td className="px-4 py-3.5">
-                              <div className="flex items-center justify-end gap-1.5">
-                                <div className="flex flex-col gap-0.5 mr-1">
-                                  <button
-                                    onClick={() => movePosition(i, i - 1)}
-                                    disabled={i === 0}
-                                    className="p-0.5 rounded text-gray-300 hover:text-gray-600 hover:bg-gray-100 disabled:opacity-20 disabled:cursor-default transition-colors"
-                                    title="Subir"
-                                  >
-                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
-                                      <path fillRule="evenodd" d="M8 14a.75.75 0 0 1-.75-.75V4.56L4.03 7.78a.75.75 0 0 1-1.06-1.06l4.5-4.5a.75.75 0 0 1 1.06 0l4.5 4.5a.75.75 0 0 1-1.06 1.06L8.75 4.56v8.69A.75.75 0 0 1 8 14Z" clipRule="evenodd" />
-                                    </svg>
-                                  </button>
-                                  <button
-                                    onClick={() => movePosition(i, i + 1)}
-                                    disabled={i === positions.length - 1}
-                                    className="p-0.5 rounded text-gray-300 hover:text-gray-600 hover:bg-gray-100 disabled:opacity-20 disabled:cursor-default transition-colors"
-                                    title="Bajar"
-                                  >
-                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
-                                      <path fillRule="evenodd" d="M8 2a.75.75 0 0 1 .75.75v8.69l3.22-3.22a.75.75 0 1 1 1.06 1.06l-4.5 4.5a.75.75 0 0 1-1.06 0l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.22 3.22V2.75A.75.75 0 0 1 8 2Z" clipRule="evenodd" />
-                                    </svg>
-                                  </button>
-                                </div>
-                                <button
-                                  onClick={() => setPositionModal(position)}
-                                  className="text-xs px-2.5 py-1.5 rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 font-medium transition-colors"
-                                >
-                                  Editar
-                                </button>
-                                <button
-                                  onClick={() => togglePositionStatus(position)}
-                                  className="text-xs px-2.5 py-1.5 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 font-medium transition-colors"
-                                >
-                                  {position.status === 'active' ? 'Desactivar' : 'Activar'}
-                                </button>
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
-                    </tbody>
-                  </table>
-                )}
-              </div>
-            </>
-          )}
-        </div>
-      )}
-
-      {/* -- PLANNER TAB -- */}
+      {/* -- PLANIFICACIÓN -- */}
       {!loading && tab === 'planner' && allowedTabs.includes('planner') && (
-        <div className="space-y-4 sm:bg-white sm:rounded-2xl sm:border sm:border-gray-200 sm:shadow-sm sm:mx-0">
-          {/* Nav row */}
-          <div className="space-y-2 px-4 pt-4">
-            {/* Row 1: week navigation */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => setWeekStart((v) => addDays(v, -7))}
-                  className="w-8 h-8 rounded-lg hover:bg-gray-100 transition-colors flex items-center justify-center text-gray-400 hover:text-gray-700"
-                  aria-label="Semana anterior"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
-                    <path fillRule="evenodd" d="M9.78 4.22a.75.75 0 0 1 0 1.06L7.06 8l2.72 2.72a.75.75 0 1 1-1.06 1.06L5.47 8.53a.75.75 0 0 1 0-1.06l3.25-3.25a.75.75 0 0 1 1.06 0Z" clipRule="evenodd" />
-                  </svg>
-                </button>
-                <label className="relative cursor-pointer group">
-                  <span className="px-3 py-1.5 rounded-lg text-sm font-semibold text-gray-800 group-hover:bg-gray-100 transition-colors block">
-                    {weekLabel}
-                  </span>
-                  <input
-                    type="date"
-                    value={weekStart}
-                    onChange={(e) => e.target.value && setWeekStart(mondayOf(e.target.value))}
-                    className="absolute inset-0 opacity-0 cursor-pointer w-full"
-                    tabIndex={-1}
-                  />
-                </label>
-                <button
-                  onClick={() => setWeekStart((v) => addDays(v, 7))}
-                  className="w-8 h-8 rounded-lg hover:bg-gray-100 transition-colors flex items-center justify-center text-gray-400 hover:text-gray-700"
-                  aria-label="Semana siguiente"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
-                    <path fillRule="evenodd" d="M6.22 4.22a.75.75 0 0 1 1.06 0l3.25 3.25a.75.75 0 0 1 0 1.06L7.28 11.78a.75.75 0 0 1-1.06-1.06L9.94 8 6.22 4.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
-                  </svg>
-                </button>
-              </div>
-              {/* Right side */}
-              <div className="flex items-center gap-1.5">
-                <button
-                  onClick={() => setWeekStart(mondayOf(todayIso()))}
-                  className="h-8 px-3 rounded-lg border border-gray-200 hover:bg-gray-50 text-xs font-semibold text-gray-500 transition-colors"
-                >
-                  Hoy
-                </button>
-
-                {/* Desktop: inline buttons */}
-                {(role === 'owner' || role === 'manager') && (<>
-                  <button
-                    onClick={copyPreviousWeekAssignments}
-                    disabled={isCopyingWeek}
-                    className="hidden lg:flex h-8 items-center gap-1.5 px-3 rounded-lg border border-gray-200 hover:bg-gray-50 text-xs font-semibold text-gray-600 transition-colors disabled:opacity-50"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5 text-gray-400">
-                      <path fillRule="evenodd" d="M13.836 2.477a.75.75 0 0 1 .75.75v3.182a.75.75 0 0 1-.75.75h-3.182a.75.75 0 0 1 0-1.5h1.37l-.84-.841a4.5 4.5 0 0 0-7.08.932.75.75 0 0 1-1.3-.75 6 6 0 0 1 9.44-1.242l.842.84V3.227a.75.75 0 0 1 .75-.75Zm-.911 7.5A.75.75 0 0 1 13.199 11a6 6 0 0 1-9.44 1.241l-.84-.84v1.371a.75.75 0 0 1-1.5 0V9.591a.75.75 0 0 1 .75-.75H5.35a.75.75 0 0 1 0 1.5H3.98l.841.841a4.5 4.5 0 0 0 7.08-.932.75.75 0 0 1 1.025-.273Z" clipRule="evenodd" />
-                    </svg>
-                    {isCopyingWeek ? 'Copiando...' : 'Copiar semana anterior'}
-                  </button>
-                  <button
-                    onClick={clearWeekAssignments}
-                    disabled={isCopyingWeek || !visibleWeekAssignments.length}
-                    className="hidden lg:flex h-8 items-center gap-1.5 px-3 rounded-lg border border-gray-200 hover:bg-rose-50 hover:border-rose-200 text-xs font-semibold text-gray-600 hover:text-rose-600 transition-colors disabled:opacity-30"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5 text-gray-400">
-                      <path fillRule="evenodd" d="M5 3.25V4H2.75a.75.75 0 0 0 0 1.5h.3l.815 8.15A1.5 1.5 0 0 0 5.357 15h5.285a1.5 1.5 0 0 0 1.493-1.35l.815-8.15h.3a.75.75 0 0 0 0-1.5H11v-.75A2.25 2.25 0 0 0 8.75 1h-1.5A2.25 2.25 0 0 0 5 3.25Zm2.25-.75a.75.75 0 0 0-.75.75V4h3v-.75a.75.75 0 0 0-.75-.75h-1.5ZM6.05 6a.75.75 0 0 1 .787.713l.275 5.5a.75.75 0 0 1-1.498.075l-.275-5.5A.75.75 0 0 1 6.05 6Zm3.9 0a.75.75 0 0 1 .712.787l-.275 5.5a.75.75 0 0 1-1.498-.075l.275-5.5a.75.75 0 0 1 .786-.711Z" clipRule="evenodd" />
-                    </svg>
+        <div className="space-y-5">
+          {/* Week navigation + actions */}
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex items-center gap-0.5 min-w-0">
+              <NavArrow dir="left" label="Semana anterior" onClick={() => setWeekStart((v) => addDays(v, -7))} />
+              <label className="relative cursor-pointer">
+                <span className="block px-1.5 text-[15px] font-semibold text-gray-900 whitespace-nowrap hover:text-violet-700">{weekLabel}</span>
+                <input
+                  type="date"
+                  value={weekStart}
+                  onChange={(e) => e.target.value && setWeekStart(mondayOf(e.target.value))}
+                  className="absolute inset-0 opacity-0 cursor-pointer w-full"
+                  tabIndex={-1}
+                  aria-label="Elegir semana"
+                />
+              </label>
+              <NavArrow dir="right" label="Semana siguiente" onClick={() => setWeekStart((v) => addDays(v, 7))} />
+              <button type="button" onClick={() => setWeekStart(mondayOf(todayIso()))} disabled={weekStart === mondayOf(todayIso())}
+                className="h-9 px-3 rounded-full text-sm font-semibold text-violet-700 hover:bg-violet-50 disabled:text-gray-300 disabled:hover:bg-transparent">
+                Hoy
+              </button>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              {canEditWeek && (
+                <div className="hidden lg:flex items-center gap-2">
+                  <GhostButton onClick={copyPreviousWeekAssignments} disabled={isCopyingWeek}>
+                    {isCopyingWeek ? 'Copiando…' : 'Copiar semana anterior'}
+                  </GhostButton>
+                  <button type="button" onClick={clearWeekAssignments} disabled={isCopyingWeek || !visibleWeekAssignments.length}
+                    className="h-9 px-2 text-[13px] font-semibold text-rose-600 hover:text-rose-700 disabled:text-gray-300">
                     Borrar semana
                   </button>
-                </>)}
-
-                {/* Desktop: download dropdown */}
-                <div className="hidden lg:block relative" ref={exportMenuDesktopRef}>
-                  <button
-                    onClick={() => setExportMenuOpen((v) => !v)}
-                    disabled={isExporting}
-                    className="h-8 px-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors inline-flex items-center justify-center gap-1.5 text-xs font-semibold text-gray-600 disabled:opacity-40"
-                    aria-label="Descargar"
-                  >
-                    {isExporting ? (
-                      <svg className="animate-spin w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" /><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z" /></svg>
-                    ) : (
-                      <>
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 text-gray-400">
-                          <path d="M8.75 2.75a.75.75 0 0 0-1.5 0v5.69L5.03 6.22a.75.75 0 0 0-1.06 1.06l3.5 3.5a.75.75 0 0 0 1.06 0l3.5-3.5a.75.75 0 0 0-1.06-1.06L8.75 8.44V2.75Z" />
-                          <path d="M3.5 9.75a.75.75 0 0 0-1.5 0v1.5A2.75 2.75 0 0 0 4.75 14h6.5A2.75 2.75 0 0 0 14 11.25v-1.5a.75.75 0 0 0-1.5 0v1.5c0 .69-.56 1.25-1.25 1.25h-6.5c-.69 0-1.25-.56-1.25-1.25v-1.5Z" />
-                        </svg>
-                        Descargar
-                      </>
-                    )}
-                  </button>
-                  {exportMenuOpen && (
-                    <div className="absolute right-0 top-full mt-1.5 w-40 bg-white rounded-xl border border-gray-200 shadow-lg z-50 overflow-hidden py-1">
-                      <button onClick={() => exportPlanner('png')} className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors">PNG</button>
-                      <button onClick={() => exportPlanner('pdf')} className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 transition-colors">PDF</button>
-                    </div>
-                  )}
                 </div>
-
-                {/* Mobile: ··· dropdown with everything */}
-                <div className="lg:hidden relative" ref={exportMenuMobileRef}>
-                  <button
-                    onClick={() => setExportMenuOpen((v) => !v)}
-                    className="w-8 h-8 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors flex items-center justify-center text-gray-500"
-                    aria-label="Más opciones"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
-                      <path d="M8 2a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3ZM8 6.5a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3ZM9.5 12.5a1.5 1.5 0 1 0-3 0 1.5 1.5 0 0 0 3 0Z" />
-                    </svg>
-                  </button>
-                  {exportMenuOpen && (
-                    <div className="absolute right-0 top-full mt-1.5 w-52 bg-white rounded-xl border border-gray-200 shadow-lg z-50 overflow-hidden py-1">
-                      {(role === 'owner' || role === 'manager') && (<>
-                        <button onClick={() => { setExportMenuOpen(false); copyPreviousWeekAssignments(); }} disabled={isCopyingWeek} className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2.5 disabled:opacity-50">
-                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 shrink-0 text-gray-400"><path fillRule="evenodd" d="M13.836 2.477a.75.75 0 0 1 .75.75v3.182a.75.75 0 0 1-.75.75h-3.182a.75.75 0 0 1 0-1.5h1.37l-.84-.841a4.5 4.5 0 0 0-7.08.932.75.75 0 0 1-1.3-.75 6 6 0 0 1 9.44-1.242l.842.84V3.227a.75.75 0 0 1 .75-.75Zm-.911 7.5A.75.75 0 0 1 13.199 11a6 6 0 0 1-9.44 1.241l-.84-.84v1.371a.75.75 0 0 1-1.5 0V9.591a.75.75 0 0 1 .75-.75H5.35a.75.75 0 0 1 0 1.5H3.98l.841.841a4.5 4.5 0 0 0 7.08-.932.75.75 0 0 1 1.025-.273Z" clipRule="evenodd" /></svg>
-                          {isCopyingWeek ? 'Copiando...' : 'Copiar semana anterior'}
-                        </button>
-                        <button onClick={() => { setExportMenuOpen(false); clearWeekAssignments(); }} disabled={isCopyingWeek || !visibleWeekAssignments.length} className="w-full text-left px-4 py-2.5 text-sm text-rose-600 hover:bg-rose-50 flex items-center gap-2.5 disabled:opacity-30">
-                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 shrink-0"><path fillRule="evenodd" d="M5 3.25V4H2.75a.75.75 0 0 0 0 1.5h.3l.815 8.15A1.5 1.5 0 0 0 5.357 15h5.285a1.5 1.5 0 0 0 1.493-1.35l.815-8.15h.3a.75.75 0 0 0 0-1.5H11v-.75A2.25 2.25 0 0 0 8.75 1h-1.5A2.25 2.25 0 0 0 5 3.25Zm2.25-.75a.75.75 0 0 0-.75.75V4h3v-.75a.75.75 0 0 0-.75-.75h-1.5ZM6.05 6a.75.75 0 0 1 .787.713l.275 5.5a.75.75 0 0 1-1.498.075l-.275-5.5A.75.75 0 0 1 6.05 6Zm3.9 0a.75.75 0 0 1 .712.787l-.275 5.5a.75.75 0 0 1-1.498-.075l.275-5.5a.75.75 0 0 1 .786-.711Z" clipRule="evenodd" /></svg>
-                          Borrar semana
-                        </button>
-                        <div className="h-px bg-gray-100 my-1" />
-                      </>)}
-                      <button onClick={() => exportPlanner('png')} disabled={isExporting} className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2.5 disabled:opacity-40">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 shrink-0 text-gray-400"><path d="M8.75 2.75a.75.75 0 0 0-1.5 0v5.69L5.03 6.22a.75.75 0 0 0-1.06 1.06l3.5 3.5a.75.75 0 0 0 1.06 0l3.5-3.5a.75.75 0 0 0-1.06-1.06L8.75 8.44V2.75Z" /><path d="M3.5 9.75a.75.75 0 0 0-1.5 0v1.5A2.75 2.75 0 0 0 4.75 14h6.5A2.75 2.75 0 0 0 14 11.25v-1.5a.75.75 0 0 0-1.5 0v1.5c0 .69-.56 1.25-1.25 1.25h-6.5c-.69 0-1.25-.56-1.25-1.25v-1.5Z" /></svg>
-                        Descargar PNG
-                      </button>
-                      <button onClick={() => exportPlanner('pdf')} disabled={isExporting} className="w-full text-left px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50 flex items-center gap-2.5 disabled:opacity-40">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 shrink-0 text-gray-400"><path d="M8.75 2.75a.75.75 0 0 0-1.5 0v5.69L5.03 6.22a.75.75 0 0 0-1.06 1.06l3.5 3.5a.75.75 0 0 0 1.06 0l3.5-3.5a.75.75 0 0 0-1.06-1.06L8.75 8.44V2.75Z" /><path d="M3.5 9.75a.75.75 0 0 0-1.5 0v1.5A2.75 2.75 0 0 0 4.75 14h6.5A2.75 2.75 0 0 0 14 11.25v-1.5a.75.75 0 0 0-1.5 0v1.5c0 .69-.56 1.25-1.25 1.25h-6.5c-.69 0-1.25-.56-1.25-1.25v-1.5Z" /></svg>
-                        Descargar PDF
-                      </button>
-                    </div>
-                  )}
-                </div>
+              )}
+              <div className="hidden lg:block">
+                <MenuButton ariaLabel="Descargar" className="h-9 px-3.5 border border-gray-200"
+                  items={isExporting ? [] : [
+                    { label: 'PNG (imagen)', onClick: () => exportPlanner('png') },
+                    { label: 'PDF', onClick: () => exportPlanner('pdf') },
+                  ]}>
+                  {isExporting ? 'Preparando…' : 'Descargar'}
+                  <Icon name="down" className="w-3.5 h-3.5" strokeWidth={2} />
+                </MenuButton>
+              </div>
+              <div className="lg:hidden">
+                <MenuButton ariaLabel="Más opciones" className="w-9 h-9 justify-center border border-gray-200 text-gray-600" items={plannerMenuItems}>
+                  <MoreIcon />
+                </MenuButton>
               </div>
             </div>
           </div>
 
-          {/* Week grid — flat grid so each shift row aligns across all columns */}
+          <FigureLine items={[
+            { label: visibleWeekAssignments.length === 1 ? 'turno asignado' : 'turnos asignados', value: visibleWeekAssignments.length },
+            { label: activeEmployees.length === 1 ? 'empleado activo' : 'empleados activos', value: activeEmployees.length },
+            weekCostSummary && { label: 'coste estimado', value: weekCostSummary },
+          ]} />
+
+          {shifts.length === 0 && (
+            <p className="rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-900">
+              Todavía no hay turnos. Créalos en Configuración para poder asignar personal.
+            </p>
+          )}
+
+          {/* Phone: pick a day, then its shifts as rows */}
+          <div className="lg:hidden space-y-3">
+            <div ref={mobileDayScrollerRef} className="grid grid-cols-7 gap-1">
+              {days.map((day, i) => {
+                const selected = i === mobileDayIndex;
+                const isToday = day.date === today;
+                const busy = (shiftRowsByDay[day.date] || []).some((sh) => (assignmentsByDayShift[`${day.date}__${sh._id}`] || []).length > 0);
+                return (
+                  <button key={day.date} type="button" ref={(node) => { mobileDayButtonRefs.current[day.date] = node; }}
+                    onClick={() => setMobileDayIndex(i)}
+                    className={`flex flex-col items-center py-1.5 rounded-xl transition-colors ${selected ? 'bg-gray-900 text-white' : 'hover:bg-gray-100'}`}>
+                    <span className={`text-[11px] font-semibold uppercase ${selected ? 'text-gray-300' : isToday ? 'text-violet-700' : 'text-gray-400'}`}>{day.short.replace('.', '')}</span>
+                    <span className={`text-[15px] font-semibold tabular-nums ${selected ? 'text-white' : isToday ? 'text-violet-700' : 'text-gray-900'}`}>{Number(day.date.slice(8, 10))}</span>
+                    <span className={`w-1 h-1 rounded-full mt-0.5 ${busy ? (selected ? 'bg-white' : 'bg-violet-500') : 'bg-transparent'}`} />
+                  </button>
+                );
+              })}
+            </div>
+            {currentMobileDay && (
+              <Section title={currentMobileDay.fullLabel}>
+                {(shiftRowsByDay[currentMobileDay.date] || []).length === 0 ? (
+                  <p className="py-6 text-sm text-gray-500">Sin turnos este día.</p>
+                ) : (
+                  <ul className="divide-y divide-gray-100">
+                    {(shiftRowsByDay[currentMobileDay.date] || []).map((shift) => {
+                      const { count, groups } = shiftGroups(currentMobileDay, shift);
+                      return (
+                        <li key={shift._id}>
+                          <button type="button" onClick={() => setSlotEditor({ day: currentMobileDay, shift })}
+                            className="w-full flex items-start gap-3 px-2 -mx-2 py-3 rounded-xl text-left hover:bg-gray-50 active:bg-gray-100">
+                            <span className="w-12 shrink-0 text-right pt-px">
+                              <span className="block text-[15px] font-semibold tabular-nums text-gray-900 leading-5">{shift.startTime}</span>
+                              <span className="block text-[11px] text-gray-400 tabular-nums leading-4">{shift.endTime}</span>
+                            </span>
+                            <span className="w-[3px] self-stretch rounded-full shrink-0 bg-violet-200" aria-hidden="true" />
+                            <span className="min-w-0 flex-1 space-y-1.5">
+                              <span className="flex items-center justify-between gap-2">
+                                <span className="text-[15px] font-medium text-gray-900 truncate">{shift.name}</span>
+                                <span className="text-[13px] text-gray-500 shrink-0">{count === 0 ? 'Asignar' : `${count} ${count === 1 ? 'persona' : 'personas'}`}</span>
+                              </span>
+                              {count > 0 && <span className="block"><ShiftStaffChips personColorByName={staffColorByName} groups={groups} /></span>}
+                            </span>
+                            <Icon name="right" className="w-4 h-4 text-gray-300 mt-0.5 shrink-0" strokeWidth={2} />
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </Section>
+            )}
+          </div>
+
+          {/* Desktop: the week in day columns; each shift row lines up across days */}
           {(() => {
-            const maxShifts = Math.max(0, ...days.map(d => (shiftRowsByDay[d.date] || []).length));
+            const maxShifts = Math.max(0, ...days.map((d) => (shiftRowsByDay[d.date] || []).length));
             return (
-              <div className="overflow-x-auto pb-4">
-                <div className="grid gap-2 px-3" style={{ gridTemplateColumns: 'repeat(7, minmax(160px, 1fr))', minWidth: 'calc(7 * 160px + 6 * 8px + 24px)' }}>
-                  {/* Row 0: day headers */}
-                  {days.map((day) => {
+              <div className="hidden lg:block">
+                <div className="grid grid-cols-7 border-b border-gray-100">
+                  {days.map((day, i) => {
                     const isToday = day.date === today;
                     return (
-                      <div key={`h-${day.date}`} className={`rounded-xl border px-3 py-2 ${isToday ? 'border-violet-300 bg-violet-50/40' : 'border-gray-200 bg-gray-50'}`}>
-                        <p className={`text-[11px] uppercase font-bold tracking-wider ${isToday ? 'text-violet-500' : 'text-gray-400'}`}>{day.short}</p>
-                        <p className={`text-base font-extrabold leading-tight ${isToday ? 'text-violet-700' : 'text-gray-900'}`}>{day.day}</p>
+                      <div key={`h-${day.date}`} className={`flex items-baseline gap-1.5 px-2 pb-2 border-b-2 ${isToday ? 'border-violet-600' : 'border-gray-200'} ${i > 0 ? 'ml-px' : ''}`}>
+                        <span className={`text-[11px] font-semibold uppercase tracking-wide ${isToday ? 'text-violet-700' : 'text-gray-400'}`}>{day.short.replace('.', '')}</span>
+                        <span className={`text-[15px] font-semibold tabular-nums ${isToday ? 'text-violet-700' : 'text-gray-900'}`}>{day.day}</span>
                       </div>
                     );
                   })}
-                  {/* Rows 1..maxShifts: one row per shift slot */}
-                  {Array.from({ length: maxShifts }, (_, i) =>
-                    days.map((day) => {
-                      const shift = (shiftRowsByDay[day.date] || [])[i];
-                      if (!shift) return <div key={`${day.date}-${i}`} className="rounded-xl border border-dashed border-gray-100" />;
-                      return renderShiftCard(day, shift, `${day.date}__${shift._id}`);
-                    })
+                  {Array.from({ length: maxShifts }, (_, row) =>
+                    days.map((day, i) => {
+                      const shift = (shiftRowsByDay[day.date] || [])[row];
+                      const cellCls = `p-1 min-h-[76px] ${row > 0 ? 'border-t border-gray-100' : ''} ${i > 0 ? 'border-l border-gray-100' : ''} ${day.date === today ? 'bg-violet-50/30' : ''}`;
+                      return (
+                        <div key={`${day.date}-${row}`} className={cellCls}>
+                          {shift && renderShiftCell(day, shift, `${day.date}__${shift._id}`)}
+                        </div>
+                      );
+                    }),
                   )}
                 </div>
+                {maxShifts > 0 && <p className="mt-2 text-xs text-gray-400">Toca un turno para asignar o quitar personal.</p>}
               </div>
             );
           })()}
@@ -2505,295 +833,257 @@ export default function Personal() {
         </div>
       )}
 
-      {/* -- COSTS TAB -- */}
+      {/* -- EMPLEADOS -- */}
+      {!loading && tab === 'employees' && allowedTabs.includes('employees') && (
+        <div className="space-y-5">
+          <Segmented size="sm" value={employeeSubTab} onChange={setEmployeeSubTab}
+            options={[['employees', `Empleados · ${employeeStats.total}`], ['positions', `Puestos · ${positions.length}`]]} />
+
+          {employeeSubTab === 'employees' && (
+            <>
+              <div className="space-y-3">
+                <label className="relative block">
+                  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" className="w-4 h-4 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none"><circle cx="9" cy="9" r="5.5" /><path d="m13.5 13.5 3 3" strokeLinecap="round" /></svg>
+                  <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar por nombre, email o teléfono"
+                    className="w-full rounded-full bg-gray-100 border border-transparent pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:bg-white focus:border-gray-300 focus:ring-2 focus:ring-violet-500/30" />
+                </label>
+                <div className="flex gap-1.5 overflow-x-auto -mx-1 px-1 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                  {[
+                    ['all', `Todos ${employeeStats.total}`],
+                    ['active', `Activos ${employeeStats.active}`],
+                    ['inactive', `Inactivos ${employeeStats.inactive}`],
+                    employeeStats.noPay > 0 && ['no_pay', `Sin pago ${employeeStats.noPay}`],
+                  ].filter(Boolean).map(([key, label]) => (
+                    <button key={key} type="button" onClick={() => setStatusFilter(key)}
+                      className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${statusFilter === key ? 'bg-gray-900 border-gray-900 text-white' : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'}`}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {filteredEmployees.length === 0 ? (
+                <Empty action={!search && employees.length === 0 && <PrimaryButton onClick={() => setEmployeeModal({})}>Nuevo empleado</PrimaryButton>}>
+                  {search ? 'No hay resultados para tu búsqueda.' : employees.length === 0 ? 'Todavía no hay empleados.' : 'No hay empleados con este filtro.'}
+                </Empty>
+              ) : (
+                <div>
+                  <div className={tableHead}>
+                    <span className="col-span-4">Empleado</span>
+                    <span className="col-span-3">Puestos</span>
+                    <span className="col-span-2">Cómo cobra</span>
+                    <span className="col-span-2">Estado</span>
+                    <span className="col-span-1" />
+                  </div>
+                  <ul className="divide-y divide-gray-100">
+                    {filteredEmployees.map((employee) => (
+                      <EmployeeRow
+                        key={employee._id}
+                        employee={employee}
+                        onEdit={() => setEmployeeModal(employee)}
+                        onPago={() => setCompModalEmployee(employee)}
+                        onToggle={() => toggleEmployeeStatus(employee)}
+                      />
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </>
+          )}
+
+          {employeeSubTab === 'positions' && (
+            <>
+              <p className="text-[13px] text-gray-500">
+                {positions.filter((p) => p.status === 'active').length} activos
+                {positions.filter((p) => p.status === 'inactive').length > 0 && ` · ${positions.filter((p) => p.status === 'inactive').length} inactivos`}
+                {positions.length > 1 && ' · El orden es el de la planificación.'}
+              </p>
+              {positions.length === 0 ? (
+                <Empty action={<PrimaryButton onClick={() => setPositionModal({})}>Nuevo puesto</PrimaryButton>}>Sin puestos definidos.</Empty>
+              ) : (
+                <div>
+                  <div className={tableHead}>
+                    <span className="col-span-5">Puesto</span>
+                    <span className="col-span-3">Empleados activos</span>
+                    <span className="col-span-2">Estado</span>
+                    <span className="col-span-2" />
+                  </div>
+                  <ul className="divide-y divide-gray-100">
+                    {positions.map((position, i) => {
+                      const count = employeeCountByPosition.get(String(position._id)) || 0;
+                      const active = position.status === 'active';
+                      return (
+                        <li key={position._id}>
+                          <div className="flex items-center gap-3 md:grid md:grid-cols-12 md:gap-4 px-2 py-3 rounded-xl hover:bg-gray-50">
+                            <button type="button" onClick={() => setPositionModal(position)} className="md:col-span-5 flex items-center gap-3 min-w-0 flex-1 text-left">
+                              <span className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: `${position.color || '#64748B'}1f` }}>
+                                <span className="w-3 h-3 rounded-full" style={{ backgroundColor: position.color || '#64748B' }} />
+                              </span>
+                              <span className="min-w-0">
+                                <span className={`block text-[15px] font-medium truncate ${active ? 'text-gray-900' : 'text-gray-500'}`}>{position.name}</span>
+                                <span className="md:hidden block text-[13px] text-gray-500">
+                                  {count > 0 ? `${count} ${count === 1 ? 'empleado' : 'empleados'}` : 'Sin empleados'}{!active && ' · Inactivo'}
+                                </span>
+                              </span>
+                            </button>
+                            <span className="hidden md:block col-span-3 text-sm text-gray-700 tabular-nums">
+                              {count > 0 ? `${count} ${count === 1 ? 'empleado' : 'empleados'}` : <span className="text-gray-300">—</span>}
+                            </span>
+                            <span className="hidden md:block col-span-2"><StateText active={active} /></span>
+                            <div className="md:col-span-2 flex items-center justify-end gap-0.5 shrink-0">
+                              <button type="button" onClick={() => movePosition(i, i - 1)} disabled={i === 0} title="Subir" aria-label="Subir"
+                                className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-25 disabled:hover:bg-transparent">
+                                <Icon name="down" className="w-4 h-4 rotate-180" strokeWidth={2} />
+                              </button>
+                              <button type="button" onClick={() => movePosition(i, i + 1)} disabled={i === positions.length - 1} title="Bajar" aria-label="Bajar"
+                                className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-25 disabled:hover:bg-transparent">
+                                <Icon name="down" className="w-4 h-4" strokeWidth={2} />
+                              </button>
+                              <MenuButton ariaLabel="Más opciones" className="w-9 h-9 justify-center text-gray-500"
+                                items={[
+                                  { label: 'Editar', onClick: () => setPositionModal(position) },
+                                  { label: active ? 'Desactivar' : 'Activar', onClick: () => togglePositionStatus(position) },
+                                ]}>
+                                <MoreIcon />
+                              </MenuButton>
+                            </div>
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+
+      {/* -- COSTES -- */}
       {!loading && tab === 'costs' && allowedTabs.includes('costs') && (
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-          {/* Sub-tab header */}
-          <div className="px-4 py-3 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center gap-2">
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setCostsSubTab('monthly')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${costsSubTab === 'monthly' ? 'bg-violet-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-              >
-                Mes
-              </button>
-              <button
-                onClick={() => setCostsSubTab('balance')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${costsSubTab === 'balance' ? 'bg-violet-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`}
-              >
-                Balance acumulado
-              </button>
-            </div>
-            {/* Month nav */}
+        <div className="space-y-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <Segmented size="sm" value={costsSubTab} onChange={setCostsSubTab} options={[['monthly', 'Mes'], ['balance', 'Balance acumulado']]} />
             {costsSubTab === 'monthly' && (
-              <div className="flex items-center gap-1 sm:ml-auto">
-                <button
-                  onClick={() => setCostMonth((v) => addMonths(v, -1))}
-                  className="w-8 h-8 rounded-lg hover:bg-gray-100 transition-colors flex items-center justify-center text-gray-400 hover:text-gray-700"
-                  aria-label="Mes anterior"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
-                    <path fillRule="evenodd" d="M9.78 4.22a.75.75 0 0 1 0 1.06L7.06 8l2.72 2.72a.75.75 0 1 1-1.06 1.06L5.47 8.53a.75.75 0 0 1 0-1.06l3.25-3.25a.75.75 0 0 1 1.06 0Z" clipRule="evenodd" />
-                  </svg>
-                </button>
-                <label className="relative cursor-pointer group">
-                  <span className="px-3 py-1.5 rounded-lg text-sm font-semibold text-gray-800 group-hover:bg-gray-100 transition-colors block">
-                    {monthLabel}
-                  </span>
+              <div className="flex items-center gap-0.5">
+                <NavArrow dir="left" label="Mes anterior" onClick={() => setCostMonth((v) => addMonths(v, -1))} />
+                <label className="relative cursor-pointer">
+                  <span className="block px-1.5 text-[15px] font-semibold text-gray-900 hover:text-violet-700 min-w-[8.5rem] text-center">{monthLabel}</span>
                   <input
                     type="month"
                     value={costMonth}
                     onChange={(e) => e.target.value && setCostMonth(e.target.value)}
                     className="absolute inset-0 opacity-0 cursor-pointer w-full"
                     tabIndex={-1}
+                    aria-label="Elegir mes"
                   />
                 </label>
-                <button
-                  onClick={() => setCostMonth((v) => addMonths(v, 1))}
-                  className="w-8 h-8 rounded-lg hover:bg-gray-100 transition-colors flex items-center justify-center text-gray-400 hover:text-gray-700"
-                  aria-label="Mes siguiente"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
-                    <path fillRule="evenodd" d="M6.22 4.22a.75.75 0 0 1 1.06 0l3.25 3.25a.75.75 0 0 1 0 1.06L7.28 11.78a.75.75 0 0 1-1.06-1.06L9.94 8 6.22 4.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
-                  </svg>
-                </button>
+                <NavArrow dir="right" label="Mes siguiente" onClick={() => setCostMonth((v) => addMonths(v, 1))} />
               </div>
             )}
           </div>
 
-          {costsLoading && <div className="h-20 mx-4 my-4 rounded-xl bg-gray-100 animate-pulse" />}
+          {costsLoading && <div className="h-20 rounded-xl bg-gray-100 animate-pulse" />}
 
-          {/* ── MONTHLY SUB-TAB ── */}
+          {/* Monthly */}
           {!costsLoading && costsSubTab === 'monthly' && (
-            <div className="overflow-x-auto">
-              {(monthlyCosts.employeeCosts || []).length === 0 ? (
-                <div className="py-16 text-center text-sm text-gray-400">Sin turnos en {monthLabel}</div>
-              ) : (
+            (monthlyCosts.employeeCosts || []).length === 0 ? (
+              <Empty>Sin turnos en {monthLabel}.</Empty>
+            ) : (() => {
+              const rows = monthlyCosts.employeeCosts || [];
+              const totalShifts = rows.reduce((n, r) => n + (Number(r.assignments) || 0), 0);
+              const totalHours = rows.reduce((n, r) => n + (Number(r.totalHours) || 0), 0);
+              return (
                 <>
-                  <div className="sm:hidden divide-y divide-gray-100">
-                    {(monthlyCosts.employeeCosts || []).map((row) => (
-                      <div key={String(row.employeeId)} className="px-4 py-3 space-y-1.5">
-                        <div className="flex items-center justify-between gap-3">
-                          <p className="font-semibold text-gray-900 truncate">{row.employeeName}</p>
-                          <p className="font-semibold text-gray-900 shrink-0">{formatMoney(row.monthlyCost, row.currency)}</p>
-                        </div>
-                        <p className="text-xs text-gray-400">
-                          {row.assignments} turnos · {row.totalHours}h · {compTypeLabel(row.compensation?.paymentType)}
-                        </p>
-                      </div>
-                    ))}
-                    {Object.entries(monthlyCosts.totalsByCurrency || {}).map(([currency, value]) => (
-                      <div key={currency} className="px-4 py-3 bg-gray-50 flex items-center justify-between">
-                        <p className="text-sm font-semibold text-gray-700">Total {monthLabel}</p>
-                        <p className="text-base font-bold text-gray-900">{formatMoney(value, currency)}</p>
-                      </div>
-                    ))}
-                  </div>
-
-                  <table className="hidden sm:table w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-gray-100">
-                        <th className="text-left px-5 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Empleado</th>
-                        <th className="hidden sm:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Turnos</th>
-                        <th className="hidden sm:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Horas</th>
-                        <th className="hidden sm:table-cell text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Tipo pago</th>
-                        <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Coste mes</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(monthlyCosts.employeeCosts || []).map((row) => (
-                        <tr key={String(row.employeeId)} className="border-b border-gray-50 hover:bg-gray-50/60 transition-colors">
-                          <td className="px-5 py-3.5">
-                            <span className="font-medium text-gray-800">{row.employeeName}</span>
-                          </td>
-                          <td className="hidden sm:table-cell px-4 py-3.5 text-gray-600">{row.assignments}</td>
-                          <td className="hidden sm:table-cell px-4 py-3.5 text-gray-600">{row.totalHours}h</td>
-                          <td className="hidden sm:table-cell px-4 py-3.5 text-gray-500 text-xs">{compTypeLabel(row.compensation?.paymentType)}</td>
-                          <td className="px-4 py-3.5 text-gray-800">{formatMoney(row.monthlyCost, row.currency)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                    <tfoot>
-                      {Object.entries(monthlyCosts.totalsByCurrency || {}).map(([currency, value]) => (
-                        <tr key={currency} className="border-t-2 border-gray-200 bg-gray-50">
-                          <td className="px-5 py-3 font-semibold text-gray-700" colSpan={4}>Total {monthLabel}</td>
-                          <td className="px-4 py-3 font-bold text-gray-900 text-base">{formatMoney(value, currency)}</td>
-                        </tr>
-                      ))}
-                    </tfoot>
-                  </table>
-                </>
-              )}
-            </div>
-          )}
-
-          {/* ── BALANCE SUB-TAB ── */}
-          {!costsLoading && costsSubTab === 'balance' && (
-            <>
-              <div className="px-5 py-3 border-b border-gray-50">
-                <p className="text-xs text-gray-400">Acumulado total generado menos pagos registrados. Pulsa <span className="font-semibold">Pagado</span> para registrar un cobro y resetear el saldo.</p>
-              </div>
-              <div className="overflow-x-auto">
-                {balances.filter((b) => b.employeeStatus === 'active' || b.balance !== 0).length === 0 ? (
-                  <div className="py-16 text-center text-sm text-gray-400">Sin datos de balance</div>
-                ) : (() => {
-                  const visibleRows = balances.filter((b) => b.employeeStatus === 'active' || b.balance !== 0);
-                  const totalPendingByCurrency = visibleRows.reduce((acc, row) => {
-                    if (row.balance > 0) acc[row.currency] = Number(((acc[row.currency] || 0) + row.balance).toFixed(2));
-                    return acc;
-                  }, {});
-                  return (
-                    <>
-                      <div className="sm:hidden divide-y divide-gray-100">
-                        {visibleRows.map((row) => {
-                          const isConfirming = confirmingPayment === String(row.employeeId);
-                          const empObj = employees.find((e) => String(e._id) === String(row.employeeId));
-                          return (
-                            <div key={String(row.employeeId)} className="px-4 py-3 space-y-2">
-                              <div className="flex items-center justify-between gap-3">
-                                <p className="font-semibold text-gray-900 truncate">{row.employeeName}</p>
-                                <p className={`font-bold ${row.balance > 0 ? 'text-gray-900' : 'text-gray-400'}`}>
-                                  {formatMoney(row.balance, row.currency)}
-                                </p>
-                              </div>
-                              <p className="text-xs text-gray-400">
-                                Último pago: {row.lastPaidAt
-                                  ? new Date(row.lastPaidAt).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })
-                                  : '—'}
-                              </p>
-                              <div className="flex items-center gap-1.5 flex-wrap">
-                                {empObj && (
-                                  <button
-                                    onClick={() => setAssignmentsModal(empObj)}
-                                    className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
-                                  >
-                                    Ver turnos
-                                  </button>
-                                )}
-                                {isConfirming ? (
-                                  <>
-                                    <span className="text-xs text-gray-500 whitespace-nowrap">¿{formatMoney(row.balance, row.currency)}?</span>
-                                    <button
-                                      onClick={() => registerPayment(String(row.employeeId), row.balance, row.currency)}
-                                      className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
-                                    >
-                                      Confirmar
-                                    </button>
-                                    <button
-                                      onClick={() => setConfirmingPayment(null)}
-                                      className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
-                                    >
-                                      Cancelar
-                                    </button>
-                                  </>
-                                ) : (
-                                  <button
-                                    disabled={row.balance <= 0}
-                                    onClick={() => setConfirmingPayment(String(row.employeeId))}
-                                    className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                                  >
-                                    Pagado
-                                  </button>
-                                )}
-                              </div>
-                            </div>
-                          );
-                        })}
-                        {Object.entries(totalPendingByCurrency).map(([currency, value]) => (
-                          <div key={currency} className="px-4 py-3 bg-gray-50 flex items-center justify-between">
-                            <p className="text-sm font-semibold text-gray-700">Total pendiente</p>
-                            <p className="text-base font-bold text-gray-900">{formatMoney(value, currency)}</p>
+                  <BigFigure label={`Coste de ${monthLabel}`} value={moneyByCurrency(monthlyCosts.totalsByCurrency)}
+                    sub={`${totalShifts} ${totalShifts === 1 ? 'turno' : 'turnos'} · ${Number(totalHours.toFixed(2)).toLocaleString('es-ES')} h · ${rows.length} ${rows.length === 1 ? 'empleado' : 'empleados'}`} />
+                  <Section title="Por empleado">
+                    <div className={tableHead}>
+                      <span className="col-span-4">Empleado</span>
+                      <span className="col-span-3">Cómo cobra</span>
+                      <span className="col-span-1 text-right">Turnos</span>
+                      <span className="col-span-2 text-right">Horas</span>
+                      <span className="col-span-2 text-right">Coste</span>
+                    </div>
+                    <ul className="divide-y divide-gray-100">
+                      {rows.map((row) => (
+                        <li key={String(row.employeeId)} className="flex items-center gap-3 md:grid md:grid-cols-12 md:gap-4 px-2 py-3">
+                          <div className="md:col-span-4 min-w-0 flex-1">
+                            <p className="text-[15px] font-medium text-gray-900 truncate">{row.employeeName}</p>
+                            <p className="md:hidden text-[13px] text-gray-500 truncate">{row.assignments} turnos · {row.totalHours} h · {compTypeLabel(row.compensation?.paymentType)}</p>
                           </div>
-                        ))}
-                      </div>
-
-                      <table className="hidden sm:table w-full text-sm">
-                        <thead>
-                          <tr className="border-b border-gray-100">
-                            <th className="text-left px-5 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Empleado</th>
-                            <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Último pago</th>
-                            <th className="text-left px-4 py-3 text-xs font-semibold text-gray-400 uppercase tracking-wide">Pendiente</th>
-                            <th className="px-4 py-3" />
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {visibleRows.map((row, i, arr) => {
-                            const isConfirming = confirmingPayment === String(row.employeeId);
-                            const empObj = employees.find((e) => String(e._id) === String(row.employeeId));
-                            return (
-                              <tr key={String(row.employeeId)} className={`hover:bg-gray-50/60 transition-colors ${i < arr.length - 1 ? 'border-b border-gray-50' : ''}`}>
-                                <td className="px-5 py-3.5">
-                                  <span className="font-medium text-gray-800">{row.employeeName}</span>
-                                </td>
-                                <td className="px-4 py-3.5 text-gray-400 text-xs">
-                                  {row.lastPaidAt
-                                    ? new Date(row.lastPaidAt).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })
-                                    : '—'}
-                                </td>
-                                <td className="px-4 py-3.5">
-                                  <span className={`font-bold text-base ${row.balance > 0 ? 'text-gray-900' : 'text-gray-400'}`}>
-                                    {formatMoney(row.balance, row.currency)}
-                                  </span>
-                                </td>
-                                <td className="px-4 py-3.5">
-                                  <div className="flex items-center justify-end gap-1.5">
-                                    {empObj && (
-                                      <button
-                                        onClick={() => setAssignmentsModal(empObj)}
-                                        className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
-                                      >
-                                        Ver turnos
-                                      </button>
-                                    )}
-                                    {isConfirming ? (
-                                      <div className="flex items-center gap-1.5">
-                                        <span className="text-xs text-gray-500 whitespace-nowrap">¿{formatMoney(row.balance, row.currency)}?</span>
-                                        <button
-                                          onClick={() => registerPayment(String(row.employeeId), row.balance, row.currency)}
-                                          className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition-colors"
-                                        >
-                                          Confirmar
-                                        </button>
-                                        <button
-                                          onClick={() => setConfirmingPayment(null)}
-                                          className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
-                                        >
-                                          Cancelar
-                                        </button>
-                                      </div>
-                                    ) : (
-                                      <button
-                                        disabled={row.balance <= 0}
-                                        onClick={() => setConfirmingPayment(String(row.employeeId))}
-                                        className="text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
-                                      >
-                                        Pagado
-                                      </button>
-                                    )}
-                                  </div>
-                                </td>
-                              </tr>
-                            );
-                          })}
-                        </tbody>
-                        {Object.keys(totalPendingByCurrency).length > 0 && (
-                          <tfoot>
-                            {Object.entries(totalPendingByCurrency).map(([currency, value]) => (
-                              <tr key={currency} className="border-t-2 border-gray-200 bg-gray-50">
-                                <td className="px-5 py-3 font-semibold text-gray-700" colSpan={2}>Total pendiente</td>
-                                <td className="px-4 py-3 font-bold text-gray-900 text-base">{formatMoney(value, currency)}</td>
-                                <td className="px-4 py-3" />
-                              </tr>
-                            ))}
-                          </tfoot>
-                        )}
-                      </table>
-                    </>
-                  );
-                })()}
-              </div>
-            </>
+                          <span className="hidden md:block col-span-3 text-sm text-gray-600">{compTypeLabel(row.compensation?.paymentType)}</span>
+                          <span className="hidden md:block col-span-1 text-right text-sm tabular-nums text-gray-700">{row.assignments}</span>
+                          <span className="hidden md:block col-span-2 text-right text-sm tabular-nums text-gray-700">{row.totalHours} h</span>
+                          <span className="md:col-span-2 text-right text-sm font-semibold tabular-nums text-gray-900 shrink-0">{formatMoney(row.monthlyCost, row.currency)}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </Section>
+                </>
+              );
+            })()
           )}
+
+          {/* Balance */}
+          {!costsLoading && costsSubTab === 'balance' && (() => {
+            const visibleRows = balances.filter((b) => b.employeeStatus === 'active' || b.balance !== 0);
+            if (visibleRows.length === 0) return <Empty>Sin datos de balance.</Empty>;
+            const totalPendingByCurrency = visibleRows.reduce((acc, row) => {
+              if (row.balance > 0) acc[row.currency] = Number(((acc[row.currency] || 0) + row.balance).toFixed(2));
+              return acc;
+            }, {});
+            const pendingCount = visibleRows.filter((r) => r.balance > 0).length;
+            return (
+              <>
+                <BigFigure label="Pendiente de pagar" value={moneyByCurrency(totalPendingByCurrency)}
+                  tone={pendingCount > 0 ? 'warn' : undefined}
+                  sub={pendingCount > 0 ? `${pendingCount} ${pendingCount === 1 ? 'empleado' : 'empleados'} con saldo` : 'Todo pagado'} />
+                <Section title="Por empleado" aside={<span className="text-xs text-gray-500 hidden sm:inline">Lo generado menos los pagos registrados</span>}>
+                  <div className={tableHead}>
+                    <span className="col-span-4">Empleado</span>
+                    <span className="col-span-3">Último pago</span>
+                    <span className="col-span-2 text-right">Pendiente</span>
+                    <span className="col-span-3" />
+                  </div>
+                  <ul className="divide-y divide-gray-100">
+                    {visibleRows.map((row) => {
+                      const isConfirming = confirmingPayment === String(row.employeeId);
+                      const empObj = employees.find((e) => String(e._id) === String(row.employeeId));
+                      return (
+                        <li key={String(row.employeeId)} className="px-2 py-3 md:grid md:grid-cols-12 md:gap-4 md:items-center">
+                          <div className="md:col-span-4 flex items-center justify-between gap-3 min-w-0">
+                            <div className="min-w-0">
+                              <p className="text-[15px] font-medium text-gray-900 truncate">{row.employeeName}</p>
+                              <p className="md:hidden text-[13px] text-gray-500">Último pago: {row.lastPaidAt ? fmtDate(row.lastPaidAt) : '—'}</p>
+                            </div>
+                            <span className={`md:hidden text-[15px] font-semibold tabular-nums shrink-0 ${row.balance > 0 ? 'text-gray-900' : 'text-gray-400'}`}>{formatMoney(row.balance, row.currency)}</span>
+                          </div>
+                          <span className="hidden md:block col-span-3 text-sm text-gray-500">{row.lastPaidAt ? fmtDate(row.lastPaidAt) : '—'}</span>
+                          <span className={`hidden md:block col-span-2 text-right text-sm font-semibold tabular-nums ${row.balance > 0 ? 'text-gray-900' : 'text-gray-400'}`}>{formatMoney(row.balance, row.currency)}</span>
+                          <div className="md:col-span-3 flex items-center md:justify-end gap-3 mt-2 md:mt-0 flex-wrap">
+                            {empObj && (
+                              <button type="button" onClick={() => setAssignmentsModal(empObj)} className="text-[13px] font-semibold text-gray-600 hover:text-gray-900">Ver turnos</button>
+                            )}
+                            {isConfirming ? (
+                              <span className="inline-flex items-center gap-2">
+                                <span className="text-[13px] text-gray-600 whitespace-nowrap">¿Pagar {formatMoney(row.balance, row.currency)}?</span>
+                                <RowAction tone="primary" onClick={() => registerPayment(String(row.employeeId), row.balance, row.currency)}>Confirmar</RowAction>
+                                <button type="button" onClick={() => setConfirmingPayment(null)} className="text-[13px] font-semibold text-gray-500 hover:text-gray-800">Cancelar</button>
+                              </span>
+                            ) : (
+                              <RowAction tone="good" disabled={row.balance <= 0} onClick={() => setConfirmingPayment(String(row.employeeId))}>Pagado</RowAction>
+                            )}
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                  <p className="mt-3 text-xs text-gray-400">Pulsa <b className="font-semibold">Pagado</b> para registrar el pago y dejar su saldo a cero.</p>
+                </Section>
+              </>
+            );
+          })()}
         </div>
       )}
 

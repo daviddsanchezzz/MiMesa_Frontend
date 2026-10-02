@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useLocation, Link } from 'react-router-dom';
 import publicApi from '../services/publicApi';
+import { longDate } from './agenda/utils';
 
 // Helper to pull query params
 function useQuery() {
@@ -70,7 +71,7 @@ export default function PublicCancel() {
         </p>
         <div className="bg-gray-50 p-4 rounded-lg mb-6">
           <div className="grid grid-cols-2 gap-2 text-sm">
-            <div><strong>Fecha:</strong> {reservation.date}</div>
+            <div><strong>Fecha:</strong> {reservation.date ? longDate(reservation.date) : ''}</div>
             <div><strong>Hora:</strong> {reservation.time}</div>
             <div><strong>Personas:</strong> {reservation.people}</div>
             <div><strong>Estado:</strong> {reservation.status === 'confirmed' ? 'Confirmada' : reservation.status}</div>

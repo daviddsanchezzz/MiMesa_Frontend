@@ -1,10 +1,24 @@
 ﻿import { useCallback, useEffect, useMemo, useState } from 'react';
 import api from '../services/api';
+import { useSetMobileHeader } from '../context/MobileHeaderContext';
+import Modal from '../components/Modal';
+import Icon from '../ui/Icon';
+import { Empty, GhostButton, MenuButton, PageHeader, PrimaryButton, Tabs, Toggle } from '../ui/kit';
 
-const inputCls = 'w-full border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white';
-const labelCls = 'block text-xs font-semibold text-gray-600 mb-1';
+const inputCls = 'w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white';
+const labelCls = 'block text-xs font-medium text-gray-500 mb-1';
+const btnPrimary = 'h-10 px-4 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold disabled:opacity-50';
+const btnQuiet = 'h-10 px-4 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-100';
+const btnDanger = 'h-10 px-3 rounded-xl text-sm font-semibold text-rose-600 hover:bg-rose-50 disabled:opacity-50';
 
-const money = (value) => `€${Number(value || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const money = (value) => `${Number(value || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`;
+const niceDate = (value) => {
+  const iso = String(value || '').slice(0, 10);
+  if (!iso) return '—';
+  const d = new Date(`${iso}T12:00:00`);
+  return d.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' }).replace('.', '');
+};
+const tableHead = 'hidden md:grid grid-cols-12 gap-4 px-2 pb-2 border-b border-gray-200 text-[11px] font-semibold uppercase tracking-wide text-gray-400';
 const todayIso = () => new Date().toISOString().slice(0, 10);
 const formatDecimalInput = (value) => {
   const num = Number(value || 0);
@@ -18,6 +32,19 @@ const parseDecimalInput = (raw) => {
   return Number.isFinite(parsed) ? parsed : 0;
 };
 const csvEscape = (value) => `"${String(value ?? '').replace(/"/g, '""')}"`;
+
+// [dot colour] per order state, in the app's palette.
+const STATUS_COLOR = { draft: '#f59e0b', sent: '#7c3aed', confirmed: '#7c3aed', received: '#10b981', cancelled: '#9ca3af' };
+
+function OrderStatus({ status }) {
+  const color = STATUS_COLOR[status] || '#9ca3af';
+  return (
+    <span className="inline-flex items-center gap-1.5 text-xs font-medium text-gray-700">
+      <span className="w-2 h-2 rounded-full shrink-0" style={status === 'draft' ? { border: `1.5px dashed ${color}` } : { backgroundColor: color }} />
+      {STATUS_LABELS[status] || status || '—'}
+    </span>
+  );
+}
 
 const STATUS_LABELS = {
   draft: 'Borrador',
@@ -287,237 +314,178 @@ export default function Compras() {
     }
   };
 
+  const primary = {
+    orders: { label: 'Nuevo pedido', short: 'Pedido', onClick: () => setOrderModal({}) },
+    products: { label: 'Nuevo producto', short: 'Producto', onClick: () => setProductModal({}) },
+    suppliers: { label: 'Nuevo proveedor', short: 'Proveedor', onClick: () => setSupplierModal({}) },
+  }[tab];
+  useSetMobileHeader({ title: 'Compras', action: { label: primary.short, onClick: primary.onClick } });
+
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Compras</h1>
-        <p className="text-sm text-gray-500 mt-1">Pedidos de compra y catálogo de productos por proveedor</p>
-      </div>
+    <div className="w-full space-y-6">
+      <PageHeader title="Compras" subtitle="Pedidos a proveedores y el catálogo de lo que les compras."
+        actions={(
+          <>
+            {tab === 'suppliers' && (
+              <MenuButton ariaLabel="Exportar" className="h-9 px-3.5 border border-gray-200"
+                items={[{ label: 'Exportar Excel', onClick: exportSuppliersProductsCsv }, { label: 'Exportar PDF', onClick: exportSuppliersProductsPdf }]}>
+                Exportar<Icon name="down" className="w-3.5 h-3.5" strokeWidth={2} />
+              </MenuButton>
+            )}
+            <PrimaryButton onClick={primary.onClick}>{primary.label}</PrimaryButton>
+          </>
+        )} />
 
-      <div className="border-b border-gray-200">
-        <nav className="flex gap-1">
-          <button onClick={() => setTab('orders')} className={`px-4 py-2 text-sm font-semibold border-b-2 ${tab === 'orders' ? 'border-violet-600 text-violet-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>Pedidos</button>
-          <button onClick={() => setTab('products')} className={`px-4 py-2 text-sm font-semibold border-b-2 ${tab === 'products' ? 'border-violet-600 text-violet-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>Productos</button>
-          <button onClick={() => setTab('suppliers')} className={`px-4 py-2 text-sm font-semibold border-b-2 ${tab === 'suppliers' ? 'border-violet-600 text-violet-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}>Proveedores</button>
-        </nav>
-      </div>
+      <Tabs value={tab} onChange={setTab} options={[
+        ['orders', `Pedidos${orders.length ? ` · ${orders.length}` : ''}`],
+        ['products', `Productos${products.length ? ` · ${products.length}` : ''}`],
+        ['suppliers', `Proveedores${suppliers.length ? ` · ${suppliers.length}` : ''}`],
+      ]} />
 
-      {loading && <div className="h-24 rounded-2xl bg-gray-100 animate-pulse" />}
-      {error && <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
+      {loading && <p className="text-sm text-gray-400">Cargando…</p>}
+      {error && <p className="rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>}
 
       {!loading && tab === 'orders' && (
-        <section className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-gray-900">Listado de pedidos</h2>
-            <button onClick={() => setOrderModal({})} className="px-3 py-2 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold">+ Pedido</button>
-          </div>
-
-          {orders.length === 0 ? (
-            <div className="rounded-2xl border border-gray-200 bg-white p-8 text-center text-sm text-gray-500">Todavía no hay pedidos registrados</div>
-          ) : (
-            <>
-            <div className="md:hidden space-y-2">
-              {orders.map((order) => (
-                <button
-                  key={order._id}
-                  onClick={() => setOrderDetail(order)}
-                  className="w-full text-left rounded-2xl border border-gray-200 bg-white p-4"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-gray-900 truncate">{order.supplierName}</p>
-                      <p className="text-xs text-gray-500 mt-1">{String(order.orderDate || '').slice(0, 10)}</p>
+        orders.length === 0 ? (
+          <Empty action={<button type="button" onClick={() => setOrderModal({})} className="text-sm font-semibold text-violet-700">+ Hacer el primer pedido</button>}>
+            Todavía no hay pedidos.
+          </Empty>
+        ) : (
+          <div>
+            <div className={tableHead}>
+              <span className="col-span-2">Fecha</span>
+              <span className="col-span-3">Proveedor</span>
+              <span className="col-span-2">Estado</span>
+              <span className="col-span-1 text-right">Productos</span>
+              <span className="col-span-2 text-right">Total</span>
+              <span className="col-span-2" />
+            </div>
+            <ul className="divide-y divide-gray-100">
+              {orders.map((order) => {
+                const orderId = String(order._id);
+                const itemsCount = order.items?.length || 0;
+                const disabledSend = itemsCount === 0 || actionLoading[orderId];
+                return (
+                  <li key={order._id}>
+                    <div role="button" tabIndex={0} onClick={() => setOrderDetail(order)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') setOrderDetail(order); }}
+                      className="w-full text-left px-2 py-3 flex items-center gap-3 md:grid md:grid-cols-12 md:gap-4 rounded-xl hover:bg-gray-50 active:bg-gray-100 cursor-pointer">
+                      <span className="hidden md:block md:col-span-2 text-sm text-gray-700">{niceDate(order.orderDate)}</span>
+                      <div className="md:col-span-3 min-w-0 flex-1">
+                        <p className="text-[15px] font-medium text-gray-900 truncate">{order.supplierName}</p>
+                        <p className="text-[13px] text-gray-500 truncate md:hidden">{niceDate(order.orderDate)} · {itemsCount} {itemsCount === 1 ? 'producto' : 'productos'}</p>
+                        <p className="md:hidden mt-0.5"><OrderStatus status={order.status} /></p>
+                      </div>
+                      <span className="hidden md:block md:col-span-2"><OrderStatus status={order.status} /></span>
+                      <span className="hidden md:block md:col-span-1 text-right text-sm tabular-nums text-gray-700">{itemsCount}</span>
+                      <span className={`${order.totalAmount ? '' : 'hidden md:block'} md:col-span-2 text-right text-sm font-semibold tabular-nums text-gray-900 shrink-0`}>{order.totalAmount ? money(order.totalAmount) : <span className="text-gray-300 font-normal">—</span>}</span>
+                      <div className="hidden md:flex md:col-span-2 justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+                        <button type="button" onClick={() => handleSendWhatsapp(order)} disabled={disabledSend}
+                          className="h-8 px-3 rounded-full bg-emerald-50 text-emerald-800 hover:bg-emerald-100 disabled:opacity-40 text-xs font-semibold">
+                          {actionLoading[orderId] ? 'Enviando…' : 'WhatsApp'}
+                        </button>
+                        <button type="button" onClick={() => setOrderModal(order)} className="h-8 px-3 rounded-full text-xs font-semibold text-gray-700 hover:bg-gray-100">Editar</button>
+                      </div>
+                      <Icon name="right" className="md:hidden w-4 h-4 text-gray-300 shrink-0" strokeWidth={2} />
                     </div>
-                    <span className="text-xs font-semibold text-gray-600">{STATUS_LABELS[order.status] || order.status || '-'}</span>
-                  </div>
-                  <p className="text-xs text-gray-500 mt-2">{order.items?.length || 0} items</p>
-                </button>
-              ))}
-            </div>
-
-            <div className="hidden md:block rounded-2xl border border-gray-200 bg-white overflow-hidden">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-gray-100 text-gray-400 text-xs uppercase tracking-wide">
-                    <th className="px-4 py-3 text-left">Fecha</th>
-                    <th className="px-4 py-3 text-left">Proveedor</th>
-                    <th className="px-4 py-3 text-left">Estado</th>
-                    <th className="px-4 py-3 text-left">Items</th>
-                    <th className="px-4 py-3 text-left">Total</th>
-                    <th className="px-4 py-3" />
-                  </tr>
-                </thead>
-                <tbody>
-                  {orders.map((order) => {
-                    const orderId = String(order._id);
-                    const itemsCount = order.items?.length || 0;
-                    const disabledSend = itemsCount === 0 || actionLoading[orderId];
-                    return (
-                      <tr key={order._id} className="border-b last:border-0 border-gray-50">
-                        <td className="px-4 py-3 text-gray-700">{String(order.orderDate || '').slice(0, 10)}</td>
-                        <td className="px-4 py-3 text-gray-900 font-medium">{order.supplierName}</td>
-                        <td className="px-4 py-3 text-gray-600">{STATUS_LABELS[order.status] || order.status || '-'}</td>
-                        <td className="px-4 py-3 text-gray-600">{itemsCount}</td>
-                        <td className="px-4 py-3 text-gray-900 font-semibold">{money(order.totalAmount)}</td>
-                        <td className="px-4 py-3">
-                          <div className="flex flex-wrap justify-end gap-2">
-                            <button
-                              onClick={() => handleSendWhatsapp(order)}
-                              disabled={disabledSend}
-                              className="px-2.5 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 hover:bg-emerald-100 disabled:opacity-40 disabled:cursor-not-allowed text-xs font-semibold"
-                            >
-                              {actionLoading[orderId] ? 'Enviando...' : 'Enviar por WhatsApp'}
-                            </button>
-                            <button onClick={() => setOrderModal(order)} className="text-violet-600 hover:text-violet-700 text-sm font-semibold">Editar</button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-            </>
-          )}
-        </section>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )
       )}
 
       {!loading && tab === 'products' && (
-        <section className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-gray-900">Productos por proveedor</h2>
-            <button onClick={() => setProductModal({})} className="px-3 py-2 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold">+ Producto</button>
+        products.length === 0 ? (
+          <Empty action={<button type="button" onClick={() => setProductModal({})} className="text-sm font-semibold text-violet-700">+ Añadir el primero</button>}>
+            {suppliers.length ? 'Todavía no hay productos.' : 'Primero añade un proveedor; luego sus productos.'}
+          </Empty>
+        ) : (
+          <div className="space-y-7">
+            {productsBySupplier.map((group) => {
+              const supplierId = String(group.supplier?._id || 'unknown');
+              const isOpen = openSuppliers[supplierId] !== false;
+              return (
+                <section key={supplierId}>
+                  <button type="button" onClick={() => setOpenSuppliers((prev) => ({ ...prev, [supplierId]: !isOpen }))}
+                    className="w-full flex items-baseline justify-between gap-3 mb-1.5 text-left">
+                    <h3 className="text-[13px] font-semibold uppercase tracking-wide text-gray-400">{group.supplier?.name || 'Sin proveedor'} · {group.products.length}</h3>
+                    <span className="text-[13px] font-semibold text-violet-700">{isOpen ? 'Ocultar' : 'Ver'}</span>
+                  </button>
+                  {isOpen && (
+                    <ul className="divide-y divide-gray-100">
+                      {group.products.map((product, idx) => (
+                        <li key={product._id} className="flex items-center gap-3 py-2.5">
+                          <div className="min-w-0 flex-1">
+                            <p className={`text-[15px] font-medium truncate ${product.isActive ? 'text-gray-900' : 'text-gray-400'}`}>{product.name}</p>
+                            <p className="text-[13px] text-gray-500">{product.unit || 'unidad'}{product.defaultUnitCost > 0 ? ` · ${money(product.defaultUnitCost)}` : ''}{!product.isActive ? ' · inactivo' : ''}</p>
+                          </div>
+                          <button type="button" onClick={() => handleMoveProduct(product, 'up')} disabled={idx === 0} aria-label="Subir"
+                            className="w-8 h-8 rounded-full text-gray-500 hover:bg-gray-100 disabled:opacity-30">↑</button>
+                          <button type="button" onClick={() => handleMoveProduct(product, 'down')} disabled={idx === group.products.length - 1} aria-label="Bajar"
+                            className="w-8 h-8 rounded-full text-gray-500 hover:bg-gray-100 disabled:opacity-30">↓</button>
+                          <button type="button" onClick={() => setProductModal(product)} className="h-8 px-3 rounded-full text-[13px] font-semibold text-gray-700 hover:bg-gray-100">Editar</button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </section>
+              );
+            })}
           </div>
-
-          {products.length === 0 ? (
-            <div className="rounded-2xl border border-gray-200 bg-white p-8 text-center text-sm text-gray-500">Todavía no hay productos registrados</div>
-          ) : (
-            <div className="space-y-3">
-              {productsBySupplier.map((group) => {
-                const supplierId = String(group.supplier?._id || 'unknown');
-                const isOpen = !!openSuppliers[supplierId];
-                return (
-                  <div key={supplierId} className="rounded-2xl border border-gray-200 bg-white overflow-hidden">
-                    <button
-                      className="w-full px-4 py-3 flex items-center justify-between hover:bg-gray-50"
-                      onClick={() => setOpenSuppliers((prev) => ({ ...prev, [supplierId]: !prev[supplierId] }))}
-                    >
-                      <span className="text-sm font-semibold text-gray-900">{group.supplier?.name || 'Sin proveedor'}</span>
-                      <span className="text-xs text-gray-500">{group.products.length} productos {isOpen ? '▲' : '▼'}</span>
-                    </button>
-                    {isOpen && (
-                      <table className="w-full text-sm border-t border-gray-100">
-                        <thead>
-                          <tr className="border-b border-gray-100 text-gray-400 text-xs uppercase tracking-wide">
-                            <th className="px-4 py-3 text-left">Producto</th>
-                            <th className="px-4 py-3 text-left">Unidad</th>
-                            <th className="px-4 py-3" />
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {group.products.map((product, idx) => (
-                            <tr key={product._id} className="border-b last:border-0 border-gray-50">
-                              <td className="px-4 py-3 text-gray-900 font-medium">{product.name}</td>
-                              <td className="px-4 py-3 text-gray-600">{product.unit || '-'}</td>
-                              <td className="px-4 py-3 text-right">
-                                <div className="inline-flex items-center gap-2">
-                                  <button
-                                    onClick={() => handleMoveProduct(product, 'up')}
-                                    disabled={idx === 0}
-                                    className="text-xs px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 disabled:opacity-40"
-                                  >
-                                    ↑
-                                  </button>
-                                  <button
-                                    onClick={() => handleMoveProduct(product, 'down')}
-                                    disabled={idx === group.products.length - 1}
-                                    className="text-xs px-2 py-1 rounded bg-gray-100 hover:bg-gray-200 disabled:opacity-40"
-                                  >
-                                    ↓
-                                  </button>
-                                  <button onClick={() => setProductModal(product)} className="text-violet-600 hover:text-violet-700 text-sm font-semibold">Editar</button>
-                                </div>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          )}
-        </section>
+        )
       )}
 
       {!loading && tab === 'suppliers' && (
-        <section className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-gray-900">Proveedores</h2>
-            <div className="flex items-center gap-2">
-              <button onClick={exportSuppliersProductsCsv} className="px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-semibold">Exportar Excel</button>
-              <button onClick={exportSuppliersProductsPdf} className="px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 text-sm font-semibold">Exportar PDF</button>
-              <button onClick={() => setSupplierModal({})} className="px-3 py-2 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold">+ Proveedor</button>
-            </div>
+        <>
+          <div className="lg:hidden flex gap-2">
+            <GhostButton onClick={exportSuppliersProductsCsv}>Exportar Excel</GhostButton>
+            <GhostButton onClick={exportSuppliersProductsPdf}>Exportar PDF</GhostButton>
           </div>
-
           {suppliers.length === 0 ? (
-            <div className="rounded-2xl border border-gray-200 bg-white p-8 text-center text-sm text-gray-500">Todavía no hay proveedores registrados</div>
+            <Empty action={<button type="button" onClick={() => setSupplierModal({})} className="text-sm font-semibold text-violet-700">+ Añadir el primero</button>}>
+              Todavía no hay proveedores.
+            </Empty>
           ) : (
-            <div className="space-y-3">
-              <div className="md:hidden space-y-2">
-                {suppliers.map((supplier) => (
-                  <div key={supplier._id} className="rounded-2xl border border-gray-200 bg-white p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold text-gray-900 truncate">{supplier.name}</p>
-                        <p className="text-xs text-gray-500 mt-1">{supplier.contactName || 'Sin contacto'}</p>
-                      </div>
-                      <span className={`text-[11px] px-2 py-0.5 rounded-full font-semibold ${supplier.isActive ? 'bg-emerald-50 text-emerald-700' : 'bg-gray-100 text-gray-600'}`}>
-                        {supplier.isActive ? 'Activo' : 'Inactivo'}
-                      </span>
-                    </div>
-                    <div className="mt-3 space-y-1.5">
-                      <p className="text-xs text-gray-600"><span className="font-semibold text-gray-500">WhatsApp:</span> {supplier.whatsappPhone || supplier.phone || '-'}</p>
-                      <p className="text-xs text-gray-600"><span className="font-semibold text-gray-500">Email:</span> {supplier.email || '-'}</p>
-                    </div>
-                    <div className="mt-3 flex justify-end">
-                      <button onClick={() => setSupplierModal(supplier)} className="text-violet-600 hover:text-violet-700 text-sm font-semibold">Editar</button>
-                    </div>
-                  </div>
-                ))}
+            <div>
+              <div className={tableHead}>
+                <span className="col-span-4">Proveedor</span>
+                <span className="col-span-3">Contacto</span>
+                <span className="col-span-3">WhatsApp</span>
+                <span className="col-span-2 text-right">Productos</span>
               </div>
-
-              <div className="hidden md:block rounded-2xl border border-gray-200 bg-white overflow-hidden">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-gray-100 text-gray-400 text-xs uppercase tracking-wide">
-                      <th className="px-4 py-3 text-left">Proveedor</th>
-                      <th className="px-4 py-3 text-left">Contacto</th>
-                      <th className="px-4 py-3 text-left">WhatsApp</th>
-                      <th className="px-4 py-3 text-left">Estado</th>
-                      <th className="px-4 py-3" />
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {suppliers.map((supplier) => (
-                      <tr key={supplier._id} className="border-b last:border-0 border-gray-50">
-                        <td className="px-4 py-3 text-gray-900 font-medium">{supplier.name}</td>
-                        <td className="px-4 py-3 text-gray-600">{supplier.contactName || '-'}</td>
-                        <td className="px-4 py-3 text-gray-700">{supplier.whatsappPhone || supplier.phone || '-'}</td>
-                        <td className="px-4 py-3 text-gray-600">{supplier.isActive ? 'Activo' : 'Inactivo'}</td>
-                        <td className="px-4 py-3 text-right">
-                          <button onClick={() => setSupplierModal(supplier)} className="text-violet-600 hover:text-violet-700 text-sm font-semibold">Editar</button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
+              <ul className="divide-y divide-gray-100">
+                {suppliers.map((supplier) => {
+                  const count = products.filter((pr) => String(pr.supplier?._id || pr.supplierId) === String(supplier._id)).length;
+                  return (
+                    <li key={supplier._id}>
+                      <button type="button" onClick={() => setSupplierModal(supplier)}
+                        className="w-full text-left px-2 py-3 flex items-center gap-3 md:grid md:grid-cols-12 md:gap-4 rounded-xl hover:bg-gray-50 active:bg-gray-100">
+                        <div className="md:col-span-4 flex items-center gap-3 min-w-0 flex-1">
+                          <span className="w-10 h-10 rounded-xl bg-gray-100 text-gray-600 flex items-center justify-center text-sm font-semibold shrink-0">
+                            {(supplier.name || '?').charAt(0).toUpperCase()}
+                          </span>
+                          <div className="min-w-0">
+                            <p className={`text-[15px] font-medium truncate ${supplier.isActive ? 'text-gray-900' : 'text-gray-400'}`}>{supplier.name}</p>
+                            <p className="text-[13px] text-gray-500 truncate md:hidden">
+                              {[supplier.contactName, supplier.whatsappPhone || supplier.phone].filter(Boolean).join(' · ') || 'Sin contacto'}{!supplier.isActive ? ' · inactivo' : ''}
+                            </p>
+                            {!supplier.isActive && <p className="hidden md:block text-[13px] text-gray-400">Inactivo</p>}
+                          </div>
+                        </div>
+                        <span className="hidden md:block md:col-span-3 text-sm text-gray-700 truncate">{supplier.contactName || <span className="text-gray-300">—</span>}</span>
+                        <span className="hidden md:block md:col-span-3 text-sm text-gray-700 tabular-nums">{supplier.whatsappPhone || supplier.phone || <span className="text-gray-300">—</span>}</span>
+                        <span className="md:col-span-2 text-right text-sm tabular-nums text-gray-700 shrink-0">{count}</span>
+                        <Icon name="right" className="md:hidden w-4 h-4 text-gray-300 shrink-0" strokeWidth={2} />
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
             </div>
           )}
-        </section>
+        </>
       )}
 
       {productModal !== null && (
@@ -578,39 +546,38 @@ export default function Compras() {
 function OrderDetailModal({ order, onClose, onEdit, onDelete, onSend, sending }) {
   const canSend = order?.status !== 'sent' && Array.isArray(order?.items) && order.items.length > 0;
   return (
-    <div className="fixed inset-0 z-50 bg-black/45 flex items-end sm:items-center justify-center p-0 sm:p-4">
-      <div className="w-full max-w-xl bg-white rounded-t-3xl sm:rounded-2xl border border-gray-200 shadow-2xl max-h-[90vh] flex flex-col">
-        <div className="px-4 py-4 border-b border-gray-100 flex items-center justify-between">
-          <div>
-            <h3 className="text-base font-semibold text-gray-900">{order.supplierName}</h3>
-            <p className="text-xs text-gray-500 mt-0.5">{String(order.orderDate || '').slice(0, 10)} · {STATUS_LABELS[order.status] || order.status}</p>
-          </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">X</button>
+    <Modal onClose={onClose} size="lg" title={order.supplierName}
+      header={(
+        <div className="min-w-0">
+          <h3 className="text-base font-semibold text-gray-900 truncate">{order.supplierName}</h3>
+          <p className="text-[13px] text-gray-500 mt-0.5 flex items-center gap-2">{niceDate(order.orderDate)} · <OrderStatus status={order.status} /></p>
         </div>
-        <div className="p-4 overflow-auto space-y-2">
-          {(order.items || []).map((item, idx) => (
-            <div key={`${item.productId}-${idx}`} className="rounded-xl border border-gray-200 px-3 py-2">
-              <p className="text-sm font-semibold text-gray-900">{item.productName}</p>
-              <p className="text-xs text-gray-600 mt-1">{item.quantity} {item.unit || ''}</p>
-            </div>
-          ))}
-          {!order.items?.length && <p className="text-sm text-gray-400">Sin productos</p>}
-        </div>
-        <div className="px-4 py-4 border-t border-gray-100 flex items-center justify-end gap-2">
-          <button onClick={onDelete} className="px-3 py-2 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 text-sm font-semibold">Eliminar</button>
-          <button onClick={onEdit} className="px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-sm">Editar</button>
+      )}
+      footer={(
+        <div className="flex items-center gap-2">
+          <button type="button" onClick={onDelete} className={btnDanger}>Eliminar</button>
+          <div className="flex-1" />
+          <button type="button" onClick={onEdit} className={btnQuiet}>Editar</button>
           {canSend && (
-            <button
-              onClick={onSend}
-              disabled={sending}
-              className="px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold disabled:opacity-50"
-            >
-              {sending ? 'Enviando...' : 'Enviar'}
+            <button type="button" onClick={onSend} disabled={sending}
+              className="h-10 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold disabled:opacity-50">
+              {sending ? 'Enviando…' : <><span className="sm:hidden">WhatsApp</span><span className="hidden sm:inline">Enviar por WhatsApp</span></>}
             </button>
           )}
         </div>
-      </div>
-    </div>
+      )}>
+      {order.items?.length ? (
+        <ul className="divide-y divide-gray-100 -my-2">
+          {order.items.map((item, idx) => (
+            <li key={`${item.productId}-${idx}`} className="flex items-center justify-between gap-3 py-2.5">
+              <span className="text-[15px] text-gray-900 min-w-0 truncate">{item.productName}</span>
+              <span className="text-sm font-semibold tabular-nums text-gray-700 shrink-0">{item.quantity} {item.unit || ''}</span>
+            </li>
+          ))}
+        </ul>
+      ) : <p className="text-sm text-gray-400">Sin productos</p>}
+      {order.notes && <p className="mt-4 text-[13px] text-gray-500 whitespace-pre-line">{order.notes}</p>}
+    </Modal>
   );
 }
 
@@ -644,37 +611,31 @@ function SupplierModal({ supplier, onClose, onSaved }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/45 flex items-center justify-center p-4">
-      <div className="w-full max-w-xl bg-white rounded-2xl border border-gray-200 shadow-2xl">
-        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-          <h3 className="text-base font-semibold text-gray-900">{supplier?._id ? 'Editar proveedor' : 'Nuevo proveedor'}</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">X</button>
+    <Modal onClose={onClose} size="lg" title={supplier?._id ? 'Editar proveedor' : 'Nuevo proveedor'}
+      footer={(
+        <div className="flex justify-end gap-2">
+          <button type="button" onClick={onClose} className={btnQuiet}>Cancelar</button>
+          <button type="submit" form="supplier-form" disabled={saving} className={btnPrimary}>{saving ? 'Guardando…' : 'Guardar'}</button>
         </div>
-        <form onSubmit={submit} className="p-5 space-y-3">
-          {error && <div className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</div>}
-          <div><label className={labelCls}>Nombre *</label><input className={inputCls} value={form.name} onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))} required /></div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div><label className={labelCls}>Persona contacto</label><input className={inputCls} value={form.contactName} onChange={(e) => setForm((prev) => ({ ...prev, contactName: e.target.value }))} /></div>
-            <div><label className={labelCls}>Teléfono</label><input className={inputCls} value={form.phone} onChange={(e) => setForm((prev) => ({ ...prev, phone: e.target.value }))} placeholder="+34600111222" /></div>
+      )}>
+      <form id="supplier-form" onSubmit={submit} className="space-y-4">
+        {error && <p className="text-sm text-rose-700 bg-rose-50 rounded-xl px-3 py-2">{error}</p>}
+        <div><label className={labelCls}>Nombre *</label><input className={inputCls} value={form.name} onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))} required /></div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div><label className={labelCls}>Persona de contacto</label><input className={inputCls} value={form.contactName} onChange={(e) => setForm((prev) => ({ ...prev, contactName: e.target.value }))} /></div>
+          <div><label className={labelCls}>Teléfono</label><input className={inputCls} value={form.phone} onChange={(e) => setForm((prev) => ({ ...prev, phone: e.target.value }))} placeholder="+34600111222" /></div>
+          <div><label className={labelCls}>WhatsApp</label><input className={inputCls} value={form.whatsappPhone} onChange={(e) => setForm((prev) => ({ ...prev, whatsappPhone: e.target.value }))} placeholder="+34600111222" /></div>
+          <div><label className={labelCls}>Email</label><input className={inputCls} type="email" value={form.email} onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))} /></div>
+        </div>
+        <div><label className={labelCls}>Notas</label><textarea rows={2} className={inputCls} value={form.notes} onChange={(e) => setForm((prev) => ({ ...prev, notes: e.target.value }))} /></div>
+        {supplier?._id && (
+          <div className="flex items-center justify-between gap-3 pt-1">
+            <span className="text-[15px] text-gray-900">Proveedor activo</span>
+            <Toggle on={form.isActive} label="Proveedor activo" onChange={(v) => setForm((prev) => ({ ...prev, isActive: v }))} />
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div><label className={labelCls}>WhatsApp</label><input className={inputCls} value={form.whatsappPhone} onChange={(e) => setForm((prev) => ({ ...prev, whatsappPhone: e.target.value }))} placeholder="+34600111222" /></div>
-            <div><label className={labelCls}>Email</label><input className={inputCls} type="email" value={form.email} onChange={(e) => setForm((prev) => ({ ...prev, email: e.target.value }))} /></div>
-          </div>
-          <div><label className={labelCls}>Notas</label><textarea rows={2} className={inputCls} value={form.notes} onChange={(e) => setForm((prev) => ({ ...prev, notes: e.target.value }))} /></div>
-          {supplier?._id && (
-            <label className="inline-flex items-center gap-2 text-sm text-gray-700">
-              <input type="checkbox" checked={form.isActive} onChange={(e) => setForm((prev) => ({ ...prev, isActive: e.target.checked }))} />
-              Proveedor activo
-            </label>
-          )}
-          <div className="flex justify-end gap-2 pt-2">
-            <button type="button" onClick={onClose} className="px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-sm">Cancelar</button>
-            <button type="submit" disabled={saving} className="px-3 py-2 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold">{saving ? 'Guardando...' : 'Guardar'}</button>
-          </div>
-        </form>
-      </div>
-    </div>
+        )}
+      </form>
+    </Modal>
   );
 }
 
@@ -722,46 +683,39 @@ function ProductModal({ product, suppliers, onClose, onSaved }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/45 flex items-center justify-center p-4">
-      <div className="w-full max-w-xl bg-white rounded-2xl border border-gray-200 shadow-2xl">
-        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-          <h3 className="text-base font-semibold text-gray-900">{product?._id ? 'Editar producto' : 'Nuevo producto'}</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">X</button>
+    <Modal onClose={onClose} size="lg" title={product?._id ? 'Editar producto' : 'Nuevo producto'}
+      footer={(
+        <div className="flex items-center gap-2">
+          {product?._id && <button type="button" onClick={remove} disabled={saving} className={btnDanger}>Eliminar</button>}
+          <div className="flex-1" />
+          <button type="button" onClick={onClose} className={btnQuiet}>Cancelar</button>
+          <button type="submit" form="product-form" disabled={saving} className={btnPrimary}>{saving ? 'Guardando…' : 'Guardar'}</button>
         </div>
-        <form onSubmit={submit} className="p-5 space-y-3">
-          {error && <div className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</div>}
-          <div>
-            <label className={labelCls}>Proveedor *</label>
-            <select className={inputCls} value={form.supplierId} onChange={(e) => setForm((prev) => ({ ...prev, supplierId: e.target.value }))} required>
-              <option value="">Seleccionar...</option>
-              {suppliers.map((supplier) => <option key={supplier._id} value={supplier._id}>{supplier.name}</option>)}
-            </select>
+      )}>
+      <form id="product-form" onSubmit={submit} className="space-y-4">
+        {error && <p className="text-sm text-rose-700 bg-rose-50 rounded-xl px-3 py-2">{error}</p>}
+        <div>
+          <label className={labelCls}>Proveedor *</label>
+          <select className={inputCls} value={form.supplierId} onChange={(e) => setForm((prev) => ({ ...prev, supplierId: e.target.value }))} required>
+            <option value="">Elegir…</option>
+            {suppliers.map((supplier) => <option key={supplier._id} value={supplier._id}>{supplier.name}</option>)}
+          </select>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div><label className={labelCls}>Nombre *</label><input className={inputCls} value={form.name} onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))} required /></div>
+          <div><label className={labelCls}>Unidad</label><input className={inputCls} value={form.unit} onChange={(e) => setForm((prev) => ({ ...prev, unit: e.target.value }))} placeholder="kg, ud, caja…" /></div>
+          <div><label className={labelCls}>Coste base</label><input type="number" min="0" step="0.01" className={inputCls} value={form.defaultUnitCost} onChange={(e) => setForm((prev) => ({ ...prev, defaultUnitCost: e.target.value }))} /></div>
+          <div><label className={labelCls}>Referencia (SKU)</label><input className={inputCls} value={form.sku} onChange={(e) => setForm((prev) => ({ ...prev, sku: e.target.value }))} /></div>
+        </div>
+        <div><label className={labelCls}>Notas</label><textarea rows={2} className={inputCls} value={form.notes} onChange={(e) => setForm((prev) => ({ ...prev, notes: e.target.value }))} /></div>
+        {product?._id && (
+          <div className="flex items-center justify-between gap-3 pt-1">
+            <span className="text-[15px] text-gray-900">Producto activo</span>
+            <Toggle on={form.isActive} label="Producto activo" onChange={(v) => setForm((prev) => ({ ...prev, isActive: v }))} />
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div><label className={labelCls}>Nombre *</label><input className={inputCls} value={form.name} onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))} required /></div>
-            <div><label className={labelCls}>Unidad</label><input className={inputCls} value={form.unit} onChange={(e) => setForm((prev) => ({ ...prev, unit: e.target.value }))} placeholder="kg, ud, caja..." /></div>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div><label className={labelCls}>Coste base</label><input type="number" min="0" step="0.01" className={inputCls} value={form.defaultUnitCost} onChange={(e) => setForm((prev) => ({ ...prev, defaultUnitCost: e.target.value }))} /></div>
-            <div><label className={labelCls}>SKU</label><input className={inputCls} value={form.sku} onChange={(e) => setForm((prev) => ({ ...prev, sku: e.target.value }))} /></div>
-          </div>
-          <div><label className={labelCls}>Notas</label><textarea rows={2} className={inputCls} value={form.notes} onChange={(e) => setForm((prev) => ({ ...prev, notes: e.target.value }))} /></div>
-          {product?._id && (
-            <label className="inline-flex items-center gap-2 text-sm text-gray-700">
-              <input type="checkbox" checked={form.isActive} onChange={(e) => setForm((prev) => ({ ...prev, isActive: e.target.checked }))} />
-              Producto activo
-            </label>
-          )}
-          <div className="flex justify-end gap-2 pt-2">
-            {product?._id && (
-              <button type="button" onClick={remove} disabled={saving} className="px-3 py-2 rounded-lg bg-rose-50 text-rose-700 hover:bg-rose-100 text-sm font-semibold disabled:opacity-50">Eliminar</button>
-            )}
-            <button type="button" onClick={onClose} className="px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-sm">Cancelar</button>
-            <button type="submit" disabled={saving} className="px-3 py-2 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold">{saving ? 'Guardando...' : 'Guardar'}</button>
-          </div>
-        </form>
-      </div>
-    </div>
+        )}
+      </form>
+    </Modal>
   );
 }
 
@@ -843,110 +797,74 @@ function OrderModal({ order, suppliers, products, onClose, onSaved }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/45 flex items-end sm:items-center justify-center p-0 sm:p-4">
-      <div className="w-full max-w-3xl bg-white rounded-t-3xl sm:rounded-2xl border border-gray-200 shadow-2xl max-h-[95vh] flex flex-col">
-        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-          <div>
-            <h3 className="text-base font-semibold text-gray-900">{order?._id ? 'Editar pedido' : 'Nuevo pedido'}</h3>
-            <p className="text-xs text-gray-500 mt-0.5">Paso {step} de 2</p>
-          </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">X</button>
+    <Modal onClose={onClose} size="lg" title={order?._id ? 'Editar pedido' : 'Nuevo pedido'}
+      subtitle={step === 1 ? 'Elige el proveedor' : `${selectedSupplier?.name || 'Sin proveedor'} · ${niceDate(form.orderDate)}`}
+      footer={(
+        <div className="flex items-center gap-2">
+          {step === 2 && <button type="button" onClick={() => setStep(1)} className={btnQuiet}>‹ Proveedor</button>}
+          <div className="flex-1" />
+          <button type="button" onClick={onClose} className={btnQuiet}>Cancelar</button>
+          {step === 1 && <button type="button" disabled={!form.supplierId} onClick={() => setStep(2)} className={btnPrimary}>Siguiente</button>}
+          {step === 2 && <button type="submit" form="order-form" disabled={saving} className={btnPrimary}>{saving ? 'Guardando…' : 'Guardar pedido'}</button>}
         </div>
-
-        <form onSubmit={submit} className="flex-1 overflow-auto p-4 sm:p-5 space-y-4">
-          {error && <div className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</div>}
-          {step === 1 && (
-            <div className="space-y-3">
-              <p className="text-sm text-gray-600">Selecciona proveedorg</p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {suppliers.filter((s) => s.isActive).map((supplier) => {
-                  const selected = String(form.supplierId) === String(supplier._id);
-                  return (
-                    <button
-                      key={supplier._id}
-                      type="button"
-                      onClick={() => {
-                        setForm((prev) => ({ ...prev, supplierId: supplier._id }));
-                        setStep(2);
-                      }}
-                      className={`text-left rounded-xl border px-3 py-3 transition-colors ${selected ? 'border-violet-500 bg-violet-50' : 'border-gray-200 bg-white hover:bg-gray-50'}`}
-                    >
-                      <p className="text-sm font-semibold text-gray-900">{supplier.name}</p>
-                      <p className="text-xs text-gray-500 mt-1">{supplier.whatsappPhone || supplier.phone || 'Sin teléfono'}</p>
+      )}>
+      <form id="order-form" onSubmit={submit} className="space-y-4">
+        {error && <p className="text-sm text-rose-700 bg-rose-50 rounded-xl px-3 py-2">{error}</p>}
+        {step === 1 && (
+          suppliers.filter((sp) => sp.isActive).length === 0 ? (
+            <p className="text-sm text-gray-500 py-4 text-center">No hay proveedores activos. Añade uno en la pestaña Proveedores.</p>
+          ) : (
+            <ul className="divide-y divide-gray-100 -my-2">
+              {suppliers.filter((sp) => sp.isActive).map((supplier) => {
+                const selected = String(form.supplierId) === String(supplier._id);
+                return (
+                  <li key={supplier._id}>
+                    <button type="button" onClick={() => { setForm((prev) => ({ ...prev, supplierId: supplier._id })); setStep(2); }}
+                      className={`w-full text-left flex items-center gap-3 px-2 -mx-2 py-3 rounded-xl ${selected ? 'bg-violet-50' : 'hover:bg-gray-50'}`}>
+                      <span className="w-9 h-9 rounded-xl bg-gray-100 text-gray-600 flex items-center justify-center text-sm font-semibold shrink-0">{(supplier.name || '?').charAt(0).toUpperCase()}</span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-[15px] font-medium text-gray-900 truncate">{supplier.name}</span>
+                        <span className="block text-[13px] text-gray-500">{supplier.whatsappPhone || supplier.phone || 'Sin teléfono'}</span>
+                      </span>
+                      <Icon name="right" className="w-4 h-4 text-gray-300" strokeWidth={2} />
                     </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
+                  </li>
+                );
+              })}
+            </ul>
+          )
+        )}
 
-          {step === 2 && (
-            <div className="space-y-4">
-              <div className="rounded-xl bg-gray-50 border border-gray-200 px-3 py-2">
-                <p className="text-xs text-gray-500">Proveedor</p>
-                <p className="text-sm font-semibold text-gray-900">{selectedSupplier?.name || 'Sin proveedor'}</p>
-                <p className="text-xs text-gray-500 mt-0.5">Fecha: {form.orderDate}</p>
-              </div>
-
-              <div className="space-y-2">
-                {supplierProducts.length === 0 ? (
-                  <div className="rounded-xl border border-gray-200 px-3 py-4 text-sm text-gray-500 text-center">Este proveedor no tiene productos activos</div>
-                ) : supplierProducts.map((product) => {
+        {step === 2 && (
+          <>
+            {supplierProducts.length === 0 ? (
+              <p className="text-sm text-gray-500 py-4 text-center">Este proveedor no tiene productos activos.</p>
+            ) : (
+              <ul className="divide-y divide-gray-100 -my-2">
+                {supplierProducts.map((product) => {
                   const row = rowByProduct.get(String(product._id)) || { quantity: 0 };
                   return (
-                    <div key={product._id} className="rounded-xl border border-gray-200 bg-white px-3 py-2.5">
-                      <div className="flex items-center justify-between gap-2">
-                        <div>
-                          <p className="text-sm font-semibold text-gray-900">{product.name}</p>
-                          <p className="text-xs text-gray-500">{product.unit || 'unidad'}</p>
-                        </div>
-                        <input
-                          type="text"
-                          inputMode="decimal"
-                          className="w-24 border border-gray-300 rounded-lg px-2 py-1.5 text-sm text-right"
-                          value={formatDecimalInput(row.quantity)}
-                          onChange={(e) => setItemQuantity(product, parseDecimalInput(e.target.value))}
-                        />
+                    <li key={product._id} className="flex items-center justify-between gap-3 py-2.5">
+                      <div className="min-w-0">
+                        <p className="text-[15px] text-gray-900 truncate">{product.name}</p>
+                        <p className="text-[13px] text-gray-500">{product.unit || 'unidad'}</p>
                       </div>
-                    </div>
+                      <input type="text" inputMode="decimal" placeholder="0" aria-label={`Cantidad de ${product.name}`}
+                        className="w-20 border border-gray-300 rounded-xl px-3 py-2 text-sm text-right tabular-nums focus:outline-none focus:ring-2 focus:ring-violet-500"
+                        value={formatDecimalInput(row.quantity)}
+                        onChange={(e) => setItemQuantity(product, parseDecimalInput(e.target.value))} />
+                    </li>
                   );
                 })}
-              </div>
-
-              <div>
-                <label className={labelCls}>Notas</label>
-                <textarea rows={2} className={inputCls} value={form.notes} onChange={(e) => setForm((prev) => ({ ...prev, notes: e.target.value }))} />
-              </div>
+              </ul>
+            )}
+            <div className="pt-2">
+              <label className={labelCls}>Notas para el proveedor</label>
+              <textarea rows={2} className={inputCls} value={form.notes} onChange={(e) => setForm((prev) => ({ ...prev, notes: e.target.value }))} />
             </div>
-          )}
-        </form>
-
-        <div className="px-4 sm:px-5 py-4 border-t border-gray-100 flex items-center justify-between gap-2">
-          <div className="flex gap-2">
-            {step === 2 && (
-              <button type="button" onClick={() => setStep(1)} className="px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-sm">Atrás</button>
-            )}
-            <button type="button" onClick={onClose} className="px-3 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-sm">Cancelar</button>
-          </div>
-          <div className="flex gap-2">
-            {step === 1 && (
-              <button
-                type="button"
-                disabled={!form.supplierId}
-                onClick={() => setStep(2)}
-                className="px-3 py-2 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold disabled:opacity-50"
-              >
-                Siguiente
-              </button>
-            )}
-            {step === 2 && (
-              <button type="submit" disabled={saving} onClick={submit} className="px-3 py-2 rounded-lg bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold">{saving ? 'Guardando...' : 'Guardar pedido'}</button>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
+          </>
+        )}
+      </form>
+    </Modal>
   );
 }
-
-

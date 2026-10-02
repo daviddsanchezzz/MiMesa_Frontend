@@ -1,5 +1,12 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Fragment } from 'react';
 import api from '../services/api';
+import { useSetMobileHeader } from '../context/MobileHeaderContext';
+import Modal from '../components/Modal';
+import Icon from '../ui/Icon';
+import {
+  PageHeader, PrimaryButton, GhostButton, Tabs, Segmented, Section, SectionLink, FigureLine, BigFigure, Empty, Toggle,
+} from '../ui/kit';
+import { euros } from './agenda/utils';
 
 // ── Color palette (static — color key stored in DB → Tailwind bg class) ───────
 
@@ -30,8 +37,9 @@ function catDot(cats, value) {
   const c = cats?.find((x) => x.value === value);
   return COLOR_DOT[c?.color] || 'bg-slate-400';
 }
+const BUILT_IN_LABELS = { staff: 'Personal', commissions: 'Comisiones' };
 function catLabel(cats, value) {
-  return cats?.find((x) => x.value === value)?.label || value;
+  return cats?.find((x) => x.value === value)?.label || BUILT_IN_LABELS[value] || value;
 }
 
 // ── Date helpers ──────────────────────────────────────────────────────────────
@@ -58,91 +66,46 @@ function getMonthRange() {
   };
 }
 
-function fmtDate(iso) {
-  if (!iso) return '—';
-  const [y, m, d] = iso.split('-');
-  return `${d}/${m}/${y}`;
+function parseIso(iso) {
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(y, m - 1, d);
 }
 
+// "1 oct" (with the year when it isn't this year)
+function fmtShort(iso, withYear = false) {
+  if (!iso) return '—';
+  const d = parseIso(iso);
+  const showYear = withYear || d.getFullYear() !== new Date().getFullYear();
+  return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', ...(showYear ? { year: 'numeric' } : {}) }).replace('.', '');
+}
+
+// "mié 1 oct"
+function fmtDay(iso) {
+  if (!iso) return '—';
+  return parseIso(iso).toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' }).replace(/[.,]/g, '');
+}
+
+function fmtRange({ from, to }) {
+  if (!from || !to) return '';
+  return `${fmtShort(from)} – ${fmtShort(to, true)}`;
+}
+
+// Amounts here are euros (not cents): 12 € · 12,50 € · −1.099,20 €
 function fmtEur(n) {
   if (n === null || n === undefined) return '—';
-  return `€${Number(n).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  return euros(Math.round(Number(n) * 100)).replace('-', '−');
 }
 
 // ── Shared UI pieces ──────────────────────────────────────────────────────────
 
-function KpiCard({ label, value, sub, color = 'violet', icon, badge }) {
-  const colors = {
-    violet:  { bg: 'bg-violet-50',  text: 'text-violet-600',  icon: 'text-violet-500'  },
-    emerald: { bg: 'bg-emerald-50', text: 'text-emerald-600', icon: 'text-emerald-500' },
-    rose:    { bg: 'bg-rose-50',    text: 'text-rose-600',    icon: 'text-rose-500'    },
-    amber:   { bg: 'bg-amber-50',   text: 'text-amber-600',   icon: 'text-amber-500'   },
-    sky:     { bg: 'bg-sky-50',     text: 'text-sky-600',     icon: 'text-sky-500'     },
-  };
-  const c = colors[color] || colors.violet;
-  return (
-    <div className="bg-white rounded-2xl border border-gray-100 p-5 shadow-sm flex flex-col gap-3">
-      <div className="flex items-center justify-between">
-        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{label}</p>
-        <div className={`w-8 h-8 rounded-xl ${c.bg} flex items-center justify-center ${c.icon}`}>{icon}</div>
-      </div>
-      <div>
-        <p className={`text-2xl font-bold ${c.text}`}>{value}</p>
-        {sub && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
-      </div>
-      {badge && <span className="self-start text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded-full">{badge}</span>}
-    </div>
-  );
-}
-
-function Spinner() {
-  return (
-    <div className="flex items-center justify-center py-16">
-      <div className="w-7 h-7 border-2 border-violet-200 border-t-violet-600 rounded-full animate-spin" />
-    </div>
-  );
-}
-
-function EmptyState({ message, cta, onCta }) {
-  return (
-    <div className="flex flex-col items-center justify-center py-16 text-center gap-3">
-      <div className="w-12 h-12 bg-gray-100 rounded-2xl flex items-center justify-center">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-6 h-6 text-gray-400">
-          <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" />
-        </svg>
-      </div>
-      <p className="text-gray-500 text-sm">{message}</p>
-      {cta && (
-        <button onClick={onCta} className="mt-1 text-sm font-semibold text-violet-600 hover:text-violet-700">
-          {cta}
-        </button>
-      )}
-    </div>
-  );
-}
-
-function ModalOverlay({ title, onClose, children }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] flex flex-col">
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-          <h2 className="text-base font-semibold text-gray-900">{title}</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
-              <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
-            </svg>
-          </button>
-        </div>
-        <div className="overflow-y-auto flex-1 px-6 py-5">{children}</div>
-      </div>
-    </div>
-  );
+function Loading() {
+  return <p className="py-6 text-sm text-gray-400">Cargando…</p>;
 }
 
 function FormField({ label, children, required }) {
   return (
     <div>
-      <label className="block text-xs font-semibold text-gray-600 mb-1.5">
+      <label className="block text-xs font-medium text-gray-600 mb-1.5">
         {label}{required && <span className="text-rose-500 ml-0.5">*</span>}
       </label>
       {children}
@@ -150,101 +113,98 @@ function FormField({ label, children, required }) {
   );
 }
 
-const inputCls = 'w-full px-3 py-2 text-sm border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent';
+const inputCls = 'w-full rounded-xl border border-gray-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent';
 const selectCls = inputCls + ' bg-white';
-const btnPrimary = 'px-4 py-2 bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold rounded-xl transition-colors';
-const btnGhost = 'px-4 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-xl transition-colors';
+const amountCls = 'w-full rounded-xl border border-gray-300 px-3.5 py-3 text-2xl font-semibold tabular-nums text-gray-900 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent';
+const btnSubmit = 'inline-flex items-center justify-center h-10 px-4 rounded-xl bg-violet-600 text-white text-sm font-semibold hover:bg-violet-700 disabled:opacity-60';
+const btnCancel = 'inline-flex items-center justify-center h-10 px-4 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-100';
+const btnDanger = 'inline-flex items-center justify-center h-10 px-4 rounded-xl bg-rose-600 text-white text-sm font-semibold hover:bg-rose-700 disabled:opacity-60';
+const errorCls = 'text-sm text-rose-700 bg-rose-50 rounded-xl px-3 py-2';
 
-// ── Period selector ───────────────────────────────────────────────────────────
-
-const PERIOD_LABELS = { week: 'Esta semana', month: 'Este mes', custom: 'Personalizado' };
-
-function PeriodSelector({ period, dateRange, onChange, onRangeChange }) {
-  const [open, setOpen] = useState(false);
-  const PERIODS = [
-    { id: 'week',   label: 'Esta semana'  },
-    { id: 'month',  label: 'Este mes'     },
-    { id: 'custom', label: 'Personalizado' },
-  ];
-
+// Hairline table header: [[label, 'col-span-x text-right'], …]
+function TableHead({ cols }) {
   return (
-    <div>
-      {/* Mobile: compact pill + expand */}
-      <div className="md:hidden flex items-center gap-2">
-        <button
-          onClick={() => setOpen((v) => !v)}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium bg-white border border-gray-200 text-gray-600"
-        >
-          {PERIOD_LABELS[period]}
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor"
-            className={`w-3.5 h-3.5 text-gray-400 transition-transform ${open ? 'rotate-180' : ''}`}>
-            <path fillRule="evenodd" d="M4.22 6.22a.75.75 0 0 1 1.06 0L8 8.94l2.72-2.72a.75.75 0 1 1 1.06 1.06l-3.25 3.25a.75.75 0 0 1-1.06 0L4.22 7.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
-          </svg>
-        </button>
-        <span className="text-xs text-gray-400">{fmtDate(dateRange.from)} — {fmtDate(dateRange.to)}</span>
-      </div>
-
-      {/* Mobile expanded options */}
-      {open && (
-        <div className="md:hidden flex flex-wrap items-center gap-2 mt-2">
-          {PERIODS.map((p) => (
-            <button key={p.id} onClick={() => { onChange(p.id); setOpen(false); }}
-              className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-                period === p.id ? 'bg-violet-600 text-white' : 'bg-white border border-gray-200 text-gray-600'
-              }`}>
-              {p.label}
-            </button>
-          ))}
-          {period === 'custom' && (
-            <div className="flex items-center gap-2 w-full mt-1">
-              <input type="date" value={dateRange.from} onChange={(e) => onRangeChange({ ...dateRange, from: e.target.value })}
-                className="px-2 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500 appearance-none" />
-              <span className="text-gray-400 text-sm">—</span>
-              <input type="date" value={dateRange.to} onChange={(e) => onRangeChange({ ...dateRange, to: e.target.value })}
-                className="px-2 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500 appearance-none" />
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Desktop: full row always visible */}
-      <div className="hidden md:flex flex-wrap items-center gap-2">
-        {PERIODS.map((p) => (
-          <button key={p.id} onClick={() => onChange(p.id)}
-            className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-colors ${
-              period === p.id ? 'bg-violet-600 text-white' : 'bg-white border border-gray-200 text-gray-600 hover:bg-gray-50'
-            }`}>
-            {p.label}
-          </button>
-        ))}
-        {period === 'custom' && (
-          <div className="flex items-center gap-2">
-            <input type="date" value={dateRange.from} onChange={(e) => onRangeChange({ ...dateRange, from: e.target.value })}
-              className="px-2 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500" />
-            <span className="text-gray-400 text-sm">—</span>
-            <input type="date" value={dateRange.to} onChange={(e) => onRangeChange({ ...dateRange, to: e.target.value })}
-              className="px-2 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500" />
-          </div>
-        )}
-        <span className="text-xs text-gray-400 ml-1">{fmtDate(dateRange.from)} — {fmtDate(dateRange.to)}</span>
-      </div>
+    <div className="hidden md:grid grid-cols-12 gap-4 px-2 pb-2 border-b border-gray-200 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+      {cols.map(([label, cls]) => <span key={label || cls} className={cls}>{label}</span>)}
     </div>
   );
 }
 
-// ── Dashboard tab ─────────────────────────────────────────────────────────────
+/** ⋯ button with a small menu (Editar · Eliminar). */
+function RowMenu({ items, label = 'Más opciones' }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="relative shrink-0" onClick={(e) => e.stopPropagation()}>
+      <button type="button" onClick={() => setOpen((o) => !o)} aria-label={label}
+        className="w-8 h-8 rounded-full text-gray-500 hover:bg-gray-100 flex items-center justify-center text-lg leading-none">⋯</button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
+          <div className="absolute z-40 right-0 top-9 bg-white border border-gray-200 rounded-xl shadow-lg py-1 w-48">
+            {items.filter(Boolean).map((it) => (
+              <button key={it.label} type="button" disabled={it.disabled} onClick={() => { setOpen(false); it.onClick(); }}
+                className={`w-full text-left px-3.5 py-2.5 text-sm hover:bg-gray-50 disabled:opacity-50 ${it.danger ? 'text-rose-600' : 'text-gray-700'}`}>
+                {it.label}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
 
-function InlineRevenueEdit({ date, value, onSave }) {
+function Dot({ cls, size = 'w-2.5 h-2.5' }) {
+  return <span className={`${size} rounded-full shrink-0 ${cls}`} aria-hidden="true" />;
+}
+
+function Pager({ page, pageCount, setPage }) {
+  if (pageCount <= 1) return null;
+  const btn = 'inline-flex items-center gap-1 h-8 px-3 rounded-full text-[13px] font-semibold text-gray-700 hover:bg-gray-100 disabled:text-gray-300 disabled:hover:bg-transparent';
+  return (
+    <div className="flex items-center justify-between pt-2">
+      <button type="button" className={btn} onClick={() => setPage((p) => Math.max(0, p - 1))} disabled={page === 0}>
+        <Icon name="left" className="w-3.5 h-3.5" strokeWidth={2} />Anterior
+      </button>
+      <span className="text-xs text-gray-400 tabular-nums">{page + 1} de {pageCount}</span>
+      <button type="button" className={btn} onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))} disabled={page >= pageCount - 1}>
+        Siguiente<Icon name="right" className="w-3.5 h-3.5" strokeWidth={2} />
+      </button>
+    </div>
+  );
+}
+
+// ── Period selector ───────────────────────────────────────────────────────────
+
+const PERIODS = [['week', 'Semana'], ['month', 'Mes'], ['custom', 'Fechas']];
+
+function PeriodSelector({ period, onChange }) {
+  return <Segmented size="sm" value={period} options={PERIODS} onChange={onChange} />;
+}
+
+function CustomRange({ dateRange, onRangeChange }) {
+  const cls = 'rounded-xl border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 min-w-0 flex-1 sm:flex-none appearance-none bg-white';
+  return (
+    <div className="flex items-center gap-2">
+      <input type="date" aria-label="Desde" value={dateRange.from} onChange={(e) => onRangeChange({ ...dateRange, from: e.target.value })} className={cls} />
+      <span className="text-gray-400 text-sm">–</span>
+      <input type="date" aria-label="Hasta" value={dateRange.to} onChange={(e) => onRangeChange({ ...dateRange, to: e.target.value })} className={cls} />
+    </div>
+  );
+}
+
+// ── Resumen tab ───────────────────────────────────────────────────────────────
+
+function InlineRevenueEdit({ date, value, source, onSave }) {
   const [modal, setModal] = useState(false);
   return (
     <>
-      <button
-        onClick={() => setModal(true)}
-        className={`text-sm font-medium px-2 py-0.5 rounded-lg transition-colors text-right ${
-          value !== null ? 'text-emerald-700 hover:bg-emerald-50' : 'text-gray-300 hover:bg-gray-100 hover:text-gray-500'
-        }`}
-      >
-        {value !== null ? fmtEur(value) : '+ añadir'}
+      <button type="button" onClick={() => setModal(true)}
+        className={`inline-flex flex-col items-end px-2 py-1 -mr-2 rounded-lg transition-colors ${value !== null ? 'hover:bg-gray-100' : 'hover:bg-violet-50'}`}>
+        {value !== null
+          ? <span className="text-sm font-semibold tabular-nums text-gray-900">{fmtEur(value)}</span>
+          : <span className="text-[13px] font-semibold text-violet-700">Añadir</span>}
+        {source && <span className="text-[11px] text-gray-400 leading-4">{source === 'till' ? 'caja' : 'a mano'}</span>}
       </button>
       {modal && (
         <RevenueModal
@@ -270,32 +230,29 @@ function TicketAverageEdit({ value, onSave }) {
 
   if (editing) {
     return (
-      <span className="inline-flex items-center gap-1">
-        <input
-          autoFocus
-          type="number" min="0" step="0.5"
-          value={val}
-          onChange={(e) => setVal(e.target.value)}
-          onBlur={save}
-          onKeyDown={(e) => { if (e.key === 'Enter') save(); if (e.key === 'Escape') setEditing(false); }}
-          className="w-20 px-2 py-0.5 text-sm border border-violet-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500"
-        />
-        <span className="text-sm text-gray-500">€/comensal</span>
-      </span>
+      <input
+        autoFocus
+        type="number" min="0" step="0.5"
+        value={val}
+        onChange={(e) => setVal(e.target.value)}
+        onBlur={save}
+        onKeyDown={(e) => { if (e.key === 'Enter') save(); if (e.key === 'Escape') setEditing(false); }}
+        className="w-24 px-2 py-0.5 text-base font-semibold tabular-nums border border-violet-400 rounded-lg focus:outline-none focus:ring-2 focus:ring-violet-500"
+      />
     );
   }
   return (
-    <button onClick={() => setEditing(true)}
-      className="text-sm text-violet-600 font-semibold hover:underline underline-offset-2"
-      title="Haz clic para editar el ticket medio">
-      {fmtEur(value)}/comensal
+    <button type="button" onClick={() => { setVal(String(value)); setEditing(true); }}
+      className="font-semibold tabular-nums text-gray-900 underline decoration-dashed decoration-gray-300 underline-offset-4 hover:decoration-violet-500"
+      title="Cambiar el ticket medio">
+      {fmtEur(value)}
     </button>
   );
 }
 
 const PAGE_SIZE = 10;
 
-function DashboardTab({ dateRange, categories, refreshTrigger }) {
+function ResumenTab({ dateRange, categories, refreshTrigger, onTodayRevenue }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
@@ -328,158 +285,173 @@ function DashboardTab({ dateRange, categories, refreshTrigger }) {
     } catch { /* ignore */ }
   };
 
-  if (loading) return <Spinner />;
-  if (!data) return <EmptyState message="No se pudieron cargar los datos" />;
+  if (loading && !data) return <Loading />;
+  if (!data) return <Empty>No se pudieron cargar los datos.</Empty>;
 
+  const appt = data.mode === 'appointments';
   const maxExpense = data.expensesByCategory[0]?.amount || 1;
   const totalExpensesSum = data.expensesByCategory.reduce((s, c) => s + c.amount, 0) || 1;
 
+  // The income the profit is computed from (real, estimated or a mix).
+  const income = (data.estimatedProfit || 0) + (data.totalExpenses || 0);
+  const barMax = Math.max(income, data.totalExpenses || 0, 1);
+  const basis = data.profitBasis === 'actual'
+    ? (appt ? 'Con lo cobrado en caja' : 'Con los ingresos reales')
+    : data.profitBasis === 'mixed' ? 'Con lo cobrado en caja y las citas de los días sin cobros'
+      : appt ? 'Con lo facturado en citas' : 'Con la estimación por reservas';
+
+  const pageCount = Math.ceil(data.days.length / PAGE_SIZE);
+  const slice = data.days.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+
   return (
-    <div className="space-y-6">
-      {/* KPI cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard
-          label="Ingresos estimados"
-          value={fmtEur(data.estimatedRevenue)}
-          sub={`${data.totalCovers} comensales`}
-          color="sky"
-          badge="desde reservas"
-          icon={<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4"><path d="M10 2a.75.75 0 0 1 .75.75v.258a33.186 33.186 0 0 1 6.668.83.75.75 0 0 1-.336 1.461 31.28 31.28 0 0 0-1.103-.232l1.702 7.545a.75.75 0 0 1-.387.832A4.981 4.981 0 0 1 15 14c-.825 0-1.606-.2-2.294-.556a.75.75 0 0 1-.387-.832l1.77-7.849a31.743 31.743 0 0 0-3.339-.254v11.505a20.01 20.01 0 0 1 3.78.501.75.75 0 1 1-.339 1.46A18.51 18.51 0 0 0 10 17.5c-1.49 0-2.938.208-4.21.582a.75.75 0 0 1-.339-1.46 20.01 20.01 0 0 1 3.78-.501V5.509a31.743 31.743 0 0 0-3.339.254l1.77 7.85a.75.75 0 0 1-.387.831A4.981 4.981 0 0 1 5 14a4.981 4.981 0 0 1-2.294-.556.75.75 0 0 1-.387-.832L4.021 5.067c-.37.07-.738.148-1.103.232a.75.75 0 0 1-.336-1.462 33.186 33.186 0 0 1 6.668-.829V2.75A.75.75 0 0 1 10 2Z" /></svg>}
-        />
-        <KpiCard
-          label="Ingresos reales"
-          value={data.actualRevenue !== null ? fmtEur(data.actualRevenue) : '—'}
-          sub={data.actualRevenue !== null ? 'introducido manualmente' : 'sin datos manuales'}
-          color="emerald"
-          icon={<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4"><path fillRule="evenodd" d="M16.704 4.153a.75.75 0 0 1 .143 1.052l-8 10.5a.75.75 0 0 1-1.127.075l-4.5-4.5a.75.75 0 0 1 1.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 0 1 1.05-.143Z" clipRule="evenodd" /></svg>}
-        />
-        <KpiCard
-          label="Gastos totales"
-          value={fmtEur(data.totalExpenses)}
-          sub={`${data.expensesByCategory.length} categorías`}
-          color="rose"
-          icon={<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4"><path d="M1 4.25a3.733 3.733 0 0 1 2.25-.75h13.5c.844 0 1.623.279 2.25.75A2.25 2.25 0 0 0 16.75 2H3.25A2.25 2.25 0 0 0 1 4.25ZM1 7.25a3.733 3.733 0 0 1 2.25-.75h13.5c.844 0 1.623.279 2.25.75A2.25 2.25 0 0 0 16.75 5H3.25A2.25 2.25 0 0 0 1 7.25ZM7 8a1 1 0 0 0 0 2h6a1 1 0 1 0 0-2H7ZM3.25 8A2.25 2.25 0 0 0 1 10.25v4.5A2.25 2.25 0 0 0 3.25 17h13.5A2.25 2.25 0 0 0 19 14.75v-4.5A2.25 2.25 0 0 0 16.75 8H3.25Z" /></svg>}
-        />
-        <KpiCard
+    <div className={`space-y-9 ${loading ? 'opacity-60' : ''}`}>
+      {/* Hero: profit, then where it comes from */}
+      <section className="space-y-5">
+        <BigFigure
           label="Beneficio estimado"
           value={fmtEur(data.estimatedProfit)}
-          sub={data.profitBasis === 'actual' ? 'basado en ingresos reales' : 'basado en estimación'}
-          color={data.estimatedProfit >= 0 ? 'emerald' : 'rose'}
-          icon={<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4"><path fillRule="evenodd" d="M12.577 4.878a.75.75 0 0 1 .919-.53l4.78 1.281a.75.75 0 0 1 .531.919l-1.281 4.78a.75.75 0 0 1-1.449-.387l.81-3.022a19.407 19.407 0 0 0-5.594 5.203.75.75 0 0 1-1.139.093L7 10.06l-4.72 4.72a.75.75 0 0 1-1.06-1.061l5.25-5.25a.75.75 0 0 1 1.06 0l3.074 3.073a20.923 20.923 0 0 1 5.545-4.931l-3.042-.815a.75.75 0 0 1-.53-.918Z" clipRule="evenodd" /></svg>}
+          tone={data.estimatedProfit < 0 ? 'bad' : data.estimatedProfit > 0 ? 'good' : undefined}
+          sub={basis}
         />
-      </div>
-
-      {/* Ticket average */}
-      <div className="flex items-center gap-2 text-sm text-gray-500">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 text-gray-400">
-          <path fillRule="evenodd" d="M15 8A7 7 0 1 1 1 8a7 7 0 0 1 14 0ZM9 5a1 1 0 1 1-2 0 1 1 0 0 1 2 0ZM6.75 8a.75.75 0 0 0 0 1.5h.75v1.75a.75.75 0 0 0 1.5 0v-2.5A.75.75 0 0 0 8.25 8h-1.5Z" clipRule="evenodd" />
-        </svg>
-        Ticket medio estimado:&nbsp;
-        <TicketAverageEdit value={data.ticketAverage} onSave={saveTicketAverage} />
-      </div>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Expenses by category */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-          <h3 className="text-sm font-semibold text-gray-700 mb-4">Gastos por categoría</h3>
-          {data.expensesByCategory.length === 0 ? (
-            <p className="text-sm text-gray-400">Sin gastos en este período</p>
-          ) : (
-            <div className="space-y-3">
-              {data.expensesByCategory.map((cat) => (
-                <div key={cat.category}>
-                  <div className="flex items-center justify-between mb-1">
-                    <div className="flex items-center gap-2">
-                      <span className={`w-2.5 h-2.5 rounded-full ${catDot(categories, cat.category)}`} />
-                      <span className="text-sm text-gray-600">{catLabel(categories, cat.category)}</span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-gray-400">{Math.round((cat.amount / totalExpensesSum) * 100)}%</span>
-                      <span className="text-sm font-semibold text-gray-700">{fmtEur(cat.amount)}</span>
-                    </div>
-                  </div>
-                  <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                    <div
-                      className={`h-full rounded-full ${catDot(categories, cat.category)}`}
-                      style={{ width: `${Math.round((cat.amount / maxExpense) * 100)}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
+        <div className="space-y-2 max-w-xl">
+          {[
+            ['Ingresos', income, 'bg-emerald-500'],
+            ['Gastos', data.totalExpenses, 'bg-rose-400'],
+          ].map(([label, value, cls]) => (
+            <div key={label} className="flex items-center gap-3">
+              <span className="w-16 shrink-0 text-[13px] text-gray-500">{label}</span>
+              <div className="flex-1 h-2 rounded-full bg-gray-100 overflow-hidden">
+                <div className={`h-full rounded-full ${cls}`} style={{ width: `${Math.max(0, Math.min(100, (value / barMax) * 100))}%` }} />
+              </div>
+              <span className="w-24 shrink-0 text-right text-sm font-semibold tabular-nums text-gray-900">{fmtEur(value)}</span>
             </div>
+          ))}
+        </div>
+        <FigureLine items={appt ? [
+          { label: data.appointments === 1 ? 'cita atendida' : 'citas atendidas', value: data.appointments },
+          { label: 'en citas', value: fmtEur(data.estimatedRevenue) },
+          { label: data.tips ? `cobrado en caja · +${fmtEur(data.tips)} propinas` : 'cobrado en caja', value: data.actualRevenue !== null ? fmtEur(data.actualRevenue) : '—' },
+          { label: 'ticket medio', value: fmtEur(data.averageTicket) },
+        ] : [
+          { label: 'comensales', value: data.totalCovers },
+          { label: 'estimado por reservas', value: fmtEur(data.estimatedRevenue) },
+          { label: data.actualRevenue !== null ? 'reales' : 'reales (sin datos)', value: data.actualRevenue !== null ? fmtEur(data.actualRevenue) : '—' },
+          { label: 'por comensal', value: <TicketAverageEdit value={data.ticketAverage} onSave={saveTicketAverage} /> },
+        ]} />
+      </section>
+
+      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_340px] gap-x-12 gap-y-9 items-start">
+        <div className="space-y-9 min-w-0">
+          {/* Daily breakdown */}
+          <Section title="Ingresos por día" aside={<SectionLink onClick={onTodayRevenue}>+ Ingreso de hoy</SectionLink>}>
+            <p className="text-[13px] text-gray-500 mb-3">
+              {appt ? 'Lo cobrado en Caja aparece solo. Toca un importe para corregir un día a mano.' : 'Toca «Añadir» para apuntar lo que entró de verdad ese día.'}
+            </p>
+            {data.days.length === 0 ? (
+              <Empty>Sin días en este periodo.</Empty>
+            ) : (
+              <>
+                <TableHead cols={[
+                  ['Día', 'col-span-4'],
+                  [appt ? 'Citas' : 'Comensales', 'col-span-2 text-right'],
+                  [appt ? 'En citas' : 'Estimado', 'col-span-3 text-right'],
+                  ['Real', 'col-span-3 text-right'],
+                ]} />
+                <ul className="divide-y divide-gray-100">
+                  {slice.map((day) => {
+                    const count = appt ? day.appointments : day.covers;
+                    return (
+                      <li key={day.date} className="px-2 py-2 flex items-center gap-3 md:grid md:grid-cols-12 md:gap-4">
+                        <div className="min-w-0 flex-1 md:col-span-4">
+                          <p className="text-[15px] font-medium text-gray-900 first-letter:uppercase">{fmtDay(day.date)}</p>
+                          <p className="text-[13px] text-gray-500 md:hidden">
+                            {count ? `${count} ${appt ? (count === 1 ? 'cita' : 'citas') : 'comensales'}` : appt ? 'Sin citas' : 'Sin reservas'}
+                            {day.estimatedRevenue > 0 && ` · ${fmtEur(day.estimatedRevenue)} ${appt ? 'en citas' : 'estimado'}`}
+                          </p>
+                        </div>
+                        <span className="hidden md:block md:col-span-2 text-right text-sm tabular-nums text-gray-600">{count || '—'}</span>
+                        <span className="hidden md:block md:col-span-3 text-right text-sm tabular-nums text-gray-600">{day.estimatedRevenue > 0 ? fmtEur(day.estimatedRevenue) : '—'}</span>
+                        <div className="shrink-0 md:col-span-3 text-right">
+                          <InlineRevenueEdit
+                            date={day.date}
+                            value={day.actualRevenue}
+                            source={appt ? day.actualSource : null}
+                            onSave={(v) => saveActual(day.date, v)}
+                          />
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+                <Pager page={page} pageCount={pageCount} setPage={setPage} />
+              </>
+            )}
+          </Section>
+
+          {appt && data.byStaff?.length > 0 && (
+            <Section title="Por profesional">
+              <p className="text-[13px] text-gray-500 mb-3">Facturado en citas atendidas y productos, menos su sueldo y comisión. Se configura en Personal.</p>
+              <TableHead cols={[
+                ['Profesional', 'col-span-3'],
+                ['Citas', 'col-span-1 text-right'],
+                ['Facturado', 'col-span-2 text-right'],
+                ['Sueldo', 'col-span-2 text-right'],
+                ['Comisión', 'col-span-2 text-right'],
+                ['Queda', 'col-span-2 text-right'],
+              ]} />
+              <ul className="divide-y divide-gray-100">
+                {data.byStaff.map((p) => {
+                  const leaves = p.leaves ?? (p.billed - p.commission);
+                  const billed = p.billed + (p.products || 0);
+                  return (
+                    <li key={p.id} className="px-2 py-3 flex items-center gap-3 md:grid md:grid-cols-12 md:gap-4">
+                      <div className="min-w-0 flex-1 md:col-span-3">
+                        <p className="text-[15px] font-medium text-gray-900 truncate">{p.name}</p>
+                        <p className="text-[13px] text-gray-500 md:hidden">
+                          {[
+                            `${p.appointments || 0} ${p.appointments === 1 ? 'cita' : 'citas'}`,
+                            `facturado ${fmtEur(billed)}`,
+                            p.salary ? `sueldo ${fmtEur(p.salary)}` : null,
+                            p.commission ? `comisión ${fmtEur(p.commission)}` : null,
+                          ].filter(Boolean).join(' · ')}
+                        </p>
+                      </div>
+                      <span className="hidden md:block md:col-span-1 text-right text-sm tabular-nums text-gray-600">{p.appointments || '—'}</span>
+                      <span className="hidden md:block md:col-span-2 text-right text-sm tabular-nums text-gray-900">{fmtEur(billed)}</span>
+                      <span className="hidden md:block md:col-span-2 text-right text-sm tabular-nums text-gray-600">{p.salary ? fmtEur(p.salary) : '—'}</span>
+                      <span className="hidden md:block md:col-span-2 text-right text-sm tabular-nums text-gray-600">{p.commission ? fmtEur(p.commission) : '—'}</span>
+                      <span className={`shrink-0 md:col-span-2 text-right text-sm font-semibold tabular-nums ${leaves >= 0 ? 'text-gray-900' : 'text-rose-600'}`}>{fmtEur(leaves)}</span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </Section>
           )}
         </div>
 
-        {/* Daily breakdown */}
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5">
-          <h3 className="text-sm font-semibold text-gray-700 mb-1">Ingresos por día</h3>
-          <p className="text-xs text-gray-400 mb-4">Haz clic en "+ añadir" para introducir el ingreso real del día</p>
-          {data.days.length === 0 ? (
-            <p className="text-sm text-gray-400">Sin días en este período</p>
-          ) : (() => {
-            const pageCount = Math.ceil(data.days.length / PAGE_SIZE);
-            const slice = data.days.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
-            return (
-              <>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="text-left text-xs text-gray-400 border-b border-gray-100">
-                        <th className="pb-2 font-medium">Fecha</th>
-                        <th className="pb-2 font-medium text-right">Comens.</th>
-                        <th className="pb-2 font-medium text-right">Estimado</th>
-                        <th className="pb-2 font-medium text-right">Real</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-50">
-                      {slice.map((day) => (
-                        <tr key={day.date} className="hover:bg-gray-50/50">
-                          <td className="py-2 text-gray-600">{fmtDate(day.date)}</td>
-                          <td className="py-2 text-right text-gray-500">{day.covers || '—'}</td>
-                          <td className="py-2 text-right text-gray-500">{day.estimatedRevenue > 0 ? fmtEur(day.estimatedRevenue) : '—'}</td>
-                          <td className="py-2 text-right">
-                            <InlineRevenueEdit
-                              date={day.date}
-                              value={day.actualRevenue}
-                              onSave={(v) => saveActual(day.date, v)}
-                            />
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                {pageCount > 1 && (
-                  <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
-                    <button
-                      onClick={() => setPage((p) => Math.max(0, p - 1))}
-                      disabled={page === 0}
-                      className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
-                        <path fillRule="evenodd" d="M9.78 4.22a.75.75 0 0 1 0 1.06L7.06 8l2.72 2.72a.75.75 0 1 1-1.06 1.06L5.47 8.53a.75.75 0 0 1 0-1.06l3.25-3.25a.75.75 0 0 1 1.06 0Z" clipRule="evenodd" />
-                      </svg>
-                      Anterior
-                    </button>
-                    <span className="text-xs text-gray-400">
-                      Página {page + 1} de {pageCount}
-                    </span>
-                    <button
-                      onClick={() => setPage((p) => Math.min(pageCount - 1, p + 1))}
-                      disabled={page >= pageCount - 1}
-                      className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                    >
-                      Siguiente
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
-                        <path fillRule="evenodd" d="M6.22 4.22a.75.75 0 0 1 1.06 0l3.25 3.25a.75.75 0 0 1 0 1.06l-3.25 3.25a.75.75 0 0 1-1.06-1.06L8.94 8 6.22 5.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
-                      </svg>
-                    </button>
+        {/* Expenses by category */}
+        <Section title="Gastos por categoría">
+          {data.expensesByCategory.length === 0 ? (
+            <p className="py-6 text-sm text-gray-500">Sin gastos en este periodo.</p>
+          ) : (
+            <ul className="divide-y divide-gray-100">
+              {data.expensesByCategory.map((cat) => (
+                <li key={cat.category} className="py-3">
+                  <div className="flex items-center gap-2.5">
+                    <Dot cls={catDot(categories, cat.category)} />
+                    <span className="min-w-0 flex-1 truncate text-[15px] text-gray-900">{catLabel(categories, cat.category)}</span>
+                    <span className="text-xs tabular-nums text-gray-400">{Math.round((cat.amount / totalExpensesSum) * 100)} %</span>
+                    <span className="w-24 text-right text-sm font-semibold tabular-nums text-gray-900">{fmtEur(cat.amount)}</span>
                   </div>
-                )}
-              </>
-            );
-          })()}
-        </div>
+                  <div className="mt-2 ml-5 h-1 rounded-full bg-gray-100 overflow-hidden">
+                    <div className={`h-full rounded-full ${catDot(categories, cat.category)}`}
+                      style={{ width: `${Math.round((cat.amount / maxExpense) * 100)}%` }} />
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </Section>
       </div>
     </div>
   );
@@ -506,66 +478,74 @@ function RecurringScopeDialog({ mode, onConfirm, onClose }) {
   const options = SCOPE_OPTIONS[mode];
 
   return (
-    <ModalOverlay
+    <Modal
       title={isDelete ? 'Eliminar gasto recurrente' : 'Editar gasto recurrente'}
+      subtitle="¿A qué registros se aplica?"
       onClose={onClose}
-    >
-      <div className="space-y-4">
-        <p className="text-sm text-gray-500">¿A qué registros quieres aplicar este cambio?</p>
-        <div className="space-y-2">
-          {options.map((opt) => (
-            <label
-              key={opt.value}
-              className={`flex items-start gap-3 p-3 rounded-xl border cursor-pointer transition-colors ${
-                scope === opt.value
-                  ? 'border-violet-400 bg-violet-50'
-                  : 'border-gray-200 hover:border-violet-200 hover:bg-gray-50'
-              }`}
-            >
-              <input
-                type="radio" name="scope" value={opt.value} checked={scope === opt.value}
-                onChange={() => setScope(opt.value)}
-                className="mt-0.5 text-violet-600 accent-violet-600"
-              />
-              <div>
-                <p className="text-sm font-medium text-gray-800">{opt.label}</p>
-                <p className="text-xs text-gray-400 mt-0.5">{opt.desc}</p>
-              </div>
-            </label>
-          ))}
-        </div>
-        <div className="flex justify-end gap-2 pt-1">
-          <button onClick={onClose} className={btnGhost}>Cancelar</button>
-          <button
-            onClick={() => onConfirm(scope)}
-            className={isDelete
-              ? 'px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-sm font-semibold rounded-xl transition-colors'
-              : btnPrimary}
-          >
+      size="md"
+      footer={(
+        <div className="flex justify-end gap-2">
+          <button type="button" onClick={onClose} className={btnCancel}>Cancelar</button>
+          <button type="button" onClick={() => onConfirm(scope)} className={isDelete ? btnDanger : btnSubmit}>
             {isDelete ? 'Eliminar' : 'Continuar'}
           </button>
         </div>
-      </div>
-    </ModalOverlay>
+      )}
+    >
+      <ul className="divide-y divide-gray-100 -my-2">
+        {options.map((opt) => (
+          <li key={opt.value}>
+            <label className="flex items-start gap-3 py-3 px-2 -mx-2 rounded-xl cursor-pointer hover:bg-gray-50">
+              <input
+                type="radio" name="scope" value={opt.value} checked={scope === opt.value}
+                onChange={() => setScope(opt.value)}
+                className="mt-1 accent-violet-600"
+              />
+              <div className="min-w-0">
+                <p className="text-[15px] font-medium text-gray-900">{opt.label}</p>
+                <p className="text-[13px] text-gray-500">{opt.desc}</p>
+              </div>
+            </label>
+          </li>
+        ))}
+      </ul>
+    </Modal>
   );
 }
 
-// ── Category manager modal ────────────────────────────────────────────────────
+// ── Categories ────────────────────────────────────────────────────────────────
 
 function ColorPicker({ value, onChange }) {
   return (
-    <div className="flex flex-wrap gap-1.5">
+    <div className="flex flex-wrap gap-2">
       {COLOR_PALETTE.map((c) => (
         <button
           key={c.value}
           type="button"
           title={c.label}
+          aria-label={c.label}
           onClick={() => onChange(c.value)}
           className={`w-6 h-6 rounded-full ${c.cls} transition-transform hover:scale-110 ${
-            value === c.value ? 'ring-2 ring-offset-1 ring-gray-600 scale-110' : ''
+            value === c.value ? 'ring-2 ring-offset-2 ring-gray-900' : ''
           }`}
         />
       ))}
+    </div>
+  );
+}
+
+function CategoryForm({ form, setForm, onSave, onCancel, saving, saveLabel = 'Guardar' }) {
+  return (
+    <div className="py-3 space-y-3">
+      <input autoFocus type="text" value={form.label}
+        onChange={(e) => setForm((f) => ({ ...f, label: e.target.value }))}
+        onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); onSave(); } if (e.key === 'Escape') onCancel?.(); }}
+        className={inputCls + ' sm:max-w-sm'} placeholder="Nombre de la categoría" />
+      <ColorPicker value={form.color} onChange={(c) => setForm((f) => ({ ...f, color: c }))} />
+      <div className="flex gap-2">
+        <button type="button" onClick={onSave} disabled={saving || !form.label.trim()} className={btnSubmit}>{saveLabel}</button>
+        {onCancel && <button type="button" onClick={onCancel} className={btnCancel}>Cancelar</button>}
+      </div>
     </div>
   );
 }
@@ -628,184 +608,64 @@ function CategoryManagerModal({ onClose, onRefresh, inline = false }) {
     finally { setSaving(false); }
   };
 
-  // ── Inline table view (used as a tab) ────────────────────────────────────────
+  const list = loading ? <Loading /> : (
+    <ul className="divide-y divide-gray-100">
+      {inline && editingId === '__new__' && (
+        <li>
+          <CategoryForm form={newForm} setForm={setNewForm} onSave={addNew} onCancel={() => setEditingId(null)} saving={saving} saveLabel="Añadir" />
+        </li>
+      )}
+      {cats.map((cat) => {
+        const isStaff = cat.value === 'staff';
+        if (editingId === cat._id) {
+          return (
+            <li key={cat._id}>
+              <CategoryForm form={editForm} setForm={setEditForm} onSave={() => saveEdit(cat._id)} onCancel={() => setEditingId(null)} saving={saving} />
+            </li>
+          );
+        }
+        return (
+          <li key={cat._id} className="flex items-center gap-3 py-3 px-2 -mx-2 rounded-xl hover:bg-gray-50">
+            <Dot cls={COLOR_DOT[cat.color] || 'bg-slate-400'} size="w-3 h-3" />
+            <span className="min-w-0 flex-1 truncate text-[15px] font-medium text-gray-900">{cat.label}</span>
+            {isStaff
+              ? <span className="text-[11px] font-semibold px-1.5 py-px rounded bg-violet-50 text-violet-800">Vinculada a Personal</span>
+              : cat.isDefault
+                ? <span className="text-[11px] font-semibold px-1.5 py-px rounded bg-gray-100 text-gray-600">Predeterminada</span>
+                : <span className="text-[11px] font-semibold px-1.5 py-px rounded bg-emerald-50 text-emerald-800">Propia</span>}
+            {isStaff ? <span className="w-8 shrink-0" /> : (
+              <RowMenu items={[
+                { label: 'Editar', onClick: () => startEdit(cat) },
+                { label: 'Eliminar', danger: true, onClick: () => deleteCat(cat._id) },
+              ]} />
+            )}
+          </li>
+        );
+      })}
+    </ul>
+  );
+
+  // ── Inline view (used as a tab) ──────────────────────────────────────────────
   if (inline) {
     return (
-      <div className="space-y-4">
-        <div className="flex justify-end">
-          <button onClick={() => { setEditingId('__new__'); setNewForm({ label: '', color: 'slate' }); }}
-            className={btnPrimary + ' flex items-center gap-1.5'}>
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
-              <path d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z" />
-            </svg>
-            Añadir categoría
-          </button>
-        </div>
-
-        {loading ? <Spinner /> : (
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50 border-b border-gray-100">
-                <tr className="text-left text-xs text-gray-500 font-semibold uppercase tracking-wide">
-                  <th className="px-4 py-3">Nombre</th>
-                  <th className="px-4 py-3 hidden sm:table-cell">Color</th>
-                  <th className="px-4 py-3">Estado</th>
-                  <th className="px-4 py-3" />
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {/* New row */}
-                {editingId === '__new__' && (
-                  <tr className="bg-violet-50/40">
-                    <td className="px-4 py-3" colSpan={4}>
-                      <div className="flex flex-wrap items-center gap-3">
-                        <input autoFocus type="text" value={newForm.label}
-                          onChange={(e) => setNewForm((f) => ({ ...f, label: e.target.value }))}
-                          className={inputCls + ' max-w-xs'} placeholder="Nombre de la categoría" />
-                        <ColorPicker value={newForm.color} onChange={(c) => setNewForm((f) => ({ ...f, color: c }))} />
-                        <div className="flex gap-2">
-                          <button onClick={addNew} disabled={saving || !newForm.label.trim()} className={btnPrimary + ' text-xs px-3 py-1.5'}>
-                            Guardar
-                          </button>
-                          <button onClick={() => setEditingId(null)} className={btnGhost + ' text-xs px-3 py-1.5'}>
-                            Cancelar
-                          </button>
-                        </div>
-                      </div>
-                    </td>
-                  </tr>
-                )}
-                {cats.map((cat) => {
-                  const isStaff = cat.value === 'staff';
-                  return editingId === cat._id ? (
-                    <tr key={cat._id} className="bg-violet-50/40">
-                      <td className="px-4 py-3" colSpan={4}>
-                        <div className="flex flex-wrap items-center gap-3">
-                          <input autoFocus type="text" value={editForm.label}
-                            onChange={(e) => setEditForm((f) => ({ ...f, label: e.target.value }))}
-                            className={inputCls + ' max-w-xs'} placeholder="Nombre de la categoría" />
-                          <ColorPicker value={editForm.color} onChange={(c) => setEditForm((f) => ({ ...f, color: c }))} />
-                          <div className="flex gap-2">
-                            <button onClick={() => saveEdit(cat._id)} disabled={saving} className={btnPrimary + ' text-xs px-3 py-1.5'}>
-                              Guardar
-                            </button>
-                            <button onClick={() => setEditingId(null)} className={btnGhost + ' text-xs px-3 py-1.5'}>
-                              Cancelar
-                            </button>
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
-                  ) : (
-                    <tr key={cat._id} className="hover:bg-gray-50/50 transition-colors">
-                      <td className="px-4 py-3">
-                        <span className="inline-flex items-center gap-2">
-                          <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${COLOR_DOT[cat.color] || 'bg-slate-400'}`} />
-                          <span className="font-medium text-gray-800">{cat.label}</span>
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 hidden sm:table-cell">
-                        <span className="text-xs text-gray-400">{cat.color}</span>
-                      </td>
-                      <td className="px-4 py-3">
-                        {isStaff
-                          ? <span className="text-[10px] text-violet-500 bg-violet-50 px-2 py-0.5 rounded-full">vinculada a Personal</span>
-                          : cat.isDefault
-                            ? <span className="text-[10px] text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">predeterminada</span>
-                            : <span className="text-[10px] text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">personalizada</span>
-                        }
-                      </td>
-                      <td className="px-4 py-3">
-                        {!isStaff && (
-                          <div className="flex items-center justify-end gap-1">
-                            <button onClick={() => startEdit(cat)}
-                              className="p-1.5 text-gray-400 hover:text-violet-600 hover:bg-violet-50 rounded-lg transition-colors">
-                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
-                                <path d="M13.488 2.513a1.75 1.75 0 0 0-2.475 0L6.75 6.774a2.75 2.75 0 0 0-.596.892l-.848 2.047a.75.75 0 0 0 .98.98l2.047-.848a2.75 2.75 0 0 0 .892-.596l4.261-4.262a1.75 1.75 0 0 0 0-2.474ZM4.75 14.25h6.5a.75.75 0 0 0 0-1.5h-6.5a.75.75 0 0 0 0 1.5Z" />
-                              </svg>
-                            </button>
-                            <button onClick={() => deleteCat(cat._id)}
-                              className="p-1.5 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors">
-                              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
-                                <path fillRule="evenodd" d="M5 3.25V4H2.75a.75.75 0 0 0 0 1.5h.3l.815 8.15A1.5 1.5 0 0 0 5.357 15h5.285a1.5 1.5 0 0 0 1.493-1.35l.815-8.15h.3a.75.75 0 0 0 0-1.5H11v-.75A2.25 2.25 0 0 0 8.75 1h-1.5A2.25 2.25 0 0 0 5 3.25Zm2.25-.75a.75.75 0 0 0-.75.75V4h3v-.75a.75.75 0 0 0-.75-.75h-1.5ZM6.05 6a.75.75 0 0 1 .787.713l.275 5.5a.75.75 0 0 1-1.498.075l-.275-5.5A.75.75 0 0 1 6.05 6Zm3.9 0a.75.75 0 0 1 .712.787l-.275 5.5a.75.75 0 0 1-1.498-.075l.275-5.5a.75.75 0 0 1 .786-.711Z" clipRule="evenodd" />
-                              </svg>
-                            </button>
-                          </div>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-        )}
-      </div>
+      <Section title="Categorías de gasto"
+        aside={<SectionLink onClick={() => { setEditingId('__new__'); setNewForm({ label: '', color: 'slate' }); }}>+ Nueva categoría</SectionLink>}>
+        {list}
+      </Section>
     );
   }
 
-  // ── Modal view ────────────────────────────────────────────────────────────────
-  const modalContent = (
-    <>
-      {loading ? <Spinner /> : (
-        <div className="space-y-1 mb-4">
-          {cats.map((cat) => {
-            const isStaff = cat.value === 'staff';
-            return (
-              <div key={cat._id} className="rounded-xl border border-gray-100 overflow-hidden">
-                {editingId === cat._id ? (
-                  <div className="p-3 space-y-3 bg-violet-50/60">
-                    <input autoFocus type="text" value={editForm.label}
-                      onChange={(e) => setEditForm((f) => ({ ...f, label: e.target.value }))}
-                      className={inputCls} placeholder="Nombre de la categoría" />
-                    <ColorPicker value={editForm.color} onChange={(c) => setEditForm((f) => ({ ...f, color: c }))} />
-                    <div className="flex gap-2">
-                      <button onClick={() => saveEdit(cat._id)} disabled={saving} className={btnPrimary + ' text-xs px-3 py-1.5'}>Guardar</button>
-                      <button onClick={() => setEditingId(null)} className={btnGhost + ' text-xs px-3 py-1.5'}>Cancelar</button>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-3 px-3 py-2.5 hover:bg-gray-50">
-                    <span className={`w-3 h-3 rounded-full flex-shrink-0 ${COLOR_DOT[cat.color] || 'bg-slate-400'}`} />
-                    <span className="flex-1 text-sm text-gray-800">{cat.label}</span>
-                    {isStaff
-                      ? <span className="text-[10px] text-violet-500 bg-violet-50 px-1.5 py-0.5 rounded-full">vinculada a Personal</span>
-                      : cat.isDefault && <span className="text-[10px] text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded-full">predeterminada</span>
-                    }
-                    {!isStaff && (
-                      <>
-                        <button onClick={() => startEdit(cat)} className="p-1 text-gray-400 hover:text-violet-600 rounded-lg transition-colors">
-                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
-                            <path d="M13.488 2.513a1.75 1.75 0 0 0-2.475 0L6.75 6.774a2.75 2.75 0 0 0-.596.892l-.848 2.047a.75.75 0 0 0 .98.98l2.047-.848a2.75 2.75 0 0 0 .892-.596l4.261-4.262a1.75 1.75 0 0 0 0-2.474ZM4.75 14.25h6.5a.75.75 0 0 0 0-1.5h-6.5a.75.75 0 0 0 0 1.5Z" />
-                          </svg>
-                        </button>
-                        <button onClick={() => deleteCat(cat._id)} className="p-1 text-gray-400 hover:text-rose-500 rounded-lg transition-colors">
-                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-3.5 h-3.5">
-                            <path fillRule="evenodd" d="M5 3.25V4H2.75a.75.75 0 0 0 0 1.5h.3l.815 8.15A1.5 1.5 0 0 0 5.357 15h5.285a1.5 1.5 0 0 0 1.493-1.35l.815-8.15h.3a.75.75 0 0 0 0-1.5H11v-.75A2.25 2.25 0 0 0 8.75 1h-1.5A2.25 2.25 0 0 0 5 3.25Zm2.25-.75a.75.75 0 0 0-.75.75V4h3v-.75a.75.75 0 0 0-.75-.75h-1.5ZM6.05 6a.75.75 0 0 1 .787.713l.275 5.5a.75.75 0 0 1-1.498.075l-.275-5.5A.75.75 0 0 1 6.05 6Zm3.9 0a.75.75 0 0 1 .712.787l-.275 5.5a.75.75 0 0 1-1.498-.075l.275-5.5a.75.75 0 0 1 .786-.711Z" clipRule="evenodd" />
-                          </svg>
-                        </button>
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
-      <form onSubmit={addNew} className="border-t border-gray-100 pt-4 space-y-3">
-        <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Nueva categoría</p>
-        <input type="text" value={newForm.label}
-          onChange={(e) => setNewForm((f) => ({ ...f, label: e.target.value }))}
-          className={inputCls} placeholder="Nombre..." />
-        <ColorPicker value={newForm.color} onChange={(c) => setNewForm((f) => ({ ...f, color: c }))} />
-        <button type="submit" disabled={saving || !newForm.label.trim()} className={btnPrimary + ' w-full'}>
-          Añadir categoría
-        </button>
-      </form>
-    </>
+  // ── Modal view ───────────────────────────────────────────────────────────────
+  return (
+    <Modal title="Categorías" onClose={onClose} size="md">
+      <div className="space-y-6">
+        {list}
+        <Section title="Nueva categoría">
+          <CategoryForm form={newForm} setForm={setNewForm} onSave={addNew} saving={saving} saveLabel="Añadir categoría" />
+        </Section>
+      </div>
+    </Modal>
   );
-  return <ModalOverlay title="Gestionar categorías" onClose={onClose}>{modalContent}</ModalOverlay>;
 }
 
 // ── Expense modal ─────────────────────────────────────────────────────────────
@@ -836,7 +696,7 @@ function ExpenseModal({ expense, suppliers, categories, onSave, onClose, scope =
 
   const submit = async (e) => {
     e.preventDefault();
-    if (!form.category) return setError('Selecciona una categoría');
+    if (!form.category) return setError('Elige una categoría');
     const parsedAmount = parseFloat(String(form.amount).replace(',', '.'));
     if (!form.amount || isNaN(parsedAmount) || parsedAmount <= 0) return setError('El importe debe ser mayor que 0');
     setSaving(true); setError('');
@@ -849,71 +709,73 @@ function ExpenseModal({ expense, suppliers, categories, onSave, onClose, scope =
       }
       onSave();
     } catch (err) {
-      setError(err.response?.data?.message || 'Error al guardar');
+      setError(err.response?.data?.message || 'No se pudo guardar');
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <ModalOverlay title={editing ? 'Editar gasto' : 'Registrar gasto'} onClose={onClose}>
-      <form onSubmit={submit} className="space-y-4">
-        {/* Amount — prominent */}
-        <div>
-          <label className="block text-xs font-semibold text-gray-600 mb-1.5">
-            Importe (€)<span className="text-rose-500 ml-0.5">*</span>
-          </label>
+    <Modal
+      title={editing ? 'Editar gasto' : 'Nuevo gasto'}
+      onClose={onClose}
+      size="md"
+      footer={(
+        <div className="flex justify-end gap-2">
+          <button type="button" onClick={onClose} className={btnCancel}>Cancelar</button>
+          <button type="submit" form="expense-form" disabled={saving} className={btnSubmit}>
+            {saving ? 'Guardando…' : editing ? 'Guardar cambios' : 'Guardar gasto'}
+          </button>
+        </div>
+      )}
+    >
+      <form id="expense-form" onSubmit={submit} className="space-y-4">
+        <FormField label="Importe (€)" required>
           <input autoFocus type="number" min="0.01" step="0.01" value={form.amount}
             onChange={(e) => set('amount', e.target.value)}
-            className="w-full px-4 py-4 text-3xl font-bold text-gray-900 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
-            inputMode="decimal" placeholder="0,00" />
+            className={amountCls} inputMode="decimal" placeholder="0,00" />
+        </FormField>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <FormField label="Fecha" required>
+            <input type="date" value={form.expenseDate} onChange={(e) => set('expenseDate', e.target.value)}
+              className={inputCls + ' appearance-none bg-white'} />
+          </FormField>
+          <FormField label="Proveedor">
+            <select value={form.supplierId} onChange={(e) => handleSupplierChange(e.target.value)} className={selectCls}>
+              <option value="">Sin proveedor</option>
+              {suppliers.filter((s) => s.isActive).map((s) => <option key={s._id} value={s._id}>{s.name}</option>)}
+            </select>
+          </FormField>
         </div>
-        <FormField label="Fecha" required>
-          <input type="date" value={form.expenseDate} onChange={(e) => set('expenseDate', e.target.value)}
-            className={inputCls + ' appearance-none'} />
-        </FormField>
-        <FormField label="Proveedor">
-          <select value={form.supplierId} onChange={(e) => handleSupplierChange(e.target.value)} className={selectCls}>
-            <option value="">Sin proveedor</option>
-            {suppliers.filter((s) => s.isActive).map((s) => <option key={s._id} value={s._id}>{s.name}</option>)}
-          </select>
-        </FormField>
         <FormField label="Categoría" required>
           <select value={form.category} onChange={(e) => set('category', e.target.value)} className={selectCls}>
-            <option value="">Seleccionar...</option>
+            <option value="">Elegir…</option>
             {categories.filter((c) => c.value !== 'staff').map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
           </select>
         </FormField>
         <FormField label="Notas">
-          <input type="text" value={form.notes} onChange={(e) => set('notes', e.target.value)} className={inputCls} placeholder="Descripción opcional" />
+          <input type="text" value={form.notes} onChange={(e) => set('notes', e.target.value)} className={inputCls} placeholder="Opcional" />
         </FormField>
 
-        {/* Recurring section */}
         {!editing && (
-          <div className="space-y-2">
-            <label className="flex items-center gap-2 cursor-pointer select-none">
-              <input type="checkbox" checked={form.isRecurring} onChange={(e) => set('isRecurring', e.target.checked)}
-                className="w-4 h-4 text-violet-600 rounded border-gray-300 focus:ring-violet-500" />
-              <span className="text-sm text-gray-600">Gasto recurrente mensual</span>
-            </label>
+          <div className="flex items-center justify-between gap-3 py-1">
+            <div>
+              <p className="text-sm font-medium text-gray-900">Se repite cada mes</p>
+              <p className="text-[13px] text-gray-500">Se apunta solo el mismo día de cada mes.</p>
+            </div>
+            <Toggle on={form.isRecurring} onChange={(v) => set('isRecurring', v)} label="Gasto recurrente mensual" />
           </div>
         )}
 
-        {error && <p className="text-sm text-rose-600 bg-rose-50 px-3 py-2 rounded-lg">{error}</p>}
-        <div className="flex justify-end gap-2 pt-1">
-          <button type="button" onClick={onClose} className={btnGhost}>Cancelar</button>
-          <button type="submit" disabled={saving} className={btnPrimary}>
-            {saving ? 'Guardando...' : editing ? 'Guardar cambios' : 'Registrar gasto'}
-          </button>
-        </div>
+        {error && <p className={errorCls}>{error}</p>}
       </form>
-    </ModalOverlay>
+    </Modal>
   );
 }
 
 // ── Gastos tab ────────────────────────────────────────────────────────────────
 
-function GastosTab({ dateRange, suppliers, categories }) {
+function GastosTab({ dateRange, suppliers, categories, refreshTrigger, onCreate }) {
   const [subView, setSubView] = useState('list'); // 'list' | 'recurrentes'
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -934,6 +796,7 @@ function GastosTab({ dateRange, suppliers, categories }) {
   }, [dateRange.from, dateRange.to]);
 
   useEffect(() => { load(); }, [load]);
+  useEffect(() => { if (refreshTrigger > 0) load(); }, [refreshTrigger]); // eslint-disable-line
 
   // Delete with scope support
   const handleDelete = async (id, scope = 'single') => {
@@ -980,14 +843,9 @@ function GastosTab({ dateRange, suppliers, categories }) {
   if (subView === 'recurrentes') {
     return (
       <div className="space-y-5">
-        <button
-          onClick={() => setSubView('list')}
-          className="flex items-center gap-1.5 text-sm font-medium text-gray-500 hover:text-gray-800 transition-colors"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
-            <path fillRule="evenodd" d="M9.78 4.22a.75.75 0 0 1 0 1.06L7.06 8l2.72 2.72a.75.75 0 1 1-1.06 1.06L5.47 8.53a.75.75 0 0 1 0-1.06l3.25-3.25a.75.75 0 0 1 1.06 0Z" clipRule="evenodd" />
-          </svg>
-          Volver a gastos
+        <button type="button" onClick={() => setSubView('list')}
+          className="inline-flex items-center gap-1 text-[13px] font-semibold text-gray-600 hover:text-gray-900">
+          <Icon name="left" className="w-4 h-4" strokeWidth={2} />Gastos
         </button>
         <RecurrentesTab categories={categories} suppliers={suppliers} />
       </div>
@@ -995,102 +853,69 @@ function GastosTab({ dateRange, suppliers, categories }) {
   }
 
   return (
-    <div className="space-y-4">
-      {/* Action bar */}
-      <div className="flex items-center gap-3">
-        <button
-          onClick={() => setSubView('recurrentes')}
-          className="ml-auto flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-gray-600 bg-white border border-gray-200 rounded-xl hover:bg-gray-50 transition-colors"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 text-violet-500">
-            <path fillRule="evenodd" d="M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14Zm.75-10.25a.75.75 0 0 0-1.5 0v3.5c0 .414.336.75.75.75h3.25a.75.75 0 0 0 0-1.5H8.75v-2.75Z" clipRule="evenodd" />
-          </svg>
-          Gastos recurrentes
-        </button>
-        <button onClick={() => setModal({})} className={btnPrimary + ' flex items-center gap-1.5'}>
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
-            <path d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z" />
-          </svg>
-          Registrar gasto
-        </button>
+    <div className="space-y-5">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <FigureLine items={[
+          { label: 'en gastos', value: fmtEur(totalFiltered) },
+          { label: expenses.length === 1 ? 'gasto' : 'gastos', value: expenses.length },
+        ]} />
+        <GhostButton onClick={() => setSubView('recurrentes')}>
+          <Icon name="clock" className="w-4 h-4" />Recurrentes
+        </GhostButton>
       </div>
 
-      {loading ? <Spinner /> : expenses.length === 0 ? (
-        <EmptyState
-          message="No hay gastos en este período"
-          cta="Registrar primer gasto"
-          onCta={() => setModal({})}
-        />
+      {loading && expenses.length === 0 ? <Loading /> : expenses.length === 0 ? (
+        <Empty action={<SectionLink onClick={onCreate}>+ Apuntar un gasto</SectionLink>}>No hay gastos en este periodo.</Empty>
       ) : (
-        <>
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-            <table className="w-full text-sm">
-              <thead className="bg-gray-50 border-b border-gray-100">
-                <tr className="text-left text-xs text-gray-500 font-semibold uppercase tracking-wide">
-                  <th className="px-4 py-3">Fecha</th>
-                  <th className="px-4 py-3">Categoría</th>
-                  <th className="px-4 py-3 hidden md:table-cell">Proveedor</th>
-                  <th className="px-4 py-3 hidden sm:table-cell">Notas</th>
-                  <th className="px-4 py-3 text-right">Importe</th>
-                  <th className="px-4 py-3 text-center hidden sm:table-cell">Rec.</th>
-                  <th className="px-4 py-3" />
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {expenses.map((exp) => (
-                  <tr key={exp._id} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="px-4 py-3 text-gray-600 whitespace-nowrap">{fmtDate(exp.expenseDate)}</td>
-                    <td className="px-4 py-3">
-                      <span className="inline-flex items-center gap-1.5">
-                        <span className={`w-2 h-2 rounded-full ${catDot(categories, exp.category)}`} />
-                        <span className="text-gray-700">{catLabel(categories, exp.category)}</span>
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-gray-500 hidden md:table-cell">
-                      {exp.supplierId?.name || <span className="text-gray-300">—</span>}
-                    </td>
-                    <td className="px-4 py-3 text-gray-400 hidden sm:table-cell max-w-xs truncate">
-                      {exp.notes || <span className="text-gray-200">—</span>}
-                    </td>
-                    <td className="px-4 py-3 text-right font-semibold text-gray-800 whitespace-nowrap">{fmtEur(exp.amount)}</td>
-                    <td className="px-4 py-3 text-center hidden sm:table-cell">
-                      {exp.isRecurring && (
-                        <span title="Recurrente" className="text-violet-400">
-                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 inline">
-                            <path fillRule="evenodd" d="M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14Zm.75-10.25a.75.75 0 0 0-1.5 0v3.5c0 .414.336.75.75.75h3.25a.75.75 0 0 0 0-1.5H8.75v-2.75Z" clipRule="evenodd" />
-                          </svg>
-                        </span>
-                      )}
-                    </td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center justify-end gap-1">
-                        <button onClick={() => handleEditClick(exp)}
-                          className="p-1.5 text-gray-400 hover:text-violet-600 hover:bg-violet-50 rounded-lg transition-colors"
-                          title="Editar">
-                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
-                            <path d="M13.488 2.513a1.75 1.75 0 0 0-2.475 0L6.75 6.774a2.75 2.75 0 0 0-.596.892l-.848 2.047a.75.75 0 0 0 .98.98l2.047-.848a2.75 2.75 0 0 0 .892-.596l4.261-4.262a1.75 1.75 0 0 0 0-2.474ZM4.75 14.25h6.5a.75.75 0 0 0 0-1.5h-6.5a.75.75 0 0 0 0 1.5Z" />
-                          </svg>
-                        </button>
-                        <button onClick={() => handleDeleteClick(exp)} disabled={deleting === exp._id}
-                          className="p-1.5 text-gray-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
-                          title="Eliminar">
-                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
-                            <path fillRule="evenodd" d="M5 3.25V4H2.75a.75.75 0 0 0 0 1.5h.3l.815 8.15A1.5 1.5 0 0 0 5.357 15h5.285a1.5 1.5 0 0 0 1.493-1.35l.815-8.15h.3a.75.75 0 0 0 0-1.5H11v-.75A2.25 2.25 0 0 0 8.75 1h-1.5A2.25 2.25 0 0 0 5 3.25Zm2.25-.75a.75.75 0 0 0-.75.75V4h3v-.75a.75.75 0 0 0-.75-.75h-1.5ZM6.05 6a.75.75 0 0 1 .787.713l.275 5.5a.75.75 0 0 1-1.498.075l-.275-5.5A.75.75 0 0 1 6.05 6Zm3.9 0a.75.75 0 0 1 .712.787l-.275 5.5a.75.75 0 0 1-1.498-.075l.275-5.5a.75.75 0 0 1 .786-.711Z" clipRule="evenodd" />
-                          </svg>
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-          <div className="flex justify-end">
-            <p className="text-sm text-gray-500">
-              Total: <span className="font-semibold text-gray-700">{fmtEur(totalFiltered)}</span>
-            </p>
-          </div>
-        </>
+        <div className={loading ? 'opacity-60' : ''}>
+          <TableHead cols={[
+            ['Fecha', 'col-span-2'],
+            ['Categoría', 'col-span-3'],
+            ['Proveedor', 'col-span-2'],
+            ['Notas', 'col-span-3'],
+            ['Importe', 'col-span-2 text-right pr-10'],
+          ]} />
+          <ul className="divide-y divide-gray-100">
+            {expenses.map((exp) => {
+              const supplier = exp.supplierId?.name;
+              const label = catLabel(categories, exp.category);
+              return (
+                <li key={exp._id}>
+                  <div role="button" tabIndex={0} onClick={() => handleEditClick(exp)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') handleEditClick(exp); }}
+                    className={`px-2 py-3 flex items-center gap-3 md:grid md:grid-cols-12 md:gap-4 rounded-xl cursor-pointer hover:bg-gray-50 ${deleting === exp._id ? 'opacity-50' : ''}`}>
+                    <span className="hidden md:block md:col-span-2 text-sm text-gray-600 tabular-nums first-letter:uppercase">{fmtDay(exp.expenseDate)}</span>
+                    {/* Mobile: one title + subtitle */}
+                    <div className="min-w-0 flex-1 md:hidden">
+                      <p className="text-[15px] font-medium text-gray-900 truncate flex items-center gap-2">
+                        <Dot cls={catDot(categories, exp.category)} size="w-2 h-2" />
+                        <span className="truncate">{supplier || label}</span>
+                        {exp.isRecurring && <span className="text-[11px] font-semibold px-1.5 py-px rounded bg-violet-50 text-violet-800 shrink-0">Mensual</span>}
+                      </p>
+                      <p className="text-[13px] text-gray-500 truncate">
+                        {[fmtShort(exp.expenseDate), supplier ? label : null, exp.notes].filter(Boolean).join(' · ')}
+                      </p>
+                    </div>
+                    <div className="hidden md:flex md:col-span-3 items-center gap-2 min-w-0">
+                      <Dot cls={catDot(categories, exp.category)} size="w-2 h-2" />
+                      <span className="text-sm font-medium text-gray-900 truncate">{label}</span>
+                      {exp.isRecurring && <span className="text-[11px] font-semibold px-1.5 py-px rounded bg-violet-50 text-violet-800 shrink-0">Mensual</span>}
+                    </div>
+                    <span className="hidden md:block md:col-span-2 text-sm text-gray-600 truncate">{supplier || <span className="text-gray-300">—</span>}</span>
+                    <span className="hidden md:block md:col-span-3 text-sm text-gray-500 truncate">{exp.notes || <span className="text-gray-300">—</span>}</span>
+                    <div className="shrink-0 md:col-span-2 flex items-center justify-end gap-2">
+                      <span className="text-sm font-semibold tabular-nums text-gray-900">{fmtEur(exp.amount)}</span>
+                      <RowMenu items={[
+                        { label: 'Editar', onClick: () => handleEditClick(exp) },
+                        { label: 'Eliminar', danger: true, disabled: deleting === exp._id, onClick: () => handleDeleteClick(exp) },
+                      ]} />
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
       )}
 
       {/* Scope picker — shown before edit/delete on recurring expenses */}
@@ -1116,9 +941,9 @@ function GastosTab({ dateRange, suppliers, categories }) {
   );
 }
 
-// ── Recurrentes tab ───────────────────────────────────────────────────────────
+// ── Recurrentes (inside Gastos) ───────────────────────────────────────────────
 
-function RecurrentesTab({ categories, suppliers }) {
+function RecurrentesTab({ categories }) {
   const [gastos, setGastos]   = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -1135,57 +960,48 @@ function RecurrentesTab({ categories, suppliers }) {
 
   const totalMensual = gastos.reduce((s, g) => s + (g.amount || 0), 0);
 
-  if (loading) return <Spinner />;
+  if (loading) return <Loading />;
 
   return (
     <div className="space-y-6">
       {gastos.length > 0 && (
-        <div className="grid grid-cols-2 gap-4">
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Gastos configurados</p>
-            <p className="text-2xl font-bold text-violet-600">{gastos.length}</p>
-          </div>
-          <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1">Total mensual</p>
-            <p className="text-2xl font-bold text-rose-500">{fmtEur(totalMensual)}</p>
-          </div>
-        </div>
+        <FigureLine items={[
+          { label: 'al mes', value: fmtEur(totalMensual) },
+          { label: gastos.length === 1 ? 'gasto recurrente' : 'gastos recurrentes', value: gastos.length },
+        ]} />
       )}
 
-      {gastos.length === 0 ? (
-        <EmptyState message="Sin gastos recurrentes configurados. Marca un gasto como recurrente al crearlo." />
-      ) : (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-          <div className="divide-y divide-gray-50">
+      <Section title="Gastos recurrentes">
+        {gastos.length === 0 ? (
+          <Empty>No hay gastos recurrentes. Marca «Se repite cada mes» al apuntar un gasto.</Empty>
+        ) : (
+          <ul className="divide-y divide-gray-100">
             {gastos.map((g) => {
               const supplierName = g.supplierId?.name;
               return (
-                <div key={g._id} className="flex items-center gap-4 px-5 py-4 hover:bg-gray-50/60 transition-colors">
-                  <div className="flex-shrink-0 w-11 h-11 rounded-2xl bg-violet-50 border border-violet-100 flex flex-col items-center justify-center">
-                    <span className="text-base font-bold text-violet-600 leading-none">{g.dayOfMonth}</span>
-                    <span className="text-[9px] font-medium text-violet-400 leading-none mt-0.5 uppercase tracking-wide">día</span>
+                <li key={g._id} className="flex items-center gap-3 py-3">
+                  <div className="w-10 h-10 shrink-0 rounded-xl bg-gray-100 flex flex-col items-center justify-center">
+                    <span className="text-[15px] font-semibold text-gray-900 leading-none tabular-nums">{g.dayOfMonth}</span>
+                    <span className="text-[9px] font-semibold text-gray-500 leading-none mt-0.5 uppercase tracking-wide">día</span>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${catDot(categories, g.category)}`} />
-                      <span className="text-sm font-semibold text-gray-900">{catLabel(categories, g.category)}</span>
-                    </div>
-                    <p className="text-xs text-gray-400 mt-0.5 truncate">
-                      {supplierName || (g.notes || <span className="text-gray-300">Sin proveedor</span>)}
-                      {supplierName && g.notes && <span className="ml-1 text-gray-300">· {g.notes}</span>}
+                    <p className="text-[15px] font-medium text-gray-900 truncate flex items-center gap-2">
+                      <Dot cls={catDot(categories, g.category)} size="w-2 h-2" />
+                      <span className="truncate">{catLabel(categories, g.category)}</span>
+                    </p>
+                    <p className="text-[13px] text-gray-500 truncate">
+                      {[supplierName, g.notes].filter(Boolean).join(' · ') || 'Sin proveedor'}
                     </p>
                   </div>
-                  <div className="text-right flex-shrink-0">
-                    <p className="text-base font-bold text-gray-900">{fmtEur(g.amount)}</p>
-                    <p className="text-xs text-gray-400">/ mes</p>
-                  </div>
-                </div>
+                  <p className="shrink-0 text-sm font-semibold tabular-nums text-gray-900">
+                    {fmtEur(g.amount)}<span className="text-[13px] font-normal text-gray-500"> /mes</span>
+                  </p>
+                </li>
               );
             })}
-          </div>
-        </div>
-      )}
-
+          </ul>
+        )}
+      </Section>
     </div>
   );
 }
@@ -1219,15 +1035,27 @@ function SupplierModal({ supplier, categories, onSave, onClose }) {
       }
       onSave();
     } catch (err) {
-      setError(err.response?.data?.message || 'Error al guardar');
+      setError(err.response?.data?.message || 'No se pudo guardar');
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <ModalOverlay title={editing ? 'Editar proveedor' : 'Añadir proveedor'} onClose={onClose}>
-      <form onSubmit={submit} className="space-y-4">
+    <Modal
+      title={editing ? 'Editar proveedor' : 'Nuevo proveedor'}
+      onClose={onClose}
+      size="md"
+      footer={(
+        <div className="flex justify-end gap-2">
+          <button type="button" onClick={onClose} className={btnCancel}>Cancelar</button>
+          <button type="submit" form="supplier-form" disabled={saving} className={btnSubmit}>
+            {saving ? 'Guardando…' : editing ? 'Guardar cambios' : 'Añadir proveedor'}
+          </button>
+        </div>
+      )}
+    >
+      <form id="supplier-form" onSubmit={submit} className="space-y-4">
         <FormField label="Nombre" required>
           <input autoFocus type="text" value={form.name} onChange={(e) => set('name', e.target.value)}
             className={inputCls} placeholder="Nombre del proveedor" />
@@ -1237,33 +1065,31 @@ function SupplierModal({ supplier, categories, onSave, onClose }) {
             {categories.map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
           </select>
         </FormField>
-        <FormField label="Persona de contacto">
-          <input type="text" value={form.contactName} onChange={(e) => set('contactName', e.target.value)}
-            className={inputCls} placeholder="Nombre y apellidos" />
-        </FormField>
-        <div className="grid grid-cols-2 gap-3">
-          <FormField label="Teléfono">
-            <input type="tel" value={form.phone} onChange={(e) => set('phone', e.target.value)}
-              className={inputCls} placeholder="612 345 678" />
-          </FormField>
-          <FormField label="Email">
-            <input type="email" value={form.email} onChange={(e) => set('email', e.target.value)}
-              className={inputCls} placeholder="proveedor@example.com" />
-          </FormField>
-        </div>
-        <FormField label="Notas">
-          <textarea value={form.notes} onChange={(e) => set('notes', e.target.value)}
-            className={inputCls} rows={2} placeholder="Condiciones de pago, días de entrega..." />
-        </FormField>
-        {error && <p className="text-sm text-rose-600 bg-rose-50 px-3 py-2 rounded-lg">{error}</p>}
-        <div className="flex justify-end gap-2 pt-1">
-          <button type="button" onClick={onClose} className={btnGhost}>Cancelar</button>
-          <button type="submit" disabled={saving} className={btnPrimary}>
-            {saving ? 'Guardando...' : editing ? 'Guardar cambios' : 'Añadir proveedor'}
-          </button>
-        </div>
+        <Section title="Contacto" className="pt-2">
+          <div className="space-y-4">
+            <FormField label="Persona de contacto">
+              <input type="text" value={form.contactName} onChange={(e) => set('contactName', e.target.value)}
+                className={inputCls} placeholder="Nombre y apellidos" />
+            </FormField>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <FormField label="Teléfono">
+                <input type="tel" value={form.phone} onChange={(e) => set('phone', e.target.value)}
+                  className={inputCls} placeholder="612 345 678" />
+              </FormField>
+              <FormField label="Email">
+                <input type="email" value={form.email} onChange={(e) => set('email', e.target.value)}
+                  className={inputCls} placeholder="proveedor@ejemplo.com" />
+              </FormField>
+            </div>
+            <FormField label="Notas">
+              <textarea value={form.notes} onChange={(e) => set('notes', e.target.value)}
+                className={inputCls} rows={2} placeholder="Condiciones de pago, días de entrega…" />
+            </FormField>
+          </div>
+        </Section>
+        {error && <p className={errorCls}>{error}</p>}
       </form>
-    </ModalOverlay>
+    </Modal>
   );
 }
 
@@ -1294,113 +1120,81 @@ function ProveedoresTab({ suppliers, loadSuppliers, categories }) {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex justify-end">
-        <button onClick={() => setModal({})} className={btnPrimary + ' flex items-center gap-1.5'}>
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
-            <path d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z" />
-          </svg>
-          Añadir proveedor
-        </button>
-      </div>
-
+    <Section title="Proveedores" aside={<SectionLink onClick={() => setModal({})}>+ Nuevo proveedor</SectionLink>}>
       {suppliers.length === 0 ? (
-        <EmptyState
-          message="Sin proveedores registrados"
-          cta="Añadir primer proveedor"
-          onCta={() => setModal({})}
-        />
+        <Empty action={<SectionLink onClick={() => setModal({})}>+ Añadir el primero</SectionLink>}>Aún no hay proveedores.</Empty>
       ) : (
-        <div className="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50 border-b border-gray-100">
-              <tr className="text-left text-xs text-gray-500 font-semibold uppercase tracking-wide">
-                <th className="px-4 py-3">Nombre</th>
-                <th className="px-4 py-3 hidden sm:table-cell">Categoría</th>
-                <th className="px-4 py-3 hidden md:table-cell">Contacto</th>
-                <th className="px-4 py-3 text-center">Estado</th>
-                <th className="px-4 py-3" />
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-50">
-              {suppliers.map((s) => (
-                <>
-                  <tr key={s._id} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="px-4 py-3">
-                      <button onClick={() => toggleExpand(s._id)}
-                        className="text-left font-medium text-gray-800 hover:text-violet-600 flex items-center gap-1.5 transition-colors">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor"
-                          className={`w-3.5 h-3.5 text-gray-400 transition-transform ${expanded === s._id ? 'rotate-90' : ''}`}>
-                          <path fillRule="evenodd" d="M6.22 4.22a.75.75 0 0 1 1.06 0l3.25 3.25a.75.75 0 0 1 0 1.06l-3.25 3.25a.75.75 0 0 1-1.06-1.06L8.94 8 6.22 5.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
-                        </svg>
-                        {s.name}
-                      </button>
-                    </td>
-                    <td className="px-4 py-3 text-gray-500 hidden sm:table-cell">
-                      {catLabel(categories, s.category)}
-                    </td>
-                    <td className="px-4 py-3 hidden md:table-cell">
-                      <span className="text-gray-600">{s.contactName || <span className="text-gray-300">—</span>}</span>
-                      {s.phone && <span className="text-gray-400 ml-2 text-xs">{s.phone}</span>}
-                    </td>
-                    <td className="px-4 py-3 text-center">
-                      <button onClick={() => toggleActive(s)}
-                        className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold transition-colors ${
-                          s.isActive
-                            ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
-                            : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-                        }`}>
-                        {s.isActive ? 'Activo' : 'Inactivo'}
-                      </button>
-                    </td>
-                    <td className="px-4 py-3">
-                      <button onClick={() => setModal({ supplier: s })}
-                        className="p-1.5 text-gray-400 hover:text-violet-600 hover:bg-violet-50 rounded-lg transition-colors float-right"
-                        title="Editar">
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4">
-                          <path d="M13.488 2.513a1.75 1.75 0 0 0-2.475 0L6.75 6.774a2.75 2.75 0 0 0-.596.892l-.848 2.047a.75.75 0 0 0 .98.98l2.047-.848a2.75 2.75 0 0 0 .892-.596l4.261-4.262a1.75 1.75 0 0 0 0-2.474ZM4.75 14.25h6.5a.75.75 0 0 0 0-1.5h-6.5a.75.75 0 0 0 0 1.5Z" />
-                        </svg>
-                      </button>
-                    </td>
-                  </tr>
-                  {expanded === s._id && (
-                    <tr key={`${s._id}-detail`}>
-                      <td colSpan={5} className="px-6 pb-4 bg-gray-50/50">
-                        {detailLoading ? (
-                          <p className="text-sm text-gray-400 py-3">Cargando gastos...</p>
-                        ) : supplierDetail ? (
-                          <div className="pt-3">
-                            <div className="flex items-center justify-between mb-3">
-                              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">
-                                Últimos gastos — Total: <span className="text-gray-700">{fmtEur(supplierDetail.total)}</span>
-                              </p>
-                            </div>
-                            {supplierDetail.expenses.length === 0 ? (
-                              <p className="text-sm text-gray-400">Sin gastos registrados para este proveedor</p>
-                            ) : (
-                              <div className="space-y-1.5">
-                                {supplierDetail.expenses.slice(0, 5).map((e) => (
-                                  <div key={e._id} className="flex items-center justify-between text-sm">
-                                    <span className="text-gray-500">{fmtDate(e.expenseDate)}</span>
-                                    <span className="text-gray-600 flex-1 mx-4 truncate">{catLabel(categories, e.category)} {e.notes && `— ${e.notes}`}</span>
-                                    <span className="font-medium text-gray-700">{fmtEur(e.amount)}</span>
-                                  </div>
-                                ))}
-                                {supplierDetail.expenses.length > 5 && (
-                                  <p className="text-xs text-gray-400">+{supplierDetail.expenses.length - 5} más en la pestaña Gastos</p>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                        ) : null}
-                      </td>
-                    </tr>
+        <>
+          <TableHead cols={[
+            ['Nombre', 'col-span-4'],
+            ['Categoría', 'col-span-3'],
+            ['Contacto', 'col-span-3'],
+            ['Activo', 'col-span-2 text-right pr-10'],
+          ]} />
+          <ul className="divide-y divide-gray-100">
+            {suppliers.map((s) => {
+              const open = expanded === s._id;
+              const contact = [s.contactName, s.phone].filter(Boolean).join(' · ');
+              return (
+                <Fragment key={s._id}>
+                  <li>
+                    <div role="button" tabIndex={0} aria-expanded={open} onClick={() => toggleExpand(s._id)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') toggleExpand(s._id); }}
+                      className="px-2 py-3 flex items-center gap-3 md:grid md:grid-cols-12 md:gap-4 rounded-xl cursor-pointer hover:bg-gray-50">
+                      <div className="min-w-0 flex-1 md:col-span-4 flex items-center gap-2">
+                        <Icon name="right" strokeWidth={2} className={`w-3.5 h-3.5 shrink-0 text-gray-400 transition-transform ${open ? 'rotate-90' : ''}`} />
+                        <div className="min-w-0">
+                          <p className={`text-[15px] font-medium truncate ${s.isActive ? 'text-gray-900' : 'text-gray-400'}`}>{s.name}</p>
+                          <p className="text-[13px] text-gray-500 truncate md:hidden">
+                            {[catLabel(categories, s.category), contact].filter(Boolean).join(' · ')}
+                          </p>
+                        </div>
+                      </div>
+                      <span className="hidden md:block md:col-span-3 text-sm text-gray-600 truncate">{catLabel(categories, s.category)}</span>
+                      <span className="hidden md:block md:col-span-3 text-sm text-gray-600 truncate">{contact || <span className="text-gray-300">—</span>}</span>
+                      <div className="shrink-0 md:col-span-2 flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
+                        <Toggle on={s.isActive} onChange={() => toggleActive(s)} label={s.isActive ? 'Activo' : 'Inactivo'} />
+                        <RowMenu items={[
+                          { label: 'Editar', onClick: () => setModal({ supplier: s }) },
+                          { label: open ? 'Ocultar gastos' : 'Ver gastos', onClick: () => toggleExpand(s._id) },
+                        ]} />
+                      </div>
+                    </div>
+                  </li>
+                  {open && (
+                    <li className="pl-8 pr-2 pb-4 pt-1">
+                      {detailLoading ? (
+                        <p className="text-sm text-gray-400 py-2">Cargando gastos…</p>
+                      ) : supplierDetail ? (
+                        <>
+                          <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 mb-1">
+                            Últimos gastos · total <span className="text-gray-700 tabular-nums">{fmtEur(supplierDetail.total)}</span>
+                          </p>
+                          {supplierDetail.expenses.length === 0 ? (
+                            <p className="text-sm text-gray-500 py-2">Sin gastos de este proveedor.</p>
+                          ) : (
+                            <ul className="divide-y divide-gray-100">
+                              {supplierDetail.expenses.slice(0, 5).map((e) => (
+                                <li key={e._id} className="flex items-center gap-3 py-2 text-sm">
+                                  <span className="w-14 shrink-0 text-gray-500 tabular-nums">{fmtShort(e.expenseDate)}</span>
+                                  <span className="flex-1 min-w-0 truncate text-gray-700">{catLabel(categories, e.category)}{e.notes && ` · ${e.notes}`}</span>
+                                  <span className="font-semibold tabular-nums text-gray-900">{fmtEur(e.amount)}</span>
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                          {supplierDetail.expenses.length > 5 && (
+                            <p className="text-xs text-gray-400 mt-1">Y {supplierDetail.expenses.length - 5} más en Gastos.</p>
+                          )}
+                        </>
+                      ) : null}
+                    </li>
                   )}
-                </>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                </Fragment>
+              );
+            })}
+          </ul>
+        </>
       )}
 
       {modal !== null && (
@@ -1411,108 +1205,11 @@ function ProveedoresTab({ suppliers, loadSuppliers, categories }) {
           onClose={() => setModal(null)}
         />
       )}
-    </div>
+    </Section>
   );
 }
 
-// ── Mobile full-screen expense form ──────────────────────────────────────────
-
-function MobileExpenseScreen({ suppliers, categories, onSave, onClose }) {
-  const [form, setForm] = useState({
-    category: '', amount: '', expenseDate: toIso(),
-    supplierId: '', notes: '', isRecurring: false,
-  });
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-
-  const set = (k, v) => setForm((f) => ({ ...f, [k]: v }));
-
-  const handleSupplierChange = (supplierId) => {
-    const supplier = suppliers.find((s) => s._id === supplierId);
-    setForm((f) => ({
-      ...f,
-      supplierId,
-      category: supplier ? supplier.category : '',
-    }));
-  };
-
-  const submit = async (e) => {
-    e.preventDefault();
-    if (!form.category) return setError('Selecciona una categoría');
-    const parsedAmount = parseFloat(String(form.amount).replace(',', '.'));
-    if (!form.amount || isNaN(parsedAmount) || parsedAmount <= 0) return setError('El importe debe ser mayor que 0');
-    setSaving(true); setError('');
-    try {
-      await api.post('/expenses', { ...form, amount: parsedAmount });
-      onSave();
-    } catch (err) {
-      setError(err.response?.data?.message || 'Error al guardar');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  return (
-    <div className="fixed inset-0 z-50 bg-white flex flex-col">
-      {/* Header */}
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-gray-100">
-        <button onClick={onClose} className="p-2 -ml-2 text-gray-500 hover:text-gray-800 rounded-xl">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
-            <path fillRule="evenodd" d="M11.78 5.22a.75.75 0 0 1 0 1.06L8.06 10l3.72 3.72a.75.75 0 1 1-1.06 1.06l-4.25-4.25a.75.75 0 0 1 0-1.06l4.25-4.25a.75.75 0 0 1 1.06 0Z" clipRule="evenodd" />
-          </svg>
-        </button>
-        <h2 className="text-base font-semibold text-gray-900">Registrar gasto</h2>
-      </div>
-
-      {/* Form */}
-      <form onSubmit={submit} className="flex-1 overflow-y-auto px-4 py-5 space-y-4">
-        <div>
-          <label className="block text-xs font-semibold text-gray-600 mb-1.5">
-            Importe (€)<span className="text-rose-500 ml-0.5">*</span>
-          </label>
-          <input autoFocus type="number" min="0.01" step="0.01" value={form.amount}
-            onChange={(e) => set('amount', e.target.value)}
-            className="w-full px-4 py-4 text-3xl font-bold text-gray-900 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
-            inputMode="decimal" placeholder="0,00" />
-        </div>
-        <FormField label="Fecha" required>
-          <input type="date" value={form.expenseDate} onChange={(e) => set('expenseDate', e.target.value)}
-            className={inputCls + ' appearance-none'} />
-        </FormField>
-        <FormField label="Proveedor">
-          <select value={form.supplierId} onChange={(e) => handleSupplierChange(e.target.value)} className={selectCls}>
-            <option value="">Sin proveedor</option>
-            {suppliers.filter((s) => s.isActive).map((s) => <option key={s._id} value={s._id}>{s.name}</option>)}
-          </select>
-        </FormField>
-        <FormField label="Categoría" required>
-          <select value={form.category} onChange={(e) => set('category', e.target.value)} className={selectCls}>
-            <option value="">Seleccionar...</option>
-            {categories.filter((c) => c.value !== 'staff').map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
-          </select>
-        </FormField>
-        <FormField label="Notas">
-          <input type="text" value={form.notes} onChange={(e) => set('notes', e.target.value)} className={inputCls} placeholder="Descripción opcional" />
-        </FormField>
-        <label className="flex items-center gap-2 cursor-pointer select-none">
-          <input type="checkbox" checked={form.isRecurring} onChange={(e) => set('isRecurring', e.target.checked)}
-            className="w-4 h-4 text-violet-600 rounded border-gray-300 focus:ring-violet-500" />
-          <span className="text-sm text-gray-600">Gasto recurrente mensual</span>
-        </label>
-        {error && <p className="text-sm text-rose-600 bg-rose-50 px-3 py-2 rounded-lg">{error}</p>}
-      </form>
-
-      {/* Footer */}
-      <div className="px-4 py-4 border-t border-gray-100">
-        <button onClick={submit} disabled={saving} className={btnPrimary + ' w-full py-3 text-base'}>
-          {saving ? 'Guardando...' : 'Registrar gasto'}
-        </button>
-      </div>
-    </div>
-  );
-}
-
-// ── Revenue modal (Ingreso de hoy + inline table clicks) ─────────────────────
+// ── Revenue modal (Ingreso de hoy + per-day clicks) ───────────────────────────
 
 function RevenueModal({ date = toIso(), initialValue = null, onClose, onSave }) {
   const [amount, setAmount] = useState(initialValue !== null ? String(initialValue) : '');
@@ -1525,7 +1222,7 @@ function RevenueModal({ date = toIso(), initialValue = null, onClose, onSave }) 
       await api.put('/revenue/actual', { date, actualRevenue: valueToSave });
       onSave(valueToSave);
     } catch {
-      setError('Error al guardar');
+      setError('No se pudo guardar');
     } finally {
       setSaving(false);
     }
@@ -1534,43 +1231,55 @@ function RevenueModal({ date = toIso(), initialValue = null, onClose, onSave }) 
   const submit = async (e) => {
     e.preventDefault();
     const num = parseFloat(String(amount).replace(',', '.'));
-    if (isNaN(num) || num <= 0) return setError('Introduce un importe válido');
+    if (isNaN(num) || num <= 0) return setError('Escribe un importe válido');
     save(num);
   };
 
   const isToday = date === toIso();
-  const title = isToday ? 'Ingreso de hoy' : `Ingreso — ${fmtDate(date)}`;
+  const hasValue = initialValue !== null && initialValue !== undefined;
 
   return (
-    <ModalOverlay title={title} onClose={onClose}>
-      <form onSubmit={submit} className="space-y-4">
-        <FormField label="Importe (€)" required>
-          <input autoFocus type="text" inputMode="decimal"
-            value={amount} onChange={(e) => setAmount(e.target.value)}
-            className={inputCls} placeholder="0,00" />
-        </FormField>
-        {error && <p className="text-sm text-rose-600 bg-rose-50 px-3 py-2 rounded-lg">{error}</p>}
-        <div className="flex items-center justify-between pt-1">
-          {initialValue !== null && initialValue !== undefined ? (
-            <button type="button" disabled={saving}
-              onClick={() => save(null)}
-              className="px-4 py-2 text-sm font-medium text-rose-600 hover:bg-rose-50 rounded-xl transition-colors">
+    <Modal
+      title={isToday ? 'Ingreso de hoy' : 'Ingreso del día'}
+      subtitle={fmtDay(date)}
+      onClose={onClose}
+      footer={(
+        <div className="flex items-center justify-between gap-2">
+          {hasValue ? (
+            <button type="button" disabled={saving} onClick={() => save(null)}
+              className="text-sm font-semibold text-rose-600 hover:text-rose-700 disabled:opacity-50">
               Borrar
             </button>
           ) : <span />}
           <div className="flex gap-2">
-            <button type="button" onClick={onClose} className={btnGhost}>Cancelar</button>
-            <button type="submit" disabled={saving} className={btnPrimary}>
-              {saving ? 'Guardando...' : 'Guardar'}
+            <button type="button" onClick={onClose} className={btnCancel}>Cancelar</button>
+            <button type="submit" form="revenue-form" disabled={saving} className={btnSubmit}>
+              {saving ? 'Guardando…' : 'Guardar'}
             </button>
           </div>
         </div>
+      )}
+    >
+      <form id="revenue-form" onSubmit={submit} className="space-y-3">
+        <FormField label="Lo que entró ese día (€)" required>
+          <input autoFocus type="text" inputMode="decimal"
+            value={amount} onChange={(e) => setAmount(e.target.value)}
+            className={amountCls} placeholder="0,00" />
+        </FormField>
+        {error && <p className={errorCls}>{error}</p>}
       </form>
-    </ModalOverlay>
+    </Modal>
   );
 }
 
 // ── Main page ─────────────────────────────────────────────────────────────────
+
+const TABS = [
+  ['dashboard',  'Resumen'],
+  ['expenses',   'Gastos'],
+  ['suppliers',  'Proveedores'],
+  ['categories', 'Categorías'],
+];
 
 export default function Finanzas() {
   const [tab, setTab] = useState('dashboard');
@@ -1579,7 +1288,9 @@ export default function Finanzas() {
   const [suppliers, setSuppliers] = useState([]);
   const [categories, setCategories] = useState([]);
   const [quickAction, setQuickAction] = useState(null); // null | 'revenue' | 'expense'
-  const [dashboardRefresh, setDashboardRefresh] = useState(0);
+  const [refresh, setRefresh] = useState(0);
+
+  useSetMobileHeader({ title: 'Finanzas', action: { label: 'Gasto', onClick: () => setQuickAction('expense') } });
 
   const loadSuppliers = useCallback(async () => {
     try {
@@ -1603,96 +1314,44 @@ export default function Finanzas() {
     if (p === 'month') setDateRange(getMonthRange());
   };
 
-  const TABS = [
-    { id: 'dashboard',   label: 'Dashboard'    },
-    { id: 'expenses',    label: 'Gastos'       },
-    { id: 'suppliers',   label: 'Proveedores'  },
-    { id: 'categories',  label: 'Categorías'   },
-  ];
+  const usesPeriod = tab === 'dashboard' || tab === 'expenses';
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6" style={{ overflowX: 'clip' }}>
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-bold text-gray-900">Finanzas</h1>
-          <p className="text-sm text-gray-400 mt-0.5">Control de ingresos, gastos y rentabilidad</p>
+    <div className="w-full space-y-6" style={{ overflowX: 'clip' }}>
+      <PageHeader
+        title="Finanzas"
+        subtitle={usesPeriod ? fmtRange(dateRange) : 'Ingresos, gastos y beneficio'}
+        actions={<PrimaryButton onClick={() => setQuickAction('expense')}>Nuevo gasto</PrimaryButton>}
+      />
+
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
+          <Tabs value={tab} options={TABS} onChange={setTab} />
+          {usesPeriod && <PeriodSelector period={period} onChange={handlePeriodChange} />}
         </div>
+        {usesPeriod && period === 'custom' && (
+          <div className="flex justify-end">
+            <CustomRange dateRange={dateRange} onRangeChange={(r) => { setPeriod('custom'); setDateRange(r); }} />
+          </div>
+        )}
       </div>
 
-      {/* Period selector — visible in dashboard and synced to other tabs */}
-      {tab !== 'suppliers' && (
-        <PeriodSelector
-          period={period}
-          dateRange={dateRange}
-          onChange={handlePeriodChange}
-          onRangeChange={(r) => { setPeriod('custom'); setDateRange(r); }}
-        />
-      )}
-
-      {/* Tabs */}
-      <div className="border-b border-gray-200 overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        <nav className="flex gap-0 min-w-max">
-          {TABS.map((t) => (
-            <button
-              key={t.id}
-              onClick={() => setTab(t.id)}
-              className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors -mb-px ${
-                tab === t.id
-                  ? 'border-violet-600 text-violet-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              {t.label}
-            </button>
-          ))}
-        </nav>
-      </div>
-
-      {/* Tab content */}
-      {tab === 'dashboard'  && <DashboardTab dateRange={dateRange} categories={categories} refreshTrigger={dashboardRefresh} />}
-      {tab === 'expenses'   && <GastosTab dateRange={dateRange} suppliers={suppliers} categories={categories} />}
+      {tab === 'dashboard'  && <ResumenTab dateRange={dateRange} categories={categories} refreshTrigger={refresh} onTodayRevenue={() => setQuickAction('revenue')} />}
+      {tab === 'expenses'   && <GastosTab dateRange={dateRange} suppliers={suppliers} categories={categories} refreshTrigger={refresh} onCreate={() => setQuickAction('expense')} />}
       {tab === 'suppliers'  && <ProveedoresTab suppliers={suppliers} loadSuppliers={loadSuppliers} categories={categories} />}
       {tab === 'categories' && <CategoryManagerModal inline onRefresh={loadCategories} />}
-
-      {/* Mobile quick-action bar */}
-      <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 flex border-t border-gray-200 bg-white shadow-[0_-2px_12px_rgba(0,0,0,0.08)]">
-        <button
-          onClick={() => setQuickAction('revenue')}
-          className="flex-1 flex flex-col items-center justify-center gap-1 py-3 text-emerald-600 active:bg-emerald-50 transition-colors"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
-            <path d="M10.75 10.818v2.614A3.13 3.13 0 0 0 11.888 13c.482-.315.612-.648.612-.875 0-.227-.13-.56-.612-.875a3.13 3.13 0 0 0-1.138-.432ZM8.33 8.62c.053.055.115.11.184.164.208.16.46.284.736.363V6.603a2.45 2.45 0 0 0-.35.13c-.14.065-.27.143-.386.233-.377.292-.514.627-.514.909 0 .184.058.39.33.615Z" />
-            <path fillRule="evenodd" d="M9.99 2a8 8 0 1 0 0 16 8 8 0 0 0 0-16Zm.75 4.5v.996a3.975 3.975 0 0 1 1.483.645 3.315 3.315 0 0 1 .87 1.015.75.75 0 0 1-1.246.832 1.82 1.82 0 0 0-.464-.535 2.48 2.48 0 0 0-.643-.34v2.455l.516.17c.497.164.962.382 1.338.693.396.327.695.787.695 1.364 0 .577-.299 1.037-.695 1.364-.376.311-.841.53-1.338.692V15a.75.75 0 0 1-1.5 0v-.99a4.23 4.23 0 0 1-1.913-.98.75.75 0 1 1 1.023-1.1c.162.151.35.278.555.38.206.102.432.177.668.224v-2.54l-.443-.148c-.497-.164-.96-.382-1.338-.693C7.022 9.497 6.75 9.056 6.75 8.5c0-.557.272-.998.612-1.315.326-.305.75-.508 1.138-.662V6.5a.75.75 0 0 1 1.5 0Z" clipRule="evenodd" />
-          </svg>
-          <span className="text-xs font-semibold">Ingreso de hoy</span>
-        </button>
-        <div className="w-px bg-gray-200 my-2" />
-        <button
-          onClick={() => setQuickAction('expense')}
-          className="flex-1 flex flex-col items-center justify-center gap-1 py-3 text-violet-600 active:bg-violet-50 transition-colors"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
-            <path fillRule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm.75-11.25a.75.75 0 0 0-1.5 0v2.5h-2.5a.75.75 0 0 0 0 1.5h2.5v2.5a.75.75 0 0 0 1.5 0v-2.5h2.5a.75.75 0 0 0 0-1.5h-2.5v-2.5Z" clipRule="evenodd" />
-          </svg>
-          <span className="text-xs font-semibold">Nuevo gasto</span>
-        </button>
-      </div>
-
-      {/* Extra bottom padding on mobile so content isn't hidden behind the bar */}
-      <div className="md:hidden h-16" />
 
       {quickAction === 'revenue' && (
         <RevenueModal
           onClose={() => setQuickAction(null)}
-          onSave={() => { setQuickAction(null); setDashboardRefresh((n) => n + 1); }}
+          onSave={() => { setQuickAction(null); setRefresh((n) => n + 1); }}
         />
       )}
       {quickAction === 'expense' && (
-        <MobileExpenseScreen
+        <ExpenseModal
           suppliers={suppliers}
           categories={categories}
-          onSave={() => setQuickAction(null)}
+          onSave={() => { setQuickAction(null); setRefresh((n) => n + 1); }}
           onClose={() => setQuickAction(null)}
         />
       )}

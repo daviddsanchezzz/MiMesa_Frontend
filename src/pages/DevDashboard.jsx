@@ -1,825 +1,513 @@
-﻿import { useState, useEffect, useCallback } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import Modal from '../components/Modal';
 import { useAuth } from '../context/AuthContext';
+import { useSetMobileHeader } from '../context/MobileHeaderContext';
+import NewClientModal, { InviteLink } from './dev/NewClientModal';
+import Icon from '../ui/Icon';
+import { Empty, FigureLine, RowAction, Section, SectionLink, Segmented, Toggle } from '../ui/kit';
 
-function StatCard({ label, value, sub }) {
+/*
+ * Vetra panel: every client business in one list (owner, team, activity,
+ * plan) with a detail sheet for everything you can do with it. Accounts that
+ * belong to no business are listed at the end.
+ */
+
+// No free plan: new businesses try Pro 14 days, then read-only ('expired') until they pay.
+// 'free' is only courtesy access (businesses from before trials, or given by Vetra).
+// [label, dot colour, short label for the switch]
+const PLAN = {
+  trial: ['Prueba', '#0ea5e9', 'Prueba'],
+  expired: ['Sin plan', '#e11d48', 'Sin plan'],
+  free: ['Cortesía', '#9ca3af', 'Cortesía'],
+  basic: ['Basic', '#7c3aed', 'Basic'],
+  pro: ['Pro', '#059669', 'Pro'],
+};
+const PLAN_CHOICES = ['trial', 'basic', 'pro', 'free'];
+
+function planState(b) {
+  if (b.effectivePlan === 'expired') return 'expired';
+  if (b.subscriptionStatus === 'trialing' && !b.hasSubscription) return 'trial';
+  if (b.effectivePlan === 'free') return 'free';
+  return b.plan;
+}
+const ROLE = { owner: 'Propietario', manager: 'Encargado', staff: 'Personal' };
+const TYPE = { appointments: 'Citas', restaurant: 'Restaurante' };
+
+const FILTERS = [
+  ['all', 'Todos'],
+  ['pending', 'Por activar'],
+  ['active', 'Activos'],
+  ['appointments', 'Citas'],
+  ['restaurant', 'Restaurantes'],
+  ['paid', 'De pago'],
+  ['idle', 'Sin actividad'],
+];
+
+function matches(b, filter) {
+  if (filter === 'pending') return b.owner.status === 'invited';
+  if (filter === 'active') return b.owner.status === 'active';
+  if (filter === 'appointments' || filter === 'restaurant') return b.businessType === filter;
+  if (filter === 'paid') return ['basic', 'pro'].includes(planState(b));
+  if (filter === 'idle') return b.activity.last30d === 0;
+  return true;
+}
+
+function ago(date) {
+  if (!date) return 'nunca';
+  const mins = Math.round((Date.now() - new Date(date).getTime()) / 60000);
+  if (mins < 2) return 'ahora';
+  if (mins < 60) return `hace ${mins} min`;
+  const h = Math.round(mins / 60);
+  if (h < 24) return `hace ${h} h`;
+  const d = Math.round(h / 24);
+  if (d < 30) return `hace ${d} ${d === 1 ? 'día' : 'días'}`;
+  return new Date(date).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function shortDate(date) {
+  return date ? new Date(date).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }) : '';
+}
+
+function Dot({ color, dashed }) {
+  return <span className="w-2 h-2 rounded-full shrink-0" style={dashed ? { border: `1.5px dashed ${color}` } : { backgroundColor: color }} />;
+}
+
+/** The plan as a coloured dot and its name, like the states elsewhere in the app. */
+function PlanText({ state, className = '' }) {
+  const [label, color] = PLAN[state] || PLAN.free;
+  return <span className={`inline-flex items-center gap-1.5 text-xs font-medium text-gray-700 ${className}`}><Dot color={color} />{label}</span>;
+}
+
+function Initial({ name, type, size = 'md' }) {
+  const bg = type === 'appointments' ? 'bg-pink-100 text-pink-700' : 'bg-amber-100 text-amber-800';
+  const dims = size === 'lg' ? 'w-12 h-12 text-lg rounded-2xl' : 'w-10 h-10 text-sm rounded-xl';
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm px-4 py-3">
-      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">{label}</p>
-      <p className="text-2xl font-bold text-gray-900 leading-tight mt-1">{value}</p>
-      {sub && <p className="text-xs text-gray-500 mt-1">{sub}</p>}
-    </div>
+    <span className={`${dims} flex items-center justify-center font-semibold shrink-0 ${bg}`}>
+      {(name || '?').trim().charAt(0).toUpperCase()}
+    </span>
   );
 }
 
-function planPillClass(plan) {
-  if (plan === 'pro') return 'bg-emerald-50 text-emerald-700 border-emerald-200';
-  if (plan === 'basic') return 'bg-violet-50 text-violet-700 border-violet-200';
-  return 'bg-gray-50 text-gray-600 border-gray-200';
+function OwnerText({ owner }) {
+  if (owner.status === 'active') {
+    return <span className="inline-flex items-center gap-1.5 min-w-0"><Dot color="#10b981" /><span className="truncate">{owner.name || owner.email}</span></span>;
+  }
+  if (owner.status === 'invited') {
+    return <span className="inline-flex items-center gap-1.5 min-w-0 text-amber-800"><Dot color="#f59e0b" dashed /><span className="truncate">Por activar · {owner.name || owner.email}</span></span>;
+  }
+  return <span className="inline-flex items-center gap-1.5 text-gray-400"><Dot color="#d1d5db" />Sin dueño</span>;
 }
 
-const IconBriefcase = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 shrink-0">
-    <path fillRule="evenodd" d="M6 5V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v1h2.25A1.75 1.75 0 0 1 18 6.75v8.5A1.75 1.75 0 0 1 16.25 17H3.75A1.75 1.75 0 0 1 2 15.25v-8.5A1.75 1.75 0 0 1 3.75 5H6Zm1.5 0h5V4a.5.5 0 0 0-.5-.5H8a.5.5 0 0 0-.5.5v1Z" clipRule="evenodd" />
-  </svg>
-);
-
-const IconCurrencyEuro = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 shrink-0">
-    <path d="M1 4.25a3.733 3.733 0 0 1 2.25-.75h13.5c.844 0 1.623.279 2.25.75A2.25 2.25 0 0 0 16.75 2H3.25A2.25 2.25 0 0 0 1 4.25ZM1 7.25a3.733 3.733 0 0 1 2.25-.75h13.5c.844 0 1.623.279 2.25.75A2.25 2.25 0 0 0 16.75 5H3.25A2.25 2.25 0 0 0 1 7.25ZM7 8a1 1 0 0 0 0 2h6a1 1 0 1 0 0-2H7ZM3.25 8A2.25 2.25 0 0 0 1 10.25v4.5A2.25 2.25 0 0 0 3.25 17h13.5A2.25 2.25 0 0 0 19 14.75v-4.5A2.25 2.25 0 0 0 16.75 8H3.25Z" />
-  </svg>
-);
-
-const IconBookmark = () => (
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 shrink-0">
-    <path d="M5 3.75A1.75 1.75 0 0 1 6.75 2h6.5A1.75 1.75 0 0 1 15 3.75v13.11a.75.75 0 0 1-1.149.634L10 15.032l-3.851 2.463A.75.75 0 0 1 5 16.861V3.75Z" />
-  </svg>
-);
-
-function ModuleIcon({ moduleKey }) {
-  if (moduleKey === 'staff') return <IconBriefcase />;
-  if (moduleKey === 'expenses') return <IconCurrencyEuro />;
-  if (moduleKey === 'thefork') return <IconBookmark />;
-  return null;
-}
-
-function MobileBusinessCard({ b, moduleCatalog, onEdit }) {
-  const activeModules = moduleCatalog.filter((m) => !!b.modules?.[m.key]?.enabled);
+function BusinessRow({ b, onOpen }) {
+  const people = `${b.team.length} ${b.team.length === 1 ? 'persona' : 'personas'}`;
   return (
-    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 space-y-3">
-      <div>
-        <p className="font-semibold text-gray-900">{b.name}</p>
-        <p className="text-xs text-gray-400 mt-0.5 truncate">{b.email}</p>
-      </div>
-
-      <div className="flex items-center">
-        <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${planPillClass(b.plan)}`}>
-          {b.plan}
-        </span>
-      </div>
-
-      <div className="grid grid-cols-3 gap-2 text-center">
-        <div className="rounded-xl bg-gray-50 border border-gray-100 py-2">
-          <p className="text-[11px] text-gray-500">Miembros</p>
-          <p className="text-sm font-semibold text-gray-900">{b.memberCount}</p>
+    <li>
+      <button type="button" onClick={() => onOpen(b)}
+        className="w-full text-left px-2 py-3 flex items-center gap-3 md:grid md:grid-cols-12 md:gap-4 rounded-xl hover:bg-gray-50 active:bg-gray-100 transition-colors">
+        <div className="md:col-span-4 flex items-center gap-3 min-w-0 flex-1">
+          <Initial name={b.name} type={b.businessType} />
+          <div className="min-w-0">
+            <p className="text-[15px] font-medium text-gray-900 truncate">{b.name}</p>
+            <p className="text-[13px] text-gray-500 truncate md:hidden">
+              {PLAN[planState(b)]?.[0]} · {TYPE[b.businessType] || 'Restaurante'} · {people}
+            </p>
+            <p className="hidden md:block text-[13px] text-gray-500 truncate">{TYPE[b.businessType] || 'Restaurante'} · desde {shortDate(b.createdAt)}</p>
+            <p className="text-xs text-gray-600 mt-0.5 md:hidden"><OwnerText owner={b.owner} /></p>
+          </div>
         </div>
-        <div className="rounded-xl bg-gray-50 border border-gray-100 py-2">
-          <p className="text-[11px] text-gray-500">30d</p>
-          <p className="text-sm font-semibold text-gray-900">{b.reservationsLast30d}</p>
+        <div className="hidden md:block md:col-span-2"><PlanText state={planState(b)} /></div>
+        <div className="hidden md:block md:col-span-3 text-sm text-gray-700 min-w-0"><OwnerText owner={b.owner} /></div>
+        <div className="hidden md:block md:col-span-1 text-right text-sm tabular-nums text-gray-700">{b.team.length}</div>
+        <div className="md:col-span-1 text-right shrink-0">
+          <p className="text-sm font-semibold text-gray-900 tabular-nums">{b.activity.last30d}</p>
+          <p className="text-[11px] text-gray-400 md:hidden">{b.activity.unit} 30 d</p>
         </div>
-        <div className="rounded-xl bg-gray-50 border border-gray-100 py-2">
-          <p className="text-[11px] text-gray-500">Total</p>
-          <p className="text-sm font-semibold text-gray-900">{b.totalReservations}</p>
-        </div>
-      </div>
+        <div className="hidden md:block md:col-span-1 text-right text-[13px] text-gray-500">{b.lastSeenAt ? ago(b.lastSeenAt) : 'sin entrar'}</div>
+        <Icon name="right" className="md:hidden w-4 h-4 text-gray-300 shrink-0" strokeWidth={2} />
+      </button>
+    </li>
+  );
+}
 
-      {moduleCatalog.length > 0 && (
-        <div className="rounded-xl bg-gray-50 border border-gray-100 p-2 space-y-1">
-          <p className="text-[11px] text-gray-500">Modulos</p>
-          {activeModules.length > 0 && (
-            <div className="flex flex-wrap gap-1.5">
-              {activeModules.map((m) => (
-                <span
-                  key={m.key}
-                  title={m.name}
-                  className="inline-flex items-center justify-center w-7 h-7 rounded-lg border bg-emerald-50 border-emerald-200 text-emerald-700"
-                >
-                  <ModuleIcon moduleKey={m.key} />
-                </span>
-              ))}
-            </div>
-          )}
+/** Start a session as that user (support). */
+async function impersonate(userId, startImpersonation) {
+  let token = '';
+  let user = { id: userId };
+  try {
+    const { data } = await api.post(`/dev/users/${userId}/impersonate`);
+    token = data?.token || '';
+    user = data?.user || user;
+  } catch (err) {
+    // Older backends lack /api/dev/users/:id/impersonate: use Better Auth's.
+    if (err?.response?.status !== 404) throw err;
+    const response = await api.post('/betterauth/admin/impersonate-user', { userId });
+    token = response?.headers?.['set-auth-token'] || '';
+    user = response?.data?.user || user;
+  }
+  if (!token) throw new Error('No se recibió token de suplantación');
+  await startImpersonation({ token, user });
+}
+
+function PersonRow({ p, onImpersonate, onDelete, busy }) {
+  return (
+    <li className="flex items-center gap-3 py-3">
+      <span className="w-9 h-9 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center text-sm font-semibold shrink-0">
+        {(p.name || p.email || '?').charAt(0).toUpperCase()}
+      </span>
+      <div className="min-w-0 flex-1">
+        <p className="text-[15px] font-medium text-gray-900 truncate">
+          {p.name || p.email}
+          {p.role && <span className="ml-1.5 text-xs font-medium text-gray-400">{ROLE[p.role] || p.role}</span>}
+          {p.isDev && <span className="ml-1.5 text-xs font-semibold text-violet-700">Vetra</span>}
+        </p>
+        <p className="text-[13px] text-gray-500 truncate">
+          {p.email}{p.emailVerified === false ? ' · sin verificar' : ''} · {p.lastSeenAt ? `entró ${ago(p.lastSeenAt)}` : 'nunca ha entrado'}
+        </p>
+      </div>
+      {onImpersonate && <RowAction disabled={busy} onClick={onImpersonate}>Entrar</RowAction>}
+      {onDelete && (
+        <button type="button" disabled={busy} onClick={onDelete} title="Eliminar usuario" aria-label="Eliminar usuario"
+          className="w-9 h-9 flex items-center justify-center rounded-full text-gray-400 hover:text-rose-600 hover:bg-rose-50 disabled:opacity-50 shrink-0">
+          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" className="w-[18px] h-[18px]"><path d="M4 6h12M8 6V4.5A1.5 1.5 0 0 1 9.5 3h1A1.5 1.5 0 0 1 12 4.5V6m2 0-.6 9.1A2 2 0 0 1 11.4 17H8.6a2 2 0 0 1-2-1.9L6 6" strokeLinecap="round" strokeLinejoin="round" /></svg>
+        </button>
+      )}
+    </li>
+  );
+}
+
+function BusinessSheet({ b, modules, onClose, onChanged }) {
+  const { startImpersonation } = useAuth();
+  const navigate = useNavigate();
+  const [plan, setPlan] = useState(planState(b));
+  const [mods, setMods] = useState(() => Object.fromEntries(modules.map((m) => [m.key, !!b.modules?.[m.key]?.enabled])));
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
+  const dirty = plan !== planState(b) || modules.some((m) => mods[m.key] !== !!b.modules?.[m.key]?.enabled);
+
+  const run = async (fn, ok) => {
+    setBusy(true); setError(''); setNotice('');
+    try {
+      await fn();
+      if (ok) setNotice(ok);
+      await onChanged?.();
+    } catch (err) {
+      setError(err.response?.data?.message || err.message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const save = () => run(async () => {
+    if (plan !== planState(b)) await api.patch(`/dev/businesses/${b.id}/plan`, { plan });
+    for (const m of modules) {
+      if (mods[m.key] !== !!b.modules?.[m.key]?.enabled) {
+        await api.patch(`/dev/businesses/${b.id}/modules/${m.key}`, { enabled: mods[m.key] });
+      }
+    }
+  }, 'Cambios guardados.');
+
+  const enterAs = async (userId) => {
+    setBusy(true); setError('');
+    try {
+      await impersonate(userId, startImpersonation);
+      navigate('/', { replace: true });
+    } catch (err) {
+      setError(err.response?.data?.message || err.message);
+      setBusy(false);
+    }
+  };
+
+  const removeUser = (p) => {
+    if (!window.confirm(`¿Eliminar la cuenta de ${p.email}? No se puede deshacer.`)) return;
+    run(() => api.delete(`/dev/users/${p.userId}`), 'Usuario eliminado.');
+  };
+
+  const removeBusiness = async () => {
+    const typed = window.prompt(`Esto borra ${b.name} y todos sus datos. Escribe el nombre del negocio para confirmar:`);
+    if (typed === null) return;
+    if (typed.trim() !== b.name.trim()) { setError('El nombre no coincide. No se ha borrado nada.'); return; }
+    setBusy(true);
+    try {
+      await api.delete(`/dev/businesses/${b.id}`);
+      onClose();
+      onChanged?.();
+    } catch (err) {
+      setError(err.response?.data?.message || err.message);
+      setBusy(false);
+    }
+  };
+
+  const state = planState(b);
+  return (
+    <Modal onClose={onClose} size="lg"
+      header={(
+        <div className="flex items-center gap-3 min-w-0">
+          <Initial name={b.name} type={b.businessType} size="lg" />
+          <div className="min-w-0">
+            <h3 className="text-lg font-semibold text-gray-900 truncate">{b.name}</h3>
+            <p className="text-[13px] text-gray-500 flex items-center gap-1.5 min-w-0">
+              <PlanText state={state} className="shrink-0" />
+              <span className="truncate">· {TYPE[b.businessType]} · desde {shortDate(b.createdAt)}</span>
+            </p>
+          </div>
         </div>
       )}
-
-      <div className="flex items-center justify-between">
-        <p className="text-xs text-gray-400">
-          Alta: {new Date(b.createdAt).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
-        </p>
-        <button
-          onClick={() => onEdit(b)}
-          className="text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors"
-        >
-          Editar
+      footer={dirty ? (
+        <button type="button" disabled={busy} onClick={save}
+          className="w-full bg-violet-600 hover:bg-violet-700 disabled:opacity-60 text-white py-2.5 rounded-xl text-sm font-semibold">
+          {busy ? 'Guardando…' : 'Guardar cambios'}
         </button>
-      </div>
-    </div>
-  );
-}
+      ) : null}>
+      <div className="space-y-7">
+        {notice && <p className="text-sm text-emerald-800 bg-emerald-50 rounded-xl px-3 py-2">{notice}</p>}
+        {error && <p className="text-sm text-rose-700 bg-rose-50 rounded-xl px-3 py-2">{error}</p>}
 
-function rolePillClass(role) {
-  if (role === 'owner') return 'bg-amber-50 text-amber-700 border-amber-200';
-  if (role === 'manager') return 'bg-blue-50 text-blue-700 border-blue-200';
-  return 'bg-gray-50 text-gray-600 border-gray-200';
+        <FigureLine items={[
+          { value: b.activity.last30d, label: `${b.activity.unit} en 30 días` },
+          { value: b.activity.total, label: 'en total' },
+          { value: b.lastSeenAt ? ago(b.lastSeenAt) : '—', label: 'última entrada' },
+        ]} />
+
+        {b.owner.status === 'invited' && (
+          <div className="rounded-2xl bg-amber-50 p-4 space-y-3">
+            <p className="text-sm text-amber-900">
+              <strong>{b.owner.name}</strong> ({b.owner.email}) aún no ha activado su cuenta.
+              {b.owner.expiresAt && ` El enlace caduca el ${shortDate(b.owner.expiresAt)}.`}
+            </p>
+            {b.owner.inviteLink && <InviteLink link={b.owner.inviteLink} businessName={b.name} ownerName={b.owner.name} />}
+            <button type="button" disabled={busy}
+              onClick={() => run(() => api.post(`/dev/businesses/${b.id}/resend-owner-invite`, {}), 'Invitación reenviada con un enlace nuevo.')}
+              className="text-sm font-semibold text-amber-900 hover:underline disabled:opacity-50">
+              Reenviar por email con un enlace nuevo
+            </button>
+          </div>
+        )}
+        {b.owner.status === 'none' && (
+          <p className="text-sm text-gray-600 bg-gray-50 rounded-xl px-3 py-2">Este negocio no tiene dueño activo ni invitación pendiente.</p>
+        )}
+
+        <Section title={`Equipo · ${b.team.length}`}>
+          {b.team.length ? (
+            <ul className="divide-y divide-gray-100">
+              {b.team.map((p) => (
+                <PersonRow key={p.userId} p={p} busy={busy}
+                  onImpersonate={p.exists ? () => enterAs(p.userId) : null}
+                  onDelete={p.exists ? () => removeUser(p) : null} />
+              ))}
+            </ul>
+          ) : <p className="text-sm text-gray-500 py-2">Todavía no ha entrado nadie.</p>}
+          {b.pendingInvites.length > 0 && (
+            <p className="text-[13px] text-gray-500 mt-1">
+              Invitados sin aceptar: {b.pendingInvites.map((i) => `${i.name || i.email} (${ROLE[i.role] || i.role})`).join(', ')}
+            </p>
+          )}
+        </Section>
+
+        <Section title="Plan">
+          <Segmented value={plan} onChange={setPlan} options={PLAN_CHOICES.map((k) => [k, PLAN[k][2]])} />
+          <p className="text-[13px] text-gray-500 mt-2 leading-relaxed">
+            {state === 'trial' && b.trialEndsAt && `En prueba hasta el ${new Date(b.trialEndsAt).toLocaleDateString('es-ES', { day: 'numeric', month: 'long' })}. `}
+            {state === 'expired' && 'Prueba terminada: en solo lectura hasta que pague. '}
+            «Prueba» da 14 días de Pro desde hoy; «Basic» y «Pro» se regalan sin Stripe; «Cortesía» es acceso gratis sin límite de tiempo.
+          </p>
+        </Section>
+
+        <Section title="Módulos">
+          <ul className="divide-y divide-gray-100">
+            {modules.map((m) => (
+              <li key={m.key} className="flex items-center gap-3 py-3">
+                <div className="min-w-0 flex-1">
+                  <p className="text-[15px] font-medium text-gray-900">{m.name}</p>
+                  <p className="text-[13px] text-gray-500">{m.description}</p>
+                </div>
+                <Toggle on={!!mods[m.key]} label={m.name} onChange={(v) => setMods((x) => ({ ...x, [m.key]: v }))} />
+              </li>
+            ))}
+          </ul>
+        </Section>
+
+        <Section title="Datos del negocio">
+          <dl className="divide-y divide-gray-100 text-sm">
+            {[['Email', b.email], ['Teléfono', b.phone], ['Dirección', b.address]].map(([k, v]) => (
+              <div key={k} className="flex gap-4 py-2.5">
+                <dt className="w-24 shrink-0 text-gray-500">{k}</dt><dd className="text-gray-900 min-w-0 break-words">{v || '—'}</dd>
+              </div>
+            ))}
+            <div className="flex gap-4 py-2.5">
+              <dt className="w-24 shrink-0 text-gray-500">Página</dt>
+              <dd className="min-w-0">{b.publicUrl
+                ? <a href={b.publicUrl} target="_blank" rel="noreferrer" className="text-violet-700 font-medium break-all hover:underline">{b.publicUrl.replace(/^https?:\/\//, '')}</a>
+                : '—'}</dd>
+            </div>
+          </dl>
+        </Section>
+
+        <div className="pt-1">
+          <button type="button" disabled={busy} onClick={removeBusiness}
+            className="text-sm font-semibold text-rose-600 hover:text-rose-700 disabled:opacity-50">
+            Eliminar negocio…
+          </button>
+        </div>
+      </div>
+    </Modal>
+  );
 }
 
 export default function DevDashboard() {
-  const [searchParams] = useSearchParams();
-  const navigate = useNavigate();
   const { startImpersonation } = useAuth();
+  const navigate = useNavigate();
+  const [data, setData] = useState(null);
+  const [error, setError] = useState('');
+  const [q, setQ] = useState('');
+  const [filter, setFilter] = useState('all');
+  const [openId, setOpenId] = useState(null);
+  const [creating, setCreating] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [showOrphans, setShowOrphans] = useState(false);
 
-  const tab = searchParams.get('tab') === 'users' ? 'users' : 'businesses';
-
-  const [businesses, setBusinesses] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
-  const [planFilter, setPlanFilter] = useState('all');
-
-  const [showModal, setShowModal] = useState(false);
-  const [form, setForm] = useState({ name: '', email: '', phone: '', address: '', plan: 'free' });
-  const [saving, setSaving] = useState(false);
-  const [formError, setFormError] = useState('');
-
-  const [editingBusiness, setEditingBusiness] = useState(null);
-  const [editPlan, setEditPlan] = useState('free');
-  const [editModules, setEditModules] = useState({});
-  const [editSaving, setEditSaving] = useState(false);
-  const [editError, setEditError] = useState('');
-
-  const [users, setUsers] = useState([]);
-  const [moduleCatalog, setModuleCatalog] = useState([]);
-  const [usersLoading, setUsersLoading] = useState(false);
-  const [userSearch, setUserSearch] = useState('');
-  const [selectedUser, setSelectedUser] = useState(null);
-  const [userActionError, setUserActionError] = useState('');
-  const [userActionLoading, setUserActionLoading] = useState(false);
+  useSetMobileHeader({ title: 'Clientes', action: { label: 'Nuevo', onClick: () => setCreating(true) } });
 
   const load = useCallback(async () => {
-    setLoading(true);
     try {
-      const [{ data }, { data: modules }] = await Promise.all([
-        api.get('/dev/businesses'),
-        api.get('/dev/modules/catalog'),
-      ]);
-      setBusinesses(data);
-      setModuleCatalog(modules || []);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    load();
-  }, [load]);
-
-  const loadUsers = useCallback(async () => {
-    setUsersLoading(true);
-    try {
-      const { data } = await api.get('/dev/users');
-      setUsers(data || []);
-    } finally {
-      setUsersLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (tab !== 'users') return;
-    loadUsers();
-  }, [tab, loadUsers]);
-
-  const filtered = businesses.filter((b) => {
-    const q = search.toLowerCase();
-    const matchQ = !q || b.name.toLowerCase().includes(q) || b.email.toLowerCase().includes(q);
-    const matchP = planFilter === 'all' || b.plan === planFilter;
-    return matchQ && matchP;
-  });
-
-  const totalReservations30d = businesses.reduce((s, b) => s + b.reservationsLast30d, 0);
-  const paidCount = businesses.filter((b) => b.plan !== 'free').length;
-  const filteredUsers = users.filter((u) => {
-    const q = userSearch.trim().toLowerCase();
-    if (!q) return true;
-  return (u.name || '').toLowerCase().includes(q) || (u.email || '').toLowerCase().includes(q);
-  });
-
-  const handleCreate = async (e) => {
-    e.preventDefault();
-    setFormError('');
-    setSaving(true);
-    try {
-      await api.post('/dev/businesses', form);
-      setShowModal(false);
-      setForm({ name: '', email: '', phone: '', address: '', plan: 'free' });
-      await load();
+      const { data: d } = await api.get('/dev/overview');
+      setData(d);
+      setError('');
     } catch (err) {
-      setFormError(err.response?.data?.message || err.message);
-    } finally {
-      setSaving(false);
+      setError(err.response?.data?.message || err.message);
     }
-  };
+  }, []);
+  useEffect(() => { load(); }, [load]);
 
-  const openBusinessEditor = (business) => {
-    setEditingBusiness(business);
-    setEditPlan(business.plan || 'free');
-    const modulesState = {};
-    moduleCatalog.forEach((m) => {
-      modulesState[m.key] = !!business.modules?.[m.key]?.enabled;
+  const term = q.trim().toLowerCase();
+
+  const list = useMemo(() => {
+    if (!data) return [];
+    return data.businesses.filter((b) => {
+      if (term) {
+        const text = [b.name, b.email, b.phone, b.owner.name, b.owner.email, ...b.team.map((t) => `${t.name} ${t.email}`)]
+          .join(' ').toLowerCase();
+        if (!text.includes(term)) return false;
+      }
+      return matches(b, filter);
     });
-    setEditModules(modulesState);
-    setEditError('');
-  };
+  }, [data, term, filter]);
 
-  const closeBusinessEditor = () => {
-    if (editSaving) return;
-    setEditingBusiness(null);
-    setEditError('');
-  };
+  const orphans = useMemo(() => {
+    if (!data) return [];
+    return data.orphans.filter((o) => !term || `${o.name} ${o.email}`.toLowerCase().includes(term));
+  }, [data, term]);
 
-  const handleEditModuleToggle = (moduleKey) => {
-    setEditModules((prev) => ({ ...prev, [moduleKey]: !prev[moduleKey] }));
-  };
+  const open = data?.businesses.find((b) => b.id === openId) || null;
+  const s = data?.stats;
 
-  const saveBusinessChanges = async () => {
-    if (!editingBusiness) return;
-    setEditSaving(true);
-    setEditError('');
+  const enterAsOrphan = async (id) => {
+    setBusy(true);
     try {
-      if (editPlan !== editingBusiness.plan) {
-        await api.patch(`/dev/businesses/${editingBusiness.id}/plan`, { plan: editPlan });
-      }
-
-      const moduleChanges = moduleCatalog.filter((m) => {
-        const currentEnabled = !!editingBusiness.modules?.[m.key]?.enabled;
-        const nextEnabled = !!editModules[m.key];
-        return currentEnabled !== nextEnabled;
-      });
-
-      for (const m of moduleChanges) {
-        await api.patch(`/dev/businesses/${editingBusiness.id}/modules/${m.key}`, {
-          enabled: !!editModules[m.key],
-        });
-      }
-
-      setBusinesses((prev) => prev.map((b) => {
-        if (b.id !== editingBusiness.id) return b;
-        return {
-          ...b,
-          plan: editPlan,
-          modules: {
-            ...(b.modules || {}),
-            ...Object.fromEntries(moduleCatalog.map((m) => [
-              m.key,
-              {
-                ...(b.modules?.[m.key] || {}),
-                enabled: !!editModules[m.key],
-              },
-            ])),
-          },
-        };
-      }));
-
-      setEditingBusiness(null);
-    } catch (err) {
-      setEditError(err.response?.data?.message || err.message || 'No se pudo guardar');
-    } finally {
-      setEditSaving(false);
-    }
-  };
-
-  const openUserActions = (user) => {
-    setSelectedUser(user);
-    setUserActionError('');
-  };
-
-  const closeUserActions = () => {
-    if (userActionLoading) return;
-    setSelectedUser(null);
-    setUserActionError('');
-  };
-
-  const handleImpersonate = async () => {
-    if (!selectedUser) return;
-    setUserActionLoading(true);
-    setUserActionError('');
-    try {
-      let token = '';
-      let userPayload = selectedUser;
-
-      try {
-        const { data } = await api.post(`/dev/users/${selectedUser.id}/impersonate`);
-        token = data?.token || '';
-        userPayload = data?.user || selectedUser;
-      } catch (err) {
-        // Backends antiguos no tienen /api/dev/users/:id/impersonate (404).
-        // Fallback al endpoint oficial de Better Auth.
-        if (err?.response?.status !== 404) throw err;
-        const response = await api.post('/betterauth/admin/impersonate-user', {
-          userId: selectedUser.id,
-        });
-        token = response?.headers?.['set-auth-token'] || '';
-        userPayload = response?.data?.user || selectedUser;
-      }
-
-      if (!token) {
-        throw new Error('No se recibio token de suplantacion');
-      }
-
-      await startImpersonation({ token, user: userPayload });
-      closeUserActions();
+      await impersonate(id, startImpersonation);
       navigate('/', { replace: true });
     } catch (err) {
-      setUserActionError(err.response?.data?.message || err.message || 'No se pudo iniciar la suplantacion');
-    } finally {
-      setUserActionLoading(false);
+      setError(err.response?.data?.message || err.message);
+      setBusy(false);
     }
   };
 
-  const handleDeleteUser = async () => {
-    if (!selectedUser) return;
-    const ok = window.confirm(`Vas a eliminar al usuario ${selectedUser.email}. Esta accion no se puede deshacer.`);
-    if (!ok) return;
-    setUserActionLoading(true);
-    setUserActionError('');
-    try {
-      await api.delete(`/dev/users/${selectedUser.id}`);
-      setUsers((prev) => prev.filter((u) => u.id !== selectedUser.id));
-      closeUserActions();
-    } catch (err) {
-      setUserActionError(err.response?.data?.message || err.message || 'No se pudo eliminar el usuario');
-    } finally {
-      setUserActionLoading(false);
-    }
+  const deleteOrphan = async (o) => {
+    if (!window.confirm(`¿Eliminar la cuenta de ${o.email}? No se puede deshacer.`)) return;
+    setBusy(true);
+    try { await api.delete(`/dev/users/${o.id}`); await load(); } catch (err) { setError(err.response?.data?.message || err.message); } finally { setBusy(false); }
   };
+
+  const counts = useMemo(() => Object.fromEntries(FILTERS.map(([k]) => [k, data ? data.businesses.filter((b) => matches(b, k)).length : 0])), [data]);
 
   return (
-    <div className="space-y-4 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3 sm:py-4">
-      {tab === 'businesses' && (
+    <div className="w-full space-y-5">
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="hidden lg:block text-2xl font-semibold tracking-tight text-gray-900">Clientes</h1>
+          <p className="text-sm text-gray-500 lg:mt-0.5">Negocios que usan Vetra, su equipo y su actividad.</p>
+        </div>
+        <button type="button" onClick={() => setCreating(true)}
+          className="hidden lg:inline-flex items-center gap-1.5 h-10 px-4 rounded-xl bg-violet-600 text-white text-sm font-semibold hover:bg-violet-700">
+          <Icon name="plus" className="w-4 h-4" strokeWidth={2} />Nuevo cliente
+        </button>
+      </div>
+
+      {error && <p className="text-sm text-rose-700 bg-rose-50 rounded-xl px-3 py-2">{error}</p>}
+      {!data && !error && <p className="text-sm text-gray-400">Cargando…</p>}
+
+      {data && (
         <>
-          <div className="grid grid-cols-2 xl:grid-cols-4 gap-3">
-            <StatCard label="Negocios" value={businesses.length} />
-            <StatCard label="De pago" value={paidCount} sub={`${businesses.length - paidCount} en free`} />
-            <StatCard label="Reservas 30d" value={totalReservations30d} />
-            <StatCard label="Reservas totales" value={businesses.reduce((s, b) => s + b.totalReservations, 0)} />
+          <FigureLine items={[
+            { value: s.active, label: `activos de ${s.businesses}` },
+            s.pending ? { value: s.pending, label: 'por activar', tone: 'warn' } : null,
+            { value: s.paid, label: 'de pago', tone: s.paid ? 'good' : undefined },
+            { value: s.trialing || 0, label: 'en prueba' },
+            s.expired ? { value: s.expired, label: 'sin plan' } : null,
+            { value: s.activity30d, label: 'citas y reservas en 30 días' },
+            { value: s.activeLast7d, label: 'entraron esta semana' },
+          ]} />
+
+          <div className="space-y-3">
+            <label className="relative block">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" className="w-4 h-4 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none"><circle cx="9" cy="9" r="5.5" /><path d="m13.5 13.5 3 3" strokeLinecap="round" /></svg>
+              <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar negocio, persona o email"
+                className="w-full rounded-full bg-gray-100 border border-transparent pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:bg-white focus:border-gray-300 focus:ring-2 focus:ring-violet-500/30" />
+            </label>
+            <div className="flex gap-1.5 overflow-x-auto -mx-1 px-1 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {FILTERS.map(([k, label]) => (
+                <button key={k} type="button" onClick={() => setFilter(k)}
+                  className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-semibold border transition-colors ${filter === k ? 'bg-gray-900 border-gray-900 text-white' : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'}`}>
+                  {label}{k !== 'all' && counts[k] > 0 && <span className={`ml-1 ${filter === k ? 'text-gray-300' : 'text-gray-400'}`}>{counts[k]}</span>}
+                </button>
+              ))}
+            </div>
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-2">
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar por nombre o email..."
-              className="flex-1 border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white"
-            />
-            <select
-              value={planFilter}
-              onChange={(e) => setPlanFilter(e.target.value)}
-              className="border border-gray-300 rounded-xl px-3 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-violet-500"
-            >
-              <option value="all">Todos los planes</option>
-              <option value="free">Free</option>
-              <option value="basic">Basic</option>
-              <option value="pro">Pro</option>
-            </select>
-            <button
-              onClick={() => setShowModal(true)}
-              className="bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold px-4 py-2.5 rounded-xl transition-colors"
-            >
-              Nuevo negocio
-            </button>
-          </div>
-
-          <div className="sm:hidden space-y-3">
-            {loading ? (
-              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm py-12 text-center text-sm text-gray-400">Cargando...</div>
-            ) : filtered.length === 0 ? (
-              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm py-12 text-center text-sm text-gray-400">Sin resultados</div>
-            ) : (
-              filtered.map((b) => (
-                <MobileBusinessCard
-                  key={b.id}
-                  b={b}
-                  moduleCatalog={moduleCatalog}
-                  onEdit={openBusinessEditor}
-                />
-              ))
-            )}
-          </div>
-
-          <div className="hidden sm:block bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-            {loading ? (
-              <div className="py-14 text-center text-sm text-gray-400">Cargando...</div>
-            ) : filtered.length === 0 ? (
-              <div className="py-14 text-center text-sm text-gray-400">Sin resultados</div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[1060px] text-sm">
-                  <thead>
-                    <tr className="border-b border-gray-200 bg-slate-50/80">
-                      <th className="text-left px-6 py-3.5 text-[11px] font-bold text-gray-500 uppercase tracking-wide">Negocio</th>
-                      <th className="text-left px-4 py-3.5 text-[11px] font-bold text-gray-500 uppercase tracking-wide">Plan</th>
-                      <th className="text-left px-4 py-3.5 text-[11px] font-bold text-gray-500 uppercase tracking-wide">Modulos</th>
-                      <th className="text-center px-4 py-3.5 text-[11px] font-bold text-gray-500 uppercase tracking-wide">Miembros</th>
-                      <th className="text-center px-4 py-3.5 text-[11px] font-bold text-gray-500 uppercase tracking-wide">Reservas 30d</th>
-                      <th className="text-center px-4 py-3.5 text-[11px] font-bold text-gray-500 uppercase tracking-wide">Total</th>
-                      <th className="text-left px-4 py-3.5 text-[11px] font-bold text-gray-500 uppercase tracking-wide">Alta</th>
-                      <th className="px-4 py-3" />
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {filtered.map((b) => (
-                      <tr key={b.id} className="hover:bg-slate-50/80 transition-colors">
-                        <td className="px-6 py-4 align-middle">
-                          <p className="font-semibold text-gray-900 truncate max-w-[200px]">{b.name}</p>
-                          <p className="text-xs text-gray-400 truncate max-w-[200px]">{b.email}</p>
-                        </td>
-                        <td className="px-4 py-4 align-middle">
-                          <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${planPillClass(b.plan)}`}>
-                            {b.plan}
-                          </span>
-                        </td>
-                        <td className="px-4 py-4 align-middle">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            {moduleCatalog
-                              .filter((m) => !!b.modules?.[m.key]?.enabled)
-                              .map((m) => (
-                                <span
-                                  key={m.key}
-                                  title={m.name}
-                                  className="inline-flex items-center justify-center w-7 h-7 rounded-lg border bg-emerald-50 border-emerald-200 text-emerald-700"
-                                >
-                                  <ModuleIcon moduleKey={m.key} />
-                                </span>
-                              ))}
-                          </div>
-                        </td>
-                        <td className="px-4 py-4 text-center text-gray-800 font-medium tabular-nums align-middle">{b.memberCount}</td>
-                        <td className="px-4 py-4 text-center text-gray-800 font-medium tabular-nums align-middle">{b.reservationsLast30d}</td>
-                        <td className="px-4 py-4 text-center text-gray-600 tabular-nums align-middle">{b.totalReservations}</td>
-                        <td className="px-4 py-4 text-xs text-gray-500 whitespace-nowrap align-middle">
-                          {new Date(b.createdAt).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })}
-                        </td>
-                        <td className="px-4 py-4 text-right align-middle">
-                          <button
-                            onClick={() => openBusinessEditor(b)}
-                            className="text-xs font-semibold px-3 py-1.5 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition-colors"
-                          >
-                            Editar
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+          {list.length ? (
+            <div>
+              <div className="hidden md:grid grid-cols-12 gap-4 px-2 pb-2 border-b border-gray-200 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                <span className="col-span-4">Negocio</span>
+                <span className="col-span-2">Plan</span>
+                <span className="col-span-3">Dueño</span>
+                <span className="col-span-1 text-right">Equipo</span>
+                <span className="col-span-1 text-right">30 días</span>
+                <span className="col-span-1 text-right">Entró</span>
               </div>
-            )}
-          </div>
-          <p className="text-xs text-gray-400 text-right">{filtered.length} de {businesses.length} negocios</p>
+              <ul className="divide-y divide-gray-100">
+                {list.map((b) => <BusinessRow key={b.id} b={b} onOpen={(x) => setOpenId(x.id)} />)}
+              </ul>
+            </div>
+          ) : (
+            <Empty action={!data.businesses.length && (
+              <button type="button" onClick={() => setCreating(true)} className="text-sm font-semibold text-violet-700">+ Crear el primero</button>
+            )}>
+              {data.businesses.length ? 'Ningún cliente coincide.' : 'Aún no hay clientes.'}
+            </Empty>
+          )}
+
+          {orphans.length > 0 && (
+            <Section title={`Cuentas sin negocio · ${orphans.length}`} className="pt-2"
+              aside={<SectionLink onClick={() => setShowOrphans((v) => !v)}>{showOrphans ? 'Ocultar' : 'Ver'}</SectionLink>}>
+              <p className="text-[13px] text-gray-500">Personas registradas que no pertenecen a ningún negocio (incluida la cuenta de Vetra).</p>
+              {showOrphans && (
+                <ul className="divide-y divide-gray-100 mt-1">
+                  {orphans.map((o) => (
+                    <PersonRow key={o.id} p={o} busy={busy}
+                      onImpersonate={o.isDev ? null : () => enterAsOrphan(o.id)}
+                      onDelete={o.isDev ? null : () => deleteOrphan(o)} />
+                  ))}
+                </ul>
+              )}
+            </Section>
+          )}
         </>
       )}
 
-      {tab === 'users' && (
-        <div className="space-y-3">
-          <div className="bg-white border border-gray-200 rounded-2xl shadow-sm p-4">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-              <div>
-                <h3 className="text-base font-semibold text-gray-900">Listado de usuarios</h3>
-                <p className="text-xs text-gray-500 mt-0.5">{filteredUsers.length} de {users.length} resultados</p>
-              </div>
-              <input
-                value={userSearch}
-                onChange={(e) => setUserSearch(e.target.value)}
-                placeholder="Buscar por nombre o email..."
-                className="w-full sm:w-72 border border-gray-300 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
-              />
-            </div>
-          </div>
-
-          <div className="sm:hidden space-y-2">
-            {usersLoading ? (
-              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm py-12 text-center text-sm text-gray-400">Cargando usuarios...</div>
-            ) : filteredUsers.length === 0 ? (
-              <div className="bg-white rounded-2xl border border-gray-200 shadow-sm py-12 text-center text-sm text-gray-400">Sin usuarios</div>
-            ) : (
-              filteredUsers.map((u) => (
-                <div key={u.id} className="bg-white rounded-2xl border border-gray-200 shadow-sm p-4 space-y-3">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="font-semibold text-gray-900">{u.name || 'Sin nombre'}</p>
-                      <p className="text-xs text-gray-400">{u.email}</p>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => openUserActions(u)}
-                      className="w-8 h-8 inline-flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-colors"
-                      aria-label="Acciones de usuario"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
-                        <path d="M10 6a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM10 11.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM11.5 15.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z" />
-                      </svg>
-                    </button>
-                  </div>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${rolePillClass(u.role)}`}>
-                      {u.role}
-                    </span>
-                    <span className="text-[11px] text-gray-500">
-                      {u.businessCount} negocio{u.businessCount === 1 ? '' : 's'}
-                    </span>
-                  </div>
-                  <div className="text-xs text-gray-500 space-y-1">
-                    {u.businesses.slice(0, 3).map((biz) => (
-                      <p key={`${u.id}-${biz.businessId}`}>{biz.businessName} · {biz.role}</p>
-                    ))}
-                    {u.businesses.length > 3 && <p>+{u.businesses.length - 3} mas</p>}
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-
-          <div className="hidden sm:block bg-white rounded-2xl border border-gray-200 shadow-sm overflow-hidden">
-            {usersLoading ? (
-              <div className="py-14 text-center text-sm text-gray-400">Cargando usuarios...</div>
-            ) : filteredUsers.length === 0 ? (
-              <div className="py-14 text-center text-sm text-gray-400">Sin usuarios</div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[860px] text-sm">
-                  <thead>
-                    <tr className="border-b border-gray-200 bg-slate-50/80">
-                      <th className="text-left px-6 py-3.5 text-[11px] font-bold text-gray-500 uppercase tracking-wide">Usuario</th>
-                      <th className="text-left px-4 py-3.5 text-[11px] font-bold text-gray-500 uppercase tracking-wide">Rol global</th>
-                      <th className="text-left px-4 py-3.5 text-[11px] font-bold text-gray-500 uppercase tracking-wide">Negocios</th>
-                      <th className="text-left px-4 py-3.5 text-[11px] font-bold text-gray-500 uppercase tracking-wide">Alta</th>
-                      <th className="px-4 py-3" />
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100">
-                    {filteredUsers.map((u) => (
-                      <tr key={u.id} className="hover:bg-slate-50/80 transition-colors">
-                        <td className="px-6 py-4 align-middle">
-                          <p className="font-semibold text-gray-900">{u.name || 'Sin nombre'}</p>
-                          <p className="text-xs text-gray-400">{u.email}</p>
-                        </td>
-                        <td className="px-4 py-4 align-middle">
-                          <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${rolePillClass(u.role)}`}>
-                            {u.role}
-                          </span>
-                        </td>
-                        <td className="px-4 py-4 text-xs text-gray-600 align-middle">
-                          {u.businessCount === 0 ? (
-                            <span className="text-gray-400">Sin membresia</span>
-                          ) : (
-                            <div className="space-y-1">
-                              {u.businesses.slice(0, 2).map((biz) => (
-                                <p key={`${u.id}-${biz.businessId}`} className="text-gray-700">
-                                  {biz.businessName} <span className="text-gray-400">·</span> <span className="text-gray-500">{biz.role}</span>
-                                </p>
-                              ))}
-                              {u.businesses.length > 2 && <p className="text-gray-400">+{u.businesses.length - 2} mas</p>}
-                            </div>
-                          )}
-                        </td>
-                        <td className="px-4 py-4 text-xs text-gray-500 whitespace-nowrap align-middle">
-                          {u.createdAt
-                            ? new Date(u.createdAt).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' })
-                            : '-'}
-                        </td>
-                        <td className="px-4 py-4 text-right align-middle">
-                          <button
-                            type="button"
-                            onClick={() => openUserActions(u)}
-                            className="w-8 h-8 inline-flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-colors"
-                            aria-label="Acciones de usuario"
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
-                              <path d="M10 6a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM10 11.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3ZM11.5 15.5a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0Z" />
-                            </svg>
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      {editingBusiness && (
-        <Modal
-          title={`Editar negocio: ${editingBusiness.name}`}
-          subtitle="Ajusta plan y modulos. Fuera de este modal la vista es solo informativa."
-          onClose={closeBusinessEditor}
-          size="md"
-        >
-          {editError && (
-            <div className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-4 py-3 mb-4">
-              {editError}
-            </div>
-          )}
-
-          <div className="space-y-4">
-            <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Plan</label>
-              <select
-                value={editPlan}
-                onChange={(e) => setEditPlan(e.target.value)}
-                disabled={editSaving}
-                className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white disabled:opacity-60"
-              >
-                <option value="free">Free</option>
-                <option value="basic">Basic</option>
-                <option value="pro">Pro</option>
-              </select>
-            </div>
-
-            {moduleCatalog.length > 0 && (
-              <div>
-                <p className="text-xs font-medium text-gray-500 mb-2">Modulos</p>
-                <div className="space-y-2">
-                  {moduleCatalog.map((m) => {
-                    const enabled = !!editModules[m.key];
-  return (
-                      <button
-                        key={m.key}
-                        type="button"
-                        disabled={editSaving}
-                        onClick={() => handleEditModuleToggle(m.key)}
-                        className={`w-full flex items-center justify-between text-sm px-3 py-2.5 rounded-xl border transition-colors disabled:opacity-60 ${
-                          enabled
-                            ? 'bg-emerald-50 border-emerald-200 text-emerald-800'
-                            : 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50'
-                        }`}
-                      >
-                        <span>{m.name}</span>
-                        <span className="text-xs font-semibold">{enabled ? 'ON' : 'OFF'}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
-            <div className="flex gap-2 pt-1">
-              <button
-                type="button"
-                onClick={closeBusinessEditor}
-                disabled={editSaving}
-                className="flex-1 border border-gray-200 text-gray-600 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors disabled:opacity-60"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={saveBusinessChanges}
-                disabled={editSaving}
-                className="flex-1 bg-violet-600 hover:bg-violet-700 text-white py-2.5 rounded-xl text-sm font-semibold transition-colors disabled:opacity-60"
-              >
-                {editSaving ? 'Guardando...' : 'Guardar cambios'}
-              </button>
-            </div>
-          </div>
-        </Modal>
-      )}
-
-      {showModal && (
-        <Modal
-          title="Nuevo negocio"
-          subtitle="Crea un negocio de prueba para desarrollo"
-          onClose={() => {
-            if (saving) return;
-            setShowModal(false);
-            setFormError('');
-          }}
-          size="md"
-        >
-          {formError && (
-            <div className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-4 py-3 mb-4">
-              {formError}
-            </div>
-          )}
-
-          <form onSubmit={handleCreate} className="space-y-4">
-            <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Nombre *</label>
-              <input
-                required
-                value={form.name}
-                onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
-                placeholder="Restaurante El Patio"
-                className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Email *</label>
-              <input
-                required
-                type="email"
-                value={form.email}
-                onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
-                placeholder="info@restaurante.com"
-                className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Telefono</label>
-              <input
-                value={form.phone}
-                onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
-                placeholder="+34 600 000 000"
-                className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Direccion</label>
-              <input
-                value={form.address}
-                onChange={(e) => setForm((f) => ({ ...f, address: e.target.value }))}
-                placeholder="Calle Mayor 123, Madrid"
-                className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-medium text-gray-500 mb-1">Plan</label>
-              <select
-                value={form.plan}
-                onChange={(e) => setForm((f) => ({ ...f, plan: e.target.value }))}
-                className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white"
-              >
-                <option value="free">Free</option>
-                <option value="basic">Basic</option>
-                <option value="pro">Pro</option>
-              </select>
-            </div>
-
-            <div className="flex gap-2 pt-2">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowModal(false);
-                  setFormError('');
-                }}
-                className="flex-1 border border-gray-200 text-gray-600 py-2.5 rounded-xl text-sm font-medium hover:bg-gray-50 transition-colors"
-              >
-                Cancelar
-              </button>
-              <button
-                type="submit"
-                disabled={saving}
-                className="flex-1 bg-violet-600 hover:bg-violet-700 disabled:opacity-60 text-white py-2.5 rounded-xl text-sm font-semibold transition-colors"
-              >
-                {saving ? 'Creando...' : 'Crear negocio'}
-              </button>
-            </div>
-          </form>
-        </Modal>
-      )}
-
-      {selectedUser && (
-        <Modal
-          title={selectedUser.name || selectedUser.email}
-          subtitle="Acciones de usuario"
-          onClose={closeUserActions}
-          size="sm"
-        >
-          {userActionError && (
-            <div className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-4 py-3 mb-4">
-              {userActionError}
-            </div>
-          )}
-
-          <div className="space-y-2">
-            <button
-              type="button"
-              disabled={userActionLoading}
-              onClick={handleImpersonate}
-              className="w-full text-left px-4 py-3 rounded-xl border border-violet-200 bg-violet-50 text-violet-800 hover:bg-violet-100 transition-colors disabled:opacity-60"
-            >
-              Impersonalizar
-            </button>
-            <button
-              type="button"
-              disabled={userActionLoading}
-              onClick={handleDeleteUser}
-              className="w-full text-left px-4 py-3 rounded-xl border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 transition-colors disabled:opacity-60"
-            >
-              Eliminar
-            </button>
-            <button
-              type="button"
-              disabled={userActionLoading}
-              onClick={closeUserActions}
-              className="w-full text-left px-4 py-3 rounded-xl border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-60"
-            >
-              Cancelar
-            </button>
-          </div>
-        </Modal>
-      )}
+      {open && <BusinessSheet key={open.id} b={open} modules={data.modules} onClose={() => setOpenId(null)} onChanged={load} />}
+      {creating && <NewClientModal onClose={() => setCreating(false)} onCreated={load} />}
     </div>
   );
 }
-
-
-
-
-
-
-
-
-
-
-

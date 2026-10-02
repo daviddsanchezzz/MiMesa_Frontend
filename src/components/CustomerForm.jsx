@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import api from '../services/api';
+import { downloadFromApi } from '../services/download';
 
 const inputCls = 'w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-white';
 const labelCls = 'block text-sm font-medium text-gray-700 mb-1.5';
 
-export default function CustomerForm({ customer, onSave, onCancel }) {
+export default function CustomerForm({ customer, onSave, onCancel, onDeleted }) {
   const [form, setForm] = useState({
     name:  customer?.name  || '',
     phone: customer?.phone || '',
@@ -35,13 +36,13 @@ export default function CustomerForm({ customer, onSave, onCancel }) {
 
   const handleDelete = async () => {
     if (!customer?._id || saving || deleting) return;
-    const ok = window.confirm(`Vas a eliminar al cliente "${customer.name}". Esta accion no se puede deshacer.`);
+    const ok = window.confirm(`Vas a borrar a "${customer.name}" y sus datos personales. Su historial se conserva sin nombre ni contacto. No se puede deshacer.`);
     if (!ok) return;
     setError('');
     setDeleting(true);
     try {
       await api.delete(`/customers/${customer._id}`);
-      onSave();
+      (onDeleted || onSave)();
     } catch (err) {
       setError(err.response?.data?.message || 'Error al eliminar');
       setDeleting(false);
@@ -86,6 +87,16 @@ export default function CustomerForm({ customer, onSave, onCancel }) {
           placeholder="Alergias, preferencias, notas..."
           className={`${inputCls} resize-none`} />
       </div>
+
+      {customer && (
+        <p className="text-xs text-gray-500">
+          ¿Te pide sus datos?{' '}
+          <button type="button" className="font-semibold text-violet-700 hover:text-violet-900"
+            onClick={() => downloadFromApi(`/customers/${customer._id}/export`, `datos-${customer._id}.json`).catch(() => setError('No se pudieron descargar sus datos'))}>
+            Descargar todo lo que guardas de este cliente
+          </button>
+        </p>
+      )}
 
       <div className="flex gap-3 pt-1">
         {customer && (

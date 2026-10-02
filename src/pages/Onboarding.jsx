@@ -1,25 +1,34 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
+import BusinessTypePicker from '../components/BusinessTypePicker';
+import { LegalConsent } from './AcceptInvite';
 
 export default function Onboarding() {
   const navigate = useNavigate();
   const { refreshBusiness, session } = useAuth();
-  const [form, setForm] = useState({ name: '', email: '', phone: '', address: '', cif: '' });
+  const [form, setForm] = useState({ businessType: 'restaurant', template: '', name: '', email: '', phone: '', address: '', cif: '' });
+  const [templates, setTemplates] = useState([]);
+  useEffect(() => {
+    api.get('/businesses/templates').then((r) => setTemplates((r.data || []).filter((t) => t.businessType === 'appointments'))).catch(() => {});
+  }, []);
   const [error, setError]   = useState('');
   const [loading, setLoading] = useState(false);
+  const [legal, setLegal] = useState(false);
 
   const set = (field) => (e) => setForm(f => ({ ...f, [field]: e.target.value }));
+  const isRestaurant = form.businessType === 'restaurant';
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
     setLoading(true);
     try {
-      await api.post('/businesses', form);
+      const { template, ...rest } = form;
+      await api.post('/businesses', { ...rest, ...(rest.businessType === 'appointments' && template ? { template } : {}), acceptLegal: legal });
       await refreshBusiness();
-      navigate('/');
+      navigate(form.businessType === 'appointments' ? '/bienvenida' : '/');
     } catch (err) {
       setError(err.response?.data?.message || err.message);
     } finally {
@@ -29,11 +38,11 @@ export default function Onboarding() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-6 py-12">
-      <div className="w-full max-w-sm">
+      <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
           <img src="/logo.svg" alt="Vetra" className="w-14 h-14 mx-auto mb-4" />
-          <h1 className="text-2xl font-bold text-gray-900">Crea tu restaurante</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Crea tu negocio</h1>
           {session?.user?.name && (
             <p className="text-sm text-gray-500 mt-1">
               Hola, <strong>{session.user.name}</strong>. Configura tu negocio para empezar.
@@ -49,27 +58,47 @@ export default function Onboarding() {
           )}
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
+              <p className="block text-sm font-medium text-gray-700 mb-1.5">¿Qué tipo de negocio tienes?</p>
+              <BusinessTypePicker value={form.businessType} onChange={(businessType) => setForm((f) => ({ ...f, businessType }))} />
+            </div>
+            {!isRestaurant && templates.length > 0 && (
+              <div>
+                <p className="block text-sm font-medium text-gray-700 mb-1.5">¿A qué te dedicas?</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {templates.map((t) => (
+                    <button key={t.key} type="button" onClick={() => setForm((f) => ({ ...f, template: t.key }))}
+                      aria-pressed={form.template === t.key}
+                      className={`text-left rounded-xl border px-3 py-2.5 transition-colors ${form.template === t.key ? 'border-violet-500 bg-violet-50 ring-1 ring-violet-500' : 'border-gray-200 hover:border-gray-300'}`}>
+                      <span className="block text-sm font-semibold text-gray-900">{t.label}</span>
+                      <span className="block text-xs text-gray-500 mt-0.5">{t.description}</span>
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-gray-500 mt-1.5">Te preparamos los servicios típicos con precio y duración; luego los ajustas.</p>
+              </div>
+            )}
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Nombre del restaurante *
+                Nombre del negocio *
               </label>
               <input
                 required
                 value={form.name}
                 onChange={set('name')}
-                placeholder="Restaurante El Patio"
+                placeholder={isRestaurant ? 'Restaurante El Patio' : 'Peluquería Laura'}
                 className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white"
               />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Correo del restaurante *
+                Correo del negocio *
               </label>
               <input
                 required
                 type="email"
                 value={form.email}
                 onChange={set('email')}
-                placeholder="info@mirestaurante.com"
+                placeholder={isRestaurant ? 'info@mirestaurante.com' : 'hola@minegocio.com'}
                 className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white"
               />
             </div>
@@ -86,7 +115,7 @@ export default function Onboarding() {
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Direccion <span className="text-gray-400 font-normal">(opcional)</span>
+                Dirección <span className="text-gray-400 font-normal">(opcional)</span>
               </label>
               <input
                 value={form.address}
@@ -106,12 +135,13 @@ export default function Onboarding() {
                 className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white"
               />
             </div>
+            <LegalConsent documents={['terms', 'dpa', 'privacy']} checked={legal} onChange={setLegal} />
             <button
               type="submit"
-              disabled={loading}
+              disabled={loading || !legal}
               className="w-full bg-violet-600 hover:bg-violet-700 disabled:opacity-60 text-white py-2.5 rounded-xl text-sm font-semibold transition-colors mt-2"
             >
-              {loading ? 'Creando...' : 'Crear restaurante'}
+              {loading ? 'Creando...' : 'Crear negocio'}
             </button>
           </form>
         </div>

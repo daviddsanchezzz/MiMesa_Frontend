@@ -185,8 +185,10 @@ function PaymentStep({ paymentConfig, form, brandColor, onBack, onPaid, error, s
   );
 }
 
-export default function PublicReservation() {
-  const { businessId } = useParams();
+export default function PublicReservation({ businessId: businessIdProp } = {}) {
+  const params = useParams();
+  // From the slug page (vetrareserve.com/{slug}) or the old /public/{businessId}/… route
+  const businessId = businessIdProp || params.businessId;
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const isEmbed = searchParams.get('embed') === '1';
@@ -464,11 +466,14 @@ export default function PublicReservation() {
   const inputCls = 'w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white';
   const multiShift = Object.keys(slotsByShift).length > 1;
 
+  const stepSummary = [dateLabel, step > 2 && form.time, step > 3 && tr.persShort(form.people)].filter(Boolean).join(' · ');
+
+  // Same page as the appointments one: the business on top, a progress bar,
+  // what you chose so far, then the step. No card around it.
   return (
-    <div className={isEmbed ? 'w-full flex justify-center px-4 py-6 box-border' : 'min-h-screen bg-gray-50 py-8 px-4'}>
-      <div className={isEmbed ? 'w-full max-w-sm' : 'max-w-sm mx-auto'}>
-        {/* Lang selector */}
-        <div className="flex justify-end mb-2">
+    <div className={isEmbed ? 'w-full' : 'min-h-screen bg-gray-50'}>
+      <div className={`mx-auto w-full max-w-lg ${isEmbed ? 'p-3' : 'px-4 py-6 sm:py-10'} space-y-4`}>
+        <div className="flex justify-end -mb-2">
           {['es', 'ca', 'en'].map(l => (
             <button key={l} type="button" onClick={() => changeLang(l)}
               className={`px-2 py-0.5 rounded-md text-xs font-semibold transition-colors ${lang === l ? 'text-white' : 'text-gray-400 hover:text-gray-600'}`}
@@ -478,71 +483,57 @@ export default function PublicReservation() {
           ))}
         </div>
 
-        <div className="bg-white rounded-2xl shadow-lg overflow-hidden">
-          {/* Header */}
-          <div className="px-6 pt-6 pb-5 border-b border-gray-100">
-            <h1 className="text-2xl font-bold text-gray-900">{tr.bookTable}</h1>
-            <p className="text-sm text-gray-400 mt-0.5">{business?.name}</p>
-          </div>
-
-          {success ? (
-            <div className="p-6 text-center">
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
+        {!isEmbed && (
+          <header className="text-center space-y-1">
+            {business?.logoUrl ? (
+              <img src={business.logoUrl} alt={business.name} className="h-14 max-w-[180px] mx-auto object-contain" />
+            ) : (
+              <div className="w-12 h-12 rounded-2xl mx-auto flex items-center justify-center text-white text-lg font-bold" style={bs}>
+                {business?.name?.[0]?.toUpperCase()}
               </div>
-              <p className="text-green-600 font-medium">{success}</p>
+            )}
+            <h1 className="text-xl font-bold text-gray-900">{business?.name}</h1>
+            {(business?.address || business?.phone) && (
+              <p className="text-sm text-gray-500">
+                {business?.address}{business?.address && business?.phone && ' · '}
+                {business?.phone && <a href={`tel:${business.phone.replace(/\s/g, '')}`} className="hover:underline">{business.phone}</a>}
+              </p>
+            )}
+          </header>
+        )}
+
+        {success ? (
+          <div className="bg-white border border-gray-200 rounded-2xl p-6 text-center">
+            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
             </div>
-          ) : (
-            <div className="p-6">
-              {/* Step bar */}
-              <div className="flex items-center justify-between mb-7">
-                {/* Step 1 */}
-                <button type="button" onClick={() => step > 1 && setStep(1)}
-                  className={`flex items-center gap-1.5 text-sm font-medium whitespace-nowrap transition-colors shrink-0 ${
-                    step === 1 ? 'text-white px-3 py-1.5 rounded-full' : step > 1 ? 'text-gray-600 hover:text-gray-900 cursor-pointer' : 'text-gray-300 cursor-default'
-                  }`}
-                  style={step === 1 ? bs : {}}>
-                  <CalIcon />
-                  {step === 1 ? tr.stepDate : (dateLabel || tr.stepDate)}
-                </button>
-                <ChevronRight />
-                {/* Step 2 */}
-                <button type="button" onClick={() => step > 2 && setStep(2)}
-                  disabled={step < 2}
-                  className={`flex items-center gap-1.5 text-sm font-medium whitespace-nowrap transition-colors shrink-0 ${
-                    step === 2 ? 'text-white px-3 py-1.5 rounded-full' : step > 2 ? 'text-gray-600 hover:text-gray-900 cursor-pointer' : 'text-gray-300 cursor-default'
-                  }`}
-                  style={step === 2 ? bs : {}}>
-                  <ClockIcon />
-                  {step > 2 ? form.time : tr.stepTime}
-                </button>
-                <ChevronRight />
-                {/* Step 3 */}
-                <button type="button" onClick={() => step > 3 && setStep(3)}
-                  disabled={step < 3}
-                  className={`flex items-center gap-1.5 text-sm font-medium whitespace-nowrap transition-colors shrink-0 ${
-                    step === 3 ? 'text-white px-3 py-1.5 rounded-full' : step > 3 ? 'text-gray-600 hover:text-gray-900 cursor-pointer' : 'text-gray-300 cursor-default'
-                  }`}
-                  style={step === 3 ? bs : {}}>
-                  <PersonIcon />
-                  {step > 3 ? tr.persShort(form.people) : tr.stepPeople}
-                </button>
-                <ChevronRight />
-                {/* Step 4 */}
-                <div className={`flex items-center gap-1.5 text-sm font-medium whitespace-nowrap shrink-0 ${
-                  step === 4 ? 'text-white px-3 py-1.5 rounded-full' : 'text-gray-300'
-                }`} style={step === 4 ? bs : {}}>
-                  <BellIcon />
-                  {step === 4 && tr.stepConfirm}
-                </div>
-              </div>
+            <p className="text-green-700 font-medium">{success}</p>
+          </div>
+        ) : (
+          <>
+            <div className="flex gap-1.5" aria-hidden="true">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="h-1 flex-1 rounded-full" style={{ backgroundColor: i <= Math.min(step, 4) ? brandColor : '#e5e7eb' }} />
+              ))}
+            </div>
 
+            {step > 1 && stepSummary && (
+              <div className="bg-white border border-gray-200 rounded-2xl px-4 py-3 flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <p className="text-sm font-semibold text-gray-900 truncate">{tr.bookTable}</p>
+                  <p className="text-xs text-gray-500 truncate">{stepSummary}</p>
+                </div>
+                <button type="button" onClick={() => setStep(Math.max(1, Math.min(step, 4) - 1))} className="text-sm font-semibold shrink-0" style={{ color: brandColor }}>{tr.back}</button>
+              </div>
+            )}
+
+            <div className="pt-1">
               {/* STEP 1: Calendar */}
               {step === 1 && (
                 <div>
-                  <h2 className="text-xl font-bold text-gray-900 mb-5">{tr.pickDate}</h2>
+                  <h2 className="text-base font-semibold text-gray-900 mb-4">{tr.pickDate}</h2>
                   <div className="flex items-center justify-between mb-4">
                     <button type="button" onClick={prevMonth} disabled={!canGoPrev}
                       className="w-8 h-8 flex items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed transition-colors">
@@ -592,7 +583,7 @@ export default function PublicReservation() {
               {/* STEP 2: Time slots */}
               {step === 2 && (
                 <div>
-                  <h2 className="text-xl font-bold text-gray-900 mb-5">{tr.pickTime}</h2>
+                  <h2 className="text-base font-semibold text-gray-900 mb-4">{tr.pickTime}</h2>
                   {slots === null ? (
                     <div className="text-gray-500 text-sm">{tr.loadingSlots}</div>
                   ) : vacation?.closed ? (
@@ -610,7 +601,7 @@ export default function PublicReservation() {
                         <div className="space-y-1.5">
                           {(publicExceptions.blockedShifts || []).map((b, idx) => (
                             <p key={`${b.shiftName}-${idx}`} className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2.5 py-1.5">
-                              <strong>{b?.allShifts || b?.shiftName === ALL_SHIFTS_KEY ? 'Todos los turnos' : b.shiftName}:</strong> {b.message || 'No disponible por excepcion'}
+                              <strong>{b?.allShifts || b?.shiftName === ALL_SHIFTS_KEY ? 'Todos los turnos' : b.shiftName}:</strong> {b.message || 'No disponible por excepción'}
                             </p>
                           ))}
                         </div>
@@ -653,7 +644,7 @@ export default function PublicReservation() {
               {/* STEP 3: People */}
               {step === 3 && (
                 <div>
-                  <h2 className="text-xl font-bold text-gray-900 mb-5">{tr.pickPeople}</h2>
+                  <h2 className="text-base font-semibold text-gray-900 mb-4">{tr.pickPeople}</h2>
                   {peopleOptions.length === 0 ? (
                     <div className="space-y-3">
                       <p className="text-gray-500 text-sm">{tr.noCapacity}</p>
@@ -723,7 +714,7 @@ export default function PublicReservation() {
               {/* STEP 4: Contact form */}
               {step === 4 && (
                 <form onSubmit={handleSubmit}>
-                  <h2 className="text-xl font-bold text-gray-900 mb-5">{tr.yourData}</h2>
+                  <h2 className="text-base font-semibold text-gray-900 mb-4">{tr.yourData}</h2>
                   <div className="space-y-4 mb-6">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1.5">{tr.name} *</label>
@@ -807,7 +798,7 @@ export default function PublicReservation() {
                       <span className="text-sm text-gray-600 leading-snug">
                         {tr.consentPrivacyPre}{' '}
                         <a
-                          href={`${import.meta.env.VITE_LANDING_URL || ''}/privacy.html`}
+                          href={`${import.meta.env.VITE_LANDING_URL || 'https://www.vetrareserve.com'}/privacy`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="underline underline-offset-2 font-medium"
@@ -853,29 +844,18 @@ export default function PublicReservation() {
                 </Elements>
               )}
             </div>
-          )}
-        </div>
-
-        {!isEmbed && (business?.phone || business?.email) && (
-          <p className="text-center text-sm text-gray-400 mt-3">
-            {business?.phone}{business?.phone && business?.email && ' · '}{business?.email}
-          </p>
+          </>
         )}
 
-        <div className="mt-6 flex items-center justify-center gap-1.5">
-          <img src={`${import.meta.env.VITE_LANDING_URL || 'https://vetrareserve.com'}/logo.svg`} alt="" className="w-4 h-4 opacity-40" />
-          <p className="text-xs text-gray-300">
-            Powered by{' '}
-            <a
-              href={import.meta.env.VITE_LANDING_URL || 'https://vetrareserve.com'}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-violet-400 hover:text-violet-500 font-medium transition-colors"
-            >
-              Vetra
-            </a>
+        {!isEmbed && business?.email && (
+          <p className="text-center text-sm text-gray-400">{business.email}</p>
+        )}
+
+        {!isEmbed && (
+          <p className="text-center text-[11px] text-gray-400 pt-2">
+            Reservas con <a href={import.meta.env.VITE_LANDING_URL || 'https://vetrareserve.com'} target="_blank" rel="noopener noreferrer" className="font-semibold text-gray-500">Vetra</a>
           </p>
-        </div>
+        )}
       </div>
     </div>
   );

@@ -1,85 +1,51 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import DayChips from '../ui/DayChips';
 import api from '../services/api';
+import { useData } from '../lib/query';
 import { useAuth } from '../context/AuthContext';
+import { DEFAULT_TZ, addDays, todayIn } from '../pages/agenda/utils';
+import { dayLabel, shortDay } from '../lib/dates';
 
 const inputCls = 'w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-white';
 const labelCls = 'block text-sm font-medium text-gray-700 mb-1.5';
-
-const monthNames = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-const dayNames = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
-
-function StepPill({ active, enabled, onClick, label, value, icon }) {
-  return (
-    <button
-      type="button"
-      onClick={enabled ? onClick : undefined}
-      className={`flex items-center gap-1.5 text-sm font-medium whitespace-nowrap transition-colors shrink-0 ${
-        active
-          ? 'text-white px-3 py-1.5 rounded-full bg-violet-600'
-          : enabled
-          ? 'text-gray-600 hover:text-gray-900 cursor-pointer'
-          : 'text-gray-300 cursor-default'
-      }`}
-    >
-      {icon}
-      {value || label}
-    </button>
-  );
-}
-
-function ChevronRight() {
-  return (
-    <svg className="w-3 h-3 text-gray-300 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-    </svg>
-  );
-}
-
-function CalIcon() {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 shrink-0">
-      <path fillRule="evenodd" d="M4 1.75a.75.75 0 0 1 1.5 0V3h5V1.75a.75.75 0 0 1 1.5 0V3a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2V1.75ZM4.5 6a.5.5 0 0 0 0 1h7a.5.5 0 0 0 0-1h-7Z" clipRule="evenodd" />
-    </svg>
-  );
-}
-
-function ClockIcon() {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 shrink-0">
-      <path fillRule="evenodd" d="M1 8a7 7 0 1 1 14 0A7 7 0 0 1 1 8Zm7.75-4.25a.75.75 0 0 0-1.5 0V8c0 .414.336.75.75.75h3.25a.75.75 0 0 0 0-1.5h-2.5v-3.5Z" clipRule="evenodd" />
-    </svg>
-  );
-}
-
-function PersonIcon() {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 shrink-0">
-      <path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM12.735 14c.618 0 1.093-.561.872-1.139a6.002 6.002 0 0 0-11.215 0c-.22.578.254 1.139.872 1.139h9.47Z" />
-    </svg>
-  );
-}
-
-function BellIcon() {
-  return (
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4 shrink-0">
-      <path fillRule="evenodd" d="M13.73 8.659a7 7 0 1 0-11.46 0L.5 12.5A.75.75 0 0 0 1 13.5h14a.75.75 0 0 0 .5-1.12L13.73 8.66ZM8 16a2 2 0 0 1-2-2h4a2 2 0 0 1-2 2Z" clipRule="evenodd" />
-    </svg>
-  );
-}
+const chip = (on) => `shrink-0 rounded-xl border transition-colors ${on ? 'bg-gray-900 border-gray-900 text-white' : 'bg-white border-gray-200 text-gray-800 hover:border-gray-400'}`;
 
 function normalizePhone(raw) {
-  if (!raw) return '';
-  return String(raw).replace(/\D/g, '');
+  return raw ? String(raw).replace(/\D/g, '') : '';
 }
 
+function Step({ n, title, aside, children }) {
+  return (
+    <section>
+      <div className="flex items-baseline justify-between gap-3 mb-2">
+        <h4 className="text-sm font-semibold text-gray-900">{n && <span className="text-gray-400 tabular-nums mr-1.5">{n}</span>}{title}</h4>
+        {aside}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+/**
+ * New or edited reservation, the same sheet as a new appointment: who, how
+ * many, which day and time, and the optional rest (room, notes).
+ */
 export default function ReservationForm({ reservation, onSave, onCancel, initialContext = null }) {
   const { business, isModuleEnabled } = useAuth();
+  const tz = business?.timezone || DEFAULT_TZ;
+  const todayStr = todayIn(tz);
   const isEdit = Boolean(reservation?._id);
   const theForkModuleEnabled = isModuleEnabled('thefork');
+<<<<<<< HEAD
   const initialDate = reservation?.date || initialContext?.date || new Date().toISOString().slice(0, 10);
   const [rooms, setRooms] = useState(initialContext?.rooms || []);
   const [professionals, setProfessionals] = useState([]);
   const [step, setStep] = useState(isEdit ? 4 : 1);
+=======
+  const initialDate = reservation?.date || initialContext?.date || todayStr;
+  const roomsQ = useData(['rooms'], () => api.get('/rooms').then((r) => r.data || []), { enabled: !initialContext?.rooms?.length, staleTime: 5 * 60000 });
+  const rooms = initialContext?.rooms?.length ? initialContext.rooms : (roomsQ.data || []);
+>>>>>>> 1f9caddbdaece80755cdfd4a32b6a7e6aeaffa96
   const [form, setForm] = useState({
     guestName: reservation?.guestName || '',
     guestPhone: reservation?.guestPhone || '',
@@ -98,15 +64,8 @@ export default function ReservationForm({ reservation, onSave, onCancel, initial
   const [slots, setSlots] = useState(initialContext?.slots ?? null);
   const [vacation, setVacation] = useState(initialContext?.vacation ?? null);
   const skipInitialFetchRef = useRef(Boolean(initialContext && !isEdit && initialContext?.date === initialDate));
+  const [showNotes, setShowNotes] = useState(Boolean(reservation?.notes));
 
-  const selectedDate = new Date(`${form.date}T12:00:00`);
-  const [calYear, setCalYear] = useState(selectedDate.getFullYear());
-  const [calMonth, setCalMonth] = useState(selectedDate.getMonth());
-
-  useEffect(() => {
-    if (rooms.length > 0) return;
-    api.get('/rooms').then((r) => setRooms(r.data)).catch(() => setRooms([]));
-  }, [rooms.length]);
 
   useEffect(() => {
     api.get('/staff/employees').then((r) => setProfessionals((r.data || []).filter((p) => (p.services || []).some((s) => s.active !== false)))).catch(() => setProfessionals([]));
@@ -128,166 +87,65 @@ export default function ReservationForm({ reservation, onSave, onCancel, initial
     ])
       .then(([slotsRes, vacRes]) => {
         setVacation(vacRes.data.closed ? vacRes.data : false);
-        if (vacRes.data.closed) {
-          setSlots([]);
-          return;
-        }
+        if (vacRes.data.closed) { setSlots([]); return; }
         setSlots(slotsRes.data);
-        if (slotsRes.data.length > 0) {
-          setForm((f) => (slotsRes.data.find((s) => s.time === f.time) ? f : { ...f, time: slotsRes.data[0].time }));
-        }
+        // Keep the chosen time if the new day has it; otherwise choose again.
+        setForm((f) => (slotsRes.data.find((s) => s.time === f.time) || isEdit ? f : { ...f, time: '' }));
       })
-      .catch(() => {
-        setSlots([]);
-        setVacation(false);
-      });
-  }, [form.date, initialDate]);
+      .catch(() => { setSlots([]); setVacation(false); });
+  }, [form.date, initialDate, isEdit]);
 
-  const today = useMemo(() => {
-    const d = new Date();
-    d.setHours(0, 0, 0, 0);
-    return d;
-  }, []);
-
-  const calDays = useMemo(() => {
-    const dim = new Date(calYear, calMonth + 1, 0).getDate();
-    const first = new Date(calYear, calMonth, 1).getDay();
-    const offset = first === 0 ? 6 : first - 1;
-    return [...Array(offset).fill(null), ...Array.from({ length: dim }, (_, i) => i + 1)];
-  }, [calYear, calMonth]);
-
-  const slotsByShift = useMemo(
-    () =>
-      slots?.reduce((acc, s) => {
-        if (!acc[s.shiftName]) acc[s.shiftName] = [];
-        acc[s.shiftName].push(s);
-        return acc;
-      }, {}) || {},
-    [slots]
-  );
-  const multiShift = Object.keys(slotsByShift).length > 1;
-  const quickPeopleMax = Math.max(1, Number(business?.maxReservationPeople) || 10);
+  const slotsByShift = useMemo(() => (slots || []).reduce((acc, s) => {
+    (acc[s.shiftName] = acc[s.shiftName] || []).push(s);
+    return acc;
+  }, {}), [slots]);
+  const quickPeopleMax = Math.min(10, Math.max(1, Number(business?.maxReservationPeople) || 10));
   const peopleOptions = Array.from({ length: quickPeopleMax }, (_, i) => i + 1);
   const [customPeopleOpen, setCustomPeopleOpen] = useState(form.people > quickPeopleMax);
-  const [customers, setCustomers] = useState([]);
-  const [customersLoading, setCustomersLoading] = useState(false);
   const [customerQuery, setCustomerQuery] = useState(reservation?.guestName || '');
-  const [selectedCustomer, setSelectedCustomer] = useState(null);
-  const [createCustomerMode, setCreateCustomerMode] = useState(false);
-
-  const isDatePast = (day) => new Date(calYear, calMonth, day) < today;
-  const fmtDay = (day) => `${calYear}-${String(calMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-  const canGoPrev = calYear > today.getFullYear() || calMonth > today.getMonth();
-  const dateLabel = form.date
-    ? new Date(`${form.date}T12:00:00`).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' })
-    : null;
-
-  const prevMonth = () => {
-    if (!canGoPrev) return;
-    if (calMonth === 0) {
-      setCalMonth(11);
-      setCalYear((y) => y - 1);
-    } else setCalMonth((m) => m - 1);
-  };
-
-  const nextMonth = () => {
-    if (calMonth === 11) {
-      setCalMonth(0);
-      setCalYear((y) => y + 1);
-    } else setCalMonth((m) => m + 1);
-  };
-
-  const selectDate = (day) => {
-    if (isDatePast(day)) return;
-    setForm((f) => ({ ...f, date: fmtDay(day), time: '' }));
-    setStep(2);
-  };
-
-  const selectSlot = (time) => {
-    setForm((f) => ({ ...f, time }));
-    setStep(3);
-  };
-
-  const goToStep = (target) => {
-    if (isEdit || target < step) setStep(target);
-  };
-
+  const [selectedCustomer, setSelectedCustomer] = useState(() => (!isEdit && reservation?.guestName
+    ? { name: reservation.guestName, phone: reservation.guestPhone, email: reservation.guestEmail } : null));
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    if (isEdit) return;
-    setCustomersLoading(true);
-    api.get('/customers')
-      .then((r) => setCustomers(Array.isArray(r.data) ? r.data : []))
-      .catch(() => setCustomers([]))
-      .finally(() => setCustomersLoading(false));
-  }, [isEdit]);
+  // Same cache as Clientes.
+  const customers = useData(['customers', 'list'], () => api.get('/customers').then((r) => r.data), { enabled: !isEdit, retry: false }).data || [];
 
   const customerMatches = useMemo(() => {
-    if (isEdit) return [];
+    if (isEdit || selectedCustomer) return [];
     const query = customerQuery.trim().toLowerCase();
     const queryPhone = normalizePhone(customerQuery);
-    if (!query && !queryPhone) return [];
-    return customers
-      .filter((c) => {
-        const name = String(c?.name || '').toLowerCase();
-        const phone = String(c?.phone || '');
-        const normalized = normalizePhone(c?.normalizedPhone || c?.phone || '');
-        const byName = query ? name.includes(query) : false;
-        const byPhone = queryPhone ? phone.includes(queryPhone) || normalized.includes(queryPhone) : false;
-        return byName || byPhone;
-      })
-      .slice(0, 8);
-  }, [customers, customerQuery, isEdit]);
-
-  const hasCustomerQuery = customerQuery.trim() !== '';
-  const showInlineCreateFields =
-    !isEdit &&
-    !selectedCustomer &&
-    hasCustomerQuery &&
-    (createCustomerMode || customerMatches.length === 0);
-  const showCustomerMatches = !isEdit && hasCustomerQuery && !selectedCustomer && !createCustomerMode && customerMatches.length > 0;
-  const showCreateCustomerCta = !isEdit && hasCustomerQuery && !selectedCustomer;
-  const showContactFields =
-    isEdit ||
-    showInlineCreateFields ||
-    (Boolean(selectedCustomer) && !String(form.guestPhone || '').trim());
+    if (query.length < 2 && queryPhone.length < 3) return [];
+    return customers.filter((c) => {
+      const name = String(c?.name || '').toLowerCase();
+      const normalized = normalizePhone(c?.normalizedPhone || c?.phone || '');
+      return (query && name.includes(query)) || (queryPhone.length >= 3 && normalized.includes(queryPhone));
+    }).slice(0, 6);
+  }, [customers, customerQuery, isEdit, selectedCustomer]);
 
   const handleCustomerQueryChange = (value) => {
-    const hadSelectedCustomer = Boolean(selectedCustomer);
-    if (!value.trim()) setCreateCustomerMode(false);
     setCustomerQuery(value);
+    setForm((f) => ({ ...f, guestName: value }));
+  };
+  const selectCustomer = (customer) => {
+    setSelectedCustomer(customer);
+    setCustomerQuery(customer?.name || '');
+    setForm((f) => ({ ...f, guestName: customer?.name || '', guestPhone: customer?.phone || '', guestEmail: customer?.email || '' }));
+  };
+  const clearCustomer = () => {
     setSelectedCustomer(null);
-    setForm((f) => ({
-      ...f,
-      guestName: value,
-      guestPhone: hadSelectedCustomer ? '' : f.guestPhone,
-      guestEmail: hadSelectedCustomer ? '' : f.guestEmail,
-    }));
+    setCustomerQuery('');
+    setForm((f) => ({ ...f, guestName: '', guestPhone: '', guestEmail: '' }));
   };
 
-  const selectCustomer = (customer) => {
-    const nextName = customer?.name || '';
-    const nextPhone = customer?.phone || '';
-    const nextEmail = customer?.email || '';
-    setCreateCustomerMode(false);
-    setSelectedCustomer(customer);
-    setCustomerQuery(nextName);
-    setForm((f) => ({
-      ...f,
-      guestName: nextName,
-      guestPhone: nextPhone,
-      guestEmail: nextEmail,
-    }));
-  };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    e?.preventDefault();
     if (saving) return;
     setError('');
     const guestName = (isEdit ? form.guestName : (selectedCustomer?.name || customerQuery)).trim();
     const guestPhone = String(form.guestPhone || '').trim();
     const guestEmail = String(form.guestEmail || '').trim();
+<<<<<<< HEAD
 
     if (!guestName) {
       setError('El nombre es obligatorio');
@@ -301,15 +159,14 @@ export default function ReservationForm({ reservation, onSave, onCancel, initial
       setError('Selecciona uno de los servicios del profesional');
       return;
     }
+=======
+    if (!guestName) return setError('Escribe el nombre del cliente');
+    if (!isEdit && !guestPhone) return setError('El teléfono es obligatorio');
+    if (!form.time) return setError('Elige una hora');
+>>>>>>> 1f9caddbdaece80755cdfd4a32b6a7e6aeaffa96
     setSaving(true);
     try {
-      const payload = {
-        ...form,
-        guestName,
-        guestPhone,
-        guestEmail,
-        roomId: form.roomId || null,
-      };
+      const payload = { ...form, guestName, guestPhone, guestEmail, roomId: form.roomId || null };
       if (isEdit) await api.put(`/reservations/${reservation._id}`, payload);
       else await api.post('/reservations', payload);
       onSave({ mode: isEdit ? 'edit' : 'create' });
@@ -320,170 +177,147 @@ export default function ReservationForm({ reservation, onSave, onCancel, initial
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center justify-between mb-1">
-        <StepPill active={step === 1} enabled={isEdit || step > 1} onClick={() => goToStep(1)} label="Fecha" value={dateLabel} icon={<CalIcon />} />
-        <ChevronRight />
-        <StepPill active={step === 2} enabled={isEdit || step > 2} onClick={() => goToStep(2)} label="Hora" value={step > 2 ? form.time : null} icon={<ClockIcon />} />
-        <ChevronRight />
-        <StepPill active={step === 3} enabled={isEdit || step > 3} onClick={() => goToStep(3)} label="Personas" value={step > 3 ? `${form.people}p` : null} icon={<PersonIcon />} />
-        <ChevronRight />
-        <StepPill active={step === 4} enabled={false} label="Datos" icon={<BellIcon />} />
-      </div>
-
-      {step === 1 && (
-        <div>
-          <h3 className="text-lg font-bold text-gray-900 mb-4">Selecciona fecha</h3>
-          <div className="flex items-center justify-between mb-3">
-            <button type="button" onClick={prevMonth} disabled={!canGoPrev} className="w-8 h-8 rounded-full text-gray-500 hover:bg-gray-100 disabled:opacity-30">
-              <svg className="w-4 h-4 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
-            </button>
-            <span className="font-semibold text-sm text-gray-800">{monthNames[calMonth]} {calYear}</span>
-            <button type="button" onClick={nextMonth} className="w-8 h-8 rounded-full text-gray-500 hover:bg-gray-100">
-              <svg className="w-4 h-4 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg>
-            </button>
+    <form onSubmit={handleSubmit} className="space-y-7">
+      <Step n="1" title="Cliente" aside={selectedCustomer && !isEdit && (
+        <button type="button" onClick={clearCustomer} className="text-xs font-semibold text-gray-500 hover:text-gray-900">Cambiar</button>
+      )}>
+        {selectedCustomer && !isEdit ? (
+          <div className="rounded-xl bg-gray-50 px-4 py-3">
+            <p className="text-[15px] font-medium text-gray-900">{form.guestName}</p>
+            <p className="text-[13px] text-gray-500">{[form.guestPhone, form.guestEmail].filter(Boolean).join(' · ') || 'Sin contacto'}</p>
+            {!form.guestPhone && (
+              <input className={`${inputCls} mt-2`} type="tel" placeholder="Teléfono *" value={form.guestPhone}
+                onChange={(e) => setForm((f) => ({ ...f, guestPhone: e.target.value }))} />
+            )}
           </div>
-          <div className="grid grid-cols-7 mb-1">
-            {dayNames.map((d) => (
-              <div key={d} className="text-center text-xs font-medium text-gray-400 py-1">{d}</div>
-            ))}
-          </div>
-          <div className="grid grid-cols-7 gap-0.5">
-            {calDays.map((day, i) => {
-              if (!day) return <div key={`e-${i}`} />;
-              const past = isDatePast(day);
-              const selected = form.date === fmtDay(day);
-              return (
-                <button
-                  key={day}
-                  type="button"
-                  onClick={() => !past && selectDate(day)}
-                  className={`aspect-square flex items-center justify-center rounded-xl text-sm font-medium transition-colors ${
-                    past ? 'text-gray-300 cursor-default' : selected ? 'bg-violet-600 text-white' : 'text-gray-700 hover:bg-gray-100'
-                  }`}
-                >
-                  {day}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {step === 2 && (
-        <div>
-          <h3 className="text-lg font-bold text-gray-900 mb-4">Selecciona hora</h3>
-          {slots === null ? (
-            <div className="h-10 bg-gray-100 rounded-xl animate-pulse" />
-          ) : vacation?.closed ? (
-            <div className="bg-rose-50 border border-rose-200 rounded-xl px-4 py-3 text-sm text-rose-700">Restaurante cerrado en esta fecha.</div>
-          ) : slots.length === 0 ? (
-            <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-700">No hay turnos para este dia.</div>
-          ) : (
-            Object.entries(slotsByShift).map(([shiftName, shiftSlots]) => (
-              <div key={shiftName} className="mb-4 last:mb-0">
-                {multiShift && <p className="text-sm font-semibold text-gray-600 mb-2">{shiftName}</p>}
-                <div className="grid grid-cols-3 gap-2">
-                  {shiftSlots.map((slot) => (
-                    <button
-                      key={slot.time}
-                      type="button"
-                      onClick={() => selectSlot(slot.time)}
-                      className={`px-3 py-2 text-sm rounded-lg border transition-colors ${
-                        form.time === slot.time ? 'bg-violet-600 text-white border-transparent' : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'
-                      }`}
-                    >
-                      {slot.label || slot.time}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      )}
-
-      {step === 3 && (
-        <div>
-          <h3 className="text-lg font-bold text-gray-900 mb-4">Selecciona personas</h3>
-          <div className="grid grid-cols-4 gap-2">
-            {peopleOptions.map((n) => (
-              <button
-                key={n}
-                type="button"
-                onClick={() => {
-                  setCustomPeopleOpen(false);
-                  setForm((f) => ({ ...f, people: n }));
-                }}
-                className={`px-3 py-2 text-sm rounded-lg border transition-colors ${
-                  form.people === n ? 'bg-violet-600 text-white border-transparent' : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'
-                }`}
-              >
-                {n}
-              </button>
-            ))}
-            <button
-              type="button"
-              onClick={() => setCustomPeopleOpen(true)}
-              className={`px-3 py-2 text-sm rounded-lg border transition-colors ${
-                customPeopleOpen ? 'bg-violet-600 text-white border-transparent' : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'
-              }`}
-            >
-              Otro
-            </button>
-          </div>
-          {customPeopleOpen && (
-            <div className="mt-3">
-              <label className={`${labelCls} mb-1`}>Numero personalizado</label>
+        ) : (
+          <div className="space-y-2">
+            <div className="relative">
               <input
-                type="number"
-                min={1}
-                inputMode="numeric"
-                pattern="[0-9]*"
-                value={form.people}
-                onChange={(e) =>
-                  setForm((f) => ({
-                    ...f,
-                    people: Math.max(1, Number(e.target.value) || 1),
-                  }))
-                }
+                value={isEdit ? form.guestName : customerQuery}
+                onChange={(e) => (isEdit ? setForm((f) => ({ ...f, guestName: e.target.value })) : handleCustomerQueryChange(e.target.value))}
+                placeholder={isEdit ? 'Nombre' : 'Nombre o teléfono'}
+                autoComplete="off"
                 className={inputCls}
               />
-              <p className="text-xs text-gray-400 mt-1">Usa "Otro" para valores por encima de {quickPeopleMax}.</p>
+              {customerMatches.length > 0 && (
+                <ul className="absolute z-10 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden divide-y divide-gray-100">
+                  {customerMatches.map((c) => (
+                    <li key={c._id}>
+                      <button type="button" onClick={() => selectCustomer(c)} className="w-full text-left px-4 py-2.5 hover:bg-gray-50">
+                        <span className="block text-sm font-medium text-gray-900">{c.name}</span>
+                        <span className="block text-xs text-gray-500">{c.phone || c.email || 'Sin contacto'}</span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
             </div>
-          )}
-          {rooms.length > 0 && (
-            <div className="mt-5">
-              <label className={`${labelCls} mb-2`}>Sala <span className="text-gray-400 font-normal">(opcional)</span></label>
+            {(isEdit || customerQuery.trim().length >= 2) && (
               <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setForm((f) => ({ ...f, roomId: '' }))}
-                  className={`px-3 py-2 text-sm rounded-lg border transition-colors ${
-                    form.roomId === '' ? 'bg-violet-600 text-white border-transparent' : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'
-                  }`}
-                >
-                  Sin preferencia
-                </button>
-                {rooms.map((r) => (
-                  <button
-                    key={r._id}
-                    type="button"
-                    onClick={() => setForm((f) => ({ ...f, roomId: r._id }))}
-                    className={`px-3 py-2 text-sm rounded-lg border transition-colors ${
-                      form.roomId === r._id ? 'bg-violet-600 text-white border-transparent' : 'bg-white text-gray-700 border-gray-300 hover:border-gray-400'
-                    }`}
-                  >
-                    {r.name}
-                  </button>
-                ))}
+                <input className={inputCls} type="tel" placeholder={isEdit ? 'Teléfono' : 'Teléfono *'} value={form.guestPhone}
+                  onChange={(e) => setForm((f) => ({ ...f, guestPhone: e.target.value }))} />
+                <input className={inputCls} type="email" placeholder="Email (opcional)" value={form.guestEmail}
+                  onChange={(e) => setForm((f) => ({ ...f, guestEmail: e.target.value }))} />
               </div>
-            </div>
+            )}
+          </div>
+        )}
+      </Step>
+
+      <Step n="2" title="Personas">
+        <div className="flex flex-wrap gap-1.5">
+          {peopleOptions.map((n) => (
+            <button key={n} type="button" onClick={() => { setCustomPeopleOpen(false); setForm((f) => ({ ...f, people: n })); }}
+              className={`${chip(!customPeopleOpen && form.people === n)} w-11 h-11 text-[15px] font-semibold tabular-nums`}>{n}</button>
+          ))}
+          <button type="button" onClick={() => setCustomPeopleOpen(true)} className={`${chip(customPeopleOpen)} px-3.5 h-11 text-sm font-semibold`}>Más</button>
+        </div>
+        {customPeopleOpen && (
+          <input type="number" min={1} inputMode="numeric" value={form.people} autoFocus
+            onChange={(e) => setForm((f) => ({ ...f, people: Math.max(1, Number(e.target.value) || 1) }))}
+            className={`${inputCls} mt-2 w-32`} />
+        )}
+      </Step>
+
+      <Step n="3" title="Día y hora">
+        <DayChips date={form.date} today={todayStr} onChange={(d) => setForm((f) => ({ ...f, date: d }))} />
+        <div className="mt-3">
+          {slots === null ? <p className="text-xs text-gray-400">Buscando horas…</p>
+            : vacation?.closed ? <p className="text-sm text-rose-700">El restaurante está cerrado este día.</p>
+              : slots.length === 0 ? <p className="text-sm text-gray-500">No hay turnos este día.</p>
+                : Object.entries(slotsByShift).map(([shiftName, list]) => (
+                  <div key={shiftName} className="mb-2">
+                    <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 mb-1">{shiftName}</p>
+                    <div className="grid grid-cols-4 sm:grid-cols-6 gap-1.5">
+                      {list.map((s) => (
+                        <button key={s.time} type="button" onClick={() => setForm((f) => ({ ...f, time: s.time }))}
+                          className={`py-2 rounded-xl text-sm font-semibold border tabular-nums text-center transition-colors ${form.time === s.time ? 'bg-violet-600 border-violet-600 text-white' : 'bg-white border-gray-200 text-gray-700 hover:border-gray-400'}`}>
+                          {s.label || s.time}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+          {isEdit && form.time && slots && !slots.some((s) => s.time === form.time) && (
+            <p className="text-xs text-gray-500 mt-1">Hora actual: {form.time}</p>
           )}
-          <button type="button" onClick={() => setStep(4)} className="w-full mt-5 py-3 rounded-xl text-white font-medium bg-violet-600 hover:bg-violet-700 transition-colors">
-            Continuar
+        </div>
+      </Step>
+
+      {rooms.length > 0 && (
+        <Step title="Sala (opcional)">
+          <div className="flex flex-wrap gap-1.5">
+            <button type="button" onClick={() => setForm((f) => ({ ...f, roomId: '' }))} className={`${chip(form.roomId === '')} px-3.5 py-2 text-sm font-semibold`}>Sin preferencia</button>
+            {rooms.map((r) => (
+              <button key={r._id} type="button" onClick={() => setForm((f) => ({ ...f, roomId: r._id }))} className={`${chip(form.roomId === r._id)} px-3.5 py-2 text-sm font-semibold`}>{r.name}</button>
+            ))}
+          </div>
+        </Step>
+      )}
+
+      {isEdit && (
+        <div>
+          <label className={labelCls}>Estado</label>
+          <select value={form.status} onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))} className={inputCls}>
+            <option value="pending">Por confirmar</option>
+            <option value="confirmed">Confirmada</option>
+            <option value="seated">Sentada</option>
+            <option value="cancelled">Cancelada</option>
+          </select>
+        </div>
+      )}
+
+      {showNotes ? (
+        <div>
+          <label className={labelCls}>Notas</label>
+          <textarea value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} rows={2} className={`${inputCls} resize-none`}
+            placeholder="Alergias, trona, celebración…" />
+        </div>
+      ) : (
+        <button type="button" onClick={() => setShowNotes(true)} className="text-sm font-medium text-violet-700">+ Añadir una nota</button>
+      )}
+
+      {theForkModuleEnabled && (
+        <label className="flex items-center gap-2.5 text-sm text-gray-700">
+          <input type="checkbox" checked={Boolean(form.thefork)} onChange={(e) => setForm((f) => ({ ...f, thefork: e.target.checked }))} className="w-4 h-4 rounded accent-violet-600" />
+          Viene de TheFork
+        </label>
+      )}
+
+      <div className="sticky bottom-0 -mx-5 -mb-5 px-5 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] bg-white border-t border-gray-100 space-y-2">
+        {error && <p className="text-sm text-rose-600">{error}</p>}
+        <div className="flex items-center gap-3">
+          <div className="min-w-0 flex-1">
+            <p className="text-xs text-gray-500 truncate">{dayLabel(form.date, todayStr)}{form.time ? `, ${form.time}` : ''}</p>
+            <p className="text-base font-semibold text-gray-900">{form.people} {form.people === 1 ? 'persona' : 'personas'}</p>
+          </div>
+          {onCancel && <button type="button" onClick={onCancel} className="hidden sm:inline-flex items-center h-12 px-4 rounded-xl text-sm font-medium text-gray-500 hover:bg-gray-100">Cancelar</button>}
+          <button type="submit" disabled={saving} className="h-12 px-6 rounded-xl bg-violet-600 text-white text-[15px] font-semibold hover:bg-violet-700 disabled:opacity-50">
+            {saving ? 'Guardando…' : isEdit ? 'Guardar cambios' : 'Crear reserva'}
           </button>
         </div>
+<<<<<<< HEAD
       )}
 
       {step === 4 && (
@@ -648,5 +482,9 @@ export default function ReservationForm({ reservation, onSave, onCancel, initial
         </form>
       )}
     </div>
+=======
+      </div>
+    </form>
+>>>>>>> 1f9caddbdaece80755cdfd4a32b6a7e6aeaffa96
   );
 }

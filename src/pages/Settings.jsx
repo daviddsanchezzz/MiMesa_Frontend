@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { Navigate, useSearchParams } from 'react-router-dom';
 import { confirmLeave } from '../lib/unsavedChanges';
 import { useAuth } from '../context/AuthContext';
 import { NegocioSection } from './settings/NegocioSection';
@@ -10,7 +10,7 @@ import { LimitesSection } from './settings/LimitesSection';
 import { PublicoSection } from './settings/PublicoSection';
 import { BillingSection } from './settings/BillingSection';
 import { PagosSection } from './settings/PagosSection';
-import { ProfessionalsSettings, ServicesSettings, HoursSettings } from './agenda/AgendaSettings';
+import { ProfessionalsSettings, SpacesSettings, ServicesSettings, HoursSettings } from './agenda/AgendaSettings';
 import { BookingLinkSettings } from './agenda/BookingLinkSettings';
 import FollowUpSettings from './agenda/FollowUpSettings';
 import PolicySettings from './agenda/PolicySettings';
@@ -24,6 +24,7 @@ const GROUPS = {
     { title: 'Negocio', items: [{ key: 'negocio', label: 'Datos del negocio', desc: 'Nombre, logo, dirección y contacto', icon: 'building' }] },
     { title: 'Qué se reserva', items: [
       { key: 'profesionales', label: 'Equipo', desc: 'Profesionales, servicios, horarios y fotos', icon: 'person' },
+      { key: 'espacios', label: 'Salas y equipamiento', desc: 'Recursos adicionales para las reservas', icon: 'map' },
       { key: 'servicios', label: 'Servicios', desc: 'Duración, precio y quién lo hace', icon: 'list' },
     ] },
     { title: 'Cuándo', items: [{ key: 'horario', label: 'Horario y cierres', desc: 'Cuándo abres, festivos y vacaciones', icon: 'clock' }] },
@@ -60,6 +61,7 @@ function ShiftsAndClosures() {
 }
 
 const SECTIONS = {
+  espacios: SpacesSettings,
   negocio: NegocioSection, mesas: TablesAndRooms, turnos: ShiftsAndClosures, normas: PolicySettings,
   limites: LimitesSection, publico: BookingLinkSettings, suscripcion: BillingSection, pagos: PagosSection,
   profesionales: ProfessionalsSettings, servicios: ServicesSettings, horario: HoursSettings, enlace: BookingLinkSettings, avisos: FollowUpSettings,
@@ -129,6 +131,7 @@ export default function Settings() {
     </nav>
   );
 
+  if (isAppointments && askedTab === 'profesionales') return <Navigate to="/equipo" replace />;
   return (
     <div className="w-full">
       <h1 className="hidden lg:block text-2xl font-semibold tracking-tight text-gray-900 mb-6">Configuración</h1>

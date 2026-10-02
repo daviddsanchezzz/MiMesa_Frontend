@@ -322,6 +322,10 @@ function PersonalPage() {
   const { isAppointments } = useAuth();
   return isAppointments ? <AppointmentTeam /> : <Personal />;
 }
+function TeamPage() {
+  const { isAppointments } = useAuth();
+  return isAppointments ? <Navigate to="/equipo" replace /> : <Team />;
+}
 function HomeDashboard() {
   const { isAppointments } = useAuth();
   return isAppointments ? <AppointmentsToday /> : <RestaurantToday />;
@@ -374,7 +378,7 @@ export default function App() {
           <Route path="/settings"      element={<Navigate to="/configuracion" replace />} />
           <Route path="/mas"           element={<PrivateLayout><More /></PrivateLayout>} />
           <Route path="/profile"       element={<PrivateLayout><Profile /></PrivateLayout>} />
-          <Route path="/team"         element={<RoleRoute minRole="manager"><PrivateLayout><Team /></PrivateLayout></RoleRoute>} />
+          <Route path="/team"         element={<RoleRoute minRole="manager"><PrivateLayout><TeamPage /></PrivateLayout></RoleRoute>} />
           <Route path="/equipo"       element={<RoleRoute minRole="manager"><PrivateLayout><ProfessionalTeam /></PrivateLayout></RoleRoute>} />
           <Route path="/analytics"    element={<RestaurantRoute><RoleRoute minRole="manager"><PrivateLayout><Analytics /></PrivateLayout></RoleRoute></RestaurantRoute>} />
           <Route path="/calendario"   element={<Navigate to="/reservations?view=calendar" replace />} />

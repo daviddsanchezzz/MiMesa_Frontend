@@ -129,7 +129,7 @@ export default function Agenda() {
   const staff = useMemo(() => resources.filter((r) => r.kind === 'staff'), [resources]);
   // "Mi agenda": the professional linked to the logged-in user
   const me = useMemo(() => staff.find((r) => r.userId && r.userId === business?.userId) || null, [staff, business?.userId]);
-  const [scope, setScopeRaw] = useState(() => { try { return localStorage.getItem(SCOPE_KEY) || ''; } catch { return ''; } });
+  const [scope, setScopeRaw] = useState(() => { if (searchParams.get('staff') && !searchParams.get('new')) return searchParams.get('staff'); try { return localStorage.getItem(SCOPE_KEY) || ''; } catch { return ''; } });
   const setScope = (v) => { setScopeRaw(v); try { localStorage.setItem(SCOPE_KEY, v); } catch { /* ignore */ } };
   // Default: staff members start on their own agenda, managers on the whole team
   const scopeId = scope === 'all' ? null

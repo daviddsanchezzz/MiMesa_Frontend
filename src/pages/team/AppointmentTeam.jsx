@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useSetMobileHeader } from '../../context/MobileHeaderContext';
 import { bookingsApi, apiError } from '../../services/bookingsApi';
@@ -20,7 +20,7 @@ const PAY_OPTIONS = [
 ];
 const TYPE_FROM_API = { monthly_fixed: 'monthly', hourly: 'hourly', commission_only: 'commission' };
 
-function payText(pay) {
+export function payText(pay) {
   if (!pay) return 'Sin definir cómo cobra';
   const parts = [];
   if (pay.type === 'monthly_fixed') parts.push(`${eur(pay.amount)}/mes`);
@@ -31,7 +31,7 @@ function payText(pay) {
   return parts.join(' · ');
 }
 
-function monthRange(ym) {
+export function monthRange(ym) {
   const [y, m] = ym.split('-').map(Number);
   const last = new Date(Date.UTC(y, m, 0)).getUTCDate();
   return [`${ym}-01`, `${ym}-${String(last).padStart(2, '0')}`];
@@ -52,7 +52,7 @@ function SheetFooter({ onCancel, onSave, saving, label }) {
   );
 }
 
-function PayModal({ person, onClose, onSaved }) {
+export function PayModal({ person, onClose, onSaved }) {
   const pay = person.pay;
   const [type, setType] = useState(TYPE_FROM_API[pay?.type] || 'commission');
   const [amount, setAmount] = useState(pay?.amount ? String(pay.amount).replace('.', ',') : '');
@@ -81,7 +81,7 @@ function PayModal({ person, onClose, onSaved }) {
   }
 
   return (
-    <Modal title={`Cómo cobra ${person.name}`} subtitle="Se usa para calcular su coste y lo que deja al negocio." onClose={onClose}
+    <Modal title={`Cómo cobra ${person.name}`} subtitle="Se usa para calcular su coste y el margen para el negocio." onClose={onClose}
       footer={<SheetFooter onCancel={onClose} onSave={save} saving={saving} label="Guardar" />}>
       <div className="space-y-6">
         <Section title="Tipo de pago">
@@ -128,7 +128,7 @@ function PayModal({ person, onClose, onSaved }) {
   );
 }
 
-function PaymentModal({ person, onClose, onSaved }) {
+export function PaymentModal({ person, onClose, onSaved }) {
   const [amount, setAmount] = useState(person.toPay ? String(person.toPay).replace('.', ',') : '');
   const [notes, setNotes] = useState('');
   const [saving, setSaving] = useState(false);
@@ -165,7 +165,7 @@ function PaymentModal({ person, onClose, onSaved }) {
 }
 
 /** The month's money for one professional, line by line (opens under the row). */
-function Breakdown({ p, onPay, onEdit }) {
+export function Breakdown({ p, onPay, onEdit }) {
   const line = (label, value, cls = 'text-gray-900') => (
     <div className="flex justify-between gap-3 py-2"><dt className="text-gray-600">{label}</dt><dd className={`tabular-nums ${cls}`}>{value}</dd></div>
   );
@@ -199,25 +199,27 @@ function Breakdown({ p, onPay, onEdit }) {
  * still to pay them.
  */
 export default function AppointmentTeam() {
+  const navigate = useNavigate();
+  const [params, setParams] = useSearchParams();
   const { business } = useAuth();
   const tz = business?.timezone || DEFAULT_TZ;
   const today = todayIn(tz);
-  const [month, setMonth] = useState(today.slice(0, 7));
+  const month = validMonth(params.get('month'), today.slice(0, 7));
+  const setMonth = (value) => setParams({ month: value });
+  const openProfessional = (id) => navigate(`/equipo?pro=${id}&tab=remuneracion&from=rendimiento&month=${month}`);
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
-  const [editing, setEditing] = useState(null);
-  const [paying, setPaying] = useState(null);
-  const [open, setOpen] = useState(null);
 
   useSetMobileHeader({ title: 'Rendimiento' });
 
   const [from, fullTo] = monthRange(month);
   const to = fullTo > today ? today : fullTo;
-  const load = useCallback(() => {
-    setError('');
-    return bookingsApi.team(from, to < from ? from : to).then(setData).catch((err) => setError(apiError(err)));
-  }, [from, to]);
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    let live = true;
+    setError(''); setData(null);
+    bookingsApi.team(from, to < from ? from : to).then((value) => { if (live) setData(value); }).catch((err) => { if (live) setError(apiError(err)); });
+    return () => { live = false; };
+  }, [from, to, business?.id]);
 
   const colors = useMemo(() => staffColors((data?.staff || []).map((s) => ({ ...s, _id: s.id, kind: 'staff' }))), [data]);
   const [y, m] = month.split('-').map(Number);
@@ -255,7 +257,7 @@ export default function AppointmentTeam() {
 
           <Section title="Profesionales">
             {data.staff.length === 0 ? (
-              <Empty action={<SectionLink to="/configuracion?tab=profesionales">Añadirlos en Configuración</SectionLink>}>Todavía no hay profesionales.</Empty>
+              <Empty action={<SectionLink to="/equipo">Añadir profesional</SectionLink>}>Todavía no hay profesionales.</Empty>
             ) : (
               <>
                 <div className="hidden md:grid grid-cols-12 gap-4 px-2 pb-2 border-b border-gray-200 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
@@ -269,13 +271,12 @@ export default function AppointmentTeam() {
                 </div>
                 <ul className="divide-y divide-gray-100">
                   {data.staff.map((p) => {
-                    const isOpen = open === p.id;
                     const cost = (p.salary || 0) + (p.commission || 0);
                     return (
                       <li key={p.id}>
-                        <div role="button" tabIndex={0} aria-expanded={isOpen}
-                          onClick={() => setOpen(isOpen ? null : p.id)}
-                          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setOpen(isOpen ? null : p.id); } }}
+                        <div role="link" tabIndex={0}
+                          onClick={() => openProfessional(p.id)}
+                          onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); openProfessional(p.id); } }}
                           className="flex items-center gap-3 md:grid md:grid-cols-12 md:gap-4 px-2 py-3 rounded-xl cursor-pointer hover:bg-gray-50">
                           <div className="md:col-span-4 flex items-center gap-3 min-w-0 flex-1">
                             <StaffAvatar name={p.name} photo={p.photo} color={colors[p.id]} size={40} />
@@ -283,7 +284,7 @@ export default function AppointmentTeam() {
                               <p className="text-[15px] font-medium text-gray-900 truncate">
                                 {p.name}{!p.active && <span className="ml-1.5 text-[11px] font-semibold px-1.5 py-px rounded bg-gray-100 text-gray-500 align-middle">Desactivada</span>}
                               </p>
-                              <button type="button" onClick={(e) => { e.stopPropagation(); setEditing(p); }}
+                              <button type="button" onClick={(e) => { e.stopPropagation(); openProfessional(p.id); }}
                                 className={`text-[13px] text-left truncate max-w-full ${p.pay ? 'text-gray-500 hover:text-violet-700' : 'text-amber-700 font-semibold'}`}>
                                 {payText(p.pay)}
                               </button>
@@ -297,14 +298,13 @@ export default function AppointmentTeam() {
                           <span className={`hidden md:block col-span-1 text-right text-sm font-semibold tabular-nums ${p.leaves >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{eur(p.leaves)}</span>
                           <div className="hidden md:flex col-span-2 items-center justify-end gap-2">
                             <span className={`text-sm tabular-nums ${p.toPay > 0 ? 'font-semibold text-amber-700' : 'text-gray-400'}`}>{eur(p.toPay)}</span>
-                            <RowAction onClick={() => setPaying(p)}>Pagar</RowAction>
+                            <RowAction onClick={(e) => { e.stopPropagation(); openProfessional(p.id); }}>Ver ficha</RowAction>
                           </div>
                           <div className="md:hidden text-right shrink-0">
                             <p className={`text-[15px] font-semibold tabular-nums ${p.leaves >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{eur(p.leaves)}</p>
                             <p className="text-[11px] text-gray-400">{p.toPay > 0 ? <span className="text-amber-700">{eur(p.toPay)} pendiente</span> : 'margen'}</p>
                           </div>
                         </div>
-                        {isOpen && <Breakdown p={p} onPay={() => setPaying(p)} onEdit={() => setEditing(p)} />}
                       </li>
                     );
                   })}
@@ -314,13 +314,49 @@ export default function AppointmentTeam() {
           </Section>
           <p className="text-xs text-gray-400">
             Datos del 1 al {Number(to.slice(8))} de {MONTHS[m - 1]}. Toca un profesional para ver el detalle. Las horas salen del horario de cada profesional en la agenda
-            (<Link to="/configuracion?tab=profesionales" className="text-violet-700">cambiar horarios</Link>). Sueldos y comisiones aparecen también en Finanzas.
+            (<Link to="/equipo" className="text-violet-700">ver equipo</Link>). Sueldos y comisiones aparecen también en Finanzas.
           </p>
         </>
       )}
 
-      {editing && <PayModal person={editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); load(); }} />}
-      {paying && <PaymentModal person={paying} onClose={() => setPaying(null)} onSaved={() => { setPaying(null); load(); }} />}
     </div>
   );
+}
+
+export function validMonth(value, fallback) {
+  return /^\d{4}-(0[1-9]|1[0-2])$/.test(value || '') && value <= fallback && value >= '2000-01' ? value : fallback;
+}
+
+export function ProfessionalPay({ resource, month, onMonthChange }) {
+  const { business } = useAuth();
+  const today = todayIn(business?.timezone || DEFAULT_TZ);
+  const [data, setData] = useState(null);
+  const [error, setError] = useState('');
+  const [modal, setModal] = useState(null);
+  const [version, setVersion] = useState(0);
+  useEffect(() => {
+    let live = true;
+    setData(null); setError('');
+    const [from, end] = monthRange(month);
+    bookingsApi.team(from, end > today ? today : end).then((report) => {
+      if (!live) return;
+      const row = report.staff.find((p) => String(p.id) === String(resource._id));
+      if (row) setData(row);
+      else setError('Este profesional inactivo no tiene resultados en este período. Consulta otro mes o reactívalo desde General.');
+    }).catch((err) => { if (live) setError(apiError(err)); });
+    return () => { live = false; };
+  }, [resource._id, month, today, version]);
+  const saved = () => { setModal(null); setVersion((v) => v + 1); };
+  return <section className="space-y-5">
+    <h2 className="font-semibold">Remuneración</h2>
+    <label className="block text-sm">Período<input type="month" min="2000-01" max={today.slice(0, 7)} className={inputCls} value={month} onChange={(e) => onMonthChange(validMonth(e.target.value, today.slice(0, 7)))} /></label>
+    {error ? <p role="alert" className="text-sm text-rose-700">{error}</p> : !data ? <p className="text-sm text-gray-500">Cargando…</p> : <>
+      <p className="font-medium">{payText(data.pay)}</p><button className="min-h-11 text-sm font-semibold text-violet-700" onClick={() => setModal('pay')}>{data.pay ? 'Editar remuneración' : 'Configurar remuneración'}</button>
+      <FigureLine items={[{ label: 'generado', value: eur(data.billed + data.products) }, { label: 'citas', value: data.appointments }, { label: 'coste estimado', value: eur(data.salary + data.commission) }]} />
+      <Breakdown p={data} onEdit={() => setModal('pay')} onPay={() => setModal('payment')} />
+      <p className="text-xs text-gray-500">Hasta el {month === today.slice(0, 7) ? today : monthRange(month)[1]}. El sueldo fijo se prorratea por los días del período; el pago por horas usa el horario. Las comisiones se calculan con la facturación registrada. Los pagos se registran con la fecha de hoy.</p>
+      {modal === 'pay' && <PayModal person={data} onClose={() => setModal(null)} onSaved={saved} />}
+      {modal === 'payment' && <PaymentModal person={data} onClose={() => setModal(null)} onSaved={saved} />}
+    </>}
+  </section>;
 }

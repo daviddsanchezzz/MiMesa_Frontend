@@ -87,7 +87,7 @@ function BusinessHours({ onSaved }) {
   );
 }
 
-function ResourceScheduleModal({ resource, onClose }) {
+export function ResourceScheduleModal({ resource, onClose, onSaved }) {
   const [value, setValue] = useState(null);
   const [own, setOwn] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -97,7 +97,7 @@ function ResourceScheduleModal({ resource, onClose }) {
     bookingsApi.schedule({ ownerType: 'resource', ownerId: resource._id }).then((s) => {
       setOwn(!!s._id);
       setValue(s);
-    });
+    }).catch((err) => setError(apiError(err)));
   }, [resource._id]);
 
   async function save() {
@@ -106,6 +106,7 @@ function ResourceScheduleModal({ resource, onClose }) {
     try {
       if (own) await bookingsApi.saveSchedule({ ownerType: 'resource', ownerId: resource._id, ...scheduleForApi(value) });
       else await bookingsApi.clearResourceSchedule(resource._id);
+      onSaved?.();
       onClose();
     } catch (err) {
       setError(apiError(err));
@@ -116,7 +117,7 @@ function ResourceScheduleModal({ resource, onClose }) {
 
   return (
     <Modal title={`Horario de ${resource.name}`} onClose={onClose} size="lg">
-      {!value ? <p className="text-sm text-gray-400">Cargando…</p> : (
+      {!value ? <p className="text-sm text-gray-400">{error || 'Cargando…'}</p> : (
         <div className="space-y-4">
           <div className="flex flex-col gap-2 text-sm text-gray-700">
             <label className="flex items-center gap-2"><input type="radio" checked={!own} onChange={() => setOwn(false)} />Sigue el horario del negocio</label>
@@ -191,13 +192,15 @@ function RowMenu({ items }) {
   );
 }
 
-function StaffServicesModal({ resource, services, staff, onClose, onSaved }) {
+export function StaffServicesModal({ resource, services, staff, onClose, onSaved, inline = false }) {
   const does = (s) => {
     const req = (s.requirements || []).find((r) => r.kind === 'staff');
     if (!req) return false;
     return !(req.resourceIds || []).length || req.resourceIds.map(String).includes(resource._id);
   };
   const [selected, setSelected] = useState(() => new Set(services.filter(does).map((s) => s._id)));
+  const [baseline, setBaseline] = useState(() => JSON.stringify([...selected].sort()));
+  useUnsavedChanges(`servicios-${resource._id}`, inline && JSON.stringify([...selected].sort()) !== baseline);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const toggle = (id) => setSelected((prev) => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
@@ -207,6 +210,7 @@ function StaffServicesModal({ resource, services, staff, onClose, onSaved }) {
     setError('');
     try {
       await bookingsApi.setResourceServices(resource._id, [...selected]);
+      setBaseline(JSON.stringify([...selected].sort()));
       onSaved();
     } catch (err) {
       setError(apiError(err));
@@ -215,8 +219,9 @@ function StaffServicesModal({ resource, services, staff, onClose, onSaved }) {
     }
   }
 
+  const Wrapper = inline ? InlineServices : Modal;
   return (
-    <Modal title={`Servicios de ${resource.name}`} subtitle="Marca lo que hace. Solo se le podrán reservar estos servicios." onClose={onClose}>
+    <Wrapper title={`Servicios de ${resource.name}`} subtitle="Marca lo que hace. Solo se le podrán reservar estos servicios." onClose={onClose}>
       <div className="space-y-2">
         {services.length === 0 && <p className="text-sm text-gray-500">Todavía no hay servicios.</p>}
         {services.map((s) => (
@@ -228,12 +233,16 @@ function StaffServicesModal({ resource, services, staff, onClose, onSaved }) {
         ))}
         {error && <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</p>}
         <div className="flex justify-end gap-2 pt-2">
-          <button type="button" className={btnSecondary} onClick={onClose}>Cancelar</button>
+          {!inline && <button type="button" className={btnSecondary} onClick={onClose}>Cancelar</button>}
           <button type="button" className={btnPrimary} onClick={save} disabled={saving}>{saving ? 'Guardando…' : 'Guardar'}</button>
         </div>
       </div>
-    </Modal>
+    </Wrapper>
   );
+}
+
+function InlineServices({ title, subtitle, children }) {
+  return <section className="space-y-4"><h2 className="font-semibold">{title}</h2><p className="text-sm text-gray-500">{subtitle}</p>{children}</section>;
 }
 
 function LinkUserModal({ resource, members, onClose, onSaved }) {
@@ -274,10 +283,10 @@ function LinkUserModal({ resource, members, onClose, onSaved }) {
   );
 }
 
-function Resources({ resources, services, reload }) {
+function Resources({ resources, services, reload, spacesOnly = false }) {
   const [adding, setAdding] = useState(false);
   const [name, setName] = useState('');
-  const [kind, setKind] = useState('staff');
+  const [kind, setKind] = useState(spacesOnly ? 'space' : 'staff');
   const [error, setError] = useState('');
   const [editingSchedule, setEditingSchedule] = useState(null);
   const [editingServices, setEditingServices] = useState(null);
@@ -405,7 +414,7 @@ function Resources({ resources, services, reload }) {
         <form onSubmit={add} className="rounded-2xl bg-gray-50 p-3 space-y-3">
           <input autoFocus className={inputCls} placeholder="Nombre (Ana, Cabina 2…)" value={name} onChange={(e) => setName(e.target.value)} required maxLength={100} />
           <div className="flex flex-wrap gap-1.5">
-            {Object.entries(KIND_LABEL).map(([k, l]) => (
+            {Object.entries(KIND_LABEL).filter(([k]) => !spacesOnly || k !== 'staff').map(([k, l]) => (
               <button key={k} type="button" onClick={() => setKind(k)}
                 className={`h-8 px-3 rounded-full text-[13px] font-semibold border ${kind === k ? 'bg-gray-900 border-gray-900 text-white' : 'bg-white border-gray-200 text-gray-700'}`}>{l}</button>
             ))}
@@ -561,6 +570,12 @@ export function ProfessionalsSettings() {
   const { resources, services, reload, error } = useSetupData();
   if (!resources || !services) return <Loading error={error} />;
   return <Resources resources={resources} services={services} reload={reload} />;
+}
+
+export function SpacesSettings() {
+  const { resources, services, reload, error } = useSetupData();
+  if (!resources || !services) return <Loading error={error} />;
+  return <Resources spacesOnly resources={resources.filter((r) => r.kind !== 'staff')} services={services} reload={reload} />;
 }
 
 export function ServicesSettings() {

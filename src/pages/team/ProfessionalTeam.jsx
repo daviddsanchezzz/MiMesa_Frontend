@@ -1,14 +1,414 @@
+import { useCallback, useEffect, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { useAuth } from '../../context/AuthContext';
 import { useSetMobileHeader } from '../../context/MobileHeaderContext';
 import { PageHeader } from '../../ui/kit';
-import { ProfessionalsSettings } from '../agenda/AgendaSettings';
+import api from '../../services/api';
+import { bookingsApi, apiError } from '../../services/bookingsApi';
+import ProfessionalAvatar from '../../components/ProfessionalAvatar';
+import { StaffServicesModal } from '../agenda/AgendaSettings';
+import {
+  btnPrimary,
+  btnSecondary,
+  staffColors,
+  todayIn,
+  DEFAULT_TZ,
+} from '../agenda/utils';
+import { ProfessionalPay, validMonth } from './AppointmentTeam';
+import ProfessionalAccess, {
+  InviteModal,
+  MemberAccess,
+  PendingAccess,
+} from './ProfessionalAccess';
+import CreateProfessional from './CreateProfessional';
+import ProfessionalGeneral from './ProfessionalGeneral';
+import { confirmLeave } from '../../lib/unsavedChanges';
 
-/** Main entry point for appointment staff; keeps the existing real resource editor. */
+const servicesOf = (r, services) =>
+  services.filter((s) =>
+    (s.requirements || []).some(
+      (q) =>
+        q.kind === 'staff' &&
+        (!q.resourceIds?.length ||
+          q.resourceIds.map(String).includes(String(r._id))),
+    ),
+  );
+const TABS = [
+  ['general', 'General'],
+  ['servicios', 'Servicios'],
+  ['remuneracion', 'Remuneración'],
+  ['acceso', 'Acceso'],
+];
+
 export default function ProfessionalTeam() {
-  useSetMobileHeader({ title: 'Equipo' });
+  const { business } = useAuth();
+  return <TeamContent key={business?._id || business?.id} />;
+}
+
+function TeamContent() {
+  const { business, isModuleEnabled, hasRole } = useAuth();
+  const [params, setParams] = useSearchParams();
+  const [data, setData] = useState(null);
+  const [error, setError] = useState('');
+  const [adding, setAdding] = useState(false);
+  const [inviting, setInviting] = useState(false);
+  const [inactive, setInactive] = useState(false);
+  const [revision, setRevision] = useState(0);
+  const [notice, setNotice] = useState('');
+  const reload = useCallback(() => setRevision((v) => v + 1), []);
+  useEffect(() => {
+    let live = true;
+    setError('');
+    Promise.all([
+      bookingsApi.resources(true),
+      bookingsApi.services(),
+      api.get('/members'),
+      api.get('/invitations'),
+      bookingsApi.schedule(),
+    ])
+      .then(async ([resources, services, members, invitations, hours]) => {
+        const staff = resources.filter((r) => r.kind === 'staff');
+        const schedules = await Promise.all(
+          staff.map((r) =>
+            bookingsApi
+              .schedule({ ownerType: 'resource', ownerId: r._id })
+              .catch(() => null),
+          ),
+        );
+        if (live)
+          setData({
+            resources: staff,
+            services,
+            members: members.data,
+            invitations: invitations.data.filter(
+              (i) =>
+                i.status === 'pending' && new Date(i.expiresAt) > new Date(),
+            ),
+            hours,
+            schedules: Object.fromEntries(
+              staff.map((r, i) => [r._id, schedules[i]]),
+            ),
+          });
+      })
+      .catch((err) => {
+        if (live) setError(apiError(err));
+      });
+    return () => {
+      live = false;
+    };
+  }, [revision]);
+  const resource = data?.resources.find(
+    (r) => String(r._id) === params.get('pro'),
+  );
+  const finance = hasRole('manager') && isModuleEnabled('staff');
+  const tabs = TABS.filter(([key]) => key !== 'remuneracion' || finance);
+  const tab = tabs.some(([key]) => key === params.get('tab'))
+    ? params.get('tab')
+    : 'general';
+  const month = validMonth(
+    params.get('month'),
+    todayIn(business?.timezone || DEFAULT_TZ).slice(0, 7),
+  );
+  useSetMobileHeader({ title: resource?.name || 'Equipo' });
+  function selectTab(key) {
+    if (!confirmLeave()) return;
+    const next = new URLSearchParams(params);
+    next.set('tab', key);
+    setParams(next, { replace: true });
+  }
+  const open = (r) => {
+    setParams({ pro: r._id });
+    setNotice('');
+  };
+  const back =
+    params.get('from') === 'rendimiento'
+      ? `/personal?month=${month}`
+      : '/equipo';
+  const colors = staffColors(data?.resources || []);
+  const saved = () => {
+    setNotice('Guardado');
+    reload();
+  };
+  if (!data)
+    return (
+      <div className="space-y-4">
+        <PageHeader title="Equipo" />
+        {error ? (
+          <>
+            <p role="alert" className="text-rose-700">
+              {error}
+            </p>
+            <button className={btnSecondary} onClick={reload}>
+              Reintentar
+            </button>
+          </>
+        ) : (
+          <p className="text-sm text-gray-500">Cargando equipo…</p>
+        )}
+      </div>
+    );
+  const { resources, members, invitations, services } = data;
+  const unlinked = members.filter(
+    (m) => !resources.some((r) => r.userId === m.userId),
+  );
+  const adminInvites = invitations.filter(
+    (i) =>
+      !resources.some((r) => String(r._id) === String(i.links?.resourceId)),
+  );
+  const active = resources.filter((r) => r.active !== false);
   return (
-    <div className="w-full space-y-6">
-      <PageHeader title="Equipo" subtitle="Profesionales, servicios, horarios, fotos y acceso a Vetra." />
-      <ProfessionalsSettings />
+    <div className="w-full max-w-5xl space-y-6">
+      {error && (
+        <p role="alert" className="text-sm text-rose-700">
+          {error}
+          <button className="ml-3 underline" onClick={reload}>
+            Reintentar
+          </button>
+        </p>
+      )}
+      {notice && (
+        <p role="status" className="text-sm text-emerald-700">
+          {notice}
+        </p>
+      )}
+      {params.get('pro') ? (
+        resource ? (
+          <>
+            <Link
+              to={back}
+              onClick={(e) => {
+                if (!confirmLeave()) e.preventDefault();
+              }}
+              className="inline-flex min-h-11 items-center text-sm font-medium text-violet-700"
+            >
+              ‹{' '}
+              {params.get('from') === 'rendimiento' ? 'Rendimiento' : 'Equipo'}
+            </Link>
+            <div className="flex items-center gap-3">
+              <ProfessionalAvatar
+                name={resource.name}
+                photo={resource.photo}
+                color={colors[resource._id]}
+                size={56}
+              />
+              <div className="min-w-0">
+                <h1 className="text-2xl font-semibold break-words">
+                  {resource.name}
+                </h1>
+                <p className="text-sm text-gray-500">
+                  {resource.active !== false ? 'Activo' : 'Inactivo'}
+                </p>
+              </div>
+            </div>
+            <nav
+              aria-label="Secciones del profesional"
+              className="flex overflow-x-auto border-b border-gray-200"
+            >
+              {tabs.map(([key, label]) => (
+                <button
+                  key={key}
+                  onClick={() => selectTab(key)}
+                  aria-current={key === tab ? 'page' : undefined}
+                  className={`shrink-0 min-h-11 px-4 text-sm font-medium border-b-2 ${key === tab ? 'border-violet-600 text-violet-700' : 'border-transparent text-gray-500'}`}
+                >
+                  {label}
+                </button>
+              ))}
+            </nav>
+            <div key={`${resource._id}-${tab}`}>
+              {tab === 'general' && (
+                <ProfessionalGeneral
+                  resource={resource}
+                  schedule={data.schedules[resource._id]}
+                  businessHours={data.hours}
+                  color={colors[resource._id]}
+                  onSaved={saved}
+                />
+              )}
+              {tab === 'servicios' && (
+                <StaffServicesModal
+                  inline
+                  resource={resource}
+                  services={services}
+                  onSaved={saved}
+                />
+              )}
+              {tab === 'remuneracion' && finance && (
+                <ProfessionalPay
+                  resource={resource}
+                  month={month}
+                  onMonthChange={(value) => {
+                    const next = new URLSearchParams(params);
+                    next.set('month', value);
+                    setParams(next, { replace: true });
+                  }}
+                />
+              )}
+              {tab === 'acceso' && (
+                <ProfessionalAccess
+                  resource={resource}
+                  resources={resources}
+                  members={members}
+                  invitations={invitations}
+                  onSaved={saved}
+                />
+              )}
+            </div>
+          </>
+        ) : (
+          <>
+            <p>Profesional no encontrado.</p>
+            <Link to="/equipo" className="text-violet-700">
+              Volver a Equipo
+            </Link>
+          </>
+        )
+      ) : (
+        <>
+          <PageHeader
+            title="Equipo"
+            subtitle={`${active.length} ${active.length === 1 ? 'profesional' : 'profesionales'}`}
+            mobileActions
+            actions={
+              <button className={btnPrimary} onClick={() => setAdding(true)}>
+                + Profesional
+              </button>
+            }
+          />
+          {!resources.length && (
+            <p className="text-sm text-gray-500">
+              Crea tu primer profesional. No necesita una cuenta para recibir
+              citas.
+            </p>
+          )}
+          <ul className="divide-y divide-gray-100">
+            {resources
+              .filter((r) => inactive || r.active !== false)
+              .map((r) => {
+                const member = members.find((m) => m.userId === r.userId);
+                const pending = invitations.some(
+                  (i) => String(i.links?.resourceId) === String(r._id),
+                );
+                const schedule = data.schedules[r._id];
+                return (
+                  <li key={r._id}>
+                    <button
+                      className="w-full text-left flex items-center gap-3 py-4 min-h-11 hover:bg-gray-50 rounded-xl"
+                      onClick={() => open(r)}
+                    >
+                      <ProfessionalAvatar
+                        name={r.name}
+                        photo={r.photo}
+                        color={colors[r._id]}
+                        size={44}
+                      />
+                      <div className="min-w-0 flex-1">
+                        <p className="font-semibold text-gray-900">
+                          {r.name}
+                          {r.active === false && (
+                            <span className="ml-2 text-xs text-gray-400">
+                              Inactivo
+                            </span>
+                          )}
+                        </p>
+                        <p className="text-sm text-gray-500 line-clamp-2">
+                          {servicesOf(r, services)
+                            .map((s) => s.name)
+                            .join(', ') || 'Sin servicios asignados'}
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {!schedule
+                            ? 'Horario no disponible'
+                            : schedule._id
+                              ? 'Horario propio'
+                              : 'Horario del negocio'}
+                        </p>
+                        <span
+                          className={`inline-block mt-2 rounded-full px-2 py-0.5 text-xs ${member ? 'bg-emerald-50 text-emerald-700' : pending ? 'bg-amber-50 text-amber-700' : 'bg-gray-100 text-gray-500'}`}
+                        >
+                          {member
+                            ? 'Con acceso'
+                            : pending
+                              ? 'Invitación pendiente'
+                              : 'Sin acceso'}
+                        </span>
+                      </div>
+                      <span className="text-gray-400" aria-hidden="true">
+                        ›
+                      </span>
+                    </button>
+                  </li>
+                );
+              })}
+          </ul>
+          {resources.some((r) => r.active === false) && (
+            <label className="flex items-center gap-2 min-h-11 text-sm text-gray-500">
+              <input
+                type="checkbox"
+                checked={inactive}
+                onChange={(e) => setInactive(e.target.checked)}
+              />
+              Mostrar inactivos
+            </label>
+          )}
+          {(unlinked.length > 0 || adminInvites.length > 0) && (
+            <section className="border-t border-gray-100 pt-6 space-y-3">
+              <h2 className="text-xs uppercase font-semibold text-gray-400">
+                Usuarios sin profesional
+              </h2>
+              <p className="text-sm text-gray-500">
+                Acceso administrativo, sin agenda propia.
+              </p>
+              {unlinked.map((m) => (
+                <details
+                  key={m._id}
+                  className="rounded-xl border border-gray-100 p-3"
+                >
+                  <summary className="min-h-11 flex items-center cursor-pointer text-sm font-medium">
+                    {m.userName || m.userEmail}
+                  </summary>
+                  <MemberAccess member={m} onSaved={saved} />
+                </details>
+              ))}
+              {adminInvites.map((i) => (
+                <PendingAccess key={i._id} invitation={i} onSaved={saved} />
+              ))}
+            </section>
+          )}
+          <button
+            className="min-h-11 text-sm text-gray-500"
+            onClick={() => setInviting(true)}
+          >
+            Invitar usuario sin profesional
+          </button>
+        </>
+      )}
+      {adding && (
+        <CreateProfessional
+          services={services}
+          maxPros={business?.capabilities?.maxProfessionals}
+          count={active.length}
+          onClose={() => setAdding(false)}
+          onSaved={(r) => {
+            setAdding(false);
+            setData((d) => ({
+              ...d,
+              resources: [...d.resources.filter((p) => p._id !== r._id), r],
+            }));
+            reload();
+            open(r);
+          }}
+        />
+      )}
+      {inviting && (
+        <InviteModal
+          onClose={() => setInviting(false)}
+          onSaved={() => {
+            setInviting(false);
+            saved();
+          }}
+        />
+      )}
     </div>
   );
 }

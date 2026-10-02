@@ -6,6 +6,7 @@ import { useSetMobileHeader } from '../context/MobileHeaderContext';
 import Modal from '../components/Modal';
 import Icon from '../ui/Icon';
 import { PageHeader, PrimaryButton, Section, MenuButton, Empty, Segmented } from '../ui/kit';
+import ProfessionalAvatar from '../components/ProfessionalAvatar';
 
 /* Constants */
 const ROLE_LABELS = { owner: 'Propietario', manager: 'Encargado', staff: 'Personal' };
@@ -28,7 +29,10 @@ function avatarTint(str = '') {
 const inputCls = 'w-full rounded-xl border border-gray-300 bg-white px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500';
 
 /* Sub-components */
-function Avatar({ name, email }) {
+function Avatar({ name, email, professional }) {
+  if (professional) {
+    return <ProfessionalAvatar name={professional.name || name} photo={professional.photo} color={professional.color} size={40} decorative />;
+  }
   const initial = (name || email || '?')[0].toUpperCase();
   return (
     <span className={`w-10 h-10 rounded-full ${avatarTint(name || email)} flex items-center justify-center text-sm font-semibold shrink-0`}>
@@ -217,7 +221,7 @@ export default function Team() {
                   return (
                     <li key={member._id} className="flex items-center gap-3 px-2 py-3 rounded-xl hover:bg-gray-50 md:grid md:grid-cols-12 md:gap-4">
                       <div className={`flex items-center gap-3 min-w-0 flex-1 ${showAgenda ? 'md:col-span-6' : 'md:col-span-9'}`}>
-                        <Avatar name={member.userName} email={member.userEmail} />
+                        <Avatar name={member.userName} email={member.userEmail} professional={pro} />
                         <div className="min-w-0">
                           <div className="flex items-center gap-2 min-w-0">
                             <p className="text-[15px] font-medium text-gray-900 truncate">{member.userName || '-'}</p>

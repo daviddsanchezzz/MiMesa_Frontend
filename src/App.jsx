@@ -315,6 +315,7 @@ function RestaurantRoute({ children }) {
 
 const Caja = lazy(() => import('./pages/Caja'));
 const AppointmentTeam = lazy(() => import('./pages/team/AppointmentTeam'));
+const ProfessionalTeam = lazy(() => import('./pages/team/ProfessionalTeam'));
 
 // Personal: appointment businesses see pay and results per professional.
 function PersonalPage() {
@@ -374,6 +375,7 @@ export default function App() {
           <Route path="/mas"           element={<PrivateLayout><More /></PrivateLayout>} />
           <Route path="/profile"       element={<PrivateLayout><Profile /></PrivateLayout>} />
           <Route path="/team"         element={<RoleRoute minRole="manager"><PrivateLayout><Team /></PrivateLayout></RoleRoute>} />
+          <Route path="/equipo"       element={<RoleRoute minRole="manager"><PrivateLayout><ProfessionalTeam /></PrivateLayout></RoleRoute>} />
           <Route path="/analytics"    element={<RestaurantRoute><RoleRoute minRole="manager"><PrivateLayout><Analytics /></PrivateLayout></RoleRoute></RestaurantRoute>} />
           <Route path="/calendario"   element={<Navigate to="/reservations?view=calendar" replace />} />
           <Route path="/publicidad"   element={<RoleRoute minRole="manager"><PrivateLayout><Publicidad /></PrivateLayout></RoleRoute>} />

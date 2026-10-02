@@ -39,6 +39,9 @@ export default function More() {
 
   const userName = session?.user?.name || business?.userName || 'Usuario';
   const userEmail = session?.user?.email || business?.userEmail || '';
+  const sections = ['Negocio', 'Equipo', 'Crecimiento']
+    .map((title) => ({ title, links: manage.filter((link) => (link.section || 'Negocio') === title) }))
+    .filter((section) => section.links.length > 0);
 
   return (
     <div className="w-full space-y-6">
@@ -51,11 +54,11 @@ export default function More() {
         </div>
       </div>
 
-      {manage.length > 0 && (
-        <Group title="Negocio">
-          {manage.map((l) => <Row key={l.to} {...l} />)}
+      {sections.map((section) => (
+        <Group key={section.title} title={section.title}>
+          {section.links.map((l) => <Row key={l.to} {...l} />)}
         </Group>
-      )}
+      ))}
 
       <Group title="Cuenta">
         {account.map((l) => <Row key={l.to} {...l} />)}

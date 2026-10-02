@@ -23,7 +23,7 @@ const GROUPS = {
   appointments: [
     { title: 'Negocio', items: [{ key: 'negocio', label: 'Datos del negocio', desc: 'Nombre, logo, dirección y contacto', icon: 'building' }] },
     { title: 'Qué se reserva', items: [
-      { key: 'profesionales', label: 'Profesionales', desc: 'Quién atiende y su horario', icon: 'person' },
+      { key: 'profesionales', label: 'Equipo', desc: 'Profesionales, servicios, horarios y fotos', icon: 'person' },
       { key: 'servicios', label: 'Servicios', desc: 'Duración, precio y quién lo hace', icon: 'list' },
     ] },
     { title: 'Cuándo', items: [{ key: 'horario', label: 'Horario y cierres', desc: 'Cuándo abres, festivos y vacaciones', icon: 'clock' }] },

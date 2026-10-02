@@ -35,6 +35,9 @@ export default function Sidebar({ collapsed = false, onDesktopToggleCollapse, de
   const userName = session?.user?.name || business?.userName || business?.name || 'Usuario';
   const userEmail = session?.user?.email || business?.userEmail || business?.email || '';
   const initial = userName?.[0]?.toUpperCase() || 'U';
+  const manageSections = ['Negocio', 'Equipo', 'Crecimiento']
+    .map((title) => ({ title, links: manage.filter((link) => (link.section || 'Negocio') === title) }))
+    .filter((section) => section.links.length > 0);
 
   useEffect(() => {
     const onDocumentClick = (e) => { if (!menuRef.current?.contains(e.target)) setMenuOpen(false); };
@@ -88,13 +91,13 @@ export default function Sidebar({ collapsed = false, onDesktopToggleCollapse, de
             <div className="space-y-0.5">
               {primary.map((l) => <Item key={l.to} {...l} collapsed={collapsed} />)}
             </div>
-            {manage.length > 0 && (
-              <div className="mt-5 space-y-0.5">
-                {!collapsed && <p className="px-3 pb-1.5 text-[11px] font-semibold uppercase tracking-wider text-gray-400">Negocio</p>}
+            {manageSections.map((section) => (
+              <div key={section.title} className="mt-5 space-y-0.5">
+                {!collapsed && <p className="px-3 pb-1.5 text-[11px] font-semibold uppercase tracking-wider text-gray-400">{section.title}</p>}
                 {collapsed && <div className="mx-3 mb-2 h-px bg-gray-100" />}
-                {manage.map((l) => <Item key={l.to} {...l} collapsed={collapsed} />)}
+                {section.links.map((l) => <Item key={l.to} {...l} collapsed={collapsed} />)}
               </div>
-            )}
+            ))}
           </>
         )}
       </nav>

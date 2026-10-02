@@ -176,7 +176,7 @@ function Breakdown({ p, onPay, onEdit }) {
         {p.products > 0 && line('Productos vendidos', eur(p.products))}
         {line('Sueldo', p.salary ? `−${eur(p.salary)}` : '—', p.salary ? 'text-rose-600' : 'text-gray-300')}
         {line('Comisión', p.commission ? `−${eur(p.commission)}` : '—', p.commission ? 'text-rose-600' : 'text-gray-300')}
-        {line('Deja al negocio', eur(p.leaves), `font-semibold ${p.leaves >= 0 ? 'text-emerald-600' : 'text-rose-600'}`)}
+        {line('Margen para el negocio', eur(p.leaves), `font-semibold ${p.leaves >= 0 ? 'text-emerald-600' : 'text-rose-600'}`)}
       </dl>
       <div>
         <dl className="text-sm divide-y divide-gray-100">
@@ -209,7 +209,7 @@ export default function AppointmentTeam() {
   const [paying, setPaying] = useState(null);
   const [open, setOpen] = useState(null);
 
-  useSetMobileHeader({ title: 'Personal' });
+  useSetMobileHeader({ title: 'Rendimiento' });
 
   const [from, fullTo] = monthRange(month);
   const to = fullTo > today ? today : fullTo;
@@ -225,7 +225,7 @@ export default function AppointmentTeam() {
 
   return (
     <div className="w-full space-y-8">
-      <PageHeader title="Personal" subtitle="Cómo cobra cada profesional y lo que deja al negocio." mobileActions
+      <PageHeader title="Rendimiento" subtitle="Facturación, costes y margen de cada profesional." mobileActions
         actions={(
           <div className="flex items-center gap-1">
             <button type="button" className="w-9 h-9 rounded-full hover:bg-gray-100 text-gray-600" onClick={() => setMonth(shiftMonth(month, -1))} aria-label="Mes anterior">‹</button>
@@ -240,7 +240,7 @@ export default function AppointmentTeam() {
       {data && (
         <>
           <section className="space-y-4">
-            <BigFigure label="Deja al negocio" value={eur(t.leaves)} tone={(t.leaves || 0) >= 0 ? 'good' : 'bad'}
+            <BigFigure label="Margen para el negocio" value={eur(t.leaves)} tone={(t.leaves || 0) >= 0 ? 'good' : 'bad'}
               sub={`Facturado menos ${eur(t.cost)} de coste del equipo`} />
             <FigureLine items={[
               { label: `facturado · ${citas(t.appointments)}`, value: eur(t.billed + t.products) },
@@ -264,7 +264,7 @@ export default function AppointmentTeam() {
                   <span className="col-span-1 text-right">Horas</span>
                   <span className="col-span-2 text-right">Facturado</span>
                   <span className="col-span-1 text-right">Coste</span>
-                  <span className="col-span-1 text-right">Deja</span>
+                  <span className="col-span-1 text-right">Margen</span>
                   <span className="col-span-2 text-right">Pendiente</span>
                 </div>
                 <ul className="divide-y divide-gray-100">
@@ -301,7 +301,7 @@ export default function AppointmentTeam() {
                           </div>
                           <div className="md:hidden text-right shrink-0">
                             <p className={`text-[15px] font-semibold tabular-nums ${p.leaves >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{eur(p.leaves)}</p>
-                            <p className="text-[11px] text-gray-400">{p.toPay > 0 ? <span className="text-amber-700">{eur(p.toPay)} pendiente</span> : 'deja'}</p>
+                            <p className="text-[11px] text-gray-400">{p.toPay > 0 ? <span className="text-amber-700">{eur(p.toPay)} pendiente</span> : 'margen'}</p>
                           </div>
                         </div>
                         {isOpen && <Breakdown p={p} onPay={() => setPaying(p)} onEdit={() => setEditing(p)} />}

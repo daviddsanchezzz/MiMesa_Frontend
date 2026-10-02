@@ -390,6 +390,10 @@ function Resources({ resources, services, reload }) {
                 { label: 'Cambiar nombre', onClick: () => setRenaming(r._id) },
                 isStaff && { label: 'Servicios que hace', onClick: () => setEditingServices(r) },
                 isStaff && { label: r.userId ? 'Cambiar usuario vinculado' : 'Vincular a un usuario', onClick: () => setLinking(r) },
+                isStaff && r.photo && {
+                  label: r.showPhotoToClients === false ? 'Mostrar foto a clientes' : 'Ocultar foto a clientes',
+                  onClick: () => update(r, { showPhotoToClients: r.showPhotoToClients === false }),
+                },
                 r.photo && { label: 'Quitar foto', onClick: () => update(r, { photo: null }) },
                 { label: 'Desactivar', danger: true, onClick: () => remove(r) },
               ]} />

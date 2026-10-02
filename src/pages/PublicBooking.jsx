@@ -3,6 +3,7 @@ import { slugPath } from '../lib/publicUrl';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { publicBookingsApi, apiError } from '../services/bookingsApi';
 import { addDays, euros, timeInTz, todayIn } from './agenda/utils';
+import ProfessionalAvatar from '../components/ProfessionalAvatar';
 
 /**
  * Public page where a customer books an appointment on their own:
@@ -266,8 +267,8 @@ export default function PublicBooking({ businessId: businessIdProp, slug = null 
           {[{ id: '', name: 'Me da igual', hint: 'Te asignamos a quien esté libre' }, ...choosableStaff].map((s) => (
             <button key={s.id || 'any'} type="button" onClick={() => { setStaffId(String(s.id)); setStep('time'); }}
               className="w-full text-left bg-white border border-gray-200 rounded-2xl px-4 py-3.5 flex items-center gap-3 hover:border-gray-300 hover:shadow-sm transition">
-              {s.photo ? (
-                <img src={s.photo} alt="" className="w-10 h-10 rounded-full object-cover shrink-0" />
+              {s.id ? (
+                <ProfessionalAvatar name={s.name} photo={s.photo} color={s.color || color} size={40} decorative />
               ) : (
                 <span className="w-10 h-10 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0"
                   style={{ backgroundColor: s.id ? (s.color || color) : '#9ca3af' }}>

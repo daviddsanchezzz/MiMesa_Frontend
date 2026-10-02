@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import api from '../services/api';
 import Modal from '../components/Modal';
 import { useAuth } from '../context/AuthContext';
@@ -8,8 +8,9 @@ import BusinessTypePicker from '../components/BusinessTypePicker';
 import PasswordInput from '../components/PasswordInput';
 import { useSetMobileHeader } from '../context/MobileHeaderContext';
 import Icon from '../ui/Icon';
-import { avatarColor } from './clients/format';
-import { initials } from './agenda/utils';
+import ProfessionalAvatar from '../components/ProfessionalAvatar';
+import { bookingsApi } from '../services/bookingsApi';
+import { resizeImage } from './agenda/utils';
 
 const inputCls = 'w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-white';
 const labelCls = 'block text-xs font-medium text-gray-600 mb-1.5';
@@ -92,6 +93,9 @@ export default function Profile() {
   const [newBusiness, setNewBusiness] = useState(EMPTY_BUSINESS);
   const [savingBusiness, setSavingBusiness] = useState(false);
   const [busyBusiness, setBusyBusiness] = useState(null);
+  const [professional, setProfessional] = useState(null);
+  const [savingPhoto, setSavingPhoto] = useState(false);
+  const photoInputRef = useRef(null);
 
   const isStaff = role === 'staff';
   const owned = useMemo(() => memberships.filter((m) => m.role === 'owner'), [memberships]);
@@ -99,9 +103,13 @@ export default function Profile() {
 
   const load = async () => {
     try {
-      const { data } = await api.get('/users/me');
+      const [{ data }, ownProfessional] = await Promise.all([
+        api.get('/users/me'),
+        business?.businessType === 'appointments' ? bookingsApi.myResource().catch(() => null) : Promise.resolve(null),
+      ]);
       setUser(data.user || { id: '', name: '', email: '' });
       setMemberships(data.memberships || []);
+      setProfessional(ownProfessional);
     } catch (err) {
       setPageError(err.response?.data?.message || 'No se pudo cargar el perfil');
     } finally {
@@ -156,6 +164,28 @@ export default function Profile() {
     }
   };
 
+  const updateProfessionalPhoto = async (patch) => {
+    setSavingPhoto(true);
+    try {
+      const updated = await bookingsApi.updateMyPhoto(patch);
+      setProfessional(updated);
+      toast('Foto profesional actualizada');
+    } catch (err) {
+      toast(err.response?.data?.message || err.message || 'No se pudo actualizar la foto', 'error');
+    } finally {
+      setSavingPhoto(false);
+    }
+  };
+
+  const uploadProfessionalPhoto = async (file) => {
+    try {
+      const photo = await resizeImage(file, { max: 160, square: true });
+      await updateProfessionalPhoto({ photo });
+    } catch (err) {
+      toast(err.message || 'No se pudo leer la imagen', 'error');
+    }
+  };
+
   const activate = async (m) => {
     setBusyBusiness(m.businessId);
     try { await switchBusiness(m.businessId); await load(); toast(`Ahora estás en ${m.businessName}`); } catch (err) {
@@ -195,9 +225,18 @@ export default function Profile() {
   return (
     <div className="w-full space-y-7">
       <header className="flex items-center gap-4 pt-1">
-        <span className="w-16 h-16 rounded-full flex items-center justify-center text-white text-xl font-semibold shrink-0" style={{ backgroundColor: avatarColor(displayName) }}>
-          {initials(displayName)}
-        </span>
+        <label className={professional ? 'relative shrink-0 cursor-pointer group' : 'shrink-0'} title={professional ? 'Cambiar foto profesional' : undefined}>
+          <ProfessionalAvatar name={professional?.name || displayName} photo={professional?.photo} color={professional?.color} size={64} />
+          {professional && (
+            <>
+              <span className="absolute inset-0 rounded-full bg-black/40 text-white text-[11px] font-semibold hidden group-hover:flex items-center justify-center">
+                {savingPhoto ? 'â€¦' : 'Foto'}
+              </span>
+              <input ref={photoInputRef} type="file" accept="image/*" className="hidden" disabled={savingPhoto}
+                onChange={(e) => { const file = e.target.files?.[0]; if (file) uploadProfessionalPhoto(file); e.target.value = ''; }} />
+            </>
+          )}
+        </label>
         <div className="min-w-0">
           <h1 className="text-2xl font-semibold tracking-tight text-gray-900 truncate">{displayName}</h1>
           <p className="text-sm text-gray-500 truncate">{user.email}</p>
@@ -228,6 +267,21 @@ export default function Profile() {
         <Row icon="chat" label="Email" value={user.email} />
         <Row icon="cog" label="Contraseña" value="••••••••" onClick={() => setShowPassword(true)} />
       </Group>
+
+      {professional && (
+        <Group title="Foto profesional" hint="Dentro de Vetra la foto siempre identifica tus citas y tu agenda.">
+          <Row icon="person" label="Foto" hint={professional.photo ? 'JPG, PNG o WebP' : 'Sube una foto para sustituir las iniciales'}
+            onClick={() => photoInputRef.current?.click()} value={professional.photo ? 'Cambiar' : 'Subir'} />
+          {professional.photo && (
+            <Row icon="person" label="Mostrar a clientes" hint="Aparecerá cuando te elijan al reservar"
+              control={<Switch label="Mostrar foto a clientes" checked={professional.showPhotoToClients !== false} disabled={savingPhoto}
+                onChange={(value) => updateProfessionalPhoto({ showPhotoToClients: value })} />} />
+          )}
+          {professional.photo && (
+            <Row icon="x" label="Quitar foto" danger onClick={() => updateProfessionalPhoto({ photo: null })} />
+          )}
+        </Group>
+      )}
 
       {memberships.length > 0 && memberships.map((m) => (
         <Group key={m.id}

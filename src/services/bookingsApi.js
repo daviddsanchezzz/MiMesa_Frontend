@@ -7,6 +7,8 @@ const unwrap = (p) => p.then((r) => r.data);
 export const bookingsApi = {
   // setup
   resources: (includeInactive = false) => unwrap(api.get('/bookings/resources', { params: { includeInactive } })),
+  myResource: () => unwrap(api.get('/bookings/resources/me')),
+  updateMyPhoto: (data) => unwrap(api.put('/bookings/resources/me/photo', data)),
   createResource: (data) => unwrap(api.post('/bookings/resources', data)),
   updateResource: (id, data) => unwrap(api.put(`/bookings/resources/${id}`, data)),
   deleteResource: (id) => unwrap(api.delete(`/bookings/resources/${id}`)),

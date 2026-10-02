@@ -47,6 +47,14 @@ function readView() {
  * on phones, a list. Tap an empty slot to book it; professionals, services
  * and hours are set up in Configuración.
  */
+function ExpandIcon({ out = false }) {
+  return out ? (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" className="w-[18px] h-[18px]"><path d="M8 3v5H3M12 3v5h5M8 17v-5H3M12 17v-5h5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+  ) : (
+    <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" className="w-3.5 h-3.5"><path d="M3 8V3h5M17 8V3h-5M3 12v5h5M17 12v5h-5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+  );
+}
+
 export default function Agenda() {
   const { business, hasRole, role } = useAuth();
   const tz = business?.timezone || DEFAULT_TZ;
@@ -57,6 +65,13 @@ export default function Agenda() {
 
   const [date, setDate] = useState(() => (isDate(searchParams.get('date')) ? searchParams.get('date') : today));
   const [view, setView] = useState(() => readView() || (window.matchMedia('(max-width: 639px)').matches ? 'list' : 'day'));
+  const [expanded, setExpanded] = useState(false);
+  useEffect(() => {
+    if (!expanded) return undefined;
+    const onKey = (e) => { if (e.key === 'Escape' && !document.querySelector('[role=dialog], .fixed.inset-0.z-50')) setExpanded(false); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [expanded]);
   const [blocking, setBlocking] = useState(false);
   const [selectedAbsence, setSelectedAbsence] = useState(null);
   const [error, setError] = useState('');
@@ -168,6 +183,45 @@ export default function Agenda() {
     return () => window.removeEventListener('resize', measure);
   }, [fill]);
 
+  const scopeChips = (withBlock) => (staff.length > 1 || (withBlock && canBlock)) && (
+            <div className="shrink-0 flex gap-1.5 overflow-x-auto -mx-1 px-1 pb-0.5" role="tablist" aria-label="Qué agenda ver">
+              {staff.length > 1 && [{ id: 'all', label: 'Todo el equipo' }, ...(me ? [{ id: me._id, label: 'Mi agenda', person: me }] : []),
+                ...staff.filter((r) => r._id !== me?._id).map((r) => ({ id: r._id, label: r.name, person: r }))].map((o) => {
+                const active = (o.id === 'all' && !scopeId) || o.id === scopeId;
+                return (
+                  <button key={o.id} type="button" role="tab" aria-selected={active} onClick={() => setScope(o.id)}
+                    className={`shrink-0 inline-flex items-center gap-1.5 pl-1.5 pr-3 py-1 rounded-full text-xs font-semibold border transition-colors ${
+                      active ? 'bg-gray-900 border-gray-900 text-white' : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300'} ${o.person ? '' : 'pl-3'}`}>
+                    {o.person && <StaffAvatar name={o.person.name} photo={o.person.photo} color={colors[o.person._id]} size={20} />}
+                    {o.label}
+                  </button>
+                );
+              })}
+              {withBlock && canBlock && (
+                <button type="button" onClick={() => setBlocking(true)}
+                  className="shrink-0 ml-auto inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold border border-dashed border-gray-300 text-gray-600 hover:border-gray-400 hover:text-gray-800">
+                  <svg viewBox="0 0 20 20" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="10" cy="10" r="7" /><path d="M5 15 15 5" strokeLinecap="round" /></svg>
+                  Ausencia
+                </button>
+              )}
+            </div>
+          );
+  const grid = (full) => (
+    <>
+          {activeView === 'week' && (
+            <div className="flex-1 min-h-0"><WeekView fill from={from} today={today} tz={tz} staff={shownStaff} bookings={visibleWeek} absences={shownAbsences} onAbsenceClick={setSelectedAbsence} businessSchedule={schedule}
+              colors={colors} onBookingClick={setSelected}
+              onEmptyClick={(resourceId, time, d) => openNew(resourceId, time, d)}
+              onDayClick={(d) => { setDate(d); chooseView('day'); }} /></div>
+          )}
+          {activeView === 'day' && (
+            <div className="flex-1 min-h-0"><DayView fill compact={isMobile} date={date} tz={tz} staff={shownStaff} bookings={dayBookings} absences={shownAbsences} onAbsenceClick={setSelectedAbsence} businessSchedule={schedule}
+              staffSchedules={staffSchedules} colors={colors} isToday={date === today}
+              onEmptyClick={(resourceId, time) => openNew(resourceId, time, date)} onBookingClick={setSelected} /></div>
+          )}
+    </>
+  );
+
   return (
     <div ref={rootRef} className={fill ? 'flex flex-col gap-3' : 'space-y-4'} style={fill && fitHeight ? { height: fitHeight } : undefined}>
       <div className="flex items-center justify-between gap-3 shrink-0">
@@ -199,29 +253,7 @@ export default function Agenda() {
         </div>
       ) : (
         <>
-          {(staff.length > 1 || canBlock) && (
-            <div className="shrink-0 flex gap-1.5 overflow-x-auto -mx-1 px-1 pb-0.5" role="tablist" aria-label="Qué agenda ver">
-              {staff.length > 1 && [{ id: 'all', label: 'Todo el equipo' }, ...(me ? [{ id: me._id, label: 'Mi agenda', person: me }] : []),
-                ...staff.filter((r) => r._id !== me?._id).map((r) => ({ id: r._id, label: r.name, person: r }))].map((o) => {
-                const active = (o.id === 'all' && !scopeId) || o.id === scopeId;
-                return (
-                  <button key={o.id} type="button" role="tab" aria-selected={active} onClick={() => setScope(o.id)}
-                    className={`shrink-0 inline-flex items-center gap-1.5 pl-1.5 pr-3 py-1 rounded-full text-xs font-semibold border transition-colors ${
-                      active ? 'bg-gray-900 border-gray-900 text-white' : 'bg-white border-gray-200 text-gray-700 hover:border-gray-300'} ${o.person ? '' : 'pl-3'}`}>
-                    {o.person && <StaffAvatar name={o.person.name} photo={o.person.photo} color={colors[o.person._id]} size={20} />}
-                    {o.label}
-                  </button>
-                );
-              })}
-              {canBlock && (
-                <button type="button" onClick={() => setBlocking(true)}
-                  className="shrink-0 ml-auto inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold border border-dashed border-gray-300 text-gray-600 hover:border-gray-400 hover:text-gray-800">
-                  <svg viewBox="0 0 20 20" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="10" cy="10" r="7" /><path d="M5 15 15 5" strokeLinecap="round" /></svg>
-                  Ausencia
-                </button>
-              )}
-            </div>
-          )}
+          {scopeChips(true)}
           <div className="shrink-0">
             <DayStrip date={date} today={today} counts={counts} closedDays={closedDays} onChange={setDate}
               extra={(
@@ -236,23 +268,21 @@ export default function Agenda() {
               <span className="font-semibold text-gray-900">{activeView === 'week' ? `Semana del ${Number(from.slice(8))} al ${Number(to.slice(8))}` : longDate(date)}</span>
               {activeView !== 'week' && dayTotal.n > 0 && <> · {pluralize(dayTotal.n, 'cita', 'citas')}{isManager && <> · {euros(dayTotal.revenue)}</>}</>}
             </p>
-            <label className="md:hidden flex items-center gap-1.5 text-xs text-gray-500">
-              <input type="checkbox" checked={showCancelled} onChange={(e) => setShowCancelled(e.target.checked)} />
-              Ver canceladas
-            </label>
+            <div className="flex items-center gap-3">
+              <label className="md:hidden flex items-center gap-1.5 text-xs text-gray-500">
+                <input type="checkbox" checked={showCancelled} onChange={(e) => setShowCancelled(e.target.checked)} />
+                Ver canceladas
+              </label>
+              {activeView !== 'list' && (
+                <button type="button" onClick={() => setExpanded(true)} title="Pantalla completa" aria-label="Ver el calendario a pantalla completa"
+                  className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full border border-gray-200 text-xs font-semibold text-gray-700 hover:bg-gray-50">
+                  <ExpandIcon />Ampliar
+                </button>
+              )}
+            </div>
           </div>
 
-          {activeView === 'week' && (
-            <div className="flex-1 min-h-0"><WeekView fill from={from} today={today} tz={tz} staff={shownStaff} bookings={visibleWeek} absences={shownAbsences} onAbsenceClick={setSelectedAbsence} businessSchedule={schedule}
-              colors={colors} onBookingClick={setSelected}
-              onEmptyClick={(resourceId, time, d) => openNew(resourceId, time, d)}
-              onDayClick={(d) => { setDate(d); chooseView('day'); }} /></div>
-          )}
-          {activeView === 'day' && (
-            <div className="flex-1 min-h-0"><DayView fill compact={isMobile} date={date} tz={tz} staff={shownStaff} bookings={dayBookings} absences={shownAbsences} onAbsenceClick={setSelectedAbsence} businessSchedule={schedule}
-              staffSchedules={staffSchedules} colors={colors} isToday={date === today}
-              onEmptyClick={(resourceId, time) => openNew(resourceId, time, date)} onBookingClick={setSelected} /></div>
-          )}
+          {!expanded && grid(false)}
           {activeView === 'list' && (
             <ListView tz={tz} date={date} bookings={dayBookings} absences={shownAbsences} onAbsenceClick={setSelectedAbsence} staffById={byId} colors={colors} isToday={date === today}
               onBookingClick={setSelected} onNew={() => openNew('', '', date)} />
@@ -260,6 +290,32 @@ export default function Agenda() {
         </>
       )}
 
+
+      {expanded && (
+        <div className="fixed inset-0 z-[45] bg-white flex flex-col pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]">
+          <div className="shrink-0 flex items-center gap-2 px-3 sm:px-5 h-14 border-b border-gray-100">
+            <button type="button" onClick={() => setDate(addDays(date, activeView === 'week' ? -7 : -1))} aria-label="Anterior"
+              className="w-9 h-9 rounded-full hover:bg-gray-100 text-gray-700 text-lg">‹</button>
+            <div className="min-w-0 flex-1 text-center">
+              <p className="text-[15px] font-semibold text-gray-900 truncate leading-tight">
+                {activeView === 'week' ? `Semana del ${Number(from.slice(8))} al ${Number(to.slice(8))}` : longDate(date)}
+              </p>
+              {activeView !== 'week' && dayTotal.n > 0 && (
+                <p className="text-xs text-gray-500 leading-tight">{pluralize(dayTotal.n, 'cita', 'citas')}{isManager && <> · {euros(dayTotal.revenue)}</>}</p>
+              )}
+            </div>
+            <button type="button" onClick={() => setDate(addDays(date, activeView === 'week' ? 7 : 1))} aria-label="Siguiente"
+              className="w-9 h-9 rounded-full hover:bg-gray-100 text-gray-700 text-lg">›</button>
+            {date !== today && (
+              <button type="button" onClick={() => setDate(today)} className="h-8 px-2.5 rounded-full text-xs font-semibold text-violet-700 hover:bg-violet-50">Hoy</button>
+            )}
+            <button type="button" onClick={() => setExpanded(false)} aria-label="Salir de pantalla completa" title="Reducir"
+              className="w-9 h-9 rounded-full hover:bg-gray-100 text-gray-700 flex items-center justify-center"><ExpandIcon out /></button>
+          </div>
+          {staff.length > 1 && <div className="shrink-0 px-3 sm:px-5 pt-2">{scopeChips(false)}</div>}
+          <div className="flex-1 min-h-0 flex flex-col p-2 sm:p-4">{grid(true)}</div>
+        </div>
+      )}
       {creating && !loading && (
         <NewBookingModal
           date={creating.date || date}

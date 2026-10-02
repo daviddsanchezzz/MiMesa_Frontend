@@ -194,13 +194,13 @@ export default function Agenda() {
   const grid = (full) => (
     <>
           {activeView === 'week' && (
-            <div className="flex-1 min-h-0"><WeekView fill from={from} today={today} tz={tz} staff={shownStaff} bookings={visibleWeek} absences={shownAbsences} onAbsenceClick={setSelectedAbsence} businessSchedule={schedule}
+            <div className={`flex-1 min-h-0 ${full ? '' : '-mx-4 lg:-mx-8'}`}><WeekView fill from={from} today={today} tz={tz} staff={shownStaff} bookings={visibleWeek} absences={shownAbsences} onAbsenceClick={setSelectedAbsence} businessSchedule={schedule}
               colors={colors} onBookingClick={setSelected}
               onEmptyClick={(resourceId, time, d) => openNew(resourceId, time, d)}
               onDayClick={(d) => { setDate(d); chooseView('day'); }} /></div>
           )}
           {activeView === 'day' && (
-            <div className="flex-1 min-h-0"><DayView fill compact={isMobile} date={date} tz={tz} staff={shownStaff} bookings={dayBookings} absences={shownAbsences} onAbsenceClick={setSelectedAbsence} businessSchedule={schedule}
+            <div className={`flex-1 min-h-0 ${full ? '' : '-mx-4 lg:-mx-8'}`}><DayView fill compact={isMobile} date={date} tz={tz} staff={shownStaff} bookings={dayBookings} absences={shownAbsences} onAbsenceClick={setSelectedAbsence} businessSchedule={schedule}
               staffSchedules={staffSchedules} colors={colors} isToday={date === today}
               onEmptyClick={(resourceId, time) => openNew(resourceId, time, date)} onBookingClick={setSelected} /></div>
           )}
@@ -208,7 +208,7 @@ export default function Agenda() {
   );
 
   return (
-    <div className="flex flex-1 min-h-0 flex-col gap-3 pb-3">
+    <div className="flex flex-1 min-h-0 flex-col gap-3">
       <div className="flex items-center gap-3 shrink-0">
         <h1 className="hidden lg:block text-2xl font-semibold tracking-tight text-gray-900 mr-auto">Agenda</h1>
         <Segmented value={activeView} onChange={chooseView} options={views} />
@@ -296,7 +296,7 @@ export default function Agenda() {
               className="w-9 h-9 rounded-full hover:bg-gray-100 text-gray-700 flex items-center justify-center"><ExpandIcon out /></button>
           </div>
           {staff.length > 1 && <div className="shrink-0 px-3 sm:px-5 pt-2">{scopeChips(false)}</div>}
-          <div className="flex-1 min-h-0 flex flex-col p-2 sm:p-4">{grid(true)}</div>
+          <div className="flex-1 min-h-0 flex flex-col">{grid(true)}</div>
         </div>
       )}
       {creating && !loading && (

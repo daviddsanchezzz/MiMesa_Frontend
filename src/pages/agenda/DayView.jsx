@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import TimeGrid, { AbsenceBlock, BookingBlock, PX_PER_MIN } from './TimeGrid';
 import StaffAvatar from './StaffAvatar';
-import { lineFor, nextBookingId, LineLegend } from './lineColors';
+import { lineFor, nextBookingId } from './lineColors';
 import { minutesInTz, toHHMM, windowsForDate, intersectWindows, layoutOverlaps, absenceSpan } from './utils';
 
 const UNASSIGNED = '__none__';
@@ -32,7 +32,6 @@ export default function DayView({ date, tz, staff, bookings, absences = [], onAb
 
   // Same colour rule as the list: the colour tells the state, the column tells who
   const nextId = nextBookingId(bookings, isToday);
-  const kinds = new Set(bookings.map((b) => lineFor(b, b._id === nextId)));
 
   const columns = useMemo(() => {
     const staffIds = new Set(staff.map((s) => s._id));
@@ -115,7 +114,6 @@ export default function DayView({ date, tz, staff, bookings, absences = [], onAb
           : columns} startMin={startMin} endMin={endMin} tz={tz} fill={fill} minColWidth={minColWidth}
           pxPerMin={ppm} snapX={compact && columns.length > 1} labelWidth={compact ? 'w-11' : 'w-14'} />
       </div>
-      <div className="shrink-0"><LineLegend kinds={kinds} /></div>
     </div>
   );
 }

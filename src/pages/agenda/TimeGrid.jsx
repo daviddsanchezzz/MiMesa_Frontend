@@ -32,7 +32,7 @@ export function AbsenceBlock({ absence, top, height, left = '4px', width = 'calc
       type="button"
       onClick={(e) => { e.stopPropagation(); onClick?.(absence); }}
       title={absence.reason ? `Ausente · ${absence.reason}` : 'Ausente'}
-      className={`absolute z-10 rounded-lg text-left overflow-hidden border border-gray-300 text-gray-600 hover:border-gray-400 flex flex-col justify-start items-start ${dense ? 'px-1 py-0.5' : 'px-2 py-1'}`}
+      className={`absolute z-10 rounded-sm text-left overflow-hidden border border-gray-300 text-gray-600 hover:border-gray-400 flex flex-col justify-start items-start ${dense ? 'px-1 py-0.5' : 'px-2 py-1'}`}
       style={{
         top, height, left, width,
         backgroundColor: '#f3f4f6',
@@ -56,7 +56,7 @@ export function BookingBlock({ booking, segment, color, kind = null, isNext = fa
       type="button"
       onClick={(e) => { e.stopPropagation(); onClick?.(booking); }}
       title={`${timeInTz(segment.start, tz)}–${timeInTz(segment.end, tz)} · ${booking.guestName} · ${segment.serviceName}`}
-      className={`absolute z-10 rounded-lg text-left overflow-hidden transition-shadow hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-gray-400 ${dense ? 'px-1.5 py-0.5' : 'px-2 py-1'} ${st?.dim ? 'opacity-70' : ''}`}
+      className={`absolute z-10 rounded-sm text-left overflow-hidden hover:brightness-95 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-gray-400 ${dense ? 'px-1.5 py-0.5' : 'px-2 py-1'} ${st?.dim ? 'opacity-70' : ''}`}
       style={{
         top, height, left, width,
         backgroundColor: muted ? '#f9fafb' : tint(color, 0.14),
@@ -90,7 +90,7 @@ function StateBlock({ booking, segment, kind, isNext, tz, top, height, left, wid
       type="button"
       onClick={(e) => { e.stopPropagation(); onClick?.(booking); }}
       title={`${timeInTz(segment.start, tz)}–${timeInTz(segment.end, tz)} · ${booking.guestName} · ${segment.serviceName} · ${l.label}`}
-      className={`absolute z-10 rounded-lg text-left overflow-hidden transition-shadow hover:shadow-md focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-gray-400 flex flex-col justify-start items-stretch ${dense ? 'px-1.5 py-0.5' : height < 44 ? 'px-2 py-0.5 justify-center' : 'px-2 py-1.5'} ${isNext ? 'ring-2 ring-violet-400 ring-offset-1' : ''}`}
+      className={`absolute z-10 rounded-sm text-left overflow-hidden hover:brightness-95 focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-gray-400 flex flex-col justify-start items-stretch ${dense ? 'px-1.5 py-0.5' : height < 44 ? 'px-2 py-0.5 justify-center' : 'px-2 py-1.5'} ${isNext ? 'ring-2 ring-violet-400 ring-offset-1' : ''}`}
       style={{
         top, height, left, width,
         backgroundColor: bg,
@@ -180,7 +180,7 @@ export default function TimeGrid({ columns, startMin, endMin, tz, minColWidth = 
   const inClosed = (col, minute) => !col.windows.some(([s, e]) => minute >= s && minute < e);
 
   return (
-    <div className={`bg-white rounded-2xl border border-gray-200 overflow-hidden ${fill ? 'h-full flex flex-col' : ''}`}>
+    <div className={`bg-white border-t border-gray-200 overflow-hidden ${fill ? 'h-full flex flex-col' : ''}`}>
       <div ref={scrollRef} data-page-scroll className={fill ? 'flex-1 min-h-0 overflow-auto overscroll-contain' : 'overflow-x-auto'}
         style={snapX ? { scrollSnapType: 'x proximity', scrollPaddingLeft: labelWidth === 'w-11' ? '2.75rem' : '3.5rem' } : undefined}>
         <div className="flex min-w-full w-max">

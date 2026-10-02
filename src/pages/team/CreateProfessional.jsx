@@ -14,6 +14,7 @@ export default function CreateProfessional({
   count,
 }) {
   const [step, setStep] = useState(0);
+  const [attendsAppointments, setAttendsAppointments] = useState(true);
   const [name, setName] = useState('');
   const [color, setColor] = useState(STAFF_COLORS[0]);
   const [selected, setSelected] = useState([]);
@@ -29,13 +30,22 @@ export default function CreateProfessional({
   const [error, setError] = useState('');
   async function save(e) {
     e.preventDefault();
-    if (step < 2) {
+    if (attendsAppointments && step < 2) {
       setStep(step + 1);
       return;
     }
     setBusy(true);
     setError('');
     try {
+      if (!attendsAppointments) {
+        await api.post('/invitations', {
+          name: name.trim(),
+          ...invite,
+          links: {},
+        });
+        onSaved(null);
+        return;
+      }
       // Keep the ID after partial success: retry never creates a duplicate.
       const r =
         created ||
@@ -67,7 +77,7 @@ export default function CreateProfessional({
   }
   return (
     <Modal
-      title="Nuevo profesional"
+      title="Añadir persona"
       onClose={() => {
         if (!busy) {
           if (created) onSaved(created);
@@ -77,10 +87,12 @@ export default function CreateProfessional({
       size="lg"
     >
       <form className="space-y-5" onSubmit={save}>
-        <p className="text-xs text-gray-500">
-          Paso {step + 1} de 3 ·{' '}
-          {['Datos y servicios', 'Horario', 'Acceso opcional'][step]}
-        </p>
+        {attendsAppointments && (
+          <p className="text-xs text-gray-500">
+            Paso {step + 1} de 3 ·{' '}
+            {['Datos y servicios', 'Horario', 'Acceso opcional'][step]}
+          </p>
+        )}
         {step === 0 && (
           <>
             <label className="block text-sm">
@@ -93,51 +105,73 @@ export default function CreateProfessional({
                 onChange={(e) => setName(e.target.value)}
               />
             </label>
-            <div className="flex flex-wrap gap-1" aria-label="Color">
-              {STAFF_COLORS.map((c) => (
-                <button
-                  type="button"
-                  key={c}
-                  aria-label={`Color ${c}`}
-                  aria-pressed={color === c}
-                  onClick={() => setColor(c)}
-                  className={`w-11 h-11 rounded-full border-4 ${color === c ? 'border-gray-900' : 'border-white'}`}
-                  style={{ backgroundColor: c }}
-                />
-              ))}
-            </div>
-            <fieldset className="space-y-1">
-              <legend className="font-medium text-sm">
-                Servicios que realiza
-              </legend>
-              {services.map((s) => (
-                <label
-                  key={s._id}
-                  className="flex items-center gap-3 min-h-11 text-sm"
-                >
-                  <input
-                    type="checkbox"
-                    checked={selected.includes(s._id)}
-                    onChange={(e) =>
-                      setSelected(
-                        e.target.checked
-                          ? [...selected, s._id]
-                          : selected.filter((id) => id !== s._id),
-                      )
-                    }
-                  />
-                  <span className="flex-1">{s.name}</span>
-                  <span className="text-xs text-gray-500">
-                    {s.durationMin} min · {euros(s.price?.amount)}
-                  </span>
-                </label>
-              ))}
-              {!services.length && (
-                <p className="text-sm text-gray-500">
-                  Podrás asignarle servicios cuando los crees en Configuración.
-                </p>
-              )}
-            </fieldset>
+            <label className="flex items-center gap-3 min-h-11 text-sm font-medium">
+              <input
+                type="checkbox"
+                checked={attendsAppointments}
+                disabled={busy}
+                onChange={(e) => setAttendsAppointments(e.target.checked)}
+              />
+              Atiende citas como profesional
+            </label>
+            <p className="text-sm text-gray-500">
+              {attendsAppointments
+                ? 'Tendrá servicios y horario. Podrás darle acceso a Vetra en el último paso.'
+                : 'Solo tendrá acceso a Vetra, sin agenda propia. Recibirá una invitación por email.'}
+            </p>
+            {!attendsAppointments && (
+              <InviteFields value={invite} onChange={setInvite} />
+            )}
+            {attendsAppointments && (
+              <>
+                <div className="flex flex-wrap gap-1" aria-label="Color">
+                  {STAFF_COLORS.map((c) => (
+                    <button
+                      type="button"
+                      key={c}
+                      aria-label={`Color ${c}`}
+                      aria-pressed={color === c}
+                      onClick={() => setColor(c)}
+                      className={`w-11 h-11 rounded-full border-4 ${color === c ? 'border-gray-900' : 'border-white'}`}
+                      style={{ backgroundColor: c }}
+                    />
+                  ))}
+                </div>
+                <fieldset className="space-y-1">
+                  <legend className="font-medium text-sm">
+                    Servicios que realiza
+                  </legend>
+                  {services.map((s) => (
+                    <label
+                      key={s._id}
+                      className="flex items-center gap-3 min-h-11 text-sm"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={selected.includes(s._id)}
+                        onChange={(e) =>
+                          setSelected(
+                            e.target.checked
+                              ? [...selected, s._id]
+                              : selected.filter((id) => id !== s._id),
+                          )
+                        }
+                      />
+                      <span className="flex-1">{s.name}</span>
+                      <span className="text-xs text-gray-500">
+                        {s.durationMin} min · {euros(s.price?.amount)}
+                      </span>
+                    </label>
+                  ))}
+                  {!services.length && (
+                    <p className="text-sm text-gray-500">
+                      Podrás asignarle servicios cuando los crees en
+                      Configuración.
+                    </p>
+                  )}
+                </fieldset>
+              </>
+            )}
           </>
         )}
         {step === 1 && (
@@ -220,11 +254,13 @@ export default function CreateProfessional({
           >
             {busy
               ? 'Guardando…'
-              : step < 2
-                ? 'Continuar'
-                : created
-                  ? 'Reintentar'
-                  : 'Crear profesional'}
+              : !attendsAppointments
+                ? 'Enviar invitación'
+                : step < 2
+                  ? 'Continuar'
+                  : created
+                    ? 'Reintentar'
+                    : 'Crear profesional'}
           </button>
         </div>
       </form>

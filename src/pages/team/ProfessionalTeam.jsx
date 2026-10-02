@@ -2,13 +2,12 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useSetMobileHeader } from '../../context/MobileHeaderContext';
-import { PageHeader } from '../../ui/kit';
+import { PageHeader, PrimaryButton } from '../../ui/kit';
 import api from '../../services/api';
 import { bookingsApi, apiError } from '../../services/bookingsApi';
 import ProfessionalAvatar from '../../components/ProfessionalAvatar';
 import { StaffServicesModal } from '../agenda/AgendaSettings';
 import {
-  btnPrimary,
   btnSecondary,
   staffColors,
   todayIn,
@@ -16,7 +15,6 @@ import {
 } from '../agenda/utils';
 import { ProfessionalPay, validMonth } from './AppointmentTeam';
 import ProfessionalAccess, {
-  InviteModal,
   MemberAccess,
   PendingAccess,
 } from './ProfessionalAccess';
@@ -51,7 +49,6 @@ function TeamContent() {
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
   const [adding, setAdding] = useState(false);
-  const [inviting, setInviting] = useState(false);
   const [inactive, setInactive] = useState(false);
   const [revision, setRevision] = useState(0);
   const [notice, setNotice] = useState('');
@@ -109,7 +106,12 @@ function TeamContent() {
     params.get('month'),
     todayIn(business?.timezone || DEFAULT_TZ).slice(0, 7),
   );
-  useSetMobileHeader({ title: resource?.name || 'Equipo' });
+  useSetMobileHeader({
+    title: resource?.name || 'Equipo',
+    action: params.get('pro')
+      ? false
+      : { label: 'Persona', onClick: () => setAdding(true) },
+  });
   function selectTab(key) {
     if (!confirmLeave()) return;
     const next = new URLSearchParams(params);
@@ -277,11 +279,10 @@ function TeamContent() {
           <PageHeader
             title="Equipo"
             subtitle={`${active.length} ${active.length === 1 ? 'profesional' : 'profesionales'}`}
-            mobileActions
             actions={
-              <button className={btnPrimary} onClick={() => setAdding(true)}>
-                + Profesional
-              </button>
+              <PrimaryButton onClick={() => setAdding(true)}>
+                Persona
+              </PrimaryButton>
             }
           />
           {!resources.length && (
@@ -385,12 +386,6 @@ function TeamContent() {
               ))}
             </section>
           )}
-          <button
-            className="min-h-11 text-sm text-gray-500"
-            onClick={() => setInviting(true)}
-          >
-            Invitar usuario sin profesional
-          </button>
         </>
       )}
       {adding && (
@@ -401,21 +396,17 @@ function TeamContent() {
           onClose={() => setAdding(false)}
           onSaved={(r) => {
             setAdding(false);
+            if (!r) {
+              setNotice('Invitación enviada');
+              reload();
+              return;
+            }
             setData((d) => ({
               ...d,
               resources: [...d.resources.filter((p) => p._id !== r._id), r],
             }));
             reload();
             open(r);
-          }}
-        />
-      )}
-      {inviting && (
-        <InviteModal
-          onClose={() => setInviting(false)}
-          onSaved={() => {
-            setInviting(false);
-            saved();
           }}
         />
       )}

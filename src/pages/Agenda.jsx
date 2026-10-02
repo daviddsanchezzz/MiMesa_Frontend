@@ -224,9 +224,23 @@ export default function Agenda() {
 
   return (
     <div ref={rootRef} className={fill ? 'flex flex-col gap-3' : 'space-y-4'} style={fill && fitHeight ? { height: fitHeight } : undefined}>
-      <div className="flex items-center justify-between gap-3 shrink-0">
-        <h1 className="hidden lg:block text-2xl font-semibold tracking-tight text-gray-900">Agenda</h1>
+      <div className="flex items-center gap-3 shrink-0">
+        <h1 className="hidden lg:block text-2xl font-semibold tracking-tight text-gray-900 mr-auto">Agenda</h1>
         <Segmented value={activeView} onChange={chooseView} options={views} />
+        {ready && (
+          <div className="ml-auto lg:ml-0 flex items-center gap-2">
+            <label className="flex items-center gap-1.5 text-xs text-gray-500 whitespace-nowrap">
+              <input type="checkbox" checked={showCancelled} onChange={(e) => setShowCancelled(e.target.checked)} />
+              Canceladas
+            </label>
+            {activeView !== 'list' && (
+              <button type="button" onClick={() => setExpanded(true)} title="Pantalla completa" aria-label="Ver el calendario a pantalla completa"
+                className="inline-flex items-center gap-1.5 h-8 px-2.5 sm:px-3 rounded-full border border-gray-200 text-xs font-semibold text-gray-700 hover:bg-gray-50">
+                <ExpandIcon /><span className="hidden sm:inline">Ampliar</span>
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {error && <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</p>}
@@ -255,31 +269,13 @@ export default function Agenda() {
         <>
           {scopeChips(true)}
           <div className="shrink-0">
-            <DayStrip date={date} today={today} counts={counts} closedDays={closedDays} onChange={setDate}
-              extra={(
-                <label className="hidden md:flex items-center gap-1.5 text-xs text-gray-500 whitespace-nowrap">
-                  <input type="checkbox" checked={showCancelled} onChange={(e) => setShowCancelled(e.target.checked)} />
-                  Canceladas
-                </label>
-              )} />
+            <DayStrip date={date} today={today} counts={counts} closedDays={closedDays} onChange={setDate} />
           </div>
-          <div className="shrink-0 flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
+          <div className="shrink-0">
             <p className="text-sm text-gray-600">
               <span className="font-semibold text-gray-900">{activeView === 'week' ? `Semana del ${Number(from.slice(8))} al ${Number(to.slice(8))}` : longDate(date)}</span>
               {activeView !== 'week' && dayTotal.n > 0 && <> · {pluralize(dayTotal.n, 'cita', 'citas')}{isManager && <> · {euros(dayTotal.revenue)}</>}</>}
             </p>
-            <div className="flex items-center gap-3">
-              <label className="md:hidden flex items-center gap-1.5 text-xs text-gray-500">
-                <input type="checkbox" checked={showCancelled} onChange={(e) => setShowCancelled(e.target.checked)} />
-                Ver canceladas
-              </label>
-              {activeView !== 'list' && (
-                <button type="button" onClick={() => setExpanded(true)} title="Pantalla completa" aria-label="Ver el calendario a pantalla completa"
-                  className="inline-flex items-center gap-1.5 h-8 px-3 rounded-full border border-gray-200 text-xs font-semibold text-gray-700 hover:bg-gray-50">
-                  <ExpandIcon />Ampliar
-                </button>
-              )}
-            </div>
           </div>
 
           {!expanded && grid(false)}

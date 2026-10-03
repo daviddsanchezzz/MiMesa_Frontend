@@ -189,10 +189,12 @@ export default function PublicBooking({ businessId: businessIdProp, slug = null 
   const back = () => setStep(step === 'details' ? 'time' : step === 'time' && service?.staffChoice !== null && catalog.staff.length > 1 ? 'staff' : 'service');
   const staffName = staffId ? catalog.staff.find((s) => String(s.id) === staffId)?.name : null;
 
-  return shell(
-    <div className="space-y-4">
-      {!isEmbed && (
-        <header className="text-center space-y-1">
+  return (
+    <div className={isEmbed ? 'w-full' : 'h-[100dvh] overflow-hidden bg-gray-50'}>
+      <div className={`mx-auto w-full max-w-lg ${isEmbed ? 'p-3' : 'flex h-full min-h-0 flex-col px-4'}`}>
+        <div className={`z-20 space-y-4 ${isEmbed ? 'sticky top-0 -mx-3 bg-white/95 px-3 pb-4 backdrop-blur' : 'shrink-0 bg-gray-50 pb-4 pt-6 sm:pt-10'}`}>
+          {!isEmbed && (
+            <header className="text-center space-y-1">
           {biz.logoUrl ? (
             <img src={biz.logoUrl} alt={biz.name} className="h-14 max-w-[180px] mx-auto object-contain" />
           ) : (
@@ -207,16 +209,22 @@ export default function PublicBooking({ businessId: businessIdProp, slug = null 
               {biz.phone && <a href={`tel:${biz.phone.replace(/\s/g, '')}`} className="hover:underline">{biz.phone}</a>}
             </p>
           )}
-        </header>
-      )}
+            </header>
+          )}
 
-      {step !== 'done' && (
-        <div className="flex gap-1.5" aria-hidden="true">
-          {[0, 1, 2, 3].map((i) => (
-            <div key={i} className="h-1 flex-1 rounded-full" style={{ backgroundColor: i <= Math.min(stepIndex, 3) ? color : '#e5e7eb' }} />
-          ))}
+          {step !== 'done' && (
+            <div className="flex gap-1.5" aria-hidden="true">
+              {[0, 1, 2, 3].map((i) => (
+                <div key={i} className="h-1 flex-1 rounded-full" style={{ backgroundColor: i <= Math.min(stepIndex, 3) ? color : '#e5e7eb' }} />
+              ))}
+            </div>
+          )}
         </div>
-      )}
+
+        <div
+          key={isEmbed ? 'embedded-content' : step}
+          className={`space-y-4 ${isEmbed ? '' : 'min-h-0 flex-1 overflow-y-auto overscroll-contain pb-6 sm:pb-10'}`}
+        >
 
       {service && step !== 'service' && step !== 'done' && (
         <div className="bg-white border border-gray-200 rounded-2xl px-4 py-3 flex items-center justify-between gap-3">
@@ -413,11 +421,13 @@ export default function PublicBooking({ businessId: businessIdProp, slug = null 
         </section>
       )}
 
-      {!isEmbed && (
-        <p className="text-center text-[11px] text-gray-400 pt-2">
-          Reservas con <a href="https://vetrareserve.com" className="font-semibold text-gray-500">Vetra</a>
-        </p>
-      )}
-    </div>,
+          {!isEmbed && (
+            <p className="text-center text-[11px] text-gray-400 pt-2">
+              Reservas con <a href="https://vetrareserve.com" className="font-semibold text-gray-500">Vetra</a>
+            </p>
+          )}
+        </div>
+      </div>
+    </div>
   );
 }

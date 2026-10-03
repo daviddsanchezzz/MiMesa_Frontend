@@ -76,7 +76,7 @@ function ReadOnlyInvoice({ invoice }) {
                   <p className="text-[15px] font-medium text-gray-900">{item.description}</p>
                   <p className="mt-0.5 text-[13px] text-gray-500">
                     {item.quantity !== null ? `${item.quantity} × ${formatInvoiceMoney(item.unitPrice, invoice.currency)}` : 'Cantidad no indicada'}
-                    {item.packageQuantity !== null && item.packageQuantity !== undefined && ` · Caja ${item.packageQuantity}`}
+                    {item.packageQuantity !== null && item.packageQuantity !== undefined && ` · Cajas ${item.packageQuantity}`}
                     {item.taxRate !== null && ` · IVA ${item.taxRate}%`}
                     {item.discount !== null && item.discount !== 0 && ` · Dto. ${item.discount}`}
                   </p>
@@ -129,7 +129,7 @@ function InvoiceLineEditor({ item, index, error, setItem, removeItem }) {
         </Field>
 
         <div className="mt-3 grid grid-cols-3 gap-x-2 gap-y-3 [&_label]:mb-1 [&_label]:text-[11px]">
-          <Field id={`mobile-line-${index}-package`} label="Caja"><input id={`mobile-line-${index}-package`} inputMode="decimal" value={item.packageQuantity} onChange={(e) => setItem(index, 'packageQuantity', decimalTyping(e.target.value))} className={compactNumberCls} /></Field>
+          <Field id={`mobile-line-${index}-package`} label="Cajas"><input id={`mobile-line-${index}-package`} inputMode="decimal" value={item.packageQuantity} onChange={(e) => setItem(index, 'packageQuantity', decimalTyping(e.target.value))} className={compactNumberCls} /></Field>
           <Field id={`mobile-line-${index}-quantity`} label="Cantidad"><input id={`mobile-line-${index}-quantity`} inputMode="decimal" value={item.quantity} onChange={(e) => setItem(index, 'quantity', decimalTyping(e.target.value))} className={compactNumberCls} /></Field>
           <Field id={`mobile-line-${index}-tax`} label="IVA %"><input id={`mobile-line-${index}-tax`} inputMode="decimal" value={item.taxRate} onChange={(e) => setItem(index, 'taxRate', decimalTyping(e.target.value))} className={compactNumberCls} /></Field>
           <Field id={`mobile-line-${index}-unit`} label="Precio"><input id={`mobile-line-${index}-unit`} inputMode="decimal" value={item.unitPrice} onChange={(e) => setItem(index, 'unitPrice', decimalTyping(e.target.value))} className={compactNumberCls} /></Field>
@@ -143,7 +143,7 @@ function InvoiceLineEditor({ item, index, error, setItem, removeItem }) {
           <input id={`line-${index}-description`} value={item.description} onChange={(e) => setItem(index, 'description', e.target.value)} className={inputCls} aria-invalid={Boolean(error)} aria-describedby={error ? `line-${index}-error` : undefined} />
           {error && <p id={`line-${index}-error`} className="mt-1 text-xs text-rose-600">{error}</p>}
         </Field>
-        <Field id={`line-${index}-package`} label="Caja" className="md:col-span-1 md:[&>label]:sr-only"><input id={`line-${index}-package`} inputMode="decimal" value={item.packageQuantity} onChange={(e) => setItem(index, 'packageQuantity', decimalTyping(e.target.value))} className={numberCls} /></Field>
+        <Field id={`line-${index}-package`} label="Cajas" className="md:col-span-1 md:[&>label]:sr-only"><input id={`line-${index}-package`} inputMode="decimal" value={item.packageQuantity} onChange={(e) => setItem(index, 'packageQuantity', decimalTyping(e.target.value))} className={numberCls} /></Field>
         <Field id={`line-${index}-quantity`} label="Cantidad" className="md:col-span-1 md:[&>label]:sr-only"><input id={`line-${index}-quantity`} inputMode="decimal" value={item.quantity} onChange={(e) => setItem(index, 'quantity', decimalTyping(e.target.value))} className={numberCls} /></Field>
         <Field id={`line-${index}-unit`} label="Precio unitario" className="md:col-span-2 md:[&>label]:sr-only"><input id={`line-${index}-unit`} inputMode="decimal" value={item.unitPrice} onChange={(e) => setItem(index, 'unitPrice', decimalTyping(e.target.value))} className={numberCls} /></Field>
         <Field id={`line-${index}-discount`} label="Descuento %" className="md:col-span-1 md:[&>label]:sr-only"><input id={`line-${index}-discount`} inputMode="decimal" value={item.discount} onChange={(e) => setItem(index, 'discount', decimalTyping(e.target.value))} className={numberCls} /></Field>
@@ -207,8 +207,9 @@ function InvoiceForm({ form, setForm, errors }) {
       </Section>
 
       <Section title="Productos / líneas" aside={<button type="button" onClick={addItem} className="text-[13px] font-semibold text-violet-700 hover:text-violet-900">+ Añadir línea</button>}>
+        <p className="mb-3 text-xs leading-5 text-gray-500 md:hidden"><span className="font-medium text-gray-600">Cajas</span> indica cajas o bultos, incluso fracciones; <span className="font-medium text-gray-600">Cantidad</span> son las unidades facturadas.</p>
         <div className="hidden md:grid grid-cols-12 gap-2 px-2 pb-2 border-b border-gray-200 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
-          <span className="col-span-3">Descripción</span><span className="text-right">Caja</span><span className="text-right">Cant.</span><span className="col-span-2 text-right">Precio</span><span className="text-right">Dto. %</span><span className="text-right">IVA</span><span className="col-span-2 text-right">Total</span><span />
+          <span className="col-span-3">Descripción</span><span className="text-right">Cajas</span><span className="text-right">Cant.</span><span className="col-span-2 text-right">Precio</span><span className="text-right">Dto. %</span><span className="text-right">IVA</span><span className="col-span-2 text-right">Total</span><span />
         </div>
         <div className="space-y-3 md:space-y-0 md:divide-y md:divide-gray-100">
           {form.items.map((item, index) => (
@@ -379,7 +380,7 @@ export default function InvoiceDetail() {
   }
 
   return (
-    <div className="w-full max-w-6xl mx-auto space-y-6">
+    <div className={`w-full max-w-6xl mx-auto space-y-6 ${editable ? 'pb-24 lg:pb-0' : ''}`}>
       <PageHeader
         title={editable ? 'Revisar factura' : 'Detalle de factura'}
         subtitle={editable ? 'Comprueba que los datos sean correctos antes de guardarla.' : 'Factura guardada y confirmada.'}
@@ -411,17 +412,13 @@ export default function InvoiceDetail() {
       {editable && form ? <InvoiceForm form={form} setForm={setForm} errors={errors} /> : <ReadOnlyInvoice invoice={invoice} />}
 
       {editable ? (
-        <div className="rounded-2xl border border-gray-200 bg-gray-50/80 p-3.5 sm:p-4 lg:flex lg:items-center lg:justify-between lg:gap-6">
-          <div className="mb-3 min-w-0 lg:mb-0">
-            <p className="text-sm font-semibold text-gray-900">{invoice.status === 'CONFIRMED' ? 'Guardar edición' : 'Finalizar revisión'}</p>
-            <p className="mt-0.5 text-xs text-gray-500">{dirty ? 'Tienes cambios sin guardar.' : 'Todos los cambios están guardados.'}{invoice.status === 'CONFIRMED' ? ' Al guardar volverá a quedar por revisar.' : ''}</p>
-          </div>
-          <div className="grid grid-cols-2 gap-2 lg:flex lg:shrink-0 lg:justify-end">
+        <div className="fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-30 border-t border-gray-200 bg-white/95 px-4 py-3 shadow-[0_-8px_24px_rgba(17,24,39,0.06)] backdrop-blur lg:sticky lg:bottom-0 lg:rounded-2xl lg:border lg:px-4">
+          <div className="mx-auto grid w-full max-w-6xl grid-cols-2 gap-2 lg:flex lg:items-center lg:justify-end">
             {invoice.status === 'CONFIRMED' && <GhostButton onClick={cancelEdit} disabled={saving || confirming} className="h-11 rounded-xl">Cancelar</GhostButton>}
             {invoice.status === 'CONFIRMED'
               ? <PrimaryButton icon="check" onClick={() => save()} disabled={saving || confirming || !dirty} className="h-11 rounded-xl">{saving ? 'Guardando…' : 'Guardar cambios'}</PrimaryButton>
               : <GhostButton onClick={() => save()} disabled={saving || confirming || !dirty} className="h-11 rounded-xl">{saving ? 'Guardando…' : 'Guardar cambios'}</GhostButton>}
-            {invoice.status !== 'CONFIRMED' && <PrimaryButton icon="check" onClick={confirm} disabled={saving || confirming} className="h-11">{confirming ? 'Confirmando…' : 'Confirmar factura'}</PrimaryButton>}
+            {invoice.status !== 'CONFIRMED' && <PrimaryButton icon="check" onClick={confirm} disabled={saving || confirming} className="h-11 rounded-xl">{confirming ? 'Confirmando…' : 'Confirmar factura'}</PrimaryButton>}
           </div>
         </div>
       ) : (

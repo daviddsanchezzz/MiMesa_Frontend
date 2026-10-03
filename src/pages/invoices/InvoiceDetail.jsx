@@ -377,15 +377,17 @@ export default function InvoiceDetail() {
 
   return (
     <div className={`w-full max-w-6xl mx-auto space-y-6 ${editable ? 'pb-24 lg:pb-0' : ''}`}>
-      <PageHeader
-        title={editable ? 'Revisar factura' : 'Detalle de factura'}
-        subtitle={editable ? 'Comprueba que los datos sean correctos antes de guardarla.' : 'Factura guardada y confirmada.'}
-        actions={<><GhostButton onClick={() => setShowDocument(true)}><Icon name="eye" className="w-4 h-4" />Ver original</GhostButton>{invoice.status === 'CONFIRMED' && !editable && <GhostButton onClick={() => setForceEditing(true)}><Icon name="edit" className="w-4 h-4" />Editar</GhostButton>}<GhostButton onClick={goBack}>Volver</GhostButton></>}
-      />
-
-      <div className="lg:hidden flex items-center justify-between gap-3">
-        <button type="button" onClick={goBack} className="inline-flex items-center gap-1 text-sm font-semibold text-gray-600"><Icon name="left" className="w-4 h-4" strokeWidth={2} />Facturas</button>
-        <button type="button" onClick={() => setShowDocument(true)} className="inline-flex items-center gap-1.5 text-sm font-semibold text-violet-700"><Icon name="eye" className="w-4 h-4" />Ver original</button>
+      <div>
+        <button type="button" onClick={goBack} className="inline-flex items-center gap-1 text-sm font-medium text-gray-500 hover:text-gray-900">
+          <Icon name="left" className="h-4 w-4" strokeWidth={2} />
+          Facturas
+        </button>
+        <PageHeader
+          title={editable ? 'Revisar factura' : 'Detalle de factura'}
+          subtitle={editable ? 'Comprueba que los datos sean correctos antes de guardarla.' : 'Factura guardada y confirmada.'}
+          actions={<><GhostButton onClick={() => setShowDocument(true)}><Icon name="eye" className="w-4 h-4" />Ver original</GhostButton>{invoice.status === 'CONFIRMED' && !editable && <GhostButton onClick={() => setForceEditing(true)}><Icon name="edit" className="w-4 h-4" />Editar</GhostButton>}</>}
+          className="mt-4"
+        />
       </div>
 
       {invoice.status === 'FAILED' && (
@@ -418,11 +420,35 @@ export default function InvoiceDetail() {
           </div>
         </div>
       ) : (
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 pt-4">
-          <GhostButton onClick={() => setShowDocument(true)}><Icon name="eye" className="w-4 h-4" />Ver documento original</GhostButton>
-          <div className="flex items-center gap-2">
-            {invoice.status === 'CONFIRMED' && <GhostButton onClick={() => setForceEditing(true)}><Icon name="edit" className="w-4 h-4" />Editar factura</GhostButton>}
-            <button type="button" onClick={remove} disabled={deleting} className="h-9 px-3.5 rounded-full text-[13px] font-semibold text-rose-600 hover:bg-rose-50 disabled:opacity-50">{deleting ? 'Eliminando…' : 'Eliminar factura'}</button>
+        <div className="border-t border-gray-100 pt-5">
+          <div className="grid grid-cols-2 gap-2.5 sm:flex sm:items-center sm:justify-end">
+            <button
+              type="button"
+              onClick={() => setShowDocument(true)}
+              className="col-span-2 inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-4 text-sm font-semibold text-gray-700 shadow-sm transition-colors hover:border-gray-300 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2 sm:col-span-1"
+            >
+              <Icon name="eye" className="h-[18px] w-[18px]" />
+              Ver documento
+            </button>
+            {invoice.status === 'CONFIRMED' && (
+              <button
+                type="button"
+                onClick={() => setForceEditing(true)}
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 text-sm font-semibold text-white shadow-sm shadow-violet-200 transition-colors hover:bg-violet-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2"
+              >
+                <Icon name="edit" className="h-[18px] w-[18px]" strokeWidth={2} />
+                Editar factura
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={remove}
+              disabled={deleting}
+              className={`${invoice.status !== 'CONFIRMED' ? 'col-span-2 sm:col-span-1' : ''} inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 text-sm font-semibold text-rose-700 transition-colors hover:border-rose-300 hover:bg-rose-100 focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50`}
+            >
+              <Icon name="trash" className="h-[18px] w-[18px]" />
+              {deleting ? 'Eliminando…' : 'Eliminar factura'}
+            </button>
           </div>
         </div>
       )}

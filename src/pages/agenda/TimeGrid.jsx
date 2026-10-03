@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { closedGaps, euros, minutesInTz, timeInTz, tint, toHHMM } from './utils';
 import { LINE } from './lineColors';
+import { gestureAxis, pageAfterSwipe } from './calendarGesture';
 
 export const PX_PER_MIN = 1.4;
 const SNAP_MIN = 15;
@@ -145,6 +146,59 @@ export default function TimeGrid({ columns, startMin, endMin, tz, minColWidth = 
   const labelRef = useRef(null);
   const [viewW, setViewW] = useState(0); // room for columns (scroller width minus the hour labels)
   useEffect(() => {
+    const el = scrollRef.current;
+    if (!snapX || !el || !viewW) return undefined;
+    let gesture = null;
+    let suppressClickUntil = 0;
+    const start = (event) => {
+      if (event.touches.length !== 1) { gesture = null; return; }
+      const touch = event.touches[0];
+      gesture = { x: touch.clientX, y: touch.clientY, axis: null, startLeft: el.scrollLeft };
+    };
+    const move = (event) => {
+      if (!gesture) return;
+      if (event.touches.length !== 1) { gesture = null; return; }
+      const touch = event.touches[0];
+      const dx = touch.clientX - gesture.x;
+      const dy = touch.clientY - gesture.y;
+      // Once chosen, the axis stays locked until the finger is lifted.
+      gesture.axis ||= gestureAxis(dx, dy);
+      if (gesture.axis === 'x') {
+        if (event.cancelable) event.preventDefault();
+        suppressClickUntil = Date.now() + 500;
+      }
+    };
+    const end = (event) => {
+      if (!gesture || !event.changedTouches.length) return;
+      const touch = event.changedTouches[0];
+      const left = pageAfterSwipe({
+        ...gesture, dx: touch.clientX - gesture.x, dy: touch.clientY - gesture.y,
+        width: viewW, maxLeft: el.scrollWidth - el.clientWidth,
+      });
+      if (gesture.axis === 'x') suppressClickUntil = Date.now() + 500;
+      gesture = null;
+      if (left !== null) el.scrollTo({ left, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+    };
+    const cancel = () => { gesture = null; };
+    const click = (event) => {
+      if (event.detail !== 0 && Date.now() < suppressClickUntil) {
+        event.preventDefault(); event.stopPropagation();
+      }
+    };
+    el.addEventListener('touchstart', start, { passive: true });
+    el.addEventListener('touchmove', move, { passive: false });
+    el.addEventListener('touchend', end, { passive: true });
+    el.addEventListener('touchcancel', cancel, { passive: true });
+    el.addEventListener('click', click, true);
+    return () => {
+      el.removeEventListener('touchstart', start);
+      el.removeEventListener('touchmove', move);
+      el.removeEventListener('touchend', end);
+      el.removeEventListener('touchcancel', cancel);
+      el.removeEventListener('click', click, true);
+    };
+  }, [snapX, viewW]);
+  useEffect(() => {
     const el = scrollRef.current; if (!el) return undefined;
     const ro = new ResizeObserver(() => setViewW(el.clientWidth - (labelRef.current?.offsetWidth || 0)));
     ro.observe(el);
@@ -182,7 +236,7 @@ export default function TimeGrid({ columns, startMin, endMin, tz, minColWidth = 
   return (
     <div className={`bg-white border-t border-gray-200 overflow-hidden ${fill ? 'h-full flex flex-col' : ''}`}>
       <div ref={scrollRef} data-page-scroll className={fill ? 'flex-1 min-h-0 overflow-auto overscroll-none' : 'overflow-x-auto overscroll-none'}
-        style={snapX ? { scrollSnapType: 'x mandatory', scrollPaddingLeft: labelWidth === 'w-11' ? '2.75rem' : '3.5rem' } : undefined}>
+        style={snapX ? { touchAction: 'pan-y pinch-zoom', scrollSnapType: 'x mandatory', scrollPaddingLeft: labelWidth === 'w-11' ? '2.75rem' : '3.5rem' } : undefined}>
         <div className="flex min-w-full w-max">
           {/* Hour labels */}
           <div ref={labelRef} className={`sticky left-0 z-30 bg-white border-r border-gray-100 ${labelWidth} shrink-0`}>

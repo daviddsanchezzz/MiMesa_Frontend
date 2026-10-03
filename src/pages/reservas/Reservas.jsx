@@ -24,8 +24,7 @@ function nowMinutes(tz) {
 }
 
 /** The day by shift: Comida, Cena… each with its reservations in time order. */
-function DayList({ date, today, tz, showCancelled, onShowCancelledChange }) {
-  const day = useRestaurantDay(date);
+function DayList({ date, today, tz, showCancelled, day }) {
   const { reservations, shifts, shiftOf, tables, pending, actions, isManager, loading } = day;
   const [openId, setOpenId] = useState(null);
   const [showPending, setShowPending] = useState(false);
@@ -34,7 +33,6 @@ function DayList({ date, today, tz, showCancelled, onShowCancelledChange }) {
 
   const visible = reservations.filter((r) => showCancelled || live(r));
   const groups = useMemo(() => groupByShift(visible, shifts, shiftOf), [visible, shifts, shiftOf]);
-  const cancelledCount = reservations.length - reservations.filter(live).length;
   const opened = openId ? reservations.find((r) => r._id === openId) : null;
   const pendingHere = pending.filter((r) => r.date >= today);
 
@@ -45,10 +43,6 @@ function DayList({ date, today, tz, showCancelled, onShowCancelledChange }) {
           <span className="font-semibold text-gray-900">{longDate(date)}</span>
           {reservations.length > 0 && <> · {plural(reservations.filter(live).length, 'reserva', 'reservas')} · {plural(peopleOf(reservations), 'persona', 'personas')}</>}
         </p>
-          <label className="flex min-h-11 items-center gap-1.5 text-xs text-gray-500">
-            <input type="checkbox" checked={showCancelled} onChange={(e) => onShowCancelledChange(e.target.checked)} />
-            Ver canceladas ({cancelledCount})
-          </label>
       </div>
 
       {pendingHere.length > 0 && (
@@ -117,6 +111,10 @@ export default function Reservas() {
   const view = ['calendar', 'map'].includes(params.get('view')) ? params.get('view') : 'list';
   const [date, setDate] = useState(() => (isDate(params.get('date')) ? params.get('date') : today));
   const [showCancelled, setShowCancelled] = useState(false);
+  const selectedDay = useRestaurantDay(date);
+  // Cached data may still belong to the previous date while the next one loads.
+  const day = { ...selectedDay, reservations: selectedDay.reservations.filter((r) => r.date === date) };
+  const cancelledCount = day.reservations.filter((r) => !live(r)).length;
 
   useSetMobileHeader({ title: 'Reservas', action: false });
 
@@ -147,15 +145,21 @@ export default function Reservas() {
 
   return (
     <div className="w-full space-y-4">
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex flex-wrap items-center gap-2">
         <h1 className="hidden lg:block text-2xl font-semibold tracking-tight text-gray-900">Reservas</h1>
         <Segmented value={view} onChange={setView} options={[['list', 'Lista'], ['calendar', 'Calendario'], ['map', 'Plano']]} />
+        {view === 'list' && cancelledCount > 0 && (
+          <label className="ml-auto flex min-h-8 items-center gap-1.5 text-xs text-gray-500 whitespace-nowrap">
+            <input type="checkbox" checked={showCancelled} onChange={(e) => setShowCancelled(e.target.checked)} />
+            Canceladas ({cancelledCount})
+          </label>
+        )}
       </div>
 
       {view === 'list' ? (
         <>
           <DayStrip date={date} today={today} counts={counts} onChange={setDate} />
-          <DayList key={date} date={date} today={today} tz={tz} showCancelled={showCancelled} onShowCancelledChange={setShowCancelled} />
+          <DayList key={date} date={date} today={today} tz={tz} showCancelled={showCancelled} day={day} />
         </>
       ) : view === 'map' ? (
         <>

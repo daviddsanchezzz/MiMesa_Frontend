@@ -26,15 +26,19 @@ test('decimal inputs accept Spanish commas and become API numbers or null', () =
 test('invoice form keeps nullable decimals and creates the PATCH shape', () => {
   const form = invoiceToForm({
     supplier: { name: 'Makro', taxId: 'A1' }, invoiceNumber: 'F-1', invoiceDate: '2026-10-03', currency: 'EUR',
-    items: [{ _id: 'line-1', description: 'Agua', quantity: null, unitPrice: 2.5, discount: null, taxRate: 10, total: 2.5 }],
-    subtotal: 2.5, taxAmount: null, total: 2.5,
+    items: [{ _id: 'line-1', description: 'Agua', packageQuantity: 0.5, quantity: null, unitPrice: 2.5, discount: null, taxRate: 10, total: 2.5 }],
+    grossAmount: 2.5, discountRate: 7, discountAmount: 0.18, shippingAmount: 0,
+    subtotal: 2.32, taxAmount: null, total: 2.5,
+    taxBreakdown: [{ taxRate: 10, taxableBase: 2.32, taxAmount: 0.23 }],
   });
   assert.equal(form.items[0].quantity, '');
   assert.equal(form.items[0].unitPrice, '2,5');
   assert.deepEqual(formToPayload(form), {
     supplier: { name: 'Makro', taxId: 'A1' },
     invoiceNumber: 'F-1', invoiceDate: '2026-10-03', currency: 'EUR',
-    items: [{ description: 'Agua', quantity: null, unitPrice: 2.5, discount: null, taxRate: 10, total: 2.5 }],
-    subtotal: 2.5, taxAmount: null, total: 2.5,
+    items: [{ description: 'Agua', packageQuantity: 0.5, quantity: null, unitPrice: 2.5, discount: null, taxRate: 10, total: 2.5 }],
+    grossAmount: 2.5, discountRate: 7, discountAmount: 0.18, shippingAmount: 0,
+    subtotal: 2.32, taxAmount: null, total: 2.5,
+    taxBreakdown: [{ taxRate: 10, taxableBase: 2.32, taxAmount: 0.23 }],
   });
 });

@@ -63,15 +63,26 @@ export function invoiceToForm(invoice) {
     items: (invoice?.items || []).map((item, index) => ({
       key: item._id || `line-${index}-${Date.now()}`,
       description: item.description || '',
+      packageQuantity: inputNumber(item.packageQuantity),
       quantity: inputNumber(item.quantity),
       unitPrice: inputNumber(item.unitPrice),
       discount: inputNumber(item.discount),
       taxRate: inputNumber(item.taxRate),
       total: inputNumber(item.total),
     })),
+    grossAmount: inputNumber(invoice?.grossAmount),
+    discountRate: inputNumber(invoice?.discountRate),
+    discountAmount: inputNumber(invoice?.discountAmount),
+    shippingAmount: inputNumber(invoice?.shippingAmount),
     subtotal: inputNumber(invoice?.subtotal),
     taxAmount: inputNumber(invoice?.taxAmount),
     total: inputNumber(invoice?.total),
+    taxBreakdown: (invoice?.taxBreakdown || []).map((entry, index) => ({
+      key: `tax-${index}-${Date.now()}`,
+      taxRate: inputNumber(entry.taxRate),
+      taxableBase: inputNumber(entry.taxableBase),
+      taxAmount: inputNumber(entry.taxAmount),
+    })),
   };
 }
 
@@ -84,17 +95,27 @@ export function formToPayload(form) {
     invoiceNumber: form.invoiceNumber.trim() || null,
     invoiceDate: form.invoiceDate || null,
     currency: form.currency.trim().toUpperCase() || null,
-    items: form.items.map(({ description, quantity, unitPrice, discount, taxRate, total }) => ({
+    items: form.items.map(({ description, packageQuantity, quantity, unitPrice, discount, taxRate, total }) => ({
       description: description.trim(),
+      packageQuantity: apiNumber(packageQuantity),
       quantity: apiNumber(quantity),
       unitPrice: apiNumber(unitPrice),
       discount: apiNumber(discount),
       taxRate: apiNumber(taxRate),
       total: apiNumber(total),
     })),
+    grossAmount: apiNumber(form.grossAmount),
+    discountRate: apiNumber(form.discountRate),
+    discountAmount: apiNumber(form.discountAmount),
+    shippingAmount: apiNumber(form.shippingAmount),
     subtotal: apiNumber(form.subtotal),
     taxAmount: apiNumber(form.taxAmount),
     total: apiNumber(form.total),
+    taxBreakdown: form.taxBreakdown.map(({ taxRate, taxableBase, taxAmount }) => ({
+      taxRate: apiNumber(taxRate),
+      taxableBase: apiNumber(taxableBase),
+      taxAmount: apiNumber(taxAmount),
+    })),
   };
 }
 

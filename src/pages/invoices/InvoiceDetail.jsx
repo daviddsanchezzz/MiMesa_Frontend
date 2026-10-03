@@ -75,6 +75,7 @@ function ReadOnlyInvoice({ invoice }) {
                   <p className="text-[15px] font-medium text-gray-900">{item.description}</p>
                   <p className="mt-0.5 text-[13px] text-gray-500">
                     {item.quantity !== null ? `${item.quantity} × ${formatInvoiceMoney(item.unitPrice, invoice.currency)}` : 'Cantidad no indicada'}
+                    {item.packageQuantity !== null && item.packageQuantity !== undefined && ` · Caja ${item.packageQuantity}`}
                     {item.taxRate !== null && ` · IVA ${item.taxRate}%`}
                     {item.discount !== null && item.discount !== 0 && ` · Dto. ${item.discount}`}
                   </p>
@@ -93,9 +94,17 @@ function ReadOnlyInvoice({ invoice }) {
 
 function TotalsReadOnly({ invoice }) {
   return (
-    <section className="ml-auto max-w-sm border-t border-gray-200 pt-4 space-y-2">
-      <div className="flex items-baseline justify-between gap-4 text-sm"><span className="text-gray-500">Subtotal</span><span className="tabular-nums text-gray-900">{formatInvoiceMoney(invoice.subtotal, invoice.currency)}</span></div>
+    <section className="ml-auto max-w-md border-t border-gray-200 pt-4 space-y-2">
+      {invoice.grossAmount !== null && invoice.grossAmount !== undefined && <div className="flex items-baseline justify-between gap-4 text-sm"><span className="text-gray-500">Total neto</span><span className="tabular-nums text-gray-900">{formatInvoiceMoney(invoice.grossAmount, invoice.currency)}</span></div>}
+      {invoice.discountAmount !== null && invoice.discountAmount !== undefined && <div className="flex items-baseline justify-between gap-4 text-sm"><span className="text-gray-500">Descuento global{invoice.discountRate !== null && invoice.discountRate !== undefined ? ` (${invoice.discountRate}%)` : ''}</span><span className="tabular-nums text-gray-900">− {formatInvoiceMoney(invoice.discountAmount, invoice.currency)}</span></div>}
+      {invoice.shippingAmount !== null && invoice.shippingAmount !== undefined && <div className="flex items-baseline justify-between gap-4 text-sm"><span className="text-gray-500">Portes</span><span className="tabular-nums text-gray-900">{formatInvoiceMoney(invoice.shippingAmount, invoice.currency)}</span></div>}
+      <div className="flex items-baseline justify-between gap-4 text-sm"><span className="text-gray-500">Base imponible</span><span className="tabular-nums text-gray-900">{formatInvoiceMoney(invoice.subtotal, invoice.currency)}</span></div>
       <div className="flex items-baseline justify-between gap-4 text-sm"><span className="text-gray-500">IVA</span><span className="tabular-nums text-gray-900">{formatInvoiceMoney(invoice.taxAmount, invoice.currency)}</span></div>
+      {invoice.taxBreakdown?.length > 0 && (
+        <div className="my-3 rounded-xl bg-gray-50 px-3 py-2 space-y-1">
+          {invoice.taxBreakdown.map((entry, index) => <div key={`${entry.taxRate}-${index}`} className="flex justify-between gap-4 text-xs text-gray-500"><span>IVA {entry.taxRate ?? '—'}% sobre {formatInvoiceMoney(entry.taxableBase, invoice.currency)}</span><span className="tabular-nums">{formatInvoiceMoney(entry.taxAmount, invoice.currency)}</span></div>)}
+        </div>
+      )}
       <div className="flex items-baseline justify-between gap-4 border-t border-gray-100 pt-3"><span className="font-semibold text-gray-900">Total</span><span className="text-2xl font-semibold tracking-tight tabular-nums text-gray-900">{formatInvoiceMoney(invoice.total, invoice.currency)}</span></div>
     </section>
   );
@@ -111,7 +120,16 @@ function InvoiceForm({ form, setForm, errors }) {
   const removeItem = (index) => setForm((current) => ({ ...current, items: current.items.filter((_, itemIndex) => itemIndex !== index) }));
   const addItem = () => setForm((current) => ({
     ...current,
-    items: [...current.items, { key: `new-${Date.now()}`, description: '', quantity: '', unitPrice: '', discount: '', taxRate: '', total: '' }],
+    items: [...current.items, { key: `new-${Date.now()}`, description: '', packageQuantity: '', quantity: '', unitPrice: '', discount: '', taxRate: '', total: '' }],
+  }));
+  const setTaxEntry = (index, field, value) => setForm((current) => ({
+    ...current,
+    taxBreakdown: current.taxBreakdown.map((entry, entryIndex) => entryIndex === index ? { ...entry, [field]: value } : entry),
+  }));
+  const removeTaxEntry = (index) => setForm((current) => ({ ...current, taxBreakdown: current.taxBreakdown.filter((_, entryIndex) => entryIndex !== index) }));
+  const addTaxEntry = () => setForm((current) => ({
+    ...current,
+    taxBreakdown: [...current.taxBreakdown, { key: `tax-new-${Date.now()}`, taxRate: '', taxableBase: '', taxAmount: '' }],
   }));
 
   return (
@@ -143,16 +161,17 @@ function InvoiceForm({ form, setForm, errors }) {
 
       <Section title="Productos / líneas" aside={<button type="button" onClick={addItem} className="text-[13px] font-semibold text-violet-700 hover:text-violet-900">+ Añadir línea</button>}>
         <div className="hidden md:grid grid-cols-12 gap-2 px-2 pb-2 border-b border-gray-200 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
-          <span className="col-span-4">Descripción</span><span className="col-span-1 text-right">Cant.</span><span className="col-span-2 text-right">Precio</span><span className="col-span-1 text-right">Dto.</span><span className="col-span-1 text-right">IVA</span><span className="col-span-2 text-right">Total</span><span />
+          <span className="col-span-3">Descripción</span><span className="text-right">Caja</span><span className="text-right">Cant.</span><span className="col-span-2 text-right">Precio</span><span className="text-right">Dto.</span><span className="text-right">IVA</span><span className="col-span-2 text-right">Total</span><span />
         </div>
         <div className="space-y-3 md:space-y-0 md:divide-y md:divide-gray-100">
           {form.items.map((item, index) => (
             <div key={item.key} className="rounded-2xl border border-gray-200 p-3 md:rounded-none md:border-0 md:px-2 md:py-3 md:grid md:grid-cols-12 md:gap-2 md:items-end">
-              <Field id={`line-${index}-description`} label="Descripción" className="md:col-span-4 md:[&>label]:sr-only">
+              <Field id={`line-${index}-description`} label="Descripción" className="md:col-span-3 md:[&>label]:sr-only">
                 <input id={`line-${index}-description`} value={item.description} onChange={(e) => setItem(index, 'description', e.target.value)} className={inputCls} aria-invalid={Boolean(errors.items?.[index])} aria-describedby={errors.items?.[index] ? `line-${index}-error` : undefined} />
                 {errors.items?.[index] && <p id={`line-${index}-error`} className="mt-1 text-xs text-rose-600">{errors.items[index]}</p>}
               </Field>
               <div className="grid grid-cols-2 gap-3 mt-3 md:contents">
+                <Field id={`line-${index}-package`} label="Caja" className="md:col-span-1 md:[&>label]:sr-only"><input id={`line-${index}-package`} inputMode="decimal" value={item.packageQuantity} onChange={(e) => setItem(index, 'packageQuantity', decimalTyping(e.target.value))} className={numberCls} /></Field>
                 <Field id={`line-${index}-quantity`} label="Cantidad" className="md:col-span-1 md:[&>label]:sr-only"><input id={`line-${index}-quantity`} inputMode="decimal" value={item.quantity} onChange={(e) => setItem(index, 'quantity', decimalTyping(e.target.value))} className={numberCls} /></Field>
                 <Field id={`line-${index}-unit`} label="Precio unitario" className="md:col-span-2 md:[&>label]:sr-only"><input id={`line-${index}-unit`} inputMode="decimal" value={item.unitPrice} onChange={(e) => setItem(index, 'unitPrice', decimalTyping(e.target.value))} className={numberCls} /></Field>
                 <Field id={`line-${index}-discount`} label="Descuento" className="md:col-span-1 md:[&>label]:sr-only"><input id={`line-${index}-discount`} inputMode="decimal" value={item.discount} onChange={(e) => setItem(index, 'discount', decimalTyping(e.target.value))} className={numberCls} /></Field>
@@ -170,9 +189,27 @@ function InvoiceForm({ form, setForm, errors }) {
         </div>
       </Section>
 
+      <Section title="Desglose de IVA" aside={<button type="button" onClick={addTaxEntry} className="text-[13px] font-semibold text-violet-700 hover:text-violet-900">+ Añadir tipo</button>}>
+        <div className="space-y-3 pt-1">
+          {form.taxBreakdown.map((entry, index) => (
+            <div key={entry.key} className="grid grid-cols-2 sm:grid-cols-[1fr_1.5fr_1.5fr_auto] gap-2 items-end">
+              <Field id={`tax-${index}-rate`} label="IVA %"><input id={`tax-${index}-rate`} inputMode="decimal" value={entry.taxRate} onChange={(e) => setTaxEntry(index, 'taxRate', decimalTyping(e.target.value))} className={numberCls} /></Field>
+              <Field id={`tax-${index}-base`} label="Base imponible"><input id={`tax-${index}-base`} inputMode="decimal" value={entry.taxableBase} onChange={(e) => setTaxEntry(index, 'taxableBase', decimalTyping(e.target.value))} className={numberCls} /></Field>
+              <Field id={`tax-${index}-amount`} label="Cuota IVA"><input id={`tax-${index}-amount`} inputMode="decimal" value={entry.taxAmount} onChange={(e) => setTaxEntry(index, 'taxAmount', decimalTyping(e.target.value))} className={numberCls} /></Field>
+              <button type="button" onClick={() => removeTaxEntry(index)} aria-label={`Eliminar tipo de IVA ${index + 1}`} className="h-10 w-10 rounded-xl text-rose-600 hover:bg-rose-50 inline-flex items-center justify-center"><Icon name="trash" className="w-4 h-4" /></button>
+            </div>
+          ))}
+          {!form.taxBreakdown.length && <p className="py-3 text-sm text-gray-500">No hay desglose de IVA registrado.</p>}
+        </div>
+      </Section>
+
       <Section title="Totales" className="ml-auto max-w-md">
         <div className="space-y-3 pt-1">
-          <Field id="subtotal" label="Subtotal" className="grid grid-cols-[1fr_minmax(9rem,12rem)] items-center gap-4 [&>label]:mb-0"><input id="subtotal" inputMode="decimal" value={form.subtotal} onChange={(e) => setRoot('subtotal', decimalTyping(e.target.value))} className={numberCls} /></Field>
+          <Field id="gross-amount" label="Total neto" className="grid grid-cols-[1fr_minmax(9rem,12rem)] items-center gap-4 [&>label]:mb-0"><input id="gross-amount" inputMode="decimal" value={form.grossAmount} onChange={(e) => setRoot('grossAmount', decimalTyping(e.target.value))} className={numberCls} /></Field>
+          <Field id="discount-rate" label="Descuento global %" className="grid grid-cols-[1fr_minmax(9rem,12rem)] items-center gap-4 [&>label]:mb-0"><input id="discount-rate" inputMode="decimal" value={form.discountRate} onChange={(e) => setRoot('discountRate', decimalTyping(e.target.value))} className={numberCls} /></Field>
+          <Field id="discount-amount" label="Importe descuento" className="grid grid-cols-[1fr_minmax(9rem,12rem)] items-center gap-4 [&>label]:mb-0"><input id="discount-amount" inputMode="decimal" value={form.discountAmount} onChange={(e) => setRoot('discountAmount', decimalTyping(e.target.value))} className={numberCls} /></Field>
+          <Field id="shipping-amount" label="Portes" className="grid grid-cols-[1fr_minmax(9rem,12rem)] items-center gap-4 [&>label]:mb-0"><input id="shipping-amount" inputMode="decimal" value={form.shippingAmount} onChange={(e) => setRoot('shippingAmount', decimalTyping(e.target.value))} className={numberCls} /></Field>
+          <Field id="subtotal" label="Base imponible indicada" className="grid grid-cols-[1fr_minmax(9rem,12rem)] items-center gap-4 [&>label]:mb-0"><input id="subtotal" inputMode="decimal" value={form.subtotal} onChange={(e) => setRoot('subtotal', decimalTyping(e.target.value))} className={numberCls} /></Field>
           <Field id="tax-amount" label="IVA" className="grid grid-cols-[1fr_minmax(9rem,12rem)] items-center gap-4 [&>label]:mb-0"><input id="tax-amount" inputMode="decimal" value={form.taxAmount} onChange={(e) => setRoot('taxAmount', decimalTyping(e.target.value))} className={numberCls} /></Field>
           <div className="border-t border-gray-200 pt-3">
             <Field id="invoice-total" label="Total" className="grid grid-cols-[1fr_minmax(9rem,12rem)] items-center gap-4 [&>label]:mb-0 [&>label]:text-base [&>label]:font-semibold [&>label]:text-gray-900"><input id="invoice-total" inputMode="decimal" value={form.total} onChange={(e) => setRoot('total', decimalTyping(e.target.value))} className={`${numberCls} text-lg font-semibold`} /></Field>
@@ -204,7 +241,9 @@ export default function InvoiceDetail() {
     refetchInterval: (query) => query.state.data?.status === 'PROCESSING' ? 2000 : false,
   });
   const invoice = invoiceQuery.data;
-  const editable = invoice && ['REVIEW', 'FAILED'].includes(invoice.status);
+  const naturallyEditable = invoice && ['REVIEW', 'FAILED'].includes(invoice.status);
+  const [forceEditing, setForceEditing] = useState(false);
+  const editable = Boolean(naturallyEditable || (invoice?.status === 'CONFIRMED' && forceEditing));
   const [form, setForm] = useState(null);
   const [baseline, setBaseline] = useState('');
   const [errors, setErrors] = useState({});
@@ -228,6 +267,15 @@ export default function InvoiceDetail() {
 
   const goBack = () => { if (confirmLeave()) navigate('/facturas'); };
 
+  const cancelEdit = () => {
+    if (dirty && !window.confirm('¿Descartar los cambios sin guardar?')) return;
+    setForceEditing(false);
+    setForm(null);
+    setBaseline('');
+    setErrors({});
+    setRequestError('');
+  };
+
   const save = async ({ quiet = false } = {}) => {
     const nextErrors = validateForm(form);
     setErrors(nextErrors);
@@ -238,12 +286,13 @@ export default function InvoiceDetail() {
     setSaving(true);
     setRequestError('');
     try {
+      const wasConfirmed = invoice.status === 'CONFIRMED';
       const updated = await invoicesApi.update(id, formToPayload(form));
       const next = invoiceToForm(updated);
       setForm(next);
       setBaseline(JSON.stringify(next));
       queryClient.setQueryData(['invoices', id], updated);
-      if (!quiet) notify('Cambios guardados');
+      if (!quiet) notify(wasConfirmed ? 'Cambios guardados. Revisa y confirma de nuevo la factura' : 'Cambios guardados');
       return updated;
     } catch (error) {
       setRequestError(apiErrorMessage(error, 'No se pudieron guardar los cambios.'));
@@ -266,6 +315,8 @@ export default function InvoiceDetail() {
       queryClient.setQueryData(['invoices', id], confirmed);
       notify('Factura confirmada');
       setBaseline('');
+      setForceEditing(false);
+      setForm(null);
     } catch (error) {
       setRequestError(apiErrorMessage(error, 'No se pudo confirmar la factura.'));
     } finally {
@@ -303,7 +354,7 @@ export default function InvoiceDetail() {
       <PageHeader
         title={editable ? 'Revisar factura' : 'Detalle de factura'}
         subtitle={editable ? 'Comprueba que los datos sean correctos antes de guardarla.' : 'Factura guardada y confirmada.'}
-        actions={<><GhostButton onClick={() => setShowDocument(true)}><Icon name="eye" className="w-4 h-4" />Ver original</GhostButton><GhostButton onClick={goBack}>Volver</GhostButton></>}
+        actions={<><GhostButton onClick={() => setShowDocument(true)}><Icon name="eye" className="w-4 h-4" />Ver original</GhostButton>{invoice.status === 'CONFIRMED' && !editable && <GhostButton onClick={() => setForceEditing(true)}><Icon name="edit" className="w-4 h-4" />Editar</GhostButton>}<GhostButton onClick={goBack}>Volver</GhostButton></>}
       />
 
       <div className="lg:hidden flex items-center justify-between gap-3">
@@ -319,7 +370,7 @@ export default function InvoiceDetail() {
         </div>
       )}
 
-      {invoice.extractionWarnings?.length > 0 && editable && (
+      {invoice.extractionWarnings?.length > 0 && (
         <div className="rounded-2xl bg-amber-50 px-4 py-3.5 flex items-start gap-3">
           <Icon name="alert" className="w-5 h-5 text-amber-600 mt-0.5" />
           <div><p className="text-sm font-semibold text-amber-900">Revisa los importes</p>{invoice.extractionWarnings.map((warning) => <p key={warning} className="mt-0.5 text-sm text-amber-800">{warning}.</p>)}</div>
@@ -334,14 +385,18 @@ export default function InvoiceDetail() {
         <div className="sticky bottom-[calc(4rem+env(safe-area-inset-bottom))] lg:bottom-0 z-20 -mx-4 lg:mx-0 px-4 lg:px-0 py-3 bg-white/95 backdrop-blur border-t border-gray-100 lg:flex lg:items-center lg:justify-between">
           <p className="hidden lg:block text-xs text-gray-500">{dirty ? 'Tienes cambios sin guardar' : 'Todos los cambios están guardados'}</p>
           <div className="grid grid-cols-2 gap-2 lg:flex lg:justify-end">
+            {invoice.status === 'CONFIRMED' && <GhostButton onClick={cancelEdit} disabled={saving || confirming} className="h-11 rounded-xl">Cancelar</GhostButton>}
             <GhostButton onClick={() => save()} disabled={saving || confirming || !dirty} className="h-11 rounded-xl">{saving ? 'Guardando…' : 'Guardar cambios'}</GhostButton>
-            <PrimaryButton icon="check" onClick={confirm} disabled={saving || confirming} className="h-11">{confirming ? 'Confirmando…' : 'Confirmar factura'}</PrimaryButton>
+            {invoice.status !== 'CONFIRMED' && <PrimaryButton icon="check" onClick={confirm} disabled={saving || confirming} className="h-11">{confirming ? 'Confirmando…' : 'Confirmar factura'}</PrimaryButton>}
           </div>
         </div>
       ) : (
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 pt-4">
           <GhostButton onClick={() => setShowDocument(true)}><Icon name="eye" className="w-4 h-4" />Ver documento original</GhostButton>
-          <button type="button" onClick={remove} disabled={deleting} className="h-9 px-3.5 rounded-full text-[13px] font-semibold text-rose-600 hover:bg-rose-50 disabled:opacity-50">{deleting ? 'Eliminando…' : 'Eliminar factura'}</button>
+          <div className="flex items-center gap-2">
+            {invoice.status === 'CONFIRMED' && <GhostButton onClick={() => setForceEditing(true)}><Icon name="edit" className="w-4 h-4" />Editar factura</GhostButton>}
+            <button type="button" onClick={remove} disabled={deleting} className="h-9 px-3.5 rounded-full text-[13px] font-semibold text-rose-600 hover:bg-rose-50 disabled:opacity-50">{deleting ? 'Eliminando…' : 'Eliminar factura'}</button>
+          </div>
         </div>
       )}
 

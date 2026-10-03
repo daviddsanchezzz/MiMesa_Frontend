@@ -24,12 +24,11 @@ function nowMinutes(tz) {
 }
 
 /** The day by shift: Comida, Cena… each with its reservations in time order. */
-function DayList({ date, today, tz }) {
+function DayList({ date, today, tz, showCancelled, onShowCancelledChange }) {
   const day = useRestaurantDay(date);
   const { reservations, shifts, shiftOf, tables, pending, actions, isManager, loading } = day;
   const [openId, setOpenId] = useState(null);
   const [showPending, setShowPending] = useState(false);
-  const [showCancelled, setShowCancelled] = useState(false);
   const isToday = date === today;
   const nowMin = isToday ? nowMinutes(tz) : null;
 
@@ -46,12 +45,10 @@ function DayList({ date, today, tz }) {
           <span className="font-semibold text-gray-900">{longDate(date)}</span>
           {reservations.length > 0 && <> · {plural(reservations.filter(live).length, 'reserva', 'reservas')} · {plural(peopleOf(reservations), 'persona', 'personas')}</>}
         </p>
-        {cancelledCount > 0 && (
-          <label className="flex items-center gap-1.5 text-xs text-gray-500">
-            <input type="checkbox" checked={showCancelled} onChange={(e) => setShowCancelled(e.target.checked)} />
+          <label className="flex min-h-11 items-center gap-1.5 text-xs text-gray-500">
+            <input type="checkbox" checked={showCancelled} onChange={(e) => onShowCancelledChange(e.target.checked)} />
             Ver canceladas ({cancelledCount})
           </label>
-        )}
       </div>
 
       {pendingHere.length > 0 && (
@@ -119,6 +116,7 @@ export default function Reservas() {
   const [params, setParams] = useSearchParams();
   const view = ['calendar', 'map'].includes(params.get('view')) ? params.get('view') : 'list';
   const [date, setDate] = useState(() => (isDate(params.get('date')) ? params.get('date') : today));
+  const [showCancelled, setShowCancelled] = useState(false);
 
   useSetMobileHeader({ title: 'Reservas', action: false });
 
@@ -157,7 +155,7 @@ export default function Reservas() {
       {view === 'list' ? (
         <>
           <DayStrip date={date} today={today} counts={counts} onChange={setDate} />
-          <DayList key={date} date={date} today={today} tz={tz} />
+          <DayList key={date} date={date} today={today} tz={tz} showCancelled={showCancelled} onShowCancelledChange={setShowCancelled} />
         </>
       ) : view === 'map' ? (
         <>

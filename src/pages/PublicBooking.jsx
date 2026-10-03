@@ -223,7 +223,7 @@ export default function PublicBooking({ businessId: businessIdProp, slug = null 
 
         <div
           key={isEmbed ? 'embedded-content' : step}
-          className={`space-y-4 ${isEmbed ? '' : 'min-h-0 flex-1 overflow-y-auto overscroll-contain pb-6 sm:pb-10'}`}
+          className={`space-y-4 ${isEmbed ? '' : 'min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain pb-6 sm:pb-10'}`}
         >
 
       {service && step !== 'service' && step !== 'done' && (

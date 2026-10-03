@@ -12,10 +12,15 @@ export default function InvoiceDocumentModal({ invoice, onClose }) {
     let active = true;
     let objectUrl = '';
     invoicesApi.document(invoice._id)
-      .then((blob) => {
+      .then((document) => {
         if (!active) return;
-        objectUrl = URL.createObjectURL(blob);
-        setType(blob.type || invoice.documentMimeType || '');
+        if (document.kind === 'url') {
+          setType(document.mimeType || invoice.documentMimeType || '');
+          setUrl(document.url);
+          return;
+        }
+        objectUrl = URL.createObjectURL(document.blob);
+        setType(document.mimeType || invoice.documentMimeType || '');
         setUrl(objectUrl);
       })
       .catch((err) => active && setError(apiErrorMessage(err, 'No se pudo abrir el documento original.')));
@@ -36,12 +41,12 @@ export default function InvoiceDocumentModal({ invoice, onClose }) {
       {url && type === 'application/pdf' && (
         <div>
           <div className="px-2 pb-2 text-right"><a href={url} target="_blank" rel="noreferrer" className="text-[13px] font-semibold text-violet-700">Abrir en otra pestaña</a></div>
-          <iframe title="Factura original" src={url} className="w-full h-[68dvh] rounded-xl bg-gray-100" />
+          <iframe title="Factura original" src={url} referrerPolicy="no-referrer" className="w-full h-[68dvh] rounded-xl bg-gray-100" />
         </div>
       )}
       {url && type !== 'application/pdf' && (
         <div className="h-[72dvh] overflow-auto flex items-start justify-center bg-gray-50 rounded-xl p-2">
-          <img src={url} alt="Factura original" className="max-w-full h-auto object-contain" />
+          <img src={url} alt="Factura original" referrerPolicy="no-referrer" className="max-w-full h-auto object-contain" />
         </div>
       )}
     </Modal>

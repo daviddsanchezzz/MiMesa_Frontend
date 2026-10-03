@@ -19,6 +19,7 @@ import {
 
 const inputCls = 'w-full min-w-0 rounded-xl border border-gray-300 bg-white px-3.5 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent disabled:bg-gray-50 disabled:text-gray-500';
 const numberCls = `${inputCls} tabular-nums text-right`;
+const compactNumberCls = `${numberCls} h-10 px-2.5 py-2`;
 
 function Field({ id, label, hint, hintId, children, className = '' }) {
   return (
@@ -110,6 +111,52 @@ function TotalsReadOnly({ invoice }) {
   );
 }
 
+function InvoiceLineEditor({ item, index, error, setItem, removeItem }) {
+  const lineNumber = String(index + 1).padStart(2, '0');
+  return (
+    <>
+      <article className="md:hidden rounded-2xl border border-gray-200 bg-white p-3.5 shadow-sm shadow-gray-100/70">
+        <div className="mb-2.5 flex items-center justify-between gap-3">
+          <span className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Línea {lineNumber}</span>
+          <button type="button" onClick={() => removeItem(index)} aria-label={`Eliminar línea ${index + 1}`} className="inline-flex h-8 items-center gap-1 rounded-lg px-2 text-xs font-semibold text-rose-600 hover:bg-rose-50">
+            <Icon name="trash" className="h-4 w-4" />Eliminar
+          </button>
+        </div>
+
+        <Field id={`mobile-line-${index}-description`} label="Descripción">
+          <textarea id={`mobile-line-${index}-description`} rows={2} value={item.description} onChange={(e) => setItem(index, 'description', e.target.value)} className={`${inputCls} min-h-[4.25rem] resize-none leading-snug`} aria-invalid={Boolean(error)} aria-describedby={error ? `mobile-line-${index}-error` : undefined} />
+          {error && <p id={`mobile-line-${index}-error`} className="mt-1 text-xs text-rose-600">{error}</p>}
+        </Field>
+
+        <div className="mt-3 grid grid-cols-3 gap-x-2 gap-y-3 [&_label]:mb-1 [&_label]:text-[11px]">
+          <Field id={`mobile-line-${index}-package`} label="Caja"><input id={`mobile-line-${index}-package`} inputMode="decimal" value={item.packageQuantity} onChange={(e) => setItem(index, 'packageQuantity', decimalTyping(e.target.value))} className={compactNumberCls} /></Field>
+          <Field id={`mobile-line-${index}-quantity`} label="Cantidad"><input id={`mobile-line-${index}-quantity`} inputMode="decimal" value={item.quantity} onChange={(e) => setItem(index, 'quantity', decimalTyping(e.target.value))} className={compactNumberCls} /></Field>
+          <Field id={`mobile-line-${index}-tax`} label="IVA %"><input id={`mobile-line-${index}-tax`} inputMode="decimal" value={item.taxRate} onChange={(e) => setItem(index, 'taxRate', decimalTyping(e.target.value))} className={compactNumberCls} /></Field>
+          <Field id={`mobile-line-${index}-unit`} label="Precio"><input id={`mobile-line-${index}-unit`} inputMode="decimal" value={item.unitPrice} onChange={(e) => setItem(index, 'unitPrice', decimalTyping(e.target.value))} className={compactNumberCls} /></Field>
+          <Field id={`mobile-line-${index}-discount`} label="Dto. %"><input id={`mobile-line-${index}-discount`} inputMode="decimal" value={item.discount} onChange={(e) => setItem(index, 'discount', decimalTyping(e.target.value))} className={compactNumberCls} /></Field>
+          <Field id={`mobile-line-${index}-total`} label="Total"><input id={`mobile-line-${index}-total`} inputMode="decimal" value={item.total} onChange={(e) => setItem(index, 'total', decimalTyping(e.target.value))} className={`${compactNumberCls} border-violet-200 bg-violet-50/60 font-semibold text-violet-950`} /></Field>
+        </div>
+      </article>
+
+      <div className="hidden md:grid md:grid-cols-12 md:items-end md:gap-2 md:px-2 md:py-3">
+        <Field id={`line-${index}-description`} label="Descripción" className="md:col-span-3 md:[&>label]:sr-only">
+          <input id={`line-${index}-description`} value={item.description} onChange={(e) => setItem(index, 'description', e.target.value)} className={inputCls} aria-invalid={Boolean(error)} aria-describedby={error ? `line-${index}-error` : undefined} />
+          {error && <p id={`line-${index}-error`} className="mt-1 text-xs text-rose-600">{error}</p>}
+        </Field>
+        <Field id={`line-${index}-package`} label="Caja" className="md:col-span-1 md:[&>label]:sr-only"><input id={`line-${index}-package`} inputMode="decimal" value={item.packageQuantity} onChange={(e) => setItem(index, 'packageQuantity', decimalTyping(e.target.value))} className={numberCls} /></Field>
+        <Field id={`line-${index}-quantity`} label="Cantidad" className="md:col-span-1 md:[&>label]:sr-only"><input id={`line-${index}-quantity`} inputMode="decimal" value={item.quantity} onChange={(e) => setItem(index, 'quantity', decimalTyping(e.target.value))} className={numberCls} /></Field>
+        <Field id={`line-${index}-unit`} label="Precio unitario" className="md:col-span-2 md:[&>label]:sr-only"><input id={`line-${index}-unit`} inputMode="decimal" value={item.unitPrice} onChange={(e) => setItem(index, 'unitPrice', decimalTyping(e.target.value))} className={numberCls} /></Field>
+        <Field id={`line-${index}-discount`} label="Descuento %" className="md:col-span-1 md:[&>label]:sr-only"><input id={`line-${index}-discount`} inputMode="decimal" value={item.discount} onChange={(e) => setItem(index, 'discount', decimalTyping(e.target.value))} className={numberCls} /></Field>
+        <Field id={`line-${index}-tax`} label="IVA %" className="md:col-span-1 md:[&>label]:sr-only"><input id={`line-${index}-tax`} inputMode="decimal" value={item.taxRate} onChange={(e) => setItem(index, 'taxRate', decimalTyping(e.target.value))} className={numberCls} /></Field>
+        <Field id={`line-${index}-total`} label="Total" className="md:col-span-2 md:[&>label]:sr-only"><input id={`line-${index}-total`} inputMode="decimal" value={item.total} onChange={(e) => setItem(index, 'total', decimalTyping(e.target.value))} className={`${numberCls} font-semibold`} /></Field>
+        <div className="md:col-span-1 flex justify-end md:pb-0.5">
+          <button type="button" onClick={() => removeItem(index)} aria-label={`Eliminar línea ${index + 1}`} className="inline-flex h-9 w-9 items-center justify-center rounded-xl text-rose-600 hover:bg-rose-50"><Icon name="trash" className="h-4 w-4" /></button>
+        </div>
+      </div>
+    </>
+  );
+}
+
 function InvoiceForm({ form, setForm, errors }) {
   const setRoot = (field, value) => setForm((current) => ({ ...current, [field]: value }));
   const setSupplier = (field, value) => setForm((current) => ({ ...current, supplier: { ...current.supplier, [field]: value } }));
@@ -161,29 +208,11 @@ function InvoiceForm({ form, setForm, errors }) {
 
       <Section title="Productos / líneas" aside={<button type="button" onClick={addItem} className="text-[13px] font-semibold text-violet-700 hover:text-violet-900">+ Añadir línea</button>}>
         <div className="hidden md:grid grid-cols-12 gap-2 px-2 pb-2 border-b border-gray-200 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
-          <span className="col-span-3">Descripción</span><span className="text-right">Caja</span><span className="text-right">Cant.</span><span className="col-span-2 text-right">Precio</span><span className="text-right">Dto.</span><span className="text-right">IVA</span><span className="col-span-2 text-right">Total</span><span />
+          <span className="col-span-3">Descripción</span><span className="text-right">Caja</span><span className="text-right">Cant.</span><span className="col-span-2 text-right">Precio</span><span className="text-right">Dto. %</span><span className="text-right">IVA</span><span className="col-span-2 text-right">Total</span><span />
         </div>
         <div className="space-y-3 md:space-y-0 md:divide-y md:divide-gray-100">
           {form.items.map((item, index) => (
-            <div key={item.key} className="rounded-2xl border border-gray-200 p-3 md:rounded-none md:border-0 md:px-2 md:py-3 md:grid md:grid-cols-12 md:gap-2 md:items-end">
-              <Field id={`line-${index}-description`} label="Descripción" className="md:col-span-3 md:[&>label]:sr-only">
-                <input id={`line-${index}-description`} value={item.description} onChange={(e) => setItem(index, 'description', e.target.value)} className={inputCls} aria-invalid={Boolean(errors.items?.[index])} aria-describedby={errors.items?.[index] ? `line-${index}-error` : undefined} />
-                {errors.items?.[index] && <p id={`line-${index}-error`} className="mt-1 text-xs text-rose-600">{errors.items[index]}</p>}
-              </Field>
-              <div className="grid grid-cols-2 gap-3 mt-3 md:contents">
-                <Field id={`line-${index}-package`} label="Caja" className="md:col-span-1 md:[&>label]:sr-only"><input id={`line-${index}-package`} inputMode="decimal" value={item.packageQuantity} onChange={(e) => setItem(index, 'packageQuantity', decimalTyping(e.target.value))} className={numberCls} /></Field>
-                <Field id={`line-${index}-quantity`} label="Cantidad" className="md:col-span-1 md:[&>label]:sr-only"><input id={`line-${index}-quantity`} inputMode="decimal" value={item.quantity} onChange={(e) => setItem(index, 'quantity', decimalTyping(e.target.value))} className={numberCls} /></Field>
-                <Field id={`line-${index}-unit`} label="Precio unitario" className="md:col-span-2 md:[&>label]:sr-only"><input id={`line-${index}-unit`} inputMode="decimal" value={item.unitPrice} onChange={(e) => setItem(index, 'unitPrice', decimalTyping(e.target.value))} className={numberCls} /></Field>
-                <Field id={`line-${index}-discount`} label="Descuento" className="md:col-span-1 md:[&>label]:sr-only"><input id={`line-${index}-discount`} inputMode="decimal" value={item.discount} onChange={(e) => setItem(index, 'discount', decimalTyping(e.target.value))} className={numberCls} /></Field>
-                <Field id={`line-${index}-tax`} label="IVA %" className="md:col-span-1 md:[&>label]:sr-only"><input id={`line-${index}-tax`} inputMode="decimal" value={item.taxRate} onChange={(e) => setItem(index, 'taxRate', decimalTyping(e.target.value))} className={numberCls} /></Field>
-                <Field id={`line-${index}-total`} label="Total" className="md:col-span-2 md:[&>label]:sr-only"><input id={`line-${index}-total`} inputMode="decimal" value={item.total} onChange={(e) => setItem(index, 'total', decimalTyping(e.target.value))} className={`${numberCls} font-semibold`} /></Field>
-              </div>
-              <div className="md:col-span-1 flex justify-end mt-2 md:mt-0 md:pb-0.5">
-                <button type="button" onClick={() => removeItem(index)} aria-label={`Eliminar línea ${index + 1}`} className="h-9 px-3 md:w-9 md:px-0 rounded-xl text-[13px] font-semibold text-rose-600 hover:bg-rose-50 inline-flex items-center justify-center gap-1">
-                  <Icon name="trash" className="w-4 h-4" /><span className="md:sr-only">Eliminar</span>
-                </button>
-              </div>
-            </div>
+            <InvoiceLineEditor key={item.key} item={item} index={index} error={errors.items?.[index]} setItem={setItem} removeItem={removeItem} />
           ))}
           {!form.items.length && <p className="py-5 text-sm text-gray-500 text-center">No hay líneas. Puedes añadirlas manualmente.</p>}
         </div>
@@ -382,11 +411,16 @@ export default function InvoiceDetail() {
       {editable && form ? <InvoiceForm form={form} setForm={setForm} errors={errors} /> : <ReadOnlyInvoice invoice={invoice} />}
 
       {editable ? (
-        <div className="sticky bottom-[calc(4rem+env(safe-area-inset-bottom))] lg:bottom-0 z-20 -mx-4 lg:mx-0 px-4 lg:px-0 py-3 bg-white/95 backdrop-blur border-t border-gray-100 lg:flex lg:items-center lg:justify-between">
-          <p className="hidden lg:block text-xs text-gray-500">{dirty ? 'Tienes cambios sin guardar' : 'Todos los cambios están guardados'}</p>
-          <div className="grid grid-cols-2 gap-2 lg:flex lg:justify-end">
+        <div className="rounded-2xl border border-gray-200 bg-gray-50/80 p-3.5 sm:p-4 lg:flex lg:items-center lg:justify-between lg:gap-6">
+          <div className="mb-3 min-w-0 lg:mb-0">
+            <p className="text-sm font-semibold text-gray-900">{invoice.status === 'CONFIRMED' ? 'Guardar edición' : 'Finalizar revisión'}</p>
+            <p className="mt-0.5 text-xs text-gray-500">{dirty ? 'Tienes cambios sin guardar.' : 'Todos los cambios están guardados.'}{invoice.status === 'CONFIRMED' ? ' Al guardar volverá a quedar por revisar.' : ''}</p>
+          </div>
+          <div className="grid grid-cols-2 gap-2 lg:flex lg:shrink-0 lg:justify-end">
             {invoice.status === 'CONFIRMED' && <GhostButton onClick={cancelEdit} disabled={saving || confirming} className="h-11 rounded-xl">Cancelar</GhostButton>}
-            <GhostButton onClick={() => save()} disabled={saving || confirming || !dirty} className="h-11 rounded-xl">{saving ? 'Guardando…' : 'Guardar cambios'}</GhostButton>
+            {invoice.status === 'CONFIRMED'
+              ? <PrimaryButton icon="check" onClick={() => save()} disabled={saving || confirming || !dirty} className="h-11 rounded-xl">{saving ? 'Guardando…' : 'Guardar cambios'}</PrimaryButton>
+              : <GhostButton onClick={() => save()} disabled={saving || confirming || !dirty} className="h-11 rounded-xl">{saving ? 'Guardando…' : 'Guardar cambios'}</GhostButton>}
             {invoice.status !== 'CONFIRMED' && <PrimaryButton icon="check" onClick={confirm} disabled={saving || confirming} className="h-11">{confirming ? 'Confirmando…' : 'Confirmar factura'}</PrimaryButton>}
           </div>
         </div>

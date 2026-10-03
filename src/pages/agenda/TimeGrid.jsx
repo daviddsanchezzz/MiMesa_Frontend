@@ -238,14 +238,14 @@ export default function TimeGrid({ columns, startMin, endMin, tz, minColWidth = 
   return (
     <div className={`bg-white border-t border-gray-200 overflow-hidden ${fill ? 'h-full flex flex-col' : ''}`}>
       <div ref={scrollRef} data-page-scroll className={fill ? 'flex-1 min-h-0 overflow-auto overscroll-none' : 'overflow-x-auto overscroll-none'}
-        style={snapX ? { touchAction: 'pan-y pinch-zoom', scrollSnapType: 'x mandatory', scrollPaddingLeft: labelWidth === 'w-11' ? '2.75rem' : '3.5rem' } : undefined}>
+        style={snapX ? { touchAction: 'pan-y pinch-zoom', scrollSnapType: 'x mandatory', scrollPaddingLeft: labelWidth === 'w-10' ? '2.5rem' : labelWidth === 'w-11' ? '2.75rem' : '3.5rem' } : undefined}>
         <div className="flex min-w-full w-max">
           {/* Hour labels */}
           <div ref={labelRef} className={`sticky left-0 z-30 bg-white border-r border-gray-100 ${labelWidth} shrink-0`}>
             <div className={`${headerHeight} border-b border-gray-100 sticky top-0 z-10 bg-white`} />
             <div className="relative" style={{ height: height + TOP_PAD }}>
               {hours.map((m) => (
-                <div key={m} className="absolute right-2 text-[11px] text-gray-400 tabular-nums leading-none"
+                <div key={m} className={`absolute ${labelWidth === 'w-10' ? 'right-1' : 'right-2'} text-[11px] text-gray-400 tabular-nums leading-none`}
                   style={{ top: y(m) + TOP_PAD - 5 }}>
                   {toHHMM(m % 1440)}
                 </div>

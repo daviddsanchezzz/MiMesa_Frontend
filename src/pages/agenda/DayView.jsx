@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import TimeGrid, { AbsenceBlock, BookingBlock, PX_PER_MIN } from './TimeGrid';
 import StaffAvatar from './StaffAvatar';
 import { lineFor, nextBookingId } from './lineColors';
-import { minutesInTz, toHHMM, windowsForDate, intersectWindows, layoutOverlaps, absenceSpan } from './utils';
+import { euros, minutesInTz, toHHMM, windowsForDate, intersectWindows, layoutOverlaps, absenceSpan } from './utils';
 
 const UNASSIGNED = '__none__';
 const MIN_BLOCK_PX = 30;
@@ -24,7 +24,7 @@ export function visibleRange(windowsList, bookings, tz) {
  * hours (inside the business hours) and their appointments, coloured by state
  * like the list (lila next, green charged, amber unpaid, red cancelled, grey rest).
  */
-export default function DayView({ date, tz, staff, bookings, absences = [], onAbsenceClick, businessSchedule, staffSchedules = {}, colors, isToday, onEmptyClick, onBookingClick, fill = false, compact = false }) {
+export default function DayView({ date, tz, staff, bookings, absences = [], onAbsenceClick, businessSchedule, staffSchedules = {}, colors, isToday, onEmptyClick, onBookingClick, fill = false, compact = false, showRevenue = false }) {
   const ppm = compact ? 1.9 : PX_PER_MIN;
   const bizWindows = useMemo(() => windowsForDate(businessSchedule, date), [businessSchedule, date]);
   const windowsFor = (id) => (staffSchedules[id] ? intersectWindows(windowsForDate(staffSchedules[id], date), bizWindows) : bizWindows);
@@ -37,13 +37,18 @@ export default function DayView({ date, tz, staff, bookings, absences = [], onAb
     const staffIds = new Set(staff.map((s) => s._id));
     const byCol = {};
     const count = {};
+    const revenue = {};
     for (const b of bookings) {
       const seen = new Set();
       for (const seg of b.segments || []) {
         const cols = (seg.resourceIds || []).filter((id) => staffIds.has(id));
         if (!cols.length) cols.push(UNASSIGNED);
         for (const col of cols) {
-          if (!seen.has(col) && !['cancelled', 'no_show'].includes(b.status)) { count[col] = (count[col] || 0) + 1; seen.add(col); }
+          if (!seen.has(col) && !['cancelled', 'no_show'].includes(b.status)) {
+            count[col] = (count[col] || 0) + 1;
+            revenue[col] = (revenue[col] || 0) + (b.totalPrice || 0);
+            seen.add(col);
+          }
           (byCol[col] ||= []).push({ booking: b, segment: seg });
         }
       }
@@ -59,12 +64,17 @@ export default function DayView({ date, tz, staff, bookings, absences = [], onAb
       isToday,
       windows: id === UNASSIGNED ? bizWindows : windowsFor(id),
       header: (
-        <div className="flex items-center gap-2 min-w-0">
-          {id !== UNASSIGNED && <StaffAvatar name={name} photo={photo} color={colors[id]} size={30} />}
-          <div className="min-w-0 text-left">
-            <p className="text-sm font-semibold text-gray-900 truncate leading-tight">{name}</p>
-            <p className="text-[11px] text-gray-500 leading-tight">
-              {(awayBy[id] || []).some((x) => x.full) ? 'Ausente' : count[id] ? `${count[id]} ${count[id] === 1 ? 'cita' : 'citas'}` : 'Libre'}
+        <div className={`flex items-center min-w-0 ${compact ? 'gap-1.5' : 'gap-2'}`}>
+          {id !== UNASSIGNED && <StaffAvatar name={name} photo={photo} color={colors[id]} size={compact ? 24 : 30} />}
+          <div className={`min-w-0 text-left ${compact ? 'flex items-baseline gap-1 text-[12px] whitespace-nowrap' : ''}`}>
+            <p className={`${compact ? 'text-[13px]' : 'text-sm'} font-semibold text-gray-900 truncate leading-tight`}>{name}</p>
+            {compact && <span className="text-gray-300" aria-hidden="true">·</span>}
+            <p className={`${compact ? 'truncate' : 'text-[11px]'} text-gray-500 leading-tight`}>
+              {(awayBy[id] || []).some((x) => x.full)
+                ? 'Ausente'
+                : count[id]
+                  ? <>{count[id]} {count[id] === 1 ? 'cita' : 'citas'}{showRevenue && <> · {euros(revenue[id])}</>}</>
+                  : 'Libre'}
             </p>
           </div>
         </div>
@@ -86,7 +96,7 @@ export default function DayView({ date, tz, staff, bookings, absences = [], onAb
         return {
           key: `${booking._id}-${segment._id}-${id}`,
           render: <BookingBlock booking={booking} segment={segment} tz={tz} top={top} height={height} color={colors[id] || '#9ca3af'} kind={lineFor(booking)} isNext={booking._id === nextId}
-            left={`calc(${col * w}% + 4px)`} width={`calc(${w}% - 8px)`} onClick={onBookingClick} />,
+            left={`calc(${col * w}% + ${compact ? 2 : 4}px)`} width={`calc(${w}% - ${compact ? 4 : 8}px)`} onClick={onBookingClick} />,
         };
       })],
     });
@@ -94,7 +104,7 @@ export default function DayView({ date, tz, staff, bookings, absences = [], onAb
     if (byCol[UNASSIGNED]) cols.push(make(UNASSIGNED, 'Sin profesional'));
     return cols;
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [bookings, absences, staff, startMin, endMin, tz, colors, bizWindows, staffSchedules, isToday, date, nextId, ppm]);
+  }, [bookings, absences, staff, startMin, endMin, tz, colors, bizWindows, staffSchedules, isToday, date, nextId, ppm, showRevenue]);
 
   if (!columns.length) {
     return (
@@ -112,7 +122,8 @@ export default function DayView({ date, tz, staff, bookings, absences = [], onAb
           // The last person fills the screen too, so sliding to her leaves no sliver of the previous one.
           ? columns.map((c, i) => (i === columns.length - 1 ? { ...c, fillView: true } : c))
           : columns} startMin={startMin} endMin={endMin} tz={tz} fill={fill} minColWidth={minColWidth}
-          pxPerMin={ppm} snapX={compact && columns.length > 1} labelWidth={compact ? 'w-11' : 'w-14'} />
+          pxPerMin={ppm} snapX={compact && columns.length > 1} labelWidth={compact ? 'w-10' : 'w-14'}
+          headerHeight={compact ? 'h-11' : 'h-14'} />
       </div>
     </div>
   );

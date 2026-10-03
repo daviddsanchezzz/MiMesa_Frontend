@@ -202,6 +202,7 @@ export default function Agenda() {
           {activeView === 'day' && (
             <div className={`flex-1 min-h-0 ${full ? '' : '-mx-4 lg:-mx-8'}`}><DayView fill compact={isMobile} date={date} tz={tz} staff={shownStaff} bookings={dayBookings} absences={shownAbsences} onAbsenceClick={setSelectedAbsence} businessSchedule={schedule}
               staffSchedules={staffSchedules} colors={colors} isToday={date === today}
+              showRevenue={isManager}
               onEmptyClick={(resourceId, time) => openNew(resourceId, time, date)} onBookingClick={setSelected} /></div>
           )}
     </>

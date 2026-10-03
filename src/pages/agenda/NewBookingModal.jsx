@@ -1,273 +1,229 @@
 import { useEffect, useMemo, useState } from 'react';
-import DayChips from '../../ui/DayChips';
 import Modal from '../../components/Modal';
 import api from '../../services/api';
 import { useData } from '../../lib/query';
 import { bookingsApi, apiError } from '../../services/bookingsApi';
-import { DEFAULT_TZ, addDays, euros, inputCls, labelCls, todayIn, toMinutes } from './utils';
 import { useAuth } from '../../context/AuthContext';
-import { dayLabel, shortDay } from '../../lib/dates';
-import StaffAvatar from './StaffAvatar';
-import { staffColors } from './utils';
+import { DEFAULT_TZ, staffColors, todayIn } from './utils';
+import {
+  AppointmentFooter, ClientStep, ScheduleStep, ServiceStep, WizardHeader,
+} from './AppointmentWizardParts';
+
+const NONE = [];
+const NO_SUMMARIES = {};
 
 // Professionals allowed to do a service ('staff' requirement; empty list = all).
 export function staffForService(service, staff) {
-  const req = (service?.requirements || []).find((r) => r.kind === 'staff');
+  const req = (service?.requirements || []).find((requirement) => requirement.kind === 'staff');
   if (!req) return [];
   const allowed = (req.resourceIds || []).map(String);
-  return allowed.length ? staff.filter((s) => allowed.includes(s._id)) : staff;
+  return allowed.length ? staff.filter((person) => allowed.includes(person._id)) : staff;
 }
 
-const chip = (on) => `shrink-0 rounded-xl border text-left transition-colors ${on ? 'bg-gray-900 border-gray-900 text-white' : 'bg-white border-gray-200 text-gray-800 hover:border-gray-400'}`;
-
-function Step({ n, title, aside, children }) {
-  return (
-    <section>
-      <div className="flex items-baseline justify-between gap-3 mb-2">
-        <h4 className="text-sm font-semibold text-gray-900"><span className="text-gray-400 tabular-nums mr-1.5">{n}</span>{title}</h4>
-        {aside}
-      </div>
-      {children}
-    </section>
-  );
+// A chosen professional has to be valid for every selected service that needs staff.
+export function staffForServices(services, staff) {
+  const requiringStaff = services.filter((service) => (service.requirements || []).some((requirement) => requirement.kind === 'staff'));
+  if (!requiringStaff.length) return [];
+  return staff.filter((person) => requiringStaff.every((service) => staffForService(service, staff).some((candidate) => candidate._id === person._id)));
 }
 
-/**
- * New appointment, in the order you ask on the phone: who, what, with whom,
- * which day, what time. Customers already in Vetra fill themselves in.
- */
+function lastRepeatable(history, services, staff, tz) {
+  const now = Date.now();
+  const booking = history?.bookings?.find((item) => !['cancelled', 'no_show'].includes(item.status) && new Date(item.start).getTime() <= now);
+  if (!booking) return null;
+  const serviceIds = (booking.segments || []).map((segment) => String(segment.serviceId));
+  const selected = serviceIds.map((id) => services.find((service) => service._id === id));
+  if (!selected.length || selected.some((service) => !service)) return null;
+  const eligible = staffForServices(selected, staff);
+  const person = eligible.find((candidate) => booking.segments.every((segment) => (segment.resourceIds || []).map(String).includes(candidate._id))) || null;
+  const when = new Date(booking.start).toLocaleDateString('es-ES', { timeZone: tz, day: 'numeric', month: 'short' });
+  return {
+    items: serviceIds.map((serviceId) => ({ serviceId })),
+    resourceId: person?._id || '',
+    services: selected.map((service) => service.name).join(' + '),
+    meta: `${selected.reduce((sum, service) => sum + service.durationMin, 0)} min · ${when}${person ? ` · con ${person.name}` : ''}`,
+  };
+}
+
+/** A fast, state-preserving wizard for creating one or more consecutive appointments. */
 export default function NewBookingModal({ date: initialDate, time: initialTime, resourceId: initialResource, guest: initialGuest, services, staff, onClose, onCreated }) {
-  const { business } = useAuth();
+  const { business, hasRole } = useAuth();
   const tz = business?.timezone || DEFAULT_TZ;
   const today = todayIn(tz);
-  const bookable = services.filter((s) => s.bookingMode !== 'quote');
+  const manager = hasRole('manager');
+  const bookable = useMemo(() => services.filter((service) => service.bookingMode !== 'quote'), [services]);
   const colors = useMemo(() => staffColors(staff), [staff]);
+  const initialService = (initialResource && bookable.find((service) => staffForService(service, staff).some((person) => person._id === initialResource))) || bookable[0];
+
+  const [page, setPage] = useState(0);
   const [date, setDate] = useState(initialDate || today);
-  const [items, setItems] = useState(() => {
-    const first = (initialResource && bookable.find((s) => staffForService(s, staff).some((x) => x._id === initialResource))) || bookable[0];
-    return [{ serviceId: first?._id || '' }];
-  });
+  const [items, setItems] = useState(() => initialService ? [{ serviceId: initialService._id }] : []);
   const [resourceId, setResourceId] = useState(initialResource || '');
   const [time, setTime] = useState(initialTime || '');
   const [slots, setSlots] = useState(null);
   const [guest, setGuest] = useState({ guestName: '', guestPhone: '', guestEmail: '', ...(initialGuest || {}), notes: '', internalNotes: '' });
+  const [picked, setPicked] = useState(() => (initialGuest?.guestName ? { name: initialGuest.guestName } : null));
+  const [creatingCustomer, setCreatingCustomer] = useState(false);
   const [partySize, setPartySize] = useState(1);
   const [showNotes, setShowNotes] = useState(false);
-  const [picked, setPicked] = useState(() => (initialGuest?.guestName ? { name: initialGuest.guestName } : null));
+  const [serviceSearch, setServiceSearch] = useState('');
+  const [category, setCategory] = useState('Todos');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
-  // Same cache as Clientes: the search works from the first letter.
-  const customers = useData(['customers', 'list'], () => api.get('/customers').then((r) => r.data || []), { retry: false }).data || [];
+  const customersQ = useData(['customers', 'list'], () => api.get('/customers').then((response) => response.data || []), { retry: false });
+  const summariesQ = useData(['bookings', 'customersSummary'], () => bookingsApi.customersSummary(), { enabled: manager, retry: false });
+  const historyQ = useData(['bookings', 'customerHistory', picked?._id], () => bookingsApi.customerHistory(picked._id), { enabled: manager && !!picked?._id, retry: false });
+  const customers = customersQ.data || NONE;
+  const summaries = summariesQ.data || NO_SUMMARIES;
 
-  const first = bookable.find((s) => s._id === items[0]?.serviceId);
-  const eligible = useMemo(() => staffForService(first, staff), [first, staff]);
-  const maxParty = first?.partySize?.max || 1;
-  const total = items.reduce((sum, it) => {
-    const s = bookable.find((x) => x._id === it.serviceId);
-    return sum + (s?.price?.amount || 0) * (s?.price?.perPerson ? partySize : 1);
-  }, 0);
+  const selectedServices = useMemo(() => items.map((item) => bookable.find((service) => service._id === item.serviceId)).filter(Boolean), [items, bookable]);
+  const eligible = useMemo(() => staffForServices(selectedServices, staff), [selectedServices, staff]);
+  const duration = selectedServices.reduce((sum, service) => sum + service.durationMin, 0);
+  const minParty = selectedServices[0]?.partySize?.min || 1;
+  const maxParty = selectedServices[0]?.partySize?.max || 1;
+  const total = selectedServices.reduce((sum, service) => sum + (service.price?.amount || 0) * (service.price?.perPerson ? partySize : 1), 0);
+  const categories = useMemo(() => ['Todos', ...new Set(bookable.map((service) => (service.category || '').trim()).filter(Boolean))], [bookable]);
+  const visibleServices = useMemo(() => {
+    const needle = serviceSearch.trim().toLocaleLowerCase('es');
+    return bookable.filter((service) => (category === 'Todos' || (service.category || '').trim() === category)
+      && (!needle || service.name.toLocaleLowerCase('es').includes(needle)));
+  }, [bookable, category, serviceSearch]);
+
+  const query = guest.guestName.trim().toLocaleLowerCase('es');
+  const digits = query.replace(/\D/g, '');
+  const matches = !picked && query.length >= 2
+    ? customers.filter((customer) => customer.name?.toLocaleLowerCase('es').includes(query)
+      || (digits.length >= 3 && (customer.phone || '').replace(/\D/g, '').includes(digits))).slice(0, 8)
+    : NONE;
+  const recent = useMemo(() => [...customers].sort((a, b) => {
+    const aDate = summaries[a._id]?.lastVisit || a.createdAt || '';
+    const bDate = summaries[b._id]?.lastVisit || b.createdAt || '';
+    return String(bDate).localeCompare(String(aDate));
+  }).slice(0, 6), [customers, summaries]);
+  const repeat = useMemo(() => lastRepeatable(historyQ.data, bookable, staff, tz), [historyQ.data, bookable, staff, tz]);
 
   useEffect(() => {
-    if (resourceId && !eligible.some((s) => s._id === resourceId)) setResourceId('');
+    if (resourceId && !eligible.some((person) => person._id === resourceId)) {
+      setResourceId('');
+      setTime('');
+    }
   }, [eligible, resourceId]);
 
   useEffect(() => {
-    if (!first) return undefined;
+    if (partySize < minParty || partySize > maxParty) {
+      setPartySize(Math.min(maxParty, Math.max(minParty, partySize)));
+      setTime('');
+    }
+  }, [minParty, maxParty, partySize]);
+
+  useEffect(() => {
+    if (!selectedServices.length) { setSlots([]); return undefined; }
     let cancelled = false;
     setSlots(null);
-    bookingsApi.availability({ serviceId: first._id, from: date, partySize, ...(resourceId ? { resourceId } : {}) })
-      .then((data) => { if (!cancelled) setSlots(data); })
+    bookingsApi.availability({
+      serviceId: selectedServices[0]._id,
+      serviceIds: selectedServices.map((service) => service._id).join(','),
+      from: date,
+      partySize,
+      ...(resourceId ? { resourceId } : {}),
+    }).then((data) => { if (!cancelled) setSlots(data); })
       .catch(() => { if (!cancelled) setSlots([]); });
     return () => { cancelled = true; };
-  }, [first, date, resourceId, partySize]);
+  }, [selectedServices, date, resourceId, partySize]);
 
-  // Customer search: name or phone, from the customers already in Vetra.
-  const query = guest.guestName.trim().toLowerCase();
-  const digits = query.replace(/\D/g, '');
-  const matches = !picked && query.length >= 2
-    ? customers.filter((c) => c.name?.toLowerCase().includes(query) || (digits.length >= 3 && (c.phone || '').replace(/\D/g, '').includes(digits))).slice(0, 5)
-    : [];
-  const pick = (c) => {
-    setPicked(c);
-    setGuest((g) => ({ ...g, guestName: c.name, guestPhone: c.phone || '', guestEmail: c.email || '' }));
+  useEffect(() => {
+    if (time && slots && !slots.some((slot) => slot.time === time)) setTime('');
+  }, [slots, time]);
+
+  const pickCustomer = (customer) => {
+    setPicked(customer);
+    setCreatingCustomer(false);
+    setGuest((current) => ({ ...current, guestName: customer.name, guestPhone: customer.phone || '', guestEmail: customer.email || '' }));
+    setError('');
+  };
+  const changeCustomer = () => {
+    setPage(0);
+    setPicked(null);
+    setCreatingCustomer(false);
+    setGuest((current) => ({ ...current, guestName: '', guestPhone: '', guestEmail: '' }));
+    setError('');
+  };
+  const toggleService = (serviceId) => {
+    setItems((current) => current.some((item) => item.serviceId === serviceId)
+      ? current.filter((item) => item.serviceId !== serviceId)
+      : current.length < 5 ? [...current, { serviceId }] : current);
+    setTime('');
+    setError('');
+  };
+  const setNote = (key, value) => setGuest((current) => ({ ...current, [key]: value }));
+  const repeatLast = () => {
+    if (!repeat) return;
+    setItems(repeat.items);
+    setResourceId(repeat.resourceId);
+    setTime('');
+    setPage(2);
   };
 
-  const setItem = (i, serviceId) => setItems((prev) => prev.map((it, idx) => (idx === i ? { serviceId } : it)));
-  const morning = (slots || []).filter((s) => toMinutes(s.time) < 14 * 60 + 30);
-  const afternoon = (slots || []).filter((s) => toMinutes(s.time) >= 14 * 60 + 30);
-
-  async function submit(e) {
-    e?.preventDefault();
+  const continueFlow = () => {
     setError('');
-    if (!guest.guestName.trim()) return setError('Escribe el nombre del cliente');
-    if (!time) return setError('Elige una hora');
+    if (page === 0) {
+      if (!guest.guestName.trim()) { setError('Elige un cliente o escribe su nombre'); return; }
+      setPage(1);
+    } else if (page === 1) {
+      if (!selectedServices.length) { setError('Elige al menos un servicio'); return; }
+      setPage(2);
+    }
+  };
+
+  async function submit() {
+    setError('');
+    if (!guest.guestName.trim()) { setPage(0); setError('Escribe el nombre del cliente'); return; }
+    if (!selectedServices.length) { setPage(1); setError('Elige al menos un servicio'); return; }
+    if (!time) { setError('Elige una hora'); return; }
     setSaving(true);
     try {
       const booking = await bookingsApi.create({
         date, time, partySize,
-        items: items.filter((it) => it.serviceId).map((it, i) => ({ serviceId: it.serviceId, ...(i === 0 && resourceId ? { resourceId } : {}) })),
+        items: selectedServices.map((service) => ({
+          serviceId: service._id,
+          ...(resourceId && (service.requirements || []).some((requirement) => requirement.kind === 'staff') ? { resourceId } : {}),
+        })),
         ...guest,
         source: 'phone',
       });
       onCreated?.(booking);
-    } catch (err) {
-      setError(apiError(err));
+    } catch (submitError) {
+      setError(apiError(submitError));
     } finally {
       setSaving(false);
     }
   }
 
   if (!bookable.length) {
-    return (
-      <Modal title="Nueva cita" onClose={onClose}>
-        <p className="text-sm text-gray-600">Primero crea al menos un servicio en Configuración.</p>
-      </Modal>
-    );
+    return <Modal title="Nueva cita" onClose={onClose}><p className="text-sm text-gray-600">Primero crea al menos un servicio en Configuración.</p></Modal>;
   }
 
-  const footer = (
-    <div className="space-y-2">
-      {error && <p className="text-sm text-rose-600">{error}</p>}
-      <div className="flex items-center gap-3">
-        <div className="min-w-0 flex-1">
-          <p className="text-xs text-gray-500 truncate">{dayLabel(date, today)}{time ? `, ${time}` : ''}{first ? ` · ${first.name}` : ''}</p>
-          <p className="text-lg font-semibold tabular-nums text-gray-900 leading-tight">{euros(total)}</p>
-        </div>
-        <button type="button" onClick={submit} disabled={saving}
-          className="h-12 px-6 rounded-xl bg-violet-600 text-white text-[15px] font-semibold hover:bg-violet-700 disabled:opacity-50">
-          {saving ? 'Guardando…' : 'Guardar cita'}
-        </button>
-      </div>
-    </div>
-  );
-
+  const canContinue = page === 0 ? !!guest.guestName.trim() : page === 1 ? selectedServices.length > 0 : !!time;
   return (
-    <Modal title="Nueva cita" onClose={onClose} size="lg" footer={footer}>
-      <form onSubmit={submit} className="space-y-7">
-        <Step n="1" title="Cliente" aside={picked && (
-          <button type="button" className="text-xs font-semibold text-gray-500 hover:text-gray-900"
-            onClick={() => { setPicked(null); setGuest((g) => ({ ...g, guestName: '', guestPhone: '', guestEmail: '' })); }}>Cambiar</button>
-        )}>
-          {picked ? (
-            <div className="rounded-xl bg-gray-50 px-4 py-3">
-              <p className="text-[15px] font-medium text-gray-900">{guest.guestName}</p>
-              <p className="text-[13px] text-gray-500">{[guest.guestPhone, guest.guestEmail].filter(Boolean).join(' · ') || 'Sin contacto'}</p>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              <div className="relative">
-                <input className={inputCls} value={guest.guestName} placeholder="Nombre o teléfono" autoComplete="off"
-                  onChange={(e) => setGuest({ ...guest, guestName: e.target.value })} maxLength={100} />
-                {matches.length > 0 && (
-                  <ul className="absolute z-10 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden divide-y divide-gray-100">
-                    {matches.map((c) => (
-                      <li key={c._id}>
-                        <button type="button" onClick={() => pick(c)} className="w-full text-left px-4 py-2.5 hover:bg-gray-50">
-                          <span className="block text-sm font-medium text-gray-900">{c.name}</span>
-                          <span className="block text-xs text-gray-500">{c.phone || c.email || 'Sin contacto'}</span>
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-              {guest.guestName.trim().length >= 2 && (
-                <div className="grid grid-cols-2 gap-2">
-                  <input className={inputCls} type="tel" placeholder="Teléfono" value={guest.guestPhone} onChange={(e) => setGuest({ ...guest, guestPhone: e.target.value })} maxLength={30} />
-                  <input className={inputCls} type="email" placeholder="Email (opcional)" value={guest.guestEmail} onChange={(e) => setGuest({ ...guest, guestEmail: e.target.value })} maxLength={200} />
-                </div>
-              )}
-            </div>
-          )}
-        </Step>
-
-        <Step n="2" title="Servicio">
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-            {bookable.map((s) => {
-              const on = items[0]?.serviceId === s._id;
-              return (
-                <button key={s._id} type="button" onClick={() => { setItem(0, s._id); setTime(''); }} className={`${chip(on)} px-3 py-2.5`}>
-                  <span className="block text-sm font-semibold truncate">{s.name}</span>
-                  <span className={`block text-xs ${on ? 'text-gray-300' : 'text-gray-500'}`}>{s.durationMin} min · {euros(s.price?.amount)}</span>
-                </button>
-              );
-            })}
-          </div>
-          {items.slice(1).map((it, idx) => (
-            <div key={idx + 1} className="flex gap-2 mt-2">
-              <select className={inputCls} value={it.serviceId} onChange={(e) => setItem(idx + 1, e.target.value)}>
-                {bookable.map((s) => <option key={s._id} value={s._id}>Después: {s.name} · {s.durationMin} min · {euros(s.price?.amount)}</option>)}
-              </select>
-              <button type="button" className="px-3 rounded-xl border border-gray-200 text-gray-500" onClick={() => setItems((p) => p.filter((_, i) => i !== idx + 1))} aria-label="Quitar servicio">✕</button>
-            </div>
-          ))}
-          {items.length < 3 && (
-            <button type="button" className="mt-2 text-xs font-semibold text-violet-700 hover:text-violet-900"
-              onClick={() => setItems((p) => [...p, { serviceId: bookable[0]._id }])}>+ Otro servicio a continuación</button>
-          )}
-          {maxParty > 1 && (
-            <div className="mt-3 flex items-center gap-3">
-              <label className={`${labelCls} mb-0`}>Personas</label>
-              <input type="number" min={first?.partySize?.min || 1} max={maxParty} className={`${inputCls} w-24`}
-                value={partySize} onChange={(e) => setPartySize(Number(e.target.value) || 1)} />
-            </div>
-          )}
-        </Step>
-
-        {eligible.length > 0 && (
-          <Step n="3" title="Con quién">
-            <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1">
-              <button type="button" onClick={() => { setResourceId(''); setTime(''); }} className={`${chip(!resourceId)} px-3.5 py-2 text-sm font-semibold`}>Cualquiera</button>
-              {eligible.map((p) => (
-                <button key={p._id} type="button" onClick={() => { setResourceId(p._id); setTime(''); }}
-                  className={`${chip(resourceId === p._id)} pl-1.5 pr-3.5 py-1.5 text-sm font-semibold inline-flex items-center gap-2`}>
-                  <StaffAvatar name={p.name} photo={p.photo} color={colors[p._id]} size={26} />{p.name}
-                </button>
-              ))}
-            </div>
-          </Step>
-        )}
-
-        <Step n={eligible.length > 0 ? '4' : '3'} title="Día y hora">
-          <DayChips date={date} today={today} onChange={(d) => { setDate(d); setTime(''); }} />
-          <div className="mt-3">
-            {slots === null ? <p className="text-xs text-gray-400">Buscando huecos…</p>
-              : slots.length === 0 ? <p className="text-sm text-gray-500">No hay huecos libres este día{resourceId ? ' con esta persona' : ''}. Prueba otro día.</p>
-                : [['Mañana', morning], ['Tarde', afternoon]].filter(([, l]) => l.length).map(([label, list]) => (
-                  <div key={label} className="mb-2">
-                    <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 mb-1">{label}</p>
-                    <div className="grid grid-cols-4 sm:grid-cols-6 gap-1.5">
-                      {list.map((s) => (
-                        <button key={s.time} type="button" onClick={() => setTime(s.time)}
-                          className={`py-2 rounded-xl text-sm font-semibold border tabular-nums text-center transition-colors ${time === s.time ? 'bg-violet-600 border-violet-600 text-white' : 'bg-white border-gray-200 text-gray-700 hover:border-gray-400'}`}>
-                          {s.time}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-            {time && slots && !slots.some((s) => s.time === time) && (
-              <p className="text-xs text-amber-700 mt-1">{time} no aparece como libre; se comprobará al guardar.</p>
-            )}
-          </div>
-        </Step>
-
-        {showNotes ? (
-          <div className="grid grid-cols-1 gap-3">
-            <div>
-              <label className={labelCls}>Nota del cliente</label>
-              <textarea className={inputCls} rows={2} value={guest.notes} onChange={(e) => setGuest({ ...guest, notes: e.target.value })} maxLength={1000} />
-            </div>
-            <div>
-              <label className={labelCls}>Nota interna <span className="font-normal text-gray-400">(no la ve el cliente)</span></label>
-              <textarea className={inputCls} rows={2} value={guest.internalNotes} onChange={(e) => setGuest({ ...guest, internalNotes: e.target.value })} maxLength={2000} />
-            </div>
-          </div>
-        ) : (
-          <button type="button" onClick={() => setShowNotes(true)} className="text-sm font-medium text-violet-700">+ Añadir una nota</button>
-        )}
-      </form>
+    <Modal title="Nueva cita" onClose={onClose} size="lg" fullHeight
+      header={<WizardHeader page={page} onStep={(next) => { setPage(next); setError(''); }} />}
+      bodyClassName="py-4 sm:py-5"
+      footer={<AppointmentFooter page={page} date={date} today={today} time={time} duration={duration} services={selectedServices}
+        total={total} canContinue={canContinue} saving={saving} error={error} onContinue={continueFlow} onSubmit={submit} />}>
+      <div key={page} className="motion-safe:animate-[wizard-in_.18s_ease-out]">
+        {page === 0 && <ClientStep guest={guest} setGuest={setGuest} picked={picked} onPick={pickCustomer} onChange={changeCustomer}
+          matches={matches} recent={recent} summaries={summaries} creating={creatingCustomer} setCreating={setCreatingCustomer}
+          repeat={repeat} onRepeat={repeatLast} />}
+        {page === 1 && <ServiceStep guest={guest} onChangeClient={changeCustomer} services={bookable} visibleServices={visibleServices} items={items}
+          onToggle={toggleService} onRemove={(index) => { setItems((current) => current.filter((_, itemIndex) => itemIndex !== index)); setTime(''); }}
+          onClear={() => { setItems([]); setTime(''); }} search={serviceSearch} setSearch={setServiceSearch}
+          category={category} setCategory={setCategory} categories={categories} partySize={partySize} setPartySize={(value) => { setPartySize(value); setTime(''); }} minParty={minParty} maxParty={maxParty} />}
+        {page === 2 && <ScheduleStep guest={guest} selectedServices={selectedServices} onChangeClient={changeCustomer} onChangeServices={() => { setPage(1); setError(''); }}
+          eligible={eligible} resourceId={resourceId} setResourceId={setResourceId} colors={colors} date={date} today={today} setDate={setDate}
+          slots={slots} time={time} setTime={setTime} showNotes={showNotes} setShowNotes={setShowNotes}
+          notes={{ notes: guest.notes, internalNotes: guest.internalNotes }} setNotes={setNote} />}
+      </div>
     </Modal>
   );
 }

@@ -28,7 +28,6 @@ const Analytics = lazy(() => import('./pages/Analytics'));
 const Personal = lazy(() => import('./pages/Personal'));
 const Finanzas = lazy(() => import('./pages/Finanzas'));
 const Compras = lazy(() => import('./pages/Compras'));
-const Invoices = lazy(() => import('./pages/invoices/Invoices'));
 const InvoiceUpload = lazy(() => import('./pages/invoices/InvoiceUpload'));
 const InvoiceDetail = lazy(() => import('./pages/invoices/InvoiceDetail'));
 const Agenda = lazy(() => import('./pages/Agenda'));
@@ -394,7 +393,10 @@ export default function App() {
           <Route path="/personal"     element={<ModuleRoute moduleKey="staff"><RoleRoute minRole="manager"><PrivateLayout><PersonalPage /></PrivateLayout></RoleRoute></ModuleRoute>} />
           <Route path="/finanzas"     element={<ModuleRoute moduleKey="expenses"><RoleRoute minRole="owner"><PrivateLayout><Finanzas /></PrivateLayout></RoleRoute></ModuleRoute>} />
           <Route path="/compras"      element={<ModuleRoute moduleKey="purchases"><RoleRoute minRole="manager"><PrivateLayout><Compras /></PrivateLayout></RoleRoute></ModuleRoute>} />
-          <Route path="/facturas"     element={<ModuleRoute moduleKey="purchases"><RoleRoute minRole="manager"><PrivateLayout><Invoices /></PrivateLayout></RoleRoute></ModuleRoute>} />
+          <Route path="/compras/:section" element={<ModuleRoute moduleKey="purchases"><RoleRoute minRole="manager"><PrivateLayout><Compras /></PrivateLayout></RoleRoute></ModuleRoute>} />
+          <Route path="/compras/facturas/nueva" element={<ModuleRoute moduleKey="purchases"><RoleRoute minRole="manager"><PrivateLayout><InvoiceUpload /></PrivateLayout></RoleRoute></ModuleRoute>} />
+          <Route path="/compras/facturas/:id" element={<ModuleRoute moduleKey="purchases"><RoleRoute minRole="manager"><PrivateLayout><InvoiceDetail /></PrivateLayout></RoleRoute></ModuleRoute>} />
+          <Route path="/facturas"     element={<Navigate to="/compras/facturas" replace />} />
           <Route path="/facturas/nueva" element={<ModuleRoute moduleKey="purchases"><RoleRoute minRole="manager"><PrivateLayout><InvoiceUpload /></PrivateLayout></RoleRoute></ModuleRoute>} />
           <Route path="/facturas/:id" element={<ModuleRoute moduleKey="purchases"><RoleRoute minRole="manager"><PrivateLayout><InvoiceDetail /></PrivateLayout></RoleRoute></ModuleRoute>} />
           <Route path="/caja"         element={<ModuleRoute moduleKey="bookings"><PrivateLayout><Caja /></PrivateLayout></ModuleRoute>} />

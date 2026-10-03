@@ -1,9 +1,11 @@
 ﻿import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { useSetMobileHeader } from '../context/MobileHeaderContext';
 import Modal from '../components/Modal';
 import Icon from '../ui/Icon';
 import { Empty, GhostButton, MenuButton, PageHeader, PrimaryButton, Tabs, Toggle } from '../ui/kit';
+import Invoices from './invoices/Invoices';
 
 const inputCls = 'w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white';
 const labelCls = 'block text-xs font-medium text-gray-500 mb-1';
@@ -95,10 +97,15 @@ function generateWhatsAppOrderMessage(order, supplier) {
 }
 
 export default function Compras() {
-  const [tab, setTab] = useState('orders');
+  const location = useLocation();
+  const navigate = useNavigate();
+  const pathTab = location.pathname.split('/')[2];
+  const initialTab = ({ resumen: 'summary', facturas: 'invoices', pedidos: 'orders', productos: 'products', proveedores: 'suppliers' })[pathTab] || 'summary';
+  const [tab, setTab] = useState(initialTab);
   const [suppliers, setSuppliers] = useState([]);
   const [products, setProducts] = useState([]);
   const [orders, setOrders] = useState([]);
+  const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [actionLoading, setActionLoading] = useState({});
@@ -106,6 +113,8 @@ export default function Compras() {
   const [productModal, setProductModal] = useState(null);
   const [orderModal, setOrderModal] = useState(null);
   const [supplierModal, setSupplierModal] = useState(null);
+  const [supplierDetail, setSupplierDetail] = useState(null);
+  const [supplierDetailLoading, setSupplierDetailLoading] = useState(false);
   const [orderDetail, setOrderDetail] = useState(null);
   const [openSuppliers, setOpenSuppliers] = useState({});
 
@@ -113,18 +122,21 @@ export default function Compras() {
     setLoading(true);
     setError('');
     try {
-      const [suppliersRes, productsRes, ordersRes] = await Promise.all([
+      const [suppliersRes, productsRes, ordersRes, invoicesRes] = await Promise.all([
         api.get('/suppliers'),
         api.get('/purchases/products'),
         api.get('/purchases/orders'),
+        api.get('/invoices'),
       ]);
       setSuppliers(suppliersRes.data || []);
       setProducts(productsRes.data || []);
       setOrders(ordersRes.data || []);
+      setInvoices(invoicesRes.data || []);
       return {
         suppliers: suppliersRes.data || [],
         products: productsRes.data || [],
         orders: ordersRes.data || [],
+        invoices: invoicesRes.data || [],
       };
     } catch (err) {
       setError(err?.response?.data?.message || 'No se pudieron cargar los datos de compras');
@@ -135,6 +147,31 @@ export default function Compras() {
   }, []);
 
   useEffect(() => { loadAll(); }, [loadAll]);
+  useEffect(() => { setTab(initialTab); }, [initialTab]);
+
+  const openSupplier = useCallback(async (supplier) => {
+    setSupplierDetailLoading(true);
+    try {
+      const { data } = await api.get(`/suppliers/${supplier._id}`);
+      setSupplierDetail(data);
+    } catch (err) {
+      setError(err?.response?.data?.message || 'No se pudo cargar el proveedor');
+    } finally {
+      setSupplierDetailLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const supplierId = new URLSearchParams(location.search).get('supplier');
+    const supplier = suppliers.find((item) => String(item._id) === String(supplierId));
+    if (supplier && !supplierDetail && !supplierDetailLoading) openSupplier(supplier);
+  }, [location.search, suppliers, supplierDetail, supplierDetailLoading, openSupplier]);
+
+  const selectTab = (next) => {
+    const slug = { summary: 'resumen', invoices: 'facturas', orders: 'pedidos', products: 'productos', suppliers: 'proveedores' }[next];
+    setTab(next);
+    navigate(`/compras/${slug}`);
+  };
 
   const activeSuppliers = useMemo(() => suppliers.filter((supplier) => supplier.isActive), [suppliers]);
   const productsBySupplier = useMemo(() => {
@@ -315,15 +352,20 @@ export default function Compras() {
   };
 
   const primary = {
+    invoices: { label: 'Añadir factura', short: 'Factura', onClick: () => navigate('/compras/facturas/nueva') },
     orders: { label: 'Nuevo pedido', short: 'Pedido', onClick: () => setOrderModal({}) },
     products: { label: 'Nuevo producto', short: 'Producto', onClick: () => setProductModal({}) },
     suppliers: { label: 'Nuevo proveedor', short: 'Proveedor', onClick: () => setSupplierModal({}) },
   }[tab];
-  useSetMobileHeader({ title: 'Compras', action: { label: primary.short, onClick: primary.onClick } });
+  useSetMobileHeader({ title: 'Compras', action: primary ? { label: primary.short, onClick: primary.onClick } : false });
+
+  const monthPrefix = todayIso().slice(0, 7);
+  const confirmedThisMonth = invoices.filter((invoice) => invoice.status === 'CONFIRMED' && String(invoice.invoiceDate || '').startsWith(monthPrefix));
+  const monthTotal = confirmedThisMonth.reduce((sum, invoice) => sum + Number(invoice.total || 0), 0);
 
   return (
     <div className="w-full space-y-6">
-      <PageHeader title="Compras" subtitle="Pedidos a proveedores y el catálogo de lo que les compras."
+      <PageHeader title="Compras" subtitle="Gestiona proveedores, pedidos, facturas y productos."
         actions={(
           <>
             {tab === 'suppliers' && (
@@ -332,11 +374,13 @@ export default function Compras() {
                 Exportar<Icon name="down" className="w-3.5 h-3.5" strokeWidth={2} />
               </MenuButton>
             )}
-            <PrimaryButton onClick={primary.onClick}>{primary.label}</PrimaryButton>
+            {primary && <PrimaryButton onClick={primary.onClick}>{primary.label}</PrimaryButton>}
           </>
         )} />
 
-      <Tabs value={tab} onChange={setTab} options={[
+      <Tabs value={tab} onChange={selectTab} options={[
+        ['summary', 'Resumen'],
+        ['invoices', `Facturas${invoices.length ? ` · ${invoices.length}` : ''}`],
         ['orders', `Pedidos${orders.length ? ` · ${orders.length}` : ''}`],
         ['products', `Productos${products.length ? ` · ${products.length}` : ''}`],
         ['suppliers', `Proveedores${suppliers.length ? ` · ${suppliers.length}` : ''}`],
@@ -344,6 +388,33 @@ export default function Compras() {
 
       {loading && <p className="text-sm text-gray-400">Cargando…</p>}
       {error && <p className="rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>}
+
+      {!loading && tab === 'summary' && (
+        <div className="space-y-7">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div className="rounded-2xl border border-gray-200 p-4"><p className="text-xs font-medium text-gray-500">Compras en facturas este mes</p><p className="mt-2 text-2xl font-semibold tabular-nums text-gray-900">{money(monthTotal)}</p></div>
+            <div className="rounded-2xl border border-gray-200 p-4"><p className="text-xs font-medium text-gray-500">Facturas este mes</p><p className="mt-2 text-2xl font-semibold tabular-nums text-gray-900">{confirmedThisMonth.length}</p></div>
+            <div className="rounded-2xl border border-gray-200 p-4"><p className="text-xs font-medium text-gray-500">Proveedores activos</p><p className="mt-2 text-2xl font-semibold tabular-nums text-gray-900">{activeSuppliers.length}</p></div>
+          </div>
+          <section>
+            <div className="mb-2 flex items-center justify-between gap-3"><h2 className="text-sm font-semibold text-gray-900">Últimas facturas</h2><button type="button" onClick={() => selectTab('invoices')} className="text-sm font-semibold text-violet-700">Ver todas</button></div>
+            {invoices.length === 0 ? <Empty>Todavía no hay facturas.</Empty> : (
+              <ul className="divide-y divide-gray-100">
+                {invoices.slice(0, 5).map((invoice) => (
+                  <li key={invoice._id}>
+                    <button type="button" onClick={() => navigate(`/compras/facturas/${invoice._id}`)} className="w-full flex items-center gap-3 rounded-xl px-2 py-3 text-left hover:bg-gray-50">
+                      <div className="min-w-0 flex-1"><p className="truncate text-[15px] font-medium text-gray-900">{invoice.supplier?.name || 'Sin proveedor'}</p><p className="truncate text-[13px] text-gray-500">{invoice.invoiceNumber || 'Sin número'} · {niceDate(invoice.invoiceDate)}</p></div>
+                      <span className="shrink-0 text-sm font-semibold tabular-nums">{money(invoice.total)}</span><Icon name="right" className="h-4 w-4 text-gray-300" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+        </div>
+      )}
+
+      {!loading && tab === 'invoices' && <Invoices embedded />}
 
       {!loading && tab === 'orders' && (
         orders.length === 0 ? (
@@ -460,7 +531,7 @@ export default function Compras() {
                   const count = products.filter((pr) => String(pr.supplier?._id || pr.supplierId) === String(supplier._id)).length;
                   return (
                     <li key={supplier._id}>
-                      <button type="button" onClick={() => setSupplierModal(supplier)}
+                      <button type="button" onClick={() => openSupplier(supplier)}
                         className="w-full text-left px-2 py-3 flex items-center gap-3 md:grid md:grid-cols-12 md:gap-4 rounded-xl hover:bg-gray-50 active:bg-gray-100">
                         <div className="md:col-span-4 flex items-center gap-3 min-w-0 flex-1">
                           <span className="w-10 h-10 rounded-xl bg-gray-100 text-gray-600 flex items-center justify-center text-sm font-semibold shrink-0">
@@ -526,6 +597,16 @@ export default function Compras() {
         />
       )}
 
+      {supplierDetailLoading && !supplierDetail && <p className="text-sm text-gray-400">Cargando proveedor…</p>}
+      {supplierDetail && (
+        <SupplierDetailModal
+          data={supplierDetail}
+          onClose={() => { setSupplierDetail(null); if (location.search) navigate('/compras/proveedores', { replace: true }); }}
+          onInvoice={(invoice) => navigate(`/compras/facturas/${invoice._id}`)}
+          onEdit={() => { setSupplierModal(supplierDetail.supplier); setSupplierDetail(null); }}
+        />
+      )}
+
       {orderDetail !== null && (
         <OrderDetailModal
           order={orderDetail}
@@ -577,6 +658,32 @@ function OrderDetailModal({ order, onClose, onEdit, onDelete, onSend, sending })
         </ul>
       ) : <p className="text-sm text-gray-400">Sin productos</p>}
       {order.notes && <p className="mt-4 text-[13px] text-gray-500 whitespace-pre-line">{order.notes}</p>}
+    </Modal>
+  );
+}
+
+function SupplierDetailModal({ data, onClose, onInvoice, onEdit }) {
+  const [tab, setTab] = useState('summary');
+  const { supplier, summary, invoices, products, orders } = data;
+  return (
+    <Modal title={supplier.name} subtitle={[supplier.taxId, supplier.contactName].filter(Boolean).join(' · ')} onClose={onClose} size="lg"
+      footer={<div className="flex justify-end gap-2"><button type="button" onClick={onClose} className={btnQuiet}>Cerrar</button><button type="button" onClick={onEdit} className={btnPrimary}>Editar proveedor</button></div>}>
+      <div className="space-y-5">
+        <Tabs value={tab} onChange={setTab} options={[
+          ['summary', 'Resumen'], ['invoices', `Facturas · ${invoices.length}`], ['products', `Productos · ${products.length}`], ['orders', `Pedidos · ${orders.length}`],
+        ]} />
+        {tab === 'summary' && (
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {[
+              ['Gasto este mes', money(summary.spendThisMonth)], ['Gasto este año', money(summary.spendThisYear)],
+              ['Facturas', summary.invoices], ['Productos', summary.products], ['Pedidos', summary.orders], ['Última compra', summary.lastPurchase ? niceDate(summary.lastPurchase) : '—'],
+            ].map(([label, value]) => <div key={label} className="rounded-xl bg-gray-50 p-3"><p className="text-xs text-gray-500">{label}</p><p className="mt-1 text-base font-semibold text-gray-900 tabular-nums">{value}</p></div>)}
+          </div>
+        )}
+        {tab === 'invoices' && (invoices.length ? <ul className="divide-y divide-gray-100">{invoices.map((invoice) => <li key={invoice._id}><button type="button" onClick={() => onInvoice(invoice)} className="w-full flex items-center gap-3 rounded-xl py-3 text-left hover:bg-gray-50"><div className="min-w-0 flex-1"><p className="font-medium text-gray-900">{invoice.invoiceNumber || 'Sin número'}</p><p className="text-sm text-gray-500">{niceDate(invoice.invoiceDate)} · {invoice.status}</p></div><span className="font-semibold tabular-nums">{money(invoice.total)}</span><Icon name="right" className="h-4 w-4 text-gray-300" /></button></li>)}</ul> : <Empty>Sin facturas relacionadas.</Empty>)}
+        {tab === 'products' && (products.length ? <ul className="divide-y divide-gray-100">{products.map((product) => <li key={product._id} className="py-3"><p className="font-medium text-gray-900">{product.name}</p><p className="text-sm text-gray-500">{product.unit || 'unidad'}{product.defaultUnitCost ? ` · ${money(product.defaultUnitCost)}` : ''}</p></li>)}</ul> : <Empty>Sin productos relacionados.</Empty>)}
+        {tab === 'orders' && (orders.length ? <ul className="divide-y divide-gray-100">{orders.map((order) => <li key={order._id} className="flex items-center gap-3 py-3"><div className="min-w-0 flex-1"><p className="font-medium text-gray-900">{niceDate(order.orderDate)}</p><OrderStatus status={order.status} /></div><span className="font-semibold tabular-nums">{money(order.totalAmount)}</span></li>)}</ul> : <Empty>Sin pedidos relacionados.</Empty>)}
+      </div>
     </Modal>
   );
 }

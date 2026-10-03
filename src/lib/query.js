@@ -31,9 +31,10 @@ const RELATED = {
   rooms: ['rooms', 'tables', 'reservations'],
   bookings: ['bookings', 'customers'],
   customers: ['customers', 'bookings', 'reservations'],
-  invoices: ['invoices', 'suppliers'],
-  suppliers: ['suppliers', 'invoices', 'purchases'],
+  invoices: ['invoices', 'suppliers', 'expenses', 'revenue'],
+  suppliers: ['suppliers', 'invoices', 'purchases', 'expenses'],
   purchases: ['purchases', 'suppliers'],
+  expenses: ['expenses', 'revenue', 'suppliers'],
   promos: ['promos'],
   marketing: ['marketing'],
 };

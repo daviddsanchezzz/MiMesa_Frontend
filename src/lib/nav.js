@@ -32,7 +32,6 @@ export function useNav() {
     !isAppointments && !isStaff && !locked && manager && { to: '/analytics', label: 'Estadísticas', icon: 'chart', section: 'Negocio' },
     isModuleEnabled('expenses') && hasRole('owner') && { to: '/finanzas', label: 'Finanzas', icon: 'euro', section: 'Negocio' },
     isModuleEnabled('purchases') && manager && { to: '/compras', label: 'Compras', icon: 'cart', section: 'Negocio' },
-    isModuleEnabled('purchases') && manager && { to: '/facturas', label: 'Facturas', icon: 'receipt', section: 'Negocio' },
     !isStaff && isSubscribed && manager && { to: '/publicidad', label: 'Publicidad', icon: 'megaphone', section: 'Crecimiento' },
   ].filter(Boolean);
 

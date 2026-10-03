@@ -23,21 +23,21 @@ function ListSkeleton() {
   );
 }
 
-export default function Invoices() {
+export default function Invoices({ embedded = false }) {
   const navigate = useNavigate();
-  const addInvoice = () => navigate('/facturas/nueva');
-  useSetMobileHeader({ title: 'Facturas', action: { label: 'Añadir', onClick: addInvoice } });
+  const addInvoice = () => navigate('/compras/facturas/nueva');
+  useSetMobileHeader({ title: embedded ? 'Compras' : 'Facturas', action: { label: 'Añadir', onClick: addInvoice } });
 
   const invoicesQuery = useData(['invoices', 'list'], invoicesApi.list, { retry: false });
   const invoices = invoicesQuery.data || [];
 
   return (
     <div className="w-full space-y-6">
-      <PageHeader
+      {!embedded && <PageHeader
         title="Facturas"
         subtitle="Digitaliza tus facturas y mantén tus compras organizadas."
         actions={<PrimaryButton onClick={addInvoice}>Añadir factura</PrimaryButton>}
-      />
+      />}
 
       {invoicesQuery.isLoading && <ListSkeleton />}
       {invoicesQuery.isError && (
@@ -72,7 +72,7 @@ export default function Invoices() {
           <ul className="divide-y divide-gray-100">
             {invoices.map((invoice) => (
               <li key={invoice._id}>
-                <button type="button" onClick={() => navigate(`/facturas/${invoice._id}`)}
+                <button type="button" onClick={() => navigate(`/compras/facturas/${invoice._id}`)}
                   className="w-full text-left px-2 py-3.5 flex items-center gap-3 md:grid md:grid-cols-12 md:gap-4 rounded-xl hover:bg-gray-50 active:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500">
                   <span className="w-9 h-9 md:hidden rounded-xl bg-gray-100 text-gray-500 flex items-center justify-center shrink-0">
                     <Icon name="receipt" className="w-[18px] h-[18px]" />

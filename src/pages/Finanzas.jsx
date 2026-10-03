@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, Fragment } from 'react';
+import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { useSetMobileHeader } from '../context/MobileHeaderContext';
 import Modal from '../components/Modal';
@@ -776,6 +777,7 @@ function ExpenseModal({ expense, suppliers, categories, onSave, onClose, scope =
 // ── Gastos tab ────────────────────────────────────────────────────────────────
 
 function GastosTab({ dateRange, suppliers, categories, refreshTrigger, onCreate }) {
+  const navigate = useNavigate();
   const [subView, setSubView] = useState('list'); // 'list' | 'recurrentes'
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -813,6 +815,11 @@ function GastosTab({ dateRange, suppliers, categories, refreshTrigger, onCreate 
   };
 
   const handleEditClick = (exp) => {
+    if (exp.sourceType === 'INVOICE') {
+      const invoiceId = exp.invoiceId?._id || exp.invoiceId || exp.sourceId;
+      if (invoiceId) navigate(`/compras/facturas/${invoiceId}`);
+      return;
+    }
     if (exp.isRecurring) {
       setScopeDialog({ mode: 'edit', expense: exp });
     } else {
@@ -891,24 +898,25 @@ function GastosTab({ dateRange, suppliers, categories, refreshTrigger, onCreate 
                         <Dot cls={catDot(categories, exp.category)} size="w-2 h-2" />
                         <span className="truncate">{supplier || label}</span>
                         {exp.isRecurring && <span className="text-[11px] font-semibold px-1.5 py-px rounded bg-violet-50 text-violet-800 shrink-0">Mensual</span>}
+                        {exp.sourceType === 'INVOICE' && <span className="text-[11px] font-semibold px-1.5 py-px rounded bg-emerald-50 text-emerald-800 shrink-0">Factura</span>}
                       </p>
                       <p className="text-[13px] text-gray-500 truncate">
-                        {[fmtShort(exp.expenseDate), supplier ? label : null, exp.notes].filter(Boolean).join(' · ')}
+                        {[fmtShort(exp.expenseDate), supplier ? label : null, exp.sourceType === 'INVOICE' ? `Factura ${exp.invoiceId?.invoiceNumber || ''}`.trim() : exp.isRecurring ? 'Recurrente' : 'Manual', exp.notes].filter(Boolean).join(' · ')}
                       </p>
                     </div>
                     <div className="hidden md:flex md:col-span-3 items-center gap-2 min-w-0">
                       <Dot cls={catDot(categories, exp.category)} size="w-2 h-2" />
                       <span className="text-sm font-medium text-gray-900 truncate">{label}</span>
                       {exp.isRecurring && <span className="text-[11px] font-semibold px-1.5 py-px rounded bg-violet-50 text-violet-800 shrink-0">Mensual</span>}
+                      {exp.sourceType === 'INVOICE' && <span className="text-[11px] font-semibold px-1.5 py-px rounded bg-emerald-50 text-emerald-800 shrink-0">Factura</span>}
                     </div>
                     <span className="hidden md:block md:col-span-2 text-sm text-gray-600 truncate">{supplier || <span className="text-gray-300">—</span>}</span>
                     <span className="hidden md:block md:col-span-3 text-sm text-gray-500 truncate">{exp.notes || <span className="text-gray-300">—</span>}</span>
                     <div className="shrink-0 md:col-span-2 flex items-center justify-end gap-2">
                       <span className="text-sm font-semibold tabular-nums text-gray-900">{fmtEur(exp.amount)}</span>
-                      <RowMenu items={[
-                        { label: 'Editar', onClick: () => handleEditClick(exp) },
-                        { label: 'Eliminar', danger: true, disabled: deleting === exp._id, onClick: () => handleDeleteClick(exp) },
-                      ]} />
+                      <RowMenu items={exp.sourceType === 'INVOICE'
+                        ? [{ label: 'Ver factura', onClick: () => handleEditClick(exp) }]
+                        : [{ label: 'Editar', onClick: () => handleEditClick(exp) }, { label: 'Eliminar', danger: true, disabled: deleting === exp._id, onClick: () => handleDeleteClick(exp) }]} />
                     </div>
                   </div>
                 </li>
@@ -1277,7 +1285,6 @@ function RevenueModal({ date = toIso(), initialValue = null, onClose, onSave }) 
 const TABS = [
   ['dashboard',  'Resumen'],
   ['expenses',   'Gastos'],
-  ['suppliers',  'Proveedores'],
   ['categories', 'Categorías'],
 ];
 
@@ -1338,7 +1345,6 @@ export default function Finanzas() {
 
       {tab === 'dashboard'  && <ResumenTab dateRange={dateRange} categories={categories} refreshTrigger={refresh} onTodayRevenue={() => setQuickAction('revenue')} />}
       {tab === 'expenses'   && <GastosTab dateRange={dateRange} suppliers={suppliers} categories={categories} refreshTrigger={refresh} onCreate={() => setQuickAction('expense')} />}
-      {tab === 'suppliers'  && <ProveedoresTab suppliers={suppliers} loadSuppliers={loadSuppliers} categories={categories} />}
       {tab === 'categories' && <CategoryManagerModal inline onRefresh={loadCategories} />}
 
       {quickAction === 'revenue' && (

@@ -70,7 +70,7 @@ export default function InvoiceUpload() {
     setPhase('processing');
     try {
       const invoice = await invoicesApi.extract(file);
-      navigate(`/facturas/${invoice._id}`, { replace: true });
+      navigate(`/compras/facturas/${invoice._id}`, { replace: true });
     } catch (err) {
       setFailedId(err?.response?.data?.invoiceId || null);
       setError(apiErrorMessage(err, 'No hemos podido leer esta factura.'));
@@ -103,8 +103,8 @@ export default function InvoiceUpload() {
           {error && <p className="mt-3 text-sm text-rose-700" role="alert">{error}</p>}
           <div className="mt-6 flex flex-col sm:flex-row justify-center gap-2">
             <PrimaryButton icon="camera" onClick={() => { setPhase('select'); setError(''); cameraInput.current?.click(); }}>Intentar de nuevo</PrimaryButton>
-            {failedId && <GhostButton onClick={() => navigate(`/facturas/${failedId}`)}>Ver borrador con error</GhostButton>}
-            <GhostButton onClick={() => navigate('/facturas')}>Volver a facturas</GhostButton>
+            {failedId && <GhostButton onClick={() => navigate(`/compras/facturas/${failedId}`)}>Ver borrador con error</GhostButton>}
+            <GhostButton onClick={() => navigate('/compras/facturas')}>Volver a facturas</GhostButton>
           </div>
           <input ref={cameraInput} type="file" accept="image/jpeg,image/png,image/webp" capture="environment" className="sr-only" onClick={(e) => { e.currentTarget.value = ''; }} onChange={(e) => choose(e.target.files?.[0])} />
         </div>
@@ -150,7 +150,7 @@ export default function InvoiceUpload() {
       {error && <p className="rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700" role="alert">{error}</p>}
 
       <div className="flex flex-col-reverse sm:flex-row sm:justify-between gap-2">
-        <GhostButton onClick={() => navigate('/facturas')} className="h-11 rounded-xl">Cancelar</GhostButton>
+        <GhostButton onClick={() => navigate('/compras/facturas')} className="h-11 rounded-xl">Cancelar</GhostButton>
         <PrimaryButton onClick={submit} disabled={!file} icon="sparkle" className="h-11">Analizar factura</PrimaryButton>
       </div>
     </div>

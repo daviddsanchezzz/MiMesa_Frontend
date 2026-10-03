@@ -76,7 +76,6 @@ function ReadOnlyInvoice({ invoice }) {
                   <p className="text-[15px] font-medium text-gray-900">{item.description}</p>
                   <p className="mt-0.5 text-[13px] text-gray-500">
                     {item.quantity !== null ? `${item.quantity} × ${formatInvoiceMoney(item.unitPrice, invoice.currency)}` : 'Cantidad no indicada'}
-                    {item.packageQuantity !== null && item.packageQuantity !== undefined && ` · Cajas ${item.packageQuantity}`}
                     {item.taxRate !== null && ` · IVA ${item.taxRate}%`}
                     {item.discount !== null && item.discount !== 0 && ` · Dto. ${item.discount}`}
                   </p>
@@ -129,21 +128,19 @@ function InvoiceLineEditor({ item, index, error, setItem, removeItem }) {
         </Field>
 
         <div className="mt-3 grid grid-cols-3 gap-x-2 gap-y-3 [&_label]:mb-1 [&_label]:text-[11px]">
-          <Field id={`mobile-line-${index}-package`} label="Cajas"><input id={`mobile-line-${index}-package`} inputMode="decimal" value={item.packageQuantity} onChange={(e) => setItem(index, 'packageQuantity', decimalTyping(e.target.value))} className={compactNumberCls} /></Field>
           <Field id={`mobile-line-${index}-quantity`} label="Cantidad"><input id={`mobile-line-${index}-quantity`} inputMode="decimal" value={item.quantity} onChange={(e) => setItem(index, 'quantity', decimalTyping(e.target.value))} className={compactNumberCls} /></Field>
-          <Field id={`mobile-line-${index}-tax`} label="IVA %"><input id={`mobile-line-${index}-tax`} inputMode="decimal" value={item.taxRate} onChange={(e) => setItem(index, 'taxRate', decimalTyping(e.target.value))} className={compactNumberCls} /></Field>
           <Field id={`mobile-line-${index}-unit`} label="Precio"><input id={`mobile-line-${index}-unit`} inputMode="decimal" value={item.unitPrice} onChange={(e) => setItem(index, 'unitPrice', decimalTyping(e.target.value))} className={compactNumberCls} /></Field>
+          <Field id={`mobile-line-${index}-tax`} label="IVA %"><input id={`mobile-line-${index}-tax`} inputMode="decimal" value={item.taxRate} onChange={(e) => setItem(index, 'taxRate', decimalTyping(e.target.value))} className={compactNumberCls} /></Field>
           <Field id={`mobile-line-${index}-discount`} label="Dto. %"><input id={`mobile-line-${index}-discount`} inputMode="decimal" value={item.discount} onChange={(e) => setItem(index, 'discount', decimalTyping(e.target.value))} className={compactNumberCls} /></Field>
-          <Field id={`mobile-line-${index}-total`} label="Total"><input id={`mobile-line-${index}-total`} inputMode="decimal" value={item.total} onChange={(e) => setItem(index, 'total', decimalTyping(e.target.value))} className={`${compactNumberCls} border-violet-200 bg-violet-50/60 font-semibold text-violet-950`} /></Field>
+          <Field id={`mobile-line-${index}-total`} label="Total" className="col-span-2"><input id={`mobile-line-${index}-total`} inputMode="decimal" value={item.total} onChange={(e) => setItem(index, 'total', decimalTyping(e.target.value))} className={`${compactNumberCls} border-violet-200 bg-violet-50/60 font-semibold text-violet-950`} /></Field>
         </div>
       </article>
 
       <div className="hidden md:grid md:grid-cols-12 md:items-end md:gap-2 md:px-2 md:py-3">
-        <Field id={`line-${index}-description`} label="Descripción" className="md:col-span-3 md:[&>label]:sr-only">
+        <Field id={`line-${index}-description`} label="Descripción" className="md:col-span-4 md:[&>label]:sr-only">
           <input id={`line-${index}-description`} value={item.description} onChange={(e) => setItem(index, 'description', e.target.value)} className={inputCls} aria-invalid={Boolean(error)} aria-describedby={error ? `line-${index}-error` : undefined} />
           {error && <p id={`line-${index}-error`} className="mt-1 text-xs text-rose-600">{error}</p>}
         </Field>
-        <Field id={`line-${index}-package`} label="Cajas" className="md:col-span-1 md:[&>label]:sr-only"><input id={`line-${index}-package`} inputMode="decimal" value={item.packageQuantity} onChange={(e) => setItem(index, 'packageQuantity', decimalTyping(e.target.value))} className={numberCls} /></Field>
         <Field id={`line-${index}-quantity`} label="Cantidad" className="md:col-span-1 md:[&>label]:sr-only"><input id={`line-${index}-quantity`} inputMode="decimal" value={item.quantity} onChange={(e) => setItem(index, 'quantity', decimalTyping(e.target.value))} className={numberCls} /></Field>
         <Field id={`line-${index}-unit`} label="Precio unitario" className="md:col-span-2 md:[&>label]:sr-only"><input id={`line-${index}-unit`} inputMode="decimal" value={item.unitPrice} onChange={(e) => setItem(index, 'unitPrice', decimalTyping(e.target.value))} className={numberCls} /></Field>
         <Field id={`line-${index}-discount`} label="Descuento %" className="md:col-span-1 md:[&>label]:sr-only"><input id={`line-${index}-discount`} inputMode="decimal" value={item.discount} onChange={(e) => setItem(index, 'discount', decimalTyping(e.target.value))} className={numberCls} /></Field>
@@ -207,9 +204,8 @@ function InvoiceForm({ form, setForm, errors }) {
       </Section>
 
       <Section title="Productos / líneas" aside={<button type="button" onClick={addItem} className="text-[13px] font-semibold text-violet-700 hover:text-violet-900">+ Añadir línea</button>}>
-        <p className="mb-3 text-xs leading-5 text-gray-500 md:hidden"><span className="font-medium text-gray-600">Cajas</span> indica cajas o bultos, incluso fracciones; <span className="font-medium text-gray-600">Cantidad</span> son las unidades facturadas.</p>
         <div className="hidden md:grid grid-cols-12 gap-2 px-2 pb-2 border-b border-gray-200 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
-          <span className="col-span-3">Descripción</span><span className="text-right">Cajas</span><span className="text-right">Cant.</span><span className="col-span-2 text-right">Precio</span><span className="text-right">Dto. %</span><span className="text-right">IVA</span><span className="col-span-2 text-right">Total</span><span />
+          <span className="col-span-4">Descripción</span><span className="text-right">Cant.</span><span className="col-span-2 text-right">Precio</span><span className="text-right">Dto. %</span><span className="text-right">IVA</span><span className="col-span-2 text-right">Total</span><span />
         </div>
         <div className="space-y-3 md:space-y-0 md:divide-y md:divide-gray-100">
           {form.items.map((item, index) => (

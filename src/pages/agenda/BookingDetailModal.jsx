@@ -224,17 +224,17 @@ export default function BookingDetailModal({ booking, staffById, services = [], 
         )}
 
         {booking.payment && (
-          <div className="rounded-xl bg-emerald-50 border border-emerald-200 px-4 py-3 flex items-center justify-between gap-3">
+          <div className="rounded-xl bg-blue-50 border border-blue-200 px-4 py-3 flex items-center justify-between gap-3">
             <div>
-              <p className="text-sm font-semibold text-emerald-900">Cobrada · {euros(booking.payment.total + (booking.payment.tip || 0))}</p>
-              <p className="text-xs text-emerald-800">
+              <p className="text-sm font-semibold text-blue-800">✓ Cobrada · {euros(booking.payment.total + (booking.payment.tip || 0))}</p>
+              <p className="text-xs text-blue-800">
                 {payMethodLabel(booking.payment.method)} · {timeInTz(booking.payment.paidAt, tz)}
                 {booking.payment.tip > 0 && ` · propina ${euros(booking.payment.tip)}`}
                 {booking.payment.discount > 0 && ` · descuento ${euros(booking.payment.discount)}`}
               </p>
             </div>
             {hasRole('manager') && (
-              <button type="button" disabled={busy} className="text-xs font-semibold text-emerald-800 hover:text-rose-700"
+              <button type="button" disabled={busy} className="text-xs font-semibold text-blue-800 hover:text-rose-700"
                 onClick={() => { if (window.confirm('¿Deshacer el cobro?')) run(() => bookingsApi.undoCheckout(booking._id)); }}>
                 Deshacer
               </button>

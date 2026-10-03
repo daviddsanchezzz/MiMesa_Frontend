@@ -33,7 +33,7 @@ export function StatusText({ tone, sector, className = '' }) {
   const t = TONES[tone] || TONES.confirmed;
   return (
     <span className={`inline-flex items-center gap-1.5 text-xs font-medium ${className}`} style={{ color: t.ink }}>
-      <span className="w-2 h-2 rounded-full shrink-0" style={t.dashed ? { border: `1.5px dashed ${t.color}` } : { backgroundColor: t.color }} />
+      {tone === 'done' ? <span aria-hidden="true" className="font-bold">✓</span> : <span className="w-2 h-2 rounded-full shrink-0" style={t.dashed ? { border: `1.5px dashed ${t.color}` } : { backgroundColor: t.color }} />}
       {toneLabel(tone, sector)}
     </span>
   );
@@ -77,6 +77,7 @@ export function TimeRow({ time, end, tone = 'confirmed', title, subtitle, badge,
         <div className="min-w-0 flex-1 py-px">
           <div className="flex items-center gap-2 min-w-0">
             <p className={`text-[15px] font-medium leading-5 truncate ${isMuted ? 'text-gray-400' : 'text-gray-900'}`}>{title}</p>
+            {tone === 'done' && <span aria-hidden="true" className="shrink-0 text-sm font-semibold" style={{ color: TONES.done.ink }}>✓</span>}
             {badge}
           </div>
           {subtitle && <p className="text-[13px] text-gray-500 leading-5 truncate">{subtitle}</p>}

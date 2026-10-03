@@ -7,7 +7,7 @@
  *   confirmed  violeta             · confirmada
  *   here       verde               · ha llegado / sentada
  *   unpaid     naranja             · atendida sin cobrar (solo citas)
- *   done       gris pizarra        · cobrada / terminada
+ *   done       azul suave          · cobrada / terminada
  *   lost       rojo                · no vino
  *   cancelled  gris claro, tachado · cancelada
  */
@@ -16,7 +16,7 @@ export const TONES = {
   confirmed: { color: '#8b5cf6', soft: '#ede9fe', ink: '#5b21b6' },
   here:      { color: '#10b981', soft: '#d1fae5', ink: '#065f46' },
   unpaid:    { color: '#f97316', soft: '#ffedd5', ink: '#9a3412' },
-  done:      { color: '#94a3b8', soft: '#f1f5f9', ink: '#475569' },
+  done:      { color: '#60a5fa', soft: '#eff6ff', ink: '#1d4ed8' },
   lost:      { color: '#f43f5e', soft: '#ffe4e6', ink: '#9f1239' },
   cancelled: { color: '#d1d5db', soft: '#f3f4f6', ink: '#9ca3af' },
 };

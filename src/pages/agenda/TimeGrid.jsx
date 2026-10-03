@@ -85,7 +85,7 @@ const STATE_BG = { confirmed: 0.13, here: 0.16, unpaid: 0.14, done: 0.1, pending
 function StateBlock({ booking, segment, kind, isNext, tz, top, height, left, width, dense, onClick }) {
   const l = LINE[kind] || LINE.confirmed;
   const lost = kind === 'lost' || kind === 'cancelled';
-  const bg = STATE_BG[kind] ? tint(l.color, STATE_BG[kind]) : lost ? '#fff7f8' : '#f9fafb';
+  const bg = kind === 'done' ? l.soft : STATE_BG[kind] ? tint(l.color, STATE_BG[kind]) : lost ? '#fff7f8' : '#f9fafb';
   return (
     <button
       type="button"
@@ -95,6 +95,7 @@ function StateBlock({ booking, segment, kind, isNext, tz, top, height, left, wid
       style={{
         top, height, left, width,
         backgroundColor: bg,
+        paddingRight: kind === 'done' ? 18 : undefined,
         borderLeft: l.dashed ? 'none' : `3px solid ${l.color}`,
         backgroundImage: l.dashed ? `repeating-linear-gradient(to bottom, ${l.color} 0 5px, transparent 5px 9px)` : 'none',
         backgroundSize: l.dashed ? '3px 100%' : undefined,
@@ -102,6 +103,7 @@ function StateBlock({ booking, segment, kind, isNext, tz, top, height, left, wid
         paddingLeft: l.dashed ? (dense ? 9 : 11) : undefined,
       }}
     >
+      {kind === 'done' && <span aria-hidden="true" className="absolute right-1 top-0 text-xs font-bold" style={{ color: l.ink }}>✓</span>}
       {dense ? (
         <p className={`text-[11px] font-semibold leading-tight truncate ${lost ? 'text-gray-400 line-through' : 'text-gray-900'}`}>{booking.guestName.split(' ')[0]}</p>
       ) : height < 44 ? (

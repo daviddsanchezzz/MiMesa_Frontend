@@ -4,7 +4,7 @@ import { TONES, bookingTone, toneLabel } from '../../lib/status';
  * The colour of an appointment tells its state, the same in the list, the
  * day view and in the restaurant (see lib/status): amber dashed = to confirm,
  * violet = confirmed, green = has arrived, orange = attended but not charged,
- * slate = charged, red = no-show, light grey = cancelled.
+ * soft blue = charged, red = no-show, light grey = cancelled.
  */
 export const LINE = Object.fromEntries(Object.entries(TONES).map(([k, t]) => [k, { ...t, label: toneLabel(k) }]));
 
@@ -29,7 +29,7 @@ export function LineLegend({ kinds }) {
     <div className="flex flex-wrap gap-x-4 gap-y-1.5 px-1 text-[11px] text-gray-500">
       {shown.map(([k, l]) => (
         <span key={k} className="inline-flex items-center gap-1.5">
-          <span className="w-2.5 h-2.5 rounded-full" style={l.dashed ? { border: `2px dashed ${l.color}` } : { backgroundColor: l.color }} />
+          {k === 'done' ? <span aria-hidden="true" className="font-bold" style={{ color: l.ink }}>✓</span> : <span className="w-2.5 h-2.5 rounded-full" style={l.dashed ? { border: `2px dashed ${l.color}` } : { backgroundColor: l.color }} />}
           {l.label}
         </span>
       ))}

@@ -376,7 +376,7 @@ export default function InvoiceDetail() {
   }
 
   return (
-    <div className={`w-full max-w-6xl mx-auto space-y-6 ${editable ? 'pb-24 lg:pb-0' : ''}`}>
+    <div className={`w-full space-y-6 ${editable ? 'pb-24 lg:pb-0' : ''}`}>
       <div>
         <button type="button" onClick={goBack} className="inline-flex items-center gap-1 text-sm font-medium text-gray-500 hover:text-gray-900">
           <Icon name="left" className="h-4 w-4" strokeWidth={2} />
@@ -411,7 +411,7 @@ export default function InvoiceDetail() {
 
       {editable ? (
         <div className="fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-30 border-t border-gray-200 bg-white/95 px-4 py-3 shadow-[0_-8px_24px_rgba(17,24,39,0.06)] backdrop-blur lg:sticky lg:bottom-0 lg:rounded-2xl lg:border lg:px-4">
-          <div className="mx-auto grid w-full max-w-6xl grid-cols-2 gap-2 lg:flex lg:items-center lg:justify-end">
+          <div className="grid w-full grid-cols-2 gap-2 lg:flex lg:items-center lg:justify-end">
             {invoice.status === 'CONFIRMED' && <GhostButton onClick={cancelEdit} disabled={saving || confirming} className="h-11 rounded-xl">Cancelar</GhostButton>}
             {invoice.status === 'CONFIRMED'
               ? <PrimaryButton icon="check" onClick={() => save()} disabled={saving || confirming || !dirty} className="h-11 rounded-xl">{saving ? 'Guardando…' : 'Guardar cambios'}</PrimaryButton>

@@ -28,7 +28,7 @@ export function useNav() {
     !isAppointments && manager && { to: '/exceptions', label: 'Cierres y excepciones', icon: 'alert', section: 'Negocio' },
     isAppointments && manager && { to: '/equipo', label: 'Equipo', hint: 'Profesionales, servicios, horarios y accesos', icon: 'team', section: 'Equipo' },
     !isAppointments && !isStaff && !locked && manager && { to: '/team', label: 'Equipo', icon: 'team', section: 'Equipo' },
-    isModuleEnabled('staff') && manager && { to: '/personal', label: isAppointments ? 'Rendimiento' : 'Personal', hint: isAppointments ? 'Facturación, costes y margen' : undefined, icon: 'briefcase', section: 'Equipo' },
+    isModuleEnabled('staff') && manager && { to: '/personal', label: isAppointments ? 'Rendimiento' : 'Personal', hint: isAppointments ? 'Facturación, costes y margen de cada profesional' : undefined, icon: 'briefcase', section: 'Equipo' },
     !isAppointments && !isStaff && !locked && manager && { to: '/analytics', label: 'Estadísticas', icon: 'chart', section: 'Negocio' },
     isModuleEnabled('expenses') && hasRole('owner') && { to: '/finanzas', label: 'Finanzas', icon: 'euro', section: 'Negocio' },
     isModuleEnabled('purchases') && manager && { to: '/compras', label: 'Compras', icon: 'cart', section: 'Negocio' },

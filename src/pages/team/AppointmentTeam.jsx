@@ -269,26 +269,28 @@ export default function AppointmentTeam() {
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-3">
-              <div className="min-w-0 rounded-2xl border border-gray-200 bg-white p-3.5">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Facturado</p>
-                <p className="mt-0.5 text-xl lg:text-2xl font-semibold tracking-tight tabular-nums text-gray-900">{eur(billed)}</p>
-                <p className="mt-0.5 text-xs text-gray-500">{citas(t.appointments)}</p>
+            <div className="space-y-2">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="min-w-0 rounded-2xl border border-gray-200 bg-white p-3.5">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Facturado</p>
+                  <p className="mt-0.5 text-xl lg:text-2xl font-semibold tracking-tight tabular-nums text-gray-900">{eur(billed)}</p>
+                  <p className="mt-0.5 text-xs text-gray-500">{citas(t.appointments)}</p>
+                </div>
+                <div className="min-w-0 rounded-2xl border border-gray-200 bg-white p-3.5">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Coste del equipo</p>
+                  <p className="mt-0.5 text-xl lg:text-2xl font-semibold tracking-tight tabular-nums text-gray-900">{eur(t.cost)}</p>
+                  <p className={`mt-0.5 text-xs tabular-nums ${t.toPay > 0 ? 'font-medium text-amber-700' : 'text-gray-500'}`}>
+                    {t.toPay > 0 ? `${eur(t.toPay)} pendientes` : 'Sin pagos pendientes'}
+                  </p>
+                </div>
               </div>
-              <div className="min-w-0 rounded-2xl border border-gray-200 bg-white p-3.5">
-                <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Coste del equipo</p>
-                <p className="mt-0.5 text-xl lg:text-2xl font-semibold tracking-tight tabular-nums text-gray-900">{eur(t.cost)}</p>
-                <p className="mt-0.5 text-xs text-gray-500">{eur(t.paid)} pagado{t.paid !== 1 ? 's' : ''}</p>
-              </div>
-            </div>
 
-            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-500">
-              <span className="font-medium text-gray-600">Coste:</span>
-              <span className="tabular-nums">{eur(t.salary)} sueldos</span>
-              <span aria-hidden="true">·</span>
-              <span className="tabular-nums">{eur(t.commission)} comisiones</span>
-              {t.tips > 0 && <><span aria-hidden="true">·</span><span className="tabular-nums">{eur(t.tips)} propinas</span></>}
-              {t.toPay > 0 && <span className="rounded-full bg-amber-50 px-2 py-0.5 font-medium text-amber-800">Pendiente de pago</span>}
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 px-0.5 text-xs text-gray-500">
+                <span className="tabular-nums">{eur(t.salary)} sueldos</span>
+                <span aria-hidden="true">·</span>
+                <span className="tabular-nums">{eur(t.commission)} comisiones</span>
+                {t.tips > 0 && <><span aria-hidden="true">·</span><span className="tabular-nums">{eur(t.tips)} propinas</span></>}
+              </div>
             </div>
           </section>
 
@@ -306,7 +308,7 @@ export default function AppointmentTeam() {
                   <span className="col-span-1 text-right">Margen</span>
                   <span className="col-span-2 text-right">Pendiente</span>
                 </div>
-                <ul className="divide-y divide-gray-100">
+                <ul className="pt-1 divide-y divide-gray-100">
                   {data.staff.map((p) => {
                     const cost = (p.salary || 0) + (p.commission || 0);
                     return (
@@ -335,18 +337,14 @@ export default function AppointmentTeam() {
                                     </button>
                                   )}
                                 </div>
-                                <div className="shrink-0 text-right">
-                                  {p.pay ? (
-                                    <>
+                                <div className="flex shrink-0 items-start gap-2">
+                                  {p.pay && (
+                                    <div className="text-right">
                                       <p className={`text-[15px] font-semibold tabular-nums ${p.leaves >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{p.leaves > 0 ? '+' : ''}{eur(p.leaves)}</p>
                                       <p className="text-[11px] text-gray-400">margen</p>
-                                    </>
-                                  ) : (
-                                    <>
-                                      <p className="text-[15px] font-semibold text-gray-300">—</p>
-                                      <p className="text-[11px] text-gray-400">sin calcular</p>
-                                    </>
+                                    </div>
                                   )}
+                                  <span aria-hidden="true" className="pt-px text-xl leading-5 text-gray-300">›</span>
                                 </div>
                               </div>
                               <p className="mt-1.5 text-[13px] text-gray-500 tabular-nums">{citas(p.appointments)} · {eur(p.billed + p.products)} facturado</p>
@@ -356,7 +354,7 @@ export default function AppointmentTeam() {
                                   {p.toPay > 0 ? (
                                     <span className="rounded-full bg-amber-50 px-2 py-0.5 font-medium text-amber-800">Pendiente</span>
                                   ) : p.paid > 0 ? (
-                                    <span className="rounded-full bg-emerald-50 px-2 py-0.5 font-medium text-emerald-700">Pagado</span>
+                                    <span className="rounded-full bg-gray-100 px-2 py-0.5 font-medium text-gray-600">Pagado</span>
                                   ) : null}
                                 </div>
                               )}

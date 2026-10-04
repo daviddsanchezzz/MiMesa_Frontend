@@ -223,7 +223,13 @@ export default function PublicBooking({ businessId: businessIdProp, slug = null 
 
         <div
           key={isEmbed ? 'embedded-content' : step}
-          className={`space-y-4 ${isEmbed ? '' : 'min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain pb-6 sm:pb-10'}`}
+          onScroll={isEmbed ? undefined : (event) => {
+            // Some iOS in-app browsers can move an overflow-y container on the
+            // x axis after a diagonal swipe on the date ribbon. Never let the
+            // whole booking step remain shifted off screen.
+            if (event.currentTarget.scrollLeft !== 0) event.currentTarget.scrollLeft = 0;
+          }}
+          className={`w-full min-w-0 max-w-full space-y-4 ${isEmbed ? '' : 'min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-x-none overscroll-y-contain pb-6 sm:pb-10'}`}
         >
 
       {service && step !== 'service' && step !== 'done' && (
@@ -304,7 +310,7 @@ export default function PublicBooking({ businessId: businessIdProp, slug = null 
             </p>
           ) : (
             <>
-              <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 [scrollbar-width:none]">
+              <div className="flex max-w-full gap-2 overflow-x-auto overscroll-x-contain pb-1 -mx-1 px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 {Array.from({ length: loadedDays }, (_, i) => addDays(today, i)).map((d) => {
                   const p = dayParts(d);
                   const has = !!slotsByDay[d];
@@ -327,12 +333,12 @@ export default function PublicBooking({ businessId: businessIdProp, slug = null 
                 )}
               </div>
               {day && (
-                <div className="bg-white border border-gray-200 rounded-2xl p-4 space-y-3">
+                <div className="w-full min-w-0 max-w-full bg-white border border-gray-200 rounded-2xl p-4 space-y-3 overflow-hidden">
                   <p className="text-sm font-semibold text-gray-800 first-letter:uppercase">{dayParts(day).long}</p>
                   <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
                     {(slotsByDay[day] || []).map((s) => (
                       <button key={s.time} type="button" onClick={() => { setTime(s.time); setStep('details'); setError(''); }}
-                        className="rounded-lg border border-gray-200 py-2 text-sm font-semibold text-gray-800 tabular-nums hover:border-gray-400 transition">
+                        className="min-w-0 rounded-lg border border-gray-200 py-2 text-sm font-semibold text-gray-800 tabular-nums hover:border-gray-400 transition">
                         {timeInTz(s.start, tz)}
                       </button>
                     ))}

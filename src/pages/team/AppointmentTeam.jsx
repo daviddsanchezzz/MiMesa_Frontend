@@ -6,7 +6,7 @@ import { bookingsApi, apiError } from '../../services/bookingsApi';
 import Modal from '../../components/Modal';
 import StaffAvatar from '../agenda/StaffAvatar';
 import { DEFAULT_TZ, inputCls, labelCls, staffColors, todayIn } from '../agenda/utils';
-import { BigFigure, Empty, FigureLine, GhostButton, PageHeader, PrimaryButton, RowAction, Section, SectionLink } from '../../ui/kit';
+import { Empty, FigureLine, GhostButton, PrimaryButton, RowAction, Section, SectionLink } from '../../ui/kit';
 
 const MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 const eur = (n) => `${(n || 0).toLocaleString('es-ES', { minimumFractionDigits: Number.isInteger(n || 0) ? 0 : 2, maximumFractionDigits: 2, useGrouping: 'always' })} €`;
@@ -81,7 +81,7 @@ export function PayModal({ person, onClose, onSaved }) {
   }
 
   return (
-    <Modal title={`Cómo cobra ${person.name}`} subtitle="Se usa para calcular su coste y el margen para el negocio." onClose={onClose}
+    <Modal title={`Cómo cobra ${person.name}`} subtitle="Se usa para calcular su coste y el margen del equipo." onClose={onClose}
       footer={<SheetFooter onCancel={onClose} onSave={save} saving={saving} label="Guardar" />}>
       <div className="space-y-6">
         <Section title="Tipo de pago">
@@ -176,7 +176,7 @@ export function Breakdown({ p, onPay, onEdit }) {
         {p.products > 0 && line('Productos vendidos', eur(p.products))}
         {line('Sueldo', p.salary ? `−${eur(p.salary)}` : '—', p.salary ? 'text-rose-600' : 'text-gray-300')}
         {line('Comisión', p.commission ? `−${eur(p.commission)}` : '—', p.commission ? 'text-rose-600' : 'text-gray-300')}
-        {line('Margen para el negocio', eur(p.leaves), `font-semibold ${p.leaves >= 0 ? 'text-emerald-600' : 'text-rose-600'}`)}
+        {line('Margen tras coste de personal', eur(p.leaves), `font-semibold ${p.leaves >= 0 ? 'text-emerald-600' : 'text-rose-600'}`)}
       </dl>
       <div>
         <dl className="text-sm divide-y divide-gray-100">
@@ -224,36 +224,72 @@ export default function AppointmentTeam() {
   const colors = useMemo(() => staffColors((data?.staff || []).map((s) => ({ ...s, _id: s.id, kind: 'staff' }))), [data]);
   const [y, m] = month.split('-').map(Number);
   const t = data?.totals;
+  const billed = (t?.billed || 0) + (t?.products || 0);
+  const canShowSplit = billed > 0 && (t?.leaves || 0) >= 0 && (t?.cost || 0) >= 0;
+  const marginShare = canShowSplit ? Math.min(100, Math.max(0, ((t?.leaves || 0) / billed) * 100)) : 0;
+  const costShare = canShowSplit ? 100 - marginShare : 0;
 
   return (
     <div className="w-full flex flex-1 min-h-0 flex-col">
-      <PageHeader className="shrink-0 pb-5" title="Rendimiento" subtitle="Facturación, costes y margen de cada profesional." mobileActions
-        actions={(
-          <div className="flex items-center gap-1">
-            <button type="button" className="w-9 h-9 rounded-full hover:bg-gray-100 text-gray-600" onClick={() => setMonth(shiftMonth(month, -1))} aria-label="Mes anterior">‹</button>
-            <span className="px-1 text-sm font-semibold text-gray-900 capitalize min-w-[8.5rem] text-center">{MONTHS[m - 1]} {y}</span>
-            <button type="button" className="w-9 h-9 rounded-full hover:bg-gray-100 text-gray-600 disabled:text-gray-300 disabled:hover:bg-transparent" onClick={() => setMonth(shiftMonth(month, 1))} disabled={month >= today.slice(0, 7)} aria-label="Mes siguiente">›</button>
-          </div>
-        )} />
+      <div className="shrink-0 flex items-center justify-center lg:justify-between pb-4 lg:pb-5">
+        <div className="hidden lg:block min-w-0">
+          <h1 className="text-2xl font-semibold tracking-tight text-gray-900">Rendimiento</h1>
+          <p className="text-sm text-gray-500 mt-0.5">Facturación, costes y margen de cada profesional.</p>
+        </div>
+        <div className="flex items-center gap-1" aria-label="Mes del informe">
+          <button type="button" className="w-9 h-9 rounded-full hover:bg-gray-100 text-gray-600" onClick={() => setMonth(shiftMonth(month, -1))} aria-label="Mes anterior">‹</button>
+          <span className="px-1 text-sm font-semibold text-gray-900 capitalize min-w-[8.5rem] text-center">{MONTHS[m - 1]} {y}</span>
+          <button type="button" className="w-9 h-9 rounded-full hover:bg-gray-100 text-gray-600 disabled:text-gray-300 disabled:hover:bg-transparent" onClick={() => setMonth(shiftMonth(month, 1))} disabled={month >= today.slice(0, 7)} aria-label="Mes siguiente">›</button>
+        </div>
+      </div>
 
-      <div key={month} data-page-scroll className="flex-1 min-h-0 overflow-y-auto overscroll-contain pb-6 space-y-8">
+      <div key={month} data-page-scroll className="flex-1 min-h-0 overflow-y-auto overscroll-contain pb-6 space-y-6 lg:space-y-8">
       {error && <p className="text-sm text-rose-700 rounded-xl bg-rose-50 px-3 py-2">{error}</p>}
       {!data && !error && <p className="text-sm text-gray-400">Cargando…</p>}
 
       {data && (
         <>
-          <section className="space-y-4">
-            <BigFigure label="Margen para el negocio" value={eur(t.leaves)} tone={(t.leaves || 0) >= 0 ? 'good' : 'bad'}
-              sub={`Facturado menos ${eur(t.cost)} de coste del equipo`} />
-            <FigureLine items={[
-              { label: `facturado · ${citas(t.appointments)}`, value: eur(t.billed + t.products) },
-              t.products ? { label: 'en productos', value: eur(t.products) } : null,
-              { label: 'sueldos', value: eur(t.salary) },
-              { label: 'comisiones', value: eur(t.commission) },
-              { label: 'pendiente de pagar', value: eur(t.toPay), tone: t.toPay > 0 ? 'warn' : undefined },
-              { label: 'ya pagado', value: eur(t.paid) },
-              t.tips ? { label: 'propinas', value: eur(t.tips) } : null,
-            ]} />
+          <section className="space-y-4" aria-labelledby="team-margin-title">
+            <div>
+              <p id="team-margin-title" className="text-[13px] font-semibold uppercase tracking-wide text-gray-400">Margen del equipo</p>
+              <p className={`text-3xl lg:text-4xl font-semibold tracking-tight tabular-nums ${(t.leaves || 0) >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{eur(t.leaves)}</p>
+              <p className="text-[13px] text-gray-500 mt-0.5">Facturación menos sueldos y comisiones</p>
+            </div>
+
+            {canShowSplit && (
+              <div className="space-y-1.5" aria-label={`${num(marginShare)} % de margen y ${num(costShare)} % de coste del equipo`}>
+                <div className="flex h-2.5 overflow-hidden rounded-full bg-gray-100" aria-hidden="true">
+                  <span className="bg-emerald-500" style={{ width: `${marginShare}%` }} />
+                  <span className="bg-violet-300" style={{ width: `${costShare}%` }} />
+                </div>
+                <div className="flex justify-between gap-3 text-[11px] font-medium tabular-nums">
+                  <span className="text-emerald-700">{num(marginShare)} % margen</span>
+                  <span className="text-violet-700">{num(costShare)} % equipo</span>
+                </div>
+              </div>
+            )}
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="min-w-0 rounded-2xl border border-gray-200 bg-white p-3.5">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Facturado</p>
+                <p className="mt-0.5 text-xl lg:text-2xl font-semibold tracking-tight tabular-nums text-gray-900">{eur(billed)}</p>
+                <p className="mt-0.5 text-xs text-gray-500">{citas(t.appointments)}</p>
+              </div>
+              <div className="min-w-0 rounded-2xl border border-gray-200 bg-white p-3.5">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Coste del equipo</p>
+                <p className="mt-0.5 text-xl lg:text-2xl font-semibold tracking-tight tabular-nums text-gray-900">{eur(t.cost)}</p>
+                <p className="mt-0.5 text-xs text-gray-500">{eur(t.paid)} pagado{t.paid !== 1 ? 's' : ''}</p>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-gray-500">
+              <span className="font-medium text-gray-600">Coste:</span>
+              <span className="tabular-nums">{eur(t.salary)} sueldos</span>
+              <span aria-hidden="true">·</span>
+              <span className="tabular-nums">{eur(t.commission)} comisiones</span>
+              {t.tips > 0 && <><span aria-hidden="true">·</span><span className="tabular-nums">{eur(t.tips)} propinas</span></>}
+              {t.toPay > 0 && <span className="rounded-full bg-amber-50 px-2 py-0.5 font-medium text-amber-800">Pendiente de pago</span>}
+            </div>
           </section>
 
           <Section title="Profesionales">
@@ -278,32 +314,80 @@ export default function AppointmentTeam() {
                         <div role="link" tabIndex={0}
                           onClick={() => openProfessional(p.id)}
                           onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); openProfessional(p.id); } }}
-                          className="flex items-center gap-3 md:grid md:grid-cols-12 md:gap-4 px-2 py-3 rounded-xl cursor-pointer hover:bg-gray-50">
-                          <div className="md:col-span-4 flex items-center gap-3 min-w-0 flex-1">
+                          className="md:hidden px-2 py-4 rounded-xl cursor-pointer hover:bg-gray-50 active:bg-gray-100">
+                          <div className="flex items-start gap-3 min-w-0">
+                            <StaffAvatar name={p.name} photo={p.photo} color={colors[p.id]} size={40} />
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="min-w-0">
+                                  <p className="text-[15px] font-medium text-gray-900 truncate">
+                                    {p.name}{!p.active && <span className="ml-1.5 text-[11px] font-semibold px-1.5 py-px rounded bg-gray-100 text-gray-500 align-middle">Desactivada</span>}
+                                  </p>
+                                  {p.pay ? (
+                                    <button type="button" onClick={(e) => { e.stopPropagation(); openProfessional(p.id); }}
+                                      className="block max-w-full truncate text-left text-[13px] text-gray-500 hover:text-violet-700">
+                                      {payText(p.pay)}
+                                    </button>
+                                  ) : (
+                                    <button type="button" onClick={(e) => { e.stopPropagation(); openProfessional(p.id); }}
+                                      className="mt-1 inline-flex min-h-7 items-center rounded-full bg-violet-50 px-2.5 text-xs font-semibold text-violet-700 hover:bg-violet-100">
+                                      Configurar remuneración
+                                    </button>
+                                  )}
+                                </div>
+                                <div className="shrink-0 text-right">
+                                  {p.pay ? (
+                                    <>
+                                      <p className={`text-[15px] font-semibold tabular-nums ${p.leaves >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{p.leaves > 0 ? '+' : ''}{eur(p.leaves)}</p>
+                                      <p className="text-[11px] text-gray-400">margen</p>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <p className="text-[15px] font-semibold text-gray-300">—</p>
+                                      <p className="text-[11px] text-gray-400">sin calcular</p>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                              <p className="mt-1.5 text-[13px] text-gray-500 tabular-nums">{citas(p.appointments)} · {eur(p.billed + p.products)} facturado</p>
+                              {p.pay && (
+                                <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
+                                  <span className="text-gray-500">Coste <strong className="font-semibold tabular-nums text-gray-700">{eur(cost)}</strong></span>
+                                  {p.toPay > 0 ? (
+                                    <span className="rounded-full bg-amber-50 px-2 py-0.5 font-medium text-amber-800">Pendiente</span>
+                                  ) : p.paid > 0 ? (
+                                    <span className="rounded-full bg-emerald-50 px-2 py-0.5 font-medium text-emerald-700">Pagado</span>
+                                  ) : null}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div role="link" tabIndex={0}
+                          onClick={() => openProfessional(p.id)}
+                          onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); openProfessional(p.id); } }}
+                          className="hidden md:grid md:grid-cols-12 md:gap-4 items-center px-2 py-3 rounded-xl cursor-pointer hover:bg-gray-50">
+                          <div className="col-span-4 flex items-center gap-3 min-w-0">
                             <StaffAvatar name={p.name} photo={p.photo} color={colors[p.id]} size={40} />
                             <div className="min-w-0">
                               <p className="text-[15px] font-medium text-gray-900 truncate">
                                 {p.name}{!p.active && <span className="ml-1.5 text-[11px] font-semibold px-1.5 py-px rounded bg-gray-100 text-gray-500 align-middle">Desactivada</span>}
                               </p>
                               <button type="button" onClick={(e) => { e.stopPropagation(); openProfessional(p.id); }}
-                                className={`text-[13px] text-left truncate max-w-full ${p.pay ? 'text-gray-500 hover:text-violet-700' : 'text-amber-700 font-semibold'}`}>
-                                {payText(p.pay)}
+                                className={`text-[13px] text-left truncate max-w-full ${p.pay ? 'text-gray-500 hover:text-violet-700' : 'text-violet-700 font-semibold hover:text-violet-900'}`}>
+                                {p.pay ? payText(p.pay) : 'Configurar remuneración'}
                               </button>
-                              <p className="md:hidden text-[13px] text-gray-500 tabular-nums">{citas(p.appointments)} · {eur(p.billed + p.products)}</p>
                             </div>
                           </div>
                           <span className="hidden md:block col-span-1 text-right text-sm tabular-nums text-gray-700">{p.appointments}</span>
                           <span className="hidden md:block col-span-1 text-right text-sm tabular-nums text-gray-700">{num(p.hours)}</span>
                           <span className="hidden md:block col-span-2 text-right text-sm tabular-nums text-gray-900">{eur(p.billed + p.products)}</span>
                           <span className="hidden md:block col-span-1 text-right text-sm tabular-nums text-gray-700">{cost ? eur(cost) : <span className="text-gray-300">—</span>}</span>
-                          <span className={`hidden md:block col-span-1 text-right text-sm font-semibold tabular-nums ${p.leaves >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{eur(p.leaves)}</span>
+                          <span className={`hidden md:block col-span-1 text-right text-sm font-semibold tabular-nums ${p.pay ? (p.leaves >= 0 ? 'text-emerald-600' : 'text-rose-600') : 'text-gray-300'}`}>{p.pay ? eur(p.leaves) : '—'}</span>
                           <div className="hidden md:flex col-span-2 items-center justify-end gap-2">
                             <span className={`text-sm tabular-nums ${p.toPay > 0 ? 'font-semibold text-amber-700' : 'text-gray-400'}`}>{eur(p.toPay)}</span>
                             <RowAction onClick={(e) => { e.stopPropagation(); openProfessional(p.id); }}>Ver ficha</RowAction>
-                          </div>
-                          <div className="md:hidden text-right shrink-0">
-                            <p className={`text-[15px] font-semibold tabular-nums ${p.leaves >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{eur(p.leaves)}</p>
-                            <p className="text-[11px] text-gray-400">{p.toPay > 0 ? <span className="text-amber-700">{eur(p.toPay)} pendiente</span> : 'margen'}</p>
                           </div>
                         </div>
                       </li>

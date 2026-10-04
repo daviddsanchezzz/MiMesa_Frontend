@@ -1,11 +1,11 @@
 import { useState, useEffect, useCallback, Fragment } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { useSetMobileHeader } from '../context/MobileHeaderContext';
 import Modal from '../components/Modal';
 import Icon from '../ui/Icon';
 import {
-  PageHeader, PrimaryButton, GhostButton, Tabs, Segmented, Section, SectionLink, FigureLine, BigFigure, Empty, Toggle,
+  PageHeader, PrimaryButton, Tabs, Section, SectionLink, FigureLine, Empty, Toggle,
 } from '../ui/kit';
 import { euros } from './agenda/utils';
 
@@ -50,8 +50,8 @@ function toIso(d = new Date()) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-function getWeekRange() {
-  const today = new Date();
+function getWeekRange(anchor = new Date()) {
+  const today = new Date(anchor);
   const day = today.getDay();
   const diff = day === 0 ? -6 : 1 - day;
   const mon = new Date(today); mon.setDate(today.getDate() + diff);
@@ -59,8 +59,8 @@ function getWeekRange() {
   return { from: toIso(mon), to: toIso(sun) };
 }
 
-function getMonthRange() {
-  const today = new Date();
+function getMonthRange(anchor = new Date()) {
+  const today = new Date(anchor);
   return {
     from: toIso(new Date(today.getFullYear(), today.getMonth(), 1)),
     to:   toIso(new Date(today.getFullYear(), today.getMonth() + 1, 0)),
@@ -177,12 +177,6 @@ function Pager({ page, pageCount, setPage }) {
 
 // ── Period selector ───────────────────────────────────────────────────────────
 
-const PERIODS = [['week', 'Semana'], ['month', 'Mes'], ['custom', 'Fechas']];
-
-function PeriodSelector({ period, onChange }) {
-  return <Segmented size="sm" value={period} options={PERIODS} onChange={onChange} />;
-}
-
 function CustomRange({ dateRange, onRangeChange }) {
   const cls = 'rounded-xl border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 min-w-0 flex-1 sm:flex-none appearance-none bg-white';
   return (
@@ -190,6 +184,58 @@ function CustomRange({ dateRange, onRangeChange }) {
       <input type="date" aria-label="Desde" value={dateRange.from} onChange={(e) => onRangeChange({ ...dateRange, from: e.target.value })} className={cls} />
       <span className="text-gray-400 text-sm">–</span>
       <input type="date" aria-label="Hasta" value={dateRange.to} onChange={(e) => onRangeChange({ ...dateRange, to: e.target.value })} className={cls} />
+    </div>
+  );
+}
+
+function periodLabel(period, dateRange) {
+  if (period === 'month') {
+    const text = parseIso(dateRange.from).toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+    return text.charAt(0).toUpperCase() + text.slice(1);
+  }
+  return fmtRange(dateRange);
+}
+
+function PeriodNavigator({ period, dateRange, onPeriodChange, onShift, onRangeChange }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="relative">
+      <div className="flex items-center justify-center gap-1">
+        <button type="button" onClick={() => onShift(-1)} aria-label="Periodo anterior"
+          className="w-9 h-9 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-100">
+          <Icon name="left" className="w-4 h-4" strokeWidth={2} />
+        </button>
+        <button type="button" onClick={() => setOpen((value) => !value)}
+          className="min-w-[180px] h-9 px-3 rounded-full inline-flex items-center justify-center gap-2 text-sm font-semibold text-gray-900 hover:bg-gray-100">
+          {periodLabel(period, dateRange)}
+          <Icon name="calendar" className="w-4 h-4 text-gray-500" />
+        </button>
+        <button type="button" onClick={() => onShift(1)} aria-label="Periodo siguiente"
+          className="w-9 h-9 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-100">
+          <Icon name="right" className="w-4 h-4" strokeWidth={2} />
+        </button>
+      </div>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
+          <div className="absolute z-40 top-full mt-2 left-1/2 -translate-x-1/2 w-[min(22rem,calc(100vw-2rem))] rounded-2xl border border-gray-200 bg-white p-3 shadow-lg">
+            <div className="grid grid-cols-3 gap-1 rounded-xl bg-gray-100 p-1">
+              {[['week', 'Semana'], ['month', 'Mes'], ['custom', 'Personalizado']].map(([key, label]) => (
+                <button key={key} type="button" onClick={() => { onPeriodChange(key); if (key !== 'custom') setOpen(false); }}
+                  className={`rounded-lg px-2 py-2 text-xs font-semibold ${period === key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'}`}>
+                  {label}
+                </button>
+              ))}
+            </div>
+            {period === 'custom' && (
+              <div className="mt-3">
+                <CustomRange dateRange={dateRange} onRangeChange={onRangeChange} />
+                <button type="button" onClick={() => setOpen(false)} className="mt-3 w-full h-9 rounded-xl bg-violet-600 text-sm font-semibold text-white">Aplicar</button>
+              </div>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 }
@@ -204,8 +250,8 @@ function InlineRevenueEdit({ date, value, source, onSave }) {
         className={`inline-flex flex-col items-end px-2 py-1 -mr-2 rounded-lg transition-colors ${value !== null ? 'hover:bg-gray-100' : 'hover:bg-violet-50'}`}>
         {value !== null
           ? <span className="text-sm font-semibold tabular-nums text-gray-900">{fmtEur(value)}</span>
-          : <span className="text-[13px] font-semibold text-violet-700">Añadir</span>}
-        {source && <span className="text-[11px] text-gray-400 leading-4">{source === 'till' ? 'caja' : 'a mano'}</span>}
+          : <span className="text-[13px] font-semibold text-violet-700">+ Registrar ingreso</span>}
+        {value !== null && <span className="text-[11px] text-gray-400 leading-4">{source === 'manual' ? 'A mano' : 'Cobrado'}</span>}
       </button>
       {modal && (
         <RevenueModal
@@ -253,7 +299,7 @@ function TicketAverageEdit({ value, onSave }) {
 
 const PAGE_SIZE = 10;
 
-function ResumenTab({ dateRange, categories, refreshTrigger, onTodayRevenue }) {
+function ResumenTab({ dateRange, categories, refreshTrigger, onTodayRevenue, onViewExpenses }) {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(0);
@@ -290,65 +336,48 @@ function ResumenTab({ dateRange, categories, refreshTrigger, onTodayRevenue }) {
   if (!data) return <Empty>No se pudieron cargar los datos.</Empty>;
 
   const appt = data.mode === 'appointments';
-  const maxExpense = data.expensesByCategory[0]?.amount || 1;
-  const totalExpensesSum = data.expensesByCategory.reduce((s, c) => s + c.amount, 0) || 1;
-
   // The income the profit is computed from (real, estimated or a mix).
   const income = (data.estimatedProfit || 0) + (data.totalExpenses || 0);
-  const barMax = Math.max(income, data.totalExpenses || 0, 1);
-  const basis = data.profitBasis === 'actual'
-    ? (appt ? 'Con lo cobrado en caja' : 'Con los ingresos reales')
-    : data.profitBasis === 'mixed' ? 'Con lo cobrado en caja y las citas de los días sin cobros'
-      : appt ? 'Con lo facturado en citas' : 'Con la estimación por reservas';
-
-  const pageCount = Math.ceil(data.days.length / PAGE_SIZE);
-  const slice = data.days.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  const visibleDays = data.days.filter((day) => {
+    const count = appt ? day.appointments : day.covers;
+    return day.date === toIso() || count > 0 || day.estimatedRevenue > 0 || day.actualRevenue !== null;
+  });
+  const pageCount = Math.ceil(visibleDays.length / PAGE_SIZE);
+  const slice = visibleDays.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  const topExpenses = data.expensesByCategory.slice(0, 3);
+  const otherExpenses = data.expensesByCategory.slice(3).reduce((sum, item) => sum + item.amount, 0);
 
   return (
-    <div className={`space-y-9 ${loading ? 'opacity-60' : ''}`}>
-      {/* Hero: profit, then where it comes from */}
-      <section className="space-y-5">
-        <BigFigure
-          label="Beneficio estimado"
-          value={fmtEur(data.estimatedProfit)}
-          tone={data.estimatedProfit < 0 ? 'bad' : data.estimatedProfit > 0 ? 'good' : undefined}
-          sub={basis}
-        />
-        <div className="space-y-2 max-w-xl">
-          {[
-            ['Ingresos', income, 'bg-emerald-500'],
-            ['Gastos', data.totalExpenses, 'bg-rose-400'],
-          ].map(([label, value, cls]) => (
-            <div key={label} className="flex items-center gap-3">
-              <span className="w-16 shrink-0 text-[13px] text-gray-500">{label}</span>
-              <div className="flex-1 h-2 rounded-full bg-gray-100 overflow-hidden">
-                <div className={`h-full rounded-full ${cls}`} style={{ width: `${Math.max(0, Math.min(100, (value / barMax) * 100))}%` }} />
-              </div>
-              <span className="w-24 shrink-0 text-right text-sm font-semibold tabular-nums text-gray-900">{fmtEur(value)}</span>
-            </div>
-          ))}
+    <div className={`space-y-8 ${loading ? 'opacity-60' : ''}`}>
+      <section className="space-y-5 border-b border-gray-100 pb-6">
+        <div>
+          <p className="text-[13px] font-semibold uppercase tracking-wide text-gray-400">Resultado estimado</p>
+          <p className={`text-3xl lg:text-4xl font-semibold tracking-tight tabular-nums ${data.estimatedProfit < 0 ? 'text-rose-600' : data.estimatedProfit > 0 ? 'text-emerald-600' : 'text-gray-900'}`}>
+            {fmtEur(data.estimatedProfit)}
+          </p>
         </div>
-        <FigureLine items={appt ? [
-          { label: data.appointments === 1 ? 'cita atendida' : 'citas atendidas', value: data.appointments },
-          { label: 'en citas', value: fmtEur(data.estimatedRevenue) },
-          { label: data.tips ? `cobrado en caja · +${fmtEur(data.tips)} propinas` : 'cobrado en caja', value: data.actualRevenue !== null ? fmtEur(data.actualRevenue) : '—' },
-          { label: 'ticket medio', value: fmtEur(data.averageTicket) },
-        ] : [
-          { label: 'comensales', value: data.totalCovers },
-          { label: 'estimado por reservas', value: fmtEur(data.estimatedRevenue) },
-          { label: data.actualRevenue !== null ? 'reales' : 'reales (sin datos)', value: data.actualRevenue !== null ? fmtEur(data.actualRevenue) : '—' },
-          { label: 'por comensal', value: <TicketAverageEdit value={data.ticketAverage} onSave={saveTicketAverage} /> },
-        ]} />
+        <div className="grid grid-cols-2 gap-6 max-w-md">
+          <div><p className="text-xs text-gray-500">Ingresos</p><p className="text-xl font-semibold tabular-nums text-gray-900">{fmtEur(income)}</p></div>
+          <div><p className="text-xs text-gray-500">Gastos</p><p className="text-xl font-semibold tabular-nums text-gray-900">{fmtEur(data.totalExpenses)}</p></div>
+        </div>
+        <div>
+          <p className="text-[13px] font-semibold uppercase tracking-wide text-gray-400">{appt ? 'Facturación' : 'Actividad estimada'}</p>
+          <p className="text-2xl font-semibold tabular-nums text-gray-900">{fmtEur(data.estimatedRevenue)}</p>
+          <p className="text-[13px] text-gray-500">
+            {appt
+              ? `${data.appointments} ${data.appointments === 1 ? 'cita' : 'citas'} · ${fmtEur(data.averageTicket)} ticket medio`
+              : <>{data.totalCovers} comensales · <TicketAverageEdit value={data.ticketAverage} onSave={saveTicketAverage} /> por comensal</>}
+          </p>
+        </div>
+        <p className="text-xs leading-5 text-gray-400">
+          El resultado utiliza los ingresos registrados en Caja. {appt ? 'La facturación corresponde a servicios realizados.' : 'La actividad corresponde a las reservas atendidas.'}
+        </p>
       </section>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_340px] gap-x-12 gap-y-9 items-start">
-        <div className="space-y-9 min-w-0">
+      <div className="space-y-8 min-w-0">
           {/* Daily breakdown */}
-          <Section title="Ingresos por día" aside={<SectionLink onClick={onTodayRevenue}>+ Ingreso de hoy</SectionLink>}>
-            <p className="text-[13px] text-gray-500 mb-3">
-              {appt ? 'Lo cobrado en Caja aparece solo. Toca un importe para corregir un día a mano.' : 'Toca «Añadir» para apuntar lo que entró de verdad ese día.'}
-            </p>
-            {data.days.length === 0 ? (
+          <Section title="Ingresos" aside={<SectionLink onClick={onTodayRevenue}>+ Ingreso de hoy</SectionLink>}>
+            {visibleDays.length === 0 ? (
               <Empty>Sin días en este periodo.</Empty>
             ) : (
               <>
@@ -356,7 +385,7 @@ function ResumenTab({ dateRange, categories, refreshTrigger, onTodayRevenue }) {
                   ['Día', 'col-span-4'],
                   [appt ? 'Citas' : 'Comensales', 'col-span-2 text-right'],
                   [appt ? 'En citas' : 'Estimado', 'col-span-3 text-right'],
-                  ['Real', 'col-span-3 text-right'],
+                  ['Cobrado', 'col-span-3 text-right'],
                 ]} />
                 <ul className="divide-y divide-gray-100">
                   {slice.map((day) => {
@@ -367,7 +396,7 @@ function ResumenTab({ dateRange, categories, refreshTrigger, onTodayRevenue }) {
                           <p className="text-[15px] font-medium text-gray-900 first-letter:uppercase">{fmtDay(day.date)}</p>
                           <p className="text-[13px] text-gray-500 md:hidden">
                             {count ? `${count} ${appt ? (count === 1 ? 'cita' : 'citas') : 'comensales'}` : appt ? 'Sin citas' : 'Sin reservas'}
-                            {day.estimatedRevenue > 0 && ` · ${fmtEur(day.estimatedRevenue)} ${appt ? 'en citas' : 'estimado'}`}
+                            {day.estimatedRevenue > 0 && ` · ${fmtEur(day.estimatedRevenue)} ${appt ? 'facturados' : 'estimado'}`}
                           </p>
                         </div>
                         <span className="hidden md:block md:col-span-2 text-right text-sm tabular-nums text-gray-600">{count || '—'}</span>
@@ -389,69 +418,21 @@ function ResumenTab({ dateRange, categories, refreshTrigger, onTodayRevenue }) {
             )}
           </Section>
 
-          {appt && data.byStaff?.length > 0 && (
-            <Section title="Por profesional">
-              <p className="text-[13px] text-gray-500 mb-3">Facturado en citas atendidas y productos, menos su sueldo y comisión. Se configura en Personal.</p>
-              <TableHead cols={[
-                ['Profesional', 'col-span-3'],
-                ['Citas', 'col-span-1 text-right'],
-                ['Facturado', 'col-span-2 text-right'],
-                ['Sueldo', 'col-span-2 text-right'],
-                ['Comisión', 'col-span-2 text-right'],
-                ['Queda', 'col-span-2 text-right'],
-              ]} />
-              <ul className="divide-y divide-gray-100">
-                {data.byStaff.map((p) => {
-                  const leaves = p.leaves ?? (p.billed - p.commission);
-                  const billed = p.billed + (p.products || 0);
-                  return (
-                    <li key={p.id} className="px-2 py-3 flex items-center gap-3 md:grid md:grid-cols-12 md:gap-4">
-                      <div className="min-w-0 flex-1 md:col-span-3">
-                        <p className="text-[15px] font-medium text-gray-900 truncate">{p.name}</p>
-                        <p className="text-[13px] text-gray-500 md:hidden">
-                          {[
-                            `${p.appointments || 0} ${p.appointments === 1 ? 'cita' : 'citas'}`,
-                            `facturado ${fmtEur(billed)}`,
-                            p.salary ? `sueldo ${fmtEur(p.salary)}` : null,
-                            p.commission ? `comisión ${fmtEur(p.commission)}` : null,
-                          ].filter(Boolean).join(' · ')}
-                        </p>
-                      </div>
-                      <span className="hidden md:block md:col-span-1 text-right text-sm tabular-nums text-gray-600">{p.appointments || '—'}</span>
-                      <span className="hidden md:block md:col-span-2 text-right text-sm tabular-nums text-gray-900">{fmtEur(billed)}</span>
-                      <span className="hidden md:block md:col-span-2 text-right text-sm tabular-nums text-gray-600">{p.salary ? fmtEur(p.salary) : '—'}</span>
-                      <span className="hidden md:block md:col-span-2 text-right text-sm tabular-nums text-gray-600">{p.commission ? fmtEur(p.commission) : '—'}</span>
-                      <span className={`shrink-0 md:col-span-2 text-right text-sm font-semibold tabular-nums ${leaves >= 0 ? 'text-gray-900' : 'text-rose-600'}`}>{fmtEur(leaves)}</span>
-                    </li>
-                  );
-                })}
-              </ul>
-            </Section>
-          )}
-        </div>
-
-        {/* Expenses by category */}
-        <Section title="Gastos por categoría">
+        <Section title="Gastos" aside={<SectionLink onClick={onViewExpenses}>Ver todos →</SectionLink>}>
           {data.expensesByCategory.length === 0 ? (
-            <p className="py-6 text-sm text-gray-500">Sin gastos en este periodo.</p>
+            <p className="py-4 text-sm text-gray-500">Sin gastos en este periodo.</p>
           ) : (
             <ul className="divide-y divide-gray-100">
-              {data.expensesByCategory.map((cat) => (
-                <li key={cat.category} className="py-3">
-                  <div className="flex items-center gap-2.5">
-                    <Dot cls={catDot(categories, cat.category)} />
-                    <span className="min-w-0 flex-1 truncate text-[15px] text-gray-900">{catLabel(categories, cat.category)}</span>
-                    <span className="text-xs tabular-nums text-gray-400">{Math.round((cat.amount / totalExpensesSum) * 100)} %</span>
-                    <span className="w-24 text-right text-sm font-semibold tabular-nums text-gray-900">{fmtEur(cat.amount)}</span>
-                  </div>
-                  <div className="mt-2 ml-5 h-1 rounded-full bg-gray-100 overflow-hidden">
-                    <div className={`h-full rounded-full ${catDot(categories, cat.category)}`}
-                      style={{ width: `${Math.round((cat.amount / maxExpense) * 100)}%` }} />
-                  </div>
+              {[...topExpenses, ...(otherExpenses > 0 ? [{ category: '__other', amount: otherExpenses }] : [])].map((cat) => (
+                <li key={cat.category} className="py-2.5 flex items-center gap-2.5">
+                  <Dot cls={cat.category === '__other' ? 'bg-slate-300' : catDot(categories, cat.category)} />
+                  <span className="min-w-0 flex-1 truncate text-[15px] text-gray-700">{cat.category === '__other' ? 'Otros' : catLabel(categories, cat.category)}</span>
+                  <span className="text-sm font-semibold tabular-nums text-gray-900">{fmtEur(cat.amount)}</span>
                 </li>
               ))}
             </ul>
           )}
+          {appt && <Link to="/personal" className="mt-3 inline-flex text-[13px] font-semibold text-violet-700 hover:text-violet-900">Ver rendimiento del equipo →</Link>}
         </Section>
       </div>
     </div>
@@ -618,6 +599,7 @@ function CategoryManagerModal({ onClose, onRefresh, inline = false }) {
       )}
       {cats.map((cat) => {
         const isStaff = cat.value === 'staff';
+        const isAutomatic = isStaff || cat.value === 'commissions';
         if (editingId === cat._id) {
           return (
             <li key={cat._id}>
@@ -629,12 +611,12 @@ function CategoryManagerModal({ onClose, onRefresh, inline = false }) {
           <li key={cat._id} className="flex items-center gap-3 py-3 px-2 -mx-2 rounded-xl hover:bg-gray-50">
             <Dot cls={COLOR_DOT[cat.color] || 'bg-slate-400'} size="w-3 h-3" />
             <span className="min-w-0 flex-1 truncate text-[15px] font-medium text-gray-900">{cat.label}</span>
-            {isStaff
-              ? <span className="text-[11px] font-semibold px-1.5 py-px rounded bg-violet-50 text-violet-800">Vinculada a Personal</span>
-              : cat.isDefault
-                ? <span className="text-[11px] font-semibold px-1.5 py-px rounded bg-gray-100 text-gray-600">Predeterminada</span>
-                : <span className="text-[11px] font-semibold px-1.5 py-px rounded bg-emerald-50 text-emerald-800">Propia</span>}
-            {isStaff ? <span className="w-8 shrink-0" /> : (
+            {isAutomatic
+              ? <span className="text-[11px] font-semibold px-1.5 py-px rounded bg-violet-50 text-violet-800">Automática</span>
+              : !cat.isDefault
+                ? <span className="text-[11px] font-semibold px-1.5 py-px rounded bg-emerald-50 text-emerald-800">Personalizada</span>
+                : null}
+            {isAutomatic ? <span className="w-8 shrink-0" /> : (
               <RowMenu items={[
                 { label: 'Editar', onClick: () => startEdit(cat) },
                 { label: 'Eliminar', danger: true, onClick: () => deleteCat(cat._id) },
@@ -751,7 +733,7 @@ function ExpenseModal({ expense, suppliers, categories, onSave, onClose, scope =
         <FormField label="Categoría" required>
           <select value={form.category} onChange={(e) => set('category', e.target.value)} className={selectCls}>
             <option value="">Elegir…</option>
-            {categories.filter((c) => c.value !== 'staff').map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
+            {categories.filter((c) => !['staff', 'commissions'].includes(c.value)).map((c) => <option key={c.value} value={c.value}>{c.label}</option>)}
           </select>
         </FormField>
         <FormField label="Notas">
@@ -784,6 +766,7 @@ function GastosTab({ dateRange, suppliers, categories, refreshTrigger, onCreate 
   const [modal, setModal] = useState(null);       // null | { expense?, scope? }
   const [scopeDialog, setScopeDialog] = useState(null); // null | { mode: 'edit'|'delete', expense }
   const [deleting, setDeleting] = useState(null);
+  const [filter, setFilter] = useState('all');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -815,6 +798,7 @@ function GastosTab({ dateRange, suppliers, categories, refreshTrigger, onCreate 
   };
 
   const handleEditClick = (exp) => {
+    if (exp.sourceType === 'AUTOMATIC') return;
     if (exp.sourceType === 'INVOICE') {
       const invoiceId = exp.invoiceId?._id || exp.invoiceId || exp.sourceId;
       if (invoiceId) navigate(`/compras/facturas/${invoiceId}`);
@@ -846,6 +830,14 @@ function GastosTab({ dateRange, suppliers, categories, refreshTrigger, onCreate 
   };
 
   const totalFiltered = expenses.reduce((s, e) => s + (e.amount || 0), 0);
+  const automaticTotal = expenses.filter((e) => e.sourceType === 'AUTOMATIC').reduce((s, e) => s + (e.amount || 0), 0);
+  const registeredTotal = totalFiltered - automaticTotal;
+  const displayedExpenses = expenses.filter((expense) => {
+    if (filter === 'automatic') return expense.sourceType === 'AUTOMATIC';
+    if (filter === 'invoices') return expense.sourceType === 'INVOICE';
+    if (filter === 'manual') return !['AUTOMATIC', 'INVOICE'].includes(expense.sourceType);
+    return true;
+  });
 
   if (subView === 'recurrentes') {
     return (
@@ -861,18 +853,35 @@ function GastosTab({ dateRange, suppliers, categories, refreshTrigger, onCreate 
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <FigureLine items={[
-          { label: 'en gastos', value: fmtEur(totalFiltered) },
-          { label: expenses.length === 1 ? 'gasto' : 'gastos', value: expenses.length },
-        ]} />
-        <GhostButton onClick={() => setSubView('recurrentes')}>
-          <Icon name="clock" className="w-4 h-4" />Recurrentes
-        </GhostButton>
+      <div className="space-y-3">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="text-xs text-gray-500">Gastos del periodo</p>
+            <p className="text-3xl font-semibold tracking-tight tabular-nums text-gray-900">{fmtEur(totalFiltered)}</p>
+            <p className="mt-1 text-[13px] text-gray-500 tabular-nums">Automáticos {fmtEur(automaticTotal)} · Registrados {fmtEur(registeredTotal)}</p>
+          </div>
+          <button type="button" onClick={() => setSubView('recurrentes')} className="inline-flex items-center gap-1 text-[13px] font-semibold text-gray-600 hover:text-violet-700">
+            <Icon name="clock" className="w-4 h-4" />Recurrentes →
+          </button>
+        </div>
+        {expenses.length > 0 && (
+          <div className="flex gap-1 overflow-x-auto [scrollbar-width:none]">
+            {[
+              ['all', 'Todos'], ['manual', 'Manuales'], ['invoices', 'Facturas'], ['automatic', 'Automáticos'],
+            ].map(([key, label]) => (
+              <button key={key} type="button" onClick={() => setFilter(key)}
+                className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold ${filter === key ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:text-gray-900'}`}>
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {loading && expenses.length === 0 ? <Loading /> : expenses.length === 0 ? (
-        <Empty action={<SectionLink onClick={onCreate}>+ Apuntar un gasto</SectionLink>}>No hay gastos en este periodo.</Empty>
+        <Empty action={<SectionLink onClick={onCreate}>+ Añadir gasto</SectionLink>}>No hay gastos en este periodo.</Empty>
+      ) : displayedExpenses.length === 0 ? (
+        <Empty>No hay gastos de este tipo en el periodo.</Empty>
       ) : (
         <div className={loading ? 'opacity-60' : ''}>
           <TableHead cols={[
@@ -883,14 +892,15 @@ function GastosTab({ dateRange, suppliers, categories, refreshTrigger, onCreate 
             ['Importe', 'col-span-2 text-right pr-10'],
           ]} />
           <ul className="divide-y divide-gray-100">
-            {expenses.map((exp) => {
+            {displayedExpenses.map((exp) => {
               const supplier = exp.supplierId?.name;
               const label = catLabel(categories, exp.category);
+              const automatic = exp.sourceType === 'AUTOMATIC';
               return (
                 <li key={exp._id}>
-                  <div role="button" tabIndex={0} onClick={() => handleEditClick(exp)}
-                    onKeyDown={(e) => { if (e.key === 'Enter') handleEditClick(exp); }}
-                    className={`px-2 py-3 flex items-center gap-3 md:grid md:grid-cols-12 md:gap-4 rounded-xl cursor-pointer hover:bg-gray-50 ${deleting === exp._id ? 'opacity-50' : ''}`}>
+                  <div role={automatic ? undefined : 'button'} tabIndex={automatic ? undefined : 0} onClick={() => handleEditClick(exp)}
+                    onKeyDown={automatic ? undefined : (e) => { if (e.key === 'Enter') handleEditClick(exp); }}
+                    className={`px-2 py-3 flex items-center gap-3 md:grid md:grid-cols-12 md:gap-4 rounded-xl ${automatic ? '' : 'cursor-pointer hover:bg-gray-50'} ${deleting === exp._id ? 'opacity-50' : ''}`}>
                     <span className="hidden md:block md:col-span-2 text-sm text-gray-600 tabular-nums first-letter:uppercase">{fmtDay(exp.expenseDate)}</span>
                     {/* Mobile: one title + subtitle */}
                     <div className="min-w-0 flex-1 md:hidden">
@@ -899,9 +909,10 @@ function GastosTab({ dateRange, suppliers, categories, refreshTrigger, onCreate 
                         <span className="truncate">{supplier || label}</span>
                         {exp.isRecurring && <span className="text-[11px] font-semibold px-1.5 py-px rounded bg-violet-50 text-violet-800 shrink-0">Mensual</span>}
                         {exp.sourceType === 'INVOICE' && <span className="text-[11px] font-semibold px-1.5 py-px rounded bg-emerald-50 text-emerald-800 shrink-0">Factura</span>}
+                        {automatic && <span className="text-[11px] font-semibold px-1.5 py-px rounded bg-violet-50 text-violet-800 shrink-0">Automático</span>}
                       </p>
                       <p className="text-[13px] text-gray-500 truncate">
-                        {[fmtShort(exp.expenseDate), supplier ? label : null, exp.sourceType === 'INVOICE' ? `Factura ${exp.invoiceId?.invoiceNumber || ''}`.trim() : exp.isRecurring ? 'Recurrente' : 'Manual', exp.notes].filter(Boolean).join(' · ')}
+                        {[fmtShort(exp.expenseDate), supplier ? label : null, exp.sourceType === 'INVOICE' ? `Factura ${exp.invoiceId?.invoiceNumber || ''}`.trim() : automatic ? label : exp.isRecurring ? 'Recurrente' : 'Manual', exp.notes].filter(Boolean).join(' · ')}
                       </p>
                     </div>
                     <div className="hidden md:flex md:col-span-3 items-center gap-2 min-w-0">
@@ -909,14 +920,15 @@ function GastosTab({ dateRange, suppliers, categories, refreshTrigger, onCreate 
                       <span className="text-sm font-medium text-gray-900 truncate">{label}</span>
                       {exp.isRecurring && <span className="text-[11px] font-semibold px-1.5 py-px rounded bg-violet-50 text-violet-800 shrink-0">Mensual</span>}
                       {exp.sourceType === 'INVOICE' && <span className="text-[11px] font-semibold px-1.5 py-px rounded bg-emerald-50 text-emerald-800 shrink-0">Factura</span>}
+                      {automatic && <span className="text-[11px] font-semibold px-1.5 py-px rounded bg-violet-50 text-violet-800 shrink-0">Automático</span>}
                     </div>
                     <span className="hidden md:block md:col-span-2 text-sm text-gray-600 truncate">{supplier || <span className="text-gray-300">—</span>}</span>
                     <span className="hidden md:block md:col-span-3 text-sm text-gray-500 truncate">{exp.notes || <span className="text-gray-300">—</span>}</span>
                     <div className="shrink-0 md:col-span-2 flex items-center justify-end gap-2">
                       <span className="text-sm font-semibold tabular-nums text-gray-900">{fmtEur(exp.amount)}</span>
-                      <RowMenu items={exp.sourceType === 'INVOICE'
+                      {!automatic && <RowMenu items={exp.sourceType === 'INVOICE'
                         ? [{ label: 'Ver factura', onClick: () => handleEditClick(exp) }]
-                        : [{ label: 'Editar', onClick: () => handleEditClick(exp) }, { label: 'Eliminar', danger: true, disabled: deleting === exp._id, onClick: () => handleDeleteClick(exp) }]} />
+                        : [{ label: 'Editar', onClick: () => handleEditClick(exp) }, { label: 'Eliminar', danger: true, disabled: deleting === exp._id, onClick: () => handleDeleteClick(exp) }]} />}
                     </div>
                   </div>
                 </li>
@@ -1321,29 +1333,51 @@ export default function Finanzas() {
     if (p === 'month') setDateRange(getMonthRange());
   };
 
+  const shiftPeriod = (direction) => {
+    if (period === 'month') {
+      const anchor = parseIso(dateRange.from);
+      anchor.setMonth(anchor.getMonth() + direction);
+      setDateRange(getMonthRange(anchor));
+      return;
+    }
+    if (period === 'week') {
+      const anchor = parseIso(dateRange.from);
+      anchor.setDate(anchor.getDate() + (7 * direction));
+      setDateRange(getWeekRange(anchor));
+      return;
+    }
+    const from = parseIso(dateRange.from);
+    const to = parseIso(dateRange.to);
+    const days = Math.round((to - from) / 86400000) + 1;
+    from.setDate(from.getDate() + (days * direction));
+    to.setDate(to.getDate() + (days * direction));
+    setDateRange({ from: toIso(from), to: toIso(to) });
+  };
+
   const usesPeriod = tab === 'dashboard' || tab === 'expenses';
 
   return (
-    <div className="w-full space-y-6" style={{ overflowX: 'clip' }}>
+    <div className="w-full space-y-5" style={{ overflowX: 'clip' }}>
       <PageHeader
         title="Finanzas"
-        subtitle={usesPeriod ? fmtRange(dateRange) : 'Ingresos, gastos y beneficio'}
+        subtitle={usesPeriod ? null : 'Ingresos, gastos y resultado'}
         actions={<PrimaryButton onClick={() => setQuickAction('expense')}>Nuevo gasto</PrimaryButton>}
       />
 
       <div className="space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-3">
-          <Tabs value={tab} options={TABS} onChange={setTab} />
-          {usesPeriod && <PeriodSelector period={period} onChange={handlePeriodChange} />}
-        </div>
-        {usesPeriod && period === 'custom' && (
-          <div className="flex justify-end">
-            <CustomRange dateRange={dateRange} onRangeChange={(r) => { setPeriod('custom'); setDateRange(r); }} />
-          </div>
+        {usesPeriod && (
+          <PeriodNavigator
+            period={period}
+            dateRange={dateRange}
+            onPeriodChange={handlePeriodChange}
+            onShift={shiftPeriod}
+            onRangeChange={(range) => { setPeriod('custom'); setDateRange(range); }}
+          />
         )}
+        <Tabs value={tab} options={TABS} onChange={setTab} />
       </div>
 
-      {tab === 'dashboard'  && <ResumenTab dateRange={dateRange} categories={categories} refreshTrigger={refresh} onTodayRevenue={() => setQuickAction('revenue')} />}
+      {tab === 'dashboard'  && <ResumenTab dateRange={dateRange} categories={categories} refreshTrigger={refresh} onTodayRevenue={() => setQuickAction('revenue')} onViewExpenses={() => setTab('expenses')} />}
       {tab === 'expenses'   && <GastosTab dateRange={dateRange} suppliers={suppliers} categories={categories} refreshTrigger={refresh} onCreate={() => setQuickAction('expense')} />}
       {tab === 'categories' && <CategoryManagerModal inline onRefresh={loadCategories} />}
 

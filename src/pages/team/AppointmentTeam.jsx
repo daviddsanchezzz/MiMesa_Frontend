@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useSetMobileHeader } from '../../context/MobileHeaderContext';
 import { bookingsApi, apiError } from '../../services/bookingsApi';
 import Modal from '../../components/Modal';
 import StaffAvatar from '../agenda/StaffAvatar';
 import { DEFAULT_TZ, inputCls, labelCls, staffColors, todayIn } from '../agenda/utils';
-import { Empty, FigureLine, GhostButton, PrimaryButton, RowAction, Section, SectionLink } from '../../ui/kit';
+import { Empty, FigureLine, GhostButton, PrimaryButton, Section, SectionLink } from '../../ui/kit';
 
 const MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 const eur = (n) => `${(n || 0).toLocaleString('es-ES', { minimumFractionDigits: Number.isInteger(n || 0) ? 0 : 2, maximumFractionDigits: 2, useGrouping: 'always' })} €`;
@@ -199,14 +199,13 @@ export function Breakdown({ p, onPay, onEdit }) {
  * still to pay them.
  */
 export default function AppointmentTeam() {
-  const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const { business } = useAuth();
   const tz = business?.timezone || DEFAULT_TZ;
   const today = todayIn(tz);
   const month = validMonth(params.get('month'), today.slice(0, 7));
   const setMonth = (value) => setParams({ month: value });
-  const openProfessional = (id) => navigate(`/equipo?pro=${id}&tab=remuneracion&from=rendimiento&month=${month}`);
+  const professionalUrl = (id) => `/equipo?pro=${id}&tab=remuneracion&from=rendimiento&month=${month}`;
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
 
@@ -313,10 +312,9 @@ export default function AppointmentTeam() {
                     const cost = (p.salary || 0) + (p.commission || 0);
                     return (
                       <li key={p.id}>
-                        <div role="link" tabIndex={0}
-                          onClick={() => openProfessional(p.id)}
-                          onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); openProfessional(p.id); } }}
-                          className="md:hidden px-2 py-4 rounded-xl cursor-pointer hover:bg-gray-50 active:bg-gray-100">
+                        <Link to={professionalUrl(p.id)}
+                          aria-label={`Ver rendimiento de ${p.name}`}
+                          className="group block md:hidden px-2 py-4 rounded-xl hover:bg-gray-50 active:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-inset">
                           <div className="flex items-start gap-3 min-w-0">
                             <StaffAvatar name={p.name} photo={p.photo} color={colors[p.id]} size={40} />
                             <div className="min-w-0 flex-1">
@@ -326,15 +324,13 @@ export default function AppointmentTeam() {
                                     {p.name}{!p.active && <span className="ml-1.5 text-[11px] font-semibold px-1.5 py-px rounded bg-gray-100 text-gray-500 align-middle">Desactivada</span>}
                                   </p>
                                   {p.pay ? (
-                                    <button type="button" onClick={(e) => { e.stopPropagation(); openProfessional(p.id); }}
-                                      className="block max-w-full truncate text-left text-[13px] text-gray-500 hover:text-violet-700">
+                                    <span className="block max-w-full truncate text-left text-[13px] text-gray-500 group-hover:text-violet-700">
                                       {payText(p.pay)}
-                                    </button>
+                                    </span>
                                   ) : (
-                                    <button type="button" onClick={(e) => { e.stopPropagation(); openProfessional(p.id); }}
-                                      className="mt-1 inline-flex min-h-7 items-center rounded-full bg-violet-50 px-2.5 text-xs font-semibold text-violet-700 hover:bg-violet-100">
+                                    <span className="mt-1 inline-flex min-h-7 items-center rounded-full bg-violet-50 px-2.5 text-xs font-semibold text-violet-700 group-hover:bg-violet-100">
                                       Configurar remuneración
-                                    </button>
+                                    </span>
                                   )}
                                 </div>
                                 <div className="flex shrink-0 items-start gap-2">
@@ -344,7 +340,7 @@ export default function AppointmentTeam() {
                                       <p className="text-[11px] text-gray-400">margen</p>
                                     </div>
                                   )}
-                                  <span aria-hidden="true" className="pt-px text-xl leading-5 text-gray-300">›</span>
+                                  <span aria-hidden="true" className="pt-px text-xl leading-5 text-gray-300 transition-transform group-hover:translate-x-0.5 group-hover:text-gray-500 group-focus-visible:translate-x-0.5 group-focus-visible:text-gray-500">›</span>
                                 </div>
                               </div>
                               <p className="mt-1.5 text-[13px] text-gray-500 tabular-nums">{citas(p.appointments)} · {eur(p.billed + p.products)} facturado</p>
@@ -360,22 +356,20 @@ export default function AppointmentTeam() {
                               )}
                             </div>
                           </div>
-                        </div>
+                        </Link>
 
-                        <div role="link" tabIndex={0}
-                          onClick={() => openProfessional(p.id)}
-                          onKeyDown={(e) => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); openProfessional(p.id); } }}
-                          className="hidden md:grid md:grid-cols-12 md:gap-4 items-center px-2 py-3 rounded-xl cursor-pointer hover:bg-gray-50">
+                        <Link to={professionalUrl(p.id)}
+                          aria-label={`Ver rendimiento de ${p.name}`}
+                          className="group hidden md:grid md:grid-cols-12 md:gap-4 items-center px-2 py-3 rounded-xl hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-inset">
                           <div className="col-span-4 flex items-center gap-3 min-w-0">
                             <StaffAvatar name={p.name} photo={p.photo} color={colors[p.id]} size={40} />
                             <div className="min-w-0">
                               <p className="text-[15px] font-medium text-gray-900 truncate">
                                 {p.name}{!p.active && <span className="ml-1.5 text-[11px] font-semibold px-1.5 py-px rounded bg-gray-100 text-gray-500 align-middle">Desactivada</span>}
                               </p>
-                              <button type="button" onClick={(e) => { e.stopPropagation(); openProfessional(p.id); }}
-                                className={`text-[13px] text-left truncate max-w-full ${p.pay ? 'text-gray-500 hover:text-violet-700' : 'text-violet-700 font-semibold hover:text-violet-900'}`}>
+                              <span className={`block text-[13px] text-left truncate max-w-full ${p.pay ? 'text-gray-500 group-hover:text-violet-700' : 'text-violet-700 font-semibold group-hover:text-violet-900'}`}>
                                 {p.pay ? payText(p.pay) : 'Configurar remuneración'}
-                              </button>
+                              </span>
                             </div>
                           </div>
                           <span className="hidden md:block col-span-1 text-right text-sm tabular-nums text-gray-700">{p.appointments}</span>
@@ -383,11 +377,11 @@ export default function AppointmentTeam() {
                           <span className="hidden md:block col-span-2 text-right text-sm tabular-nums text-gray-900">{eur(p.billed + p.products)}</span>
                           <span className="hidden md:block col-span-1 text-right text-sm tabular-nums text-gray-700">{cost ? eur(cost) : <span className="text-gray-300">—</span>}</span>
                           <span className={`hidden md:block col-span-1 text-right text-sm font-semibold tabular-nums ${p.pay ? (p.leaves >= 0 ? 'text-emerald-600' : 'text-rose-600') : 'text-gray-300'}`}>{p.pay ? eur(p.leaves) : '—'}</span>
-                          <div className="hidden md:flex col-span-2 items-center justify-end gap-2">
+                          <div className="hidden md:flex col-span-2 items-center justify-end gap-3">
                             <span className={`text-sm tabular-nums ${p.toPay > 0 ? 'font-semibold text-amber-700' : 'text-gray-400'}`}>{eur(p.toPay)}</span>
-                            <RowAction onClick={(e) => { e.stopPropagation(); openProfessional(p.id); }}>Ver ficha</RowAction>
+                            <span aria-hidden="true" className="text-xl leading-5 text-gray-300 transition-transform group-hover:translate-x-0.5 group-hover:text-gray-500 group-focus-visible:translate-x-0.5 group-focus-visible:text-gray-500">›</span>
                           </div>
-                        </div>
+                        </Link>
                       </li>
                     );
                   })}

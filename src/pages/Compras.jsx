@@ -1,6 +1,7 @@
 ﻿import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import { useSetMobileHeader } from '../context/MobileHeaderContext';
 import Modal from '../components/Modal';
 import Icon from '../ui/Icon';
@@ -102,6 +103,9 @@ function generateWhatsAppOrderMessage(order, supplier) {
 /** The first screen of Compras: what you spent, what is waiting for you, who you buy from. */
 function ComprasResumen({ invoices, orders, period, dateRange, onGo, onNewOrder, onOpenInvoice }) {
   const navigate = useNavigate();
+  const { isAppointments } = useAuth();
+  // A restaurant orders from its suppliers far more often than it scans invoices: the order comes first
+  const orderFirst = !isAppointments;
   const prev = shiftRange(period, dateRange, -1);
 
   const counted = (range) => invoices.filter((i) => {
@@ -156,14 +160,21 @@ function ComprasResumen({ invoices, orders, period, dateRange, onGo, onNewOrder,
       </section>
 
       <div className="flex gap-2.5">
-        <button type="button" onClick={() => navigate('/compras/facturas/nueva')}
-          className="flex-[1.4] inline-flex items-center justify-center gap-2 h-12 rounded-2xl bg-violet-600 text-white text-[15px] font-semibold active:bg-violet-700 hover:bg-violet-700">
-          <Icon name="camera" className="w-5 h-5" />Subir factura
-        </button>
-        <button type="button" onClick={onNewOrder}
-          className="flex-1 inline-flex items-center justify-center gap-2 h-12 rounded-2xl border border-gray-200 bg-white text-[15px] font-semibold text-gray-800 active:bg-gray-50 hover:bg-gray-50">
-          <Icon name="plus" className="w-[18px] h-[18px] text-violet-600" />Pedido
-        </button>
+        {(() => {
+          const primary = 'flex-[1.4] inline-flex items-center justify-center gap-2 h-12 rounded-2xl bg-violet-600 text-white text-[15px] font-semibold active:bg-violet-700 hover:bg-violet-700';
+          const quiet = 'flex-1 inline-flex items-center justify-center gap-2 h-12 rounded-2xl border border-gray-200 bg-white text-[15px] font-semibold text-gray-800 active:bg-gray-50 hover:bg-gray-50';
+          const invoiceBtn = (
+            <button key="invoice" type="button" onClick={() => navigate('/compras/facturas/nueva')} className={orderFirst ? quiet : primary}>
+              <Icon name="camera" className={`w-5 h-5 ${orderFirst ? 'text-violet-600' : ''}`} />Subir factura
+            </button>
+          );
+          const orderBtn = (
+            <button key="order" type="button" onClick={onNewOrder} className={orderFirst ? primary : quiet}>
+              <Icon name="plus" className={`w-[18px] h-[18px] ${orderFirst ? '' : 'text-violet-600'}`} />{orderFirst ? 'Nuevo pedido' : 'Pedido'}
+            </button>
+          );
+          return orderFirst ? [orderBtn, invoiceBtn] : [invoiceBtn, orderBtn];
+        })()}
       </div>
 
       {todo.length > 0 && (

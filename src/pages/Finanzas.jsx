@@ -322,11 +322,11 @@ function ResumenTab({ period, dateRange, categories, refreshTrigger, onTodayReve
           )}
         </div>
         <div className="mt-5 flex divide-x divide-gray-100 border-t border-gray-100 pt-4">
-          <Stat label={appt ? 'Facturado' : 'Ingresos'} value={fmtEur(income)} delta={<Delta now={income} before={prevIncome} />} hint={appt ? `${data.appointments} ${data.appointments === 1 ? 'cita' : 'citas'}` : null} />
+          <Stat label={appt ? 'Facturado' : 'Ingresos'} value={fmtEur(income)} delta={<Delta now={income} before={prevIncome} />} hint={appt ? `${data.appointments} ${data.appointments === 1 ? 'cita' : 'citas'}` : (data.profitBasis === 'estimated' ? 'estimados' : null)} />
           <Stat label="Gastos" value={fmtEur(expenses)} delta={<Delta now={expenses} before={prevExpenses} goodWhen="down" />} />
           {appt
             ? <Stat label="Cobrado" value={fmtEur(data.collectedRevenue || 0)} hint="en caja" />
-            : <Stat label="Comensales" value={data.totalCovers} hint={<span><TicketAverageEdit value={data.ticketAverage} onSave={saveTicketAverage} /> / comensal</span>} />}
+            : <Stat label="Comensales" value={data.totalCovers} hint={<span>ticket <TicketAverageEdit value={data.ticketAverage} onSave={saveTicketAverage} /></span>} />}
         </div>
       </section>
 
@@ -375,7 +375,7 @@ function ResumenTab({ period, dateRange, categories, refreshTrigger, onTodayReve
       {/* Day by day, tucked away */}
       <Section title="Día a día" aside={<SectionLink onClick={() => setShowDays((v) => !v)}>{showDays ? 'Ocultar' : 'Ver detalle'}</SectionLink>}>
         {!showDays ? (
-          <p className="py-1 text-[13px] text-gray-500">Lo facturado y lo cobrado cada día; desde aquí puedes corregir un cobro.</p>
+          <p className="py-1 text-[13px] text-gray-500">{appt ? 'Lo facturado y lo cobrado cada día; desde aquí puedes corregir un cobro.' : 'Comensales y lo ingresado cada día; apunta aquí lo que realmente has cobrado para afinar el resultado.'}</p>
         ) : visibleDays.length === 0 ? (
           <Empty>Sin días en este periodo.</Empty>
         ) : (

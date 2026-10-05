@@ -6,10 +6,12 @@ import { bookingsApi, apiError } from '../../services/bookingsApi';
 import Modal from '../../components/Modal';
 import StaffAvatar from '../agenda/StaffAvatar';
 import { DEFAULT_TZ, inputCls, labelCls, staffColors, todayIn } from '../agenda/utils';
+import Icon from '../../ui/Icon';
 import { Empty, FigureLine, GhostButton, PrimaryButton, Section, SectionLink } from '../../ui/kit';
 
 const MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 const eur = (n) => `${(n || 0).toLocaleString('es-ES', { minimumFractionDigits: Number.isInteger(n || 0) ? 0 : 2, maximumFractionDigits: 2, useGrouping: 'always' })} €`;
+const eurRound = (n) => eur(Math.round(n || 0));
 const citas = (n) => `${n || 0} ${n === 1 ? 'cita' : 'citas'}`;
 const num = (n) => (n || 0).toLocaleString('es-ES', { maximumFractionDigits: 1 });
 
@@ -236,9 +238,9 @@ export default function AppointmentTeam() {
           <p className="text-sm text-gray-500 mt-0.5">Facturación, costes y margen de cada profesional.</p>
         </div>
         <div className="flex items-center gap-1" aria-label="Mes del informe">
-          <button type="button" className="w-9 h-9 rounded-full hover:bg-gray-100 text-gray-600" onClick={() => setMonth(shiftMonth(month, -1))} aria-label="Mes anterior">‹</button>
-          <span className="px-1 text-sm font-semibold text-gray-900 capitalize min-w-[8.5rem] text-center">{MONTHS[m - 1]} {y}</span>
-          <button type="button" className="w-9 h-9 rounded-full hover:bg-gray-100 text-gray-600 disabled:text-gray-300 disabled:hover:bg-transparent" onClick={() => setMonth(shiftMonth(month, 1))} disabled={month >= today.slice(0, 7)} aria-label="Mes siguiente">›</button>
+          <button type="button" className="w-9 h-9 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-100" onClick={() => setMonth(shiftMonth(month, -1))} aria-label="Mes anterior"><Icon name="left" className="w-4 h-4" strokeWidth={2} /></button>
+          <span className="px-1 text-sm font-semibold text-gray-900 first-letter:uppercase min-w-[9.5rem] text-center">{MONTHS[m - 1]} de {y}</span>
+          <button type="button" className="w-9 h-9 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-100 disabled:opacity-30 disabled:hover:bg-transparent" onClick={() => setMonth(shiftMonth(month, 1))} disabled={month >= today.slice(0, 7)} aria-label="Mes siguiente"><Icon name="right" className="w-4 h-4" strokeWidth={2} /></button>
         </div>
       </div>
 
@@ -248,16 +250,13 @@ export default function AppointmentTeam() {
 
       {data && (
         <>
-          <section className="space-y-4" aria-labelledby="team-margin-title">
-            <div>
-              <p id="team-margin-title" className="text-[13px] font-semibold uppercase tracking-wide text-gray-400">Margen del equipo</p>
-              <p className={`text-3xl lg:text-4xl font-semibold tracking-tight tabular-nums ${(t.leaves || 0) >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{eur(t.leaves)}</p>
-              <p className="text-[13px] text-gray-500 mt-0.5">Facturación menos sueldos y comisiones</p>
-            </div>
+          <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04)]" aria-labelledby="team-margin-title">
+            <p id="team-margin-title" className="text-[13px] font-semibold uppercase tracking-wide text-gray-400">Margen del equipo</p>
+            <p className={`mt-1 text-4xl font-semibold tracking-tight tabular-nums ${(t.leaves || 0) >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{eur(t.leaves)}</p>
 
             {canShowSplit && (
-              <div className="space-y-1.5" aria-label={`${num(marginShare)} % de margen y ${num(costShare)} % de coste del equipo`}>
-                <div className="flex h-2.5 overflow-hidden rounded-full bg-gray-100" aria-hidden="true">
+              <div className="mt-4 space-y-1.5" aria-label={`${num(marginShare)} % de margen y ${num(costShare)} % de coste del equipo`}>
+                <div className="flex h-3 overflow-hidden rounded-full bg-gray-100" aria-hidden="true">
                   <span className="bg-emerald-500" style={{ width: `${marginShare}%` }} />
                   <span className="bg-violet-300" style={{ width: `${costShare}%` }} />
                 </div>
@@ -268,29 +267,26 @@ export default function AppointmentTeam() {
               </div>
             )}
 
-            <div className="space-y-2">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="min-w-0 rounded-2xl border border-gray-200 bg-white p-3.5">
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Facturado</p>
-                  <p className="mt-0.5 text-xl lg:text-2xl font-semibold tracking-tight tabular-nums text-gray-900">{eur(billed)}</p>
-                  <p className="mt-0.5 text-xs text-gray-500">{citas(t.appointments)}</p>
-                </div>
-                <div className="min-w-0 rounded-2xl border border-gray-200 bg-white p-3.5">
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">Coste del equipo</p>
-                  <p className="mt-0.5 text-xl lg:text-2xl font-semibold tracking-tight tabular-nums text-gray-900">{eur(t.cost)}</p>
-                  <p className={`mt-0.5 text-xs tabular-nums ${t.toPay > 0 ? 'font-medium text-amber-700' : 'text-gray-500'}`}>
-                    {t.toPay > 0 ? `${eur(t.toPay)} pendientes` : 'Sin pagos pendientes'}
-                  </p>
-                </div>
+            <div className="mt-5 flex divide-x divide-gray-100 border-t border-gray-100 pt-4">
+              <div className="min-w-0 flex-1 px-3.5 first:pl-0 last:pr-0">
+                <p className="text-xs text-gray-500">Facturado</p>
+                <p className="mt-0.5 text-xl font-semibold tracking-tight tabular-nums text-gray-900">{eurRound(billed)}</p>
+                <p className="mt-0.5 text-[11px] text-gray-400">{citas(t.appointments)}</p>
               </div>
-
-              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 px-0.5 text-xs text-gray-500">
-                <span className="tabular-nums">{eur(t.salary)} sueldos</span>
-                <span aria-hidden="true">·</span>
-                <span className="tabular-nums">{eur(t.commission)} comisiones</span>
-                {t.tips > 0 && <><span aria-hidden="true">·</span><span className="tabular-nums">{eur(t.tips)} propinas</span></>}
+              <div className="min-w-0 flex-1 px-3.5 first:pl-0 last:pr-0">
+                <p className="text-xs text-gray-500">Coste</p>
+                <p className="mt-0.5 text-xl font-semibold tracking-tight tabular-nums text-gray-900">{eurRound(t.cost)}</p>
+                <p className="mt-0.5 text-[11px] text-gray-400">sueldos y comisiones</p>
+              </div>
+              <div className="min-w-0 flex-1 px-3.5 first:pl-0 last:pr-0">
+                <p className="text-xs text-gray-500">Por pagar</p>
+                <p className={`mt-0.5 text-xl font-semibold tracking-tight tabular-nums ${t.toPay > 0 ? 'text-amber-600' : 'text-gray-900'}`}>{eurRound(t.toPay)}</p>
+                <p className="mt-0.5 text-[11px] text-gray-400">{t.toPay > 0 ? 'pendiente' : 'al día'}</p>
               </div>
             </div>
+            <p className="mt-3 text-xs text-gray-500 tabular-nums">
+              {eur(t.salary)} en sueldos · {eur(t.commission)} en comisiones{t.tips > 0 ? ` · ${eur(t.tips)} en propinas` : ''}
+            </p>
           </section>
 
           <Section title="Profesionales">
@@ -307,14 +303,14 @@ export default function AppointmentTeam() {
                   <span className="col-span-1 text-right">Margen</span>
                   <span className="col-span-2 text-right">Pendiente</span>
                 </div>
-                <ul className="pt-1 divide-y divide-gray-100">
+                <ul className="mt-1 divide-y divide-gray-100 rounded-2xl border border-gray-200 overflow-hidden md:mt-0 md:rounded-none md:border-0 md:overflow-visible">
                   {data.staff.map((p) => {
                     const cost = (p.salary || 0) + (p.commission || 0);
                     return (
                       <li key={p.id}>
                         <Link to={professionalUrl(p.id)}
                           aria-label={`Ver rendimiento de ${p.name}`}
-                          className="group block md:hidden px-2 py-4 rounded-xl hover:bg-gray-50 active:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-inset">
+                          className="group block md:hidden px-4 py-4 hover:bg-gray-50 active:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-inset">
                           <div className="flex items-start gap-3 min-w-0">
                             <StaffAvatar name={p.name} photo={p.photo} color={colors[p.id]} size={40} />
                             <div className="min-w-0 flex-1">
@@ -348,7 +344,7 @@ export default function AppointmentTeam() {
                                 <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
                                   <span className="text-gray-500">Coste <strong className="font-semibold tabular-nums text-gray-700">{eur(cost)}</strong></span>
                                   {p.toPay > 0 ? (
-                                    <span className="rounded-full bg-amber-50 px-2 py-0.5 font-medium text-amber-800">Pendiente</span>
+                                    <span className="rounded-full bg-amber-50 px-2 py-0.5 font-medium text-amber-800 tabular-nums">Pendiente · {eur(p.toPay)}</span>
                                   ) : p.paid > 0 ? (
                                     <span className="rounded-full bg-gray-100 px-2 py-0.5 font-medium text-gray-600">Pagado</span>
                                   ) : null}
@@ -390,8 +386,7 @@ export default function AppointmentTeam() {
             )}
           </Section>
           <p className="text-xs text-gray-400">
-            Datos del 1 al {Number(to.slice(8))} de {MONTHS[m - 1]}. Toca un profesional para ver el detalle. Las horas salen del horario de cada profesional en la agenda
-            (<Link to="/equipo" className="text-violet-700">ver equipo</Link>). Sueldos y comisiones aparecen también en Finanzas.
+            Datos del 1 al {Number(to.slice(8))} de {MONTHS[m - 1]}. Toca un profesional para ver el detalle. Sueldos y comisiones cuentan también como gasto en Finanzas.
           </p>
         </>
       )}

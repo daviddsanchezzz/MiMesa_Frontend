@@ -53,6 +53,10 @@ export default function RestaurantToday() {
   const [nowMin, setNowMin] = useState(() => nowMinutes(tz));
 
   useSetMobileHeader({ title: business?.name || 'Hoy' });
+  // Linked to an employee of Personal: show today's shift
+  const hasShifts = !!business?.professionalId && !!business?.modules?.staff?.enabled;
+  const myWeek = useData(['staff', 'me', 'schedule', 'today'], () => api.get('/staff/me/schedule').then((r) => r.data), { enabled: hasShifts, retry: false });
+  const myShiftsToday = (myWeek.data?.days || []).find((x) => x.date === today)?.shifts || [];
 
   useEffect(() => {
     const t = setInterval(() => setNowMin(nowMinutes(tz)), 60000);
@@ -114,6 +118,19 @@ export default function RestaurantToday() {
           ]} />
         </div>
       </header>
+
+      {hasShifts && myWeek.data?.linked && (
+        <Link to="/mi-horario" className="mb-6 flex items-center gap-3 rounded-2xl border border-violet-200 bg-violet-50/60 px-4 py-3 active:bg-violet-50">
+          <span aria-hidden="true">🕒</span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[15px] font-semibold text-gray-900">
+              {myShiftsToday.length ? `Tu turno de hoy: ${myShiftsToday.map((s) => `${s.start}–${s.end}`).join(' y ')}` : 'Hoy no tienes turno'}
+            </span>
+            {myShiftsToday[0]?.coworkers?.length > 0 && <span className="block text-[13px] text-gray-600 truncate">Con {myShiftsToday[0].coworkers.join(', ')}</span>}
+          </span>
+          <span className="text-[13px] font-semibold text-violet-700">Ver semana</span>
+        </Link>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_300px] xl:grid-cols-[minmax(0,1fr)_340px] gap-x-12 gap-y-8">
         <div className="space-y-9 min-w-0">

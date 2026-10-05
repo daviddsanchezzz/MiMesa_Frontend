@@ -10,6 +10,7 @@ import { Notice, addDays, compTypeLabel, compareShiftTime, formatMoney, mondayOf
 import { ShiftStaffChips, assignPersonColors } from './personal/ShiftStaffChips';
 import { EmployeeRow, MoreIcon, StateText } from './personal/MobileEmployeeRow';
 import { EmployeeFormModal } from './personal/EmployeeFormModal';
+import EmployeeAccessModal from './personal/EmployeeAccessModal';
 import { PositionFormModal } from './personal/PositionFormModal';
 import { CompensationModal } from './personal/CompensationModal';
 import { ShiftEditorModal } from './personal/ShiftEditorModal';
@@ -66,6 +67,7 @@ export default function Personal() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [employeeModal, setEmployeeModal] = useState(null);
+  const [accessEmployee, setAccessEmployee] = useState(null);
   const [positionModal, setPositionModal] = useState(null);
   const [employeeSubTab, setEmployeeSubTab] = useState('employees');
   const [compModalEmployee, setCompModalEmployee] = useState(null);
@@ -883,6 +885,7 @@ export default function Personal() {
                         onEdit={() => setEmployeeModal(employee)}
                         onPago={() => setCompModalEmployee(employee)}
                         onToggle={() => toggleEmployeeStatus(employee)}
+                        onAccess={() => setAccessEmployee(employee)}
                       />
                     ))}
                   </ul>
@@ -1098,6 +1101,13 @@ export default function Personal() {
             await loadCore({ silent: true });
             await loadWeekData();
           }}
+        />
+      )}
+      {accessEmployee && (
+        <EmployeeAccessModal
+          employee={employees.find((e) => e._id === accessEmployee._id) || accessEmployee}
+          onClose={() => setAccessEmployee(null)}
+          onChanged={() => loadCore({ silent: true })}
         />
       )}
       {positionModal && (

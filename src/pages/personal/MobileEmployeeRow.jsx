@@ -23,7 +23,7 @@ export function MoreIcon() {
  * One employee: a row on the phone (name, puestos and pay below), a line of
  * the table from md up. Tap opens the edit sheet; ⋯ holds the rest.
  */
-export function EmployeeRow({ employee, onEdit, onPago, onToggle }) {
+export function EmployeeRow({ employee, onEdit, onPago, onToggle, onAccess }) {
   const fullName = `${employee.firstName} ${employee.lastName || ''}`.trim();
   const comp = employee.activeCompensation;
   const positions = employee.positions || [];
@@ -46,6 +46,8 @@ export function EmployeeRow({ employee, onEdit, onPago, onToggle }) {
             <p className="md:hidden text-[13px] truncate">
               {positions.length > 0 && <span className="text-gray-500">{positions.map((p) => p.name).join(', ')} · </span>}
               {comp ? <span className="text-gray-500">{compLabel(comp)}</span> : <span className="text-amber-700">Sin condiciones de pago</span>}
+              {employee.member && <span className="text-emerald-700"> · Con acceso</span>}
+              {!employee.member && employee.pendingInvitation && <span className="text-amber-700"> · Invitado</span>}
               {!active && <span className="text-gray-400"> · Inactivo</span>}
             </p>
           </div>
@@ -69,12 +71,17 @@ export function EmployeeRow({ employee, onEdit, onPago, onToggle }) {
             <button type="button" onClick={(e) => { e.stopPropagation(); onPago(); }} className="text-[11px] font-semibold px-1.5 py-px rounded bg-amber-50 text-amber-800 hover:bg-amber-100">Sin definir</button>
           )}
         </div>
-        <div className="hidden md:block md:col-span-2"><StateText active={active} /></div>
+        <div className="hidden md:block md:col-span-2">
+          <StateText active={active} />
+          {employee.member && <p className="text-[11px] text-emerald-700">Con acceso a Vetra</p>}
+          {!employee.member && employee.pendingInvitation && <p className="text-[11px] text-amber-700">Invitado</p>}
+        </div>
         <div className="md:col-span-1 flex justify-end" onClick={(e) => e.stopPropagation()}>
           <MenuButton ariaLabel="Más opciones" className="w-9 h-9 justify-center text-gray-500"
             items={[
               { label: 'Editar', onClick: onEdit },
               { label: comp ? 'Cambiar cómo cobra' : 'Definir cómo cobra', onClick: onPago },
+              onAccess && { label: employee.member ? 'Acceso a Vetra' : employee.pendingInvitation ? 'Invitación pendiente' : 'Dar acceso a Vetra', onClick: onAccess },
               { label: active ? 'Desactivar' : 'Activar', onClick: onToggle },
             ]}>
             <MoreIcon />

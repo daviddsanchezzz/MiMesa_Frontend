@@ -26,6 +26,7 @@ const SetupWizard = lazy(() => import('./pages/SetupWizard'));
 const Publicidad = lazy(() => import('./pages/Publicidad'));
 const Analytics = lazy(() => import('./pages/Analytics'));
 const Estadisticas = lazy(() => import('./pages/Estadisticas'));
+const MySchedule = lazy(() => import('./pages/MySchedule'));
 const Personal = lazy(() => import('./pages/Personal'));
 const Finanzas = lazy(() => import('./pages/Finanzas'));
 const Compras = lazy(() => import('./pages/Compras'));
@@ -397,6 +398,7 @@ export default function App() {
           <Route path="/analytics"    element={<RoleRoute minRole="manager"><PrivateLayout><StatsPage /></PrivateLayout></RoleRoute>} />
           <Route path="/calendario"   element={<Navigate to="/reservations?view=calendar" replace />} />
           <Route path="/publicidad"   element={<RoleRoute minRole="manager"><PrivateLayout><Publicidad /></PrivateLayout></RoleRoute>} />
+          <Route path="/mi-horario"   element={<ModuleRoute moduleKey="staff"><RestaurantRoute><PrivateLayout><MySchedule /></PrivateLayout></RestaurantRoute></ModuleRoute>} />
           <Route path="/personal"     element={<ModuleRoute moduleKey="staff"><RoleRoute minRole="manager"><PrivateLayout><PersonalPage /></PrivateLayout></RoleRoute></ModuleRoute>} />
           <Route path="/finanzas"     element={<ModuleRoute moduleKey="expenses"><RoleRoute minRole="owner"><PrivateLayout><Finanzas /></PrivateLayout></RoleRoute></ModuleRoute>} />
           <Route path="/compras"      element={<ModuleRoute moduleKey="purchases"><RoleRoute minRole="manager"><PrivateLayout><Compras /></PrivateLayout></RoleRoute></ModuleRoute>} />

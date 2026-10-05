@@ -182,7 +182,7 @@ function ComprasResumen({ invoices, orders, period, dateRange, onGo, onNewOrder,
       </div>
       </div>
 
-      <div className="space-y-7 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-x-14 lg:gap-y-8 lg:items-start">
+      <div className="space-y-7 xl:space-y-0 xl:grid xl:grid-cols-2 xl:gap-x-14 xl:gap-y-8 xl:items-start">
 
       {todo.length > 0 && (
         <section>
@@ -224,7 +224,7 @@ function ComprasResumen({ invoices, orders, period, dateRange, onGo, onNewOrder,
         </section>
       )}
 
-      <section className={`${PANEL} lg:col-start-2 lg:row-start-1 lg:row-span-2`}>
+      <section className={`${PANEL} xl:col-start-2 xl:row-start-1 xl:row-span-2`}>
         <div className="mb-1 flex items-baseline justify-between gap-3">
           <h3 className="text-[13px] font-semibold uppercase tracking-wide text-gray-400">Últimas facturas</h3>
           {invoices.length > 0 && <button type="button" onClick={() => onGo('invoices')} className="text-[13px] font-semibold text-violet-700">Ver todas</button>}

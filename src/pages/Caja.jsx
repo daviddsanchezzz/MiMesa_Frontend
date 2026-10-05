@@ -69,7 +69,7 @@ export default function Caja() {
 
   return (
     <div className={`w-full ${PAGE_BODY}`} style={{ overflowX: 'clip' }}>
-      <div className="hidden lg:block mb-4">
+      <div className="hidden lg:block mb-1">
         <h1 className="text-2xl font-semibold tracking-tight text-gray-900">Caja</h1>
       </div>
       <StickyBar>
@@ -83,23 +83,23 @@ export default function Caja() {
 
       {data && (
         <>
-          <section className="mb-8 rounded-3xl border border-gray-200 bg-white p-5 lg:p-7 shadow-[0_1px_2px_rgba(16,24,40,0.04)] lg:flex lg:items-center lg:gap-12">
-            <div className="lg:w-[34%] lg:shrink-0">
+          <section className="mb-8 rounded-3xl border border-gray-200 bg-white p-5 lg:p-7 shadow-[0_1px_2px_rgba(16,24,40,0.04)] xl:flex xl:items-center xl:gap-12">
+            <div className="xl:w-[30%] xl:shrink-0">
             <p className="text-[13px] font-semibold uppercase tracking-wide text-gray-400">Cobrado</p>
             <p className="mt-1 text-4xl font-semibold tracking-tight tabular-nums text-gray-900">{euros(collected)}</p>
             <p className="mt-1 text-sm text-gray-500">
               {pluralize(t.payments, 'cobro', 'cobros')}{t.packSales ? ` · ${euros(t.packSales)} en bonos vendidos` : ''}{t.packSessions ? ` · ${pluralize(t.packSessions, 'sesión de bono', 'sesiones de bono')}` : ''}{t.tips ? ` · +${euros(t.tips)} propinas` : ''}
             </p>
             </div>
-            <div className="lg:flex-1 lg:min-w-0 lg:border-l lg:border-gray-100 lg:pl-12">
+            <div className="xl:flex-1 xl:min-w-0 xl:border-l xl:border-gray-100 xl:pl-12">
             {collected > 0 && (
-              <div className="mt-4 lg:mt-0 h-3 rounded-full overflow-hidden flex bg-gray-100">
+              <div className="mt-4 xl:mt-0 h-3 rounded-full overflow-hidden flex bg-gray-100">
                 {PAY_METHODS.filter((m) => t[m.key] > 0).map((m) => (
                   <div key={m.key} style={{ width: `${(t[m.key] / methodSum) * 100}%`, backgroundColor: METHOD_COLOR[m.key] }} title={`${m.label}: ${euros(t[m.key])}`} />
                 ))}
               </div>
             )}
-            <div className="mt-4 flex divide-x divide-gray-100 border-t border-gray-100 pt-4">
+            <div className="mt-4 flex divide-x divide-gray-100 border-t border-gray-100 pt-4 xl:border-t-0 xl:pt-0 xl:mt-5">
               <div className="min-w-0 flex-1 px-3.5 first:pl-0 last:pr-0">
                 <p className="flex items-center gap-1.5 text-xs text-gray-500"><span className="w-2 h-2 rounded-full" style={{ backgroundColor: METHOD_COLOR.cash }} />Efectivo</p>
                 <p className="mt-0.5 text-xl font-semibold tracking-tight tabular-nums text-gray-900">{euros(t.cash)}</p>
@@ -121,8 +121,8 @@ export default function Caja() {
             </div>
           </section>
 
-          <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_340px] gap-x-10 gap-y-9 items-start">
-            <div className="space-y-9 min-w-0">
+          <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_340px] xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_360px] gap-x-10 gap-y-9 items-start">
+            <div className="space-y-9 min-w-0 xl:space-y-0 xl:contents">
               <Section title="Por cobrar" aside={data.toCharge.length > 0 && <span className="text-xs text-gray-500">{pluralize(data.toCharge.length, 'cita', 'citas')} · {euros(data.toChargeAmount)}</span>}>
                 {data.toCharge.length === 0 ? (
                   <p className="py-6 text-sm text-gray-500">No queda nada por cobrar este día.</p>
@@ -147,6 +147,7 @@ export default function Caja() {
                 )}
               </Section>
 
+              <div className="space-y-9 min-w-0">
               <Section title="Cobros del día">
                 {data.payments.length === 0 ? (
                   <p className="py-6 text-sm text-gray-500">Todavía no hay cobros.</p>
@@ -201,6 +202,7 @@ export default function Caja() {
                   </ul>
                 </Section>
               )}
+              </div>
             </div>
 
             <Section title="Cierre de caja">

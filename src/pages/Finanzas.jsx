@@ -351,7 +351,7 @@ function ResumenTab({ period, dateRange, categories, refreshTrigger, onTodayReve
         </Link>
       )}
 
-      <div className="space-y-7 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-x-14 lg:gap-y-8 lg:items-start">
+      <div className="space-y-7 xl:space-y-0 xl:grid xl:grid-cols-2 xl:gap-x-14 xl:gap-y-8 xl:items-start">
       {/* Where the money goes */}
       <Section className={PANEL} title="En qué se va el dinero" aside={cats.length > 0 && <SectionLink onClick={onViewExpenses}>Ver gastos</SectionLink>}>
         {cats.length === 0 ? (

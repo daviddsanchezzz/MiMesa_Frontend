@@ -107,8 +107,8 @@ export default function Estadisticas() {
 
       {d && !empty && (
         <div className={`space-y-8 lg:space-y-6 ${q.isFetching ? 'opacity-60' : ''}`}>
-          <section className="rounded-3xl border border-gray-200 bg-white p-5 lg:p-7 shadow-[0_1px_2px_rgba(16,24,40,0.04)] lg:flex lg:items-center lg:justify-between lg:gap-12">
-            <div className="lg:shrink-0">
+          <section className="rounded-3xl border border-gray-200 bg-white p-5 lg:p-7 shadow-[0_1px_2px_rgba(16,24,40,0.04)] xl:flex xl:items-center xl:justify-between xl:gap-12">
+            <div className="xl:shrink-0">
             <p className="text-[13px] font-semibold uppercase tracking-wide text-gray-400">Has atendido</p>
             <div className="mt-1 flex flex-wrap items-baseline gap-x-3">
               <p className="text-4xl font-semibold tracking-tight tabular-nums text-gray-900">{s.appointments} <span className="text-lg font-medium text-gray-500">{s.appointments === 1 ? 'cita' : 'citas'}</span></p>
@@ -119,14 +119,14 @@ export default function Estadisticas() {
               )}
             </div>
             </div>
-            <div className="mt-5 flex divide-x divide-gray-100 border-t border-gray-100 pt-4 lg:mt-0 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-12 lg:flex-1 lg:max-w-2xl">
+            <div className="mt-5 flex divide-x divide-gray-100 border-t border-gray-100 pt-4 xl:mt-0 xl:border-t-0 xl:border-l xl:pt-0 xl:pl-12 xl:flex-1 xl:max-w-3xl">
               <Stat label="Facturado" value={euros(s.billed)} delta={<Delta now={s.billed} before={p.billed} />} />
               <Stat label="Ticket medio" value={euros(s.averageTicket)} delta={<Delta now={s.averageTicket} before={p.averageTicket} />} />
               <Stat label="Clientes" value={s.customers} delta={<Delta now={s.customers} before={p.customers} />} />
             </div>
           </section>
 
-          <div className="space-y-8 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-x-14 lg:gap-y-10 lg:items-start">
+          <div className="space-y-8 xl:space-y-0 xl:grid xl:grid-cols-2 2xl:grid-cols-4 xl:gap-x-12 xl:gap-y-10 xl:items-start">
           <Card title="Servicios que más facturan">
             {d.services.length === 0 ? <p className="text-sm text-gray-500">Aún no hay servicios atendidos.</p> : (
               <ul className="space-y-3.5">

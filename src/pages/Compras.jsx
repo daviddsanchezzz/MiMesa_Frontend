@@ -8,7 +8,7 @@ import Icon from '../ui/Icon';
 import { Empty, GhostButton, MenuButton, PageHeader, PrimaryButton, Segmented, Tabs, Toggle } from '../ui/kit';
 import Invoices from './invoices/Invoices';
 import InvoiceStatus from './invoices/InvoiceStatus';
-import PeriodNavigator, { StickyBar, usePeriod } from '../ui/PeriodNavigator';
+import PeriodNavigator, { PAGE_BODY, StickyBar, usePeriod } from '../ui/PeriodNavigator';
 import { previousLabel, shiftRange } from '../lib/periods';
 
 const inputCls = 'w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white';
@@ -101,6 +101,9 @@ function generateWhatsAppOrderMessage(order, supplier) {
 }
 
 /** The first screen of Compras: what you spent, what is waiting for you, who you buy from. */
+/** Sections stay plain on every screen; on desktop they sit side by side without boxes. */
+const PANEL = '';
+
 function ComprasResumen({ invoices, orders, period, dateRange, onGo, onNewOrder, onOpenInvoice }) {
   const navigate = useNavigate();
   const { isAppointments } = useAuth();
@@ -142,7 +145,8 @@ function ComprasResumen({ invoices, orders, period, dateRange, onGo, onNewOrder,
 
   return (
     <div className="space-y-7">
-      <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+      <div className="space-y-7 lg:space-y-5">
+      <section className="rounded-3xl border border-gray-200 bg-white p-5 lg:p-7 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
         <p className="text-[13px] font-semibold uppercase tracking-wide text-gray-400">Has comprado</p>
         <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1">
           <p className="text-4xl font-semibold tracking-tight tabular-nums text-gray-900">{money(total)}</p>
@@ -161,8 +165,8 @@ function ComprasResumen({ invoices, orders, period, dateRange, onGo, onNewOrder,
 
       <div className="flex gap-2.5">
         {(() => {
-          const primary = 'flex-[1.4] inline-flex items-center justify-center gap-2 h-12 rounded-2xl bg-violet-600 text-white text-[15px] font-semibold active:bg-violet-700 hover:bg-violet-700';
-          const quiet = 'flex-1 inline-flex items-center justify-center gap-2 h-12 rounded-2xl border border-gray-200 bg-white text-[15px] font-semibold text-gray-800 active:bg-gray-50 hover:bg-gray-50';
+          const primary = 'flex-[1.4] lg:flex-none lg:px-7 inline-flex items-center justify-center gap-2 h-12 rounded-2xl bg-violet-600 text-white text-[15px] font-semibold active:bg-violet-700 hover:bg-violet-700';
+          const quiet = 'flex-1 lg:flex-none lg:px-7 inline-flex items-center justify-center gap-2 h-12 rounded-2xl border border-gray-200 bg-white text-[15px] font-semibold text-gray-800 active:bg-gray-50 hover:bg-gray-50';
           const invoiceBtn = (
             <button key="invoice" type="button" onClick={() => navigate('/compras/facturas/nueva')} className={orderFirst ? quiet : primary}>
               <Icon name="camera" className={`w-5 h-5 ${orderFirst ? 'text-violet-600' : ''}`} />Subir factura
@@ -176,11 +180,14 @@ function ComprasResumen({ invoices, orders, period, dateRange, onGo, onNewOrder,
           return orderFirst ? [orderBtn, invoiceBtn] : [invoiceBtn, orderBtn];
         })()}
       </div>
+      </div>
+
+      <div className="space-y-7 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-x-14 lg:gap-y-8 lg:items-start">
 
       {todo.length > 0 && (
         <section>
           <h3 className="mb-1.5 text-[13px] font-semibold uppercase tracking-wide text-gray-400">Pendiente</h3>
-          <ul className="rounded-2xl border border-gray-200 divide-y divide-gray-100 overflow-hidden">
+          <ul className="rounded-2xl border border-gray-200 divide-y divide-gray-100 overflow-hidden lg:rounded-none lg:border-0 lg:border-y">
             {todo.map((t) => (
               <li key={t.key}>
                 <button type="button" onClick={t.onClick} className="w-full flex items-center gap-3 px-4 py-3 text-left active:bg-gray-50 hover:bg-gray-50">
@@ -198,7 +205,7 @@ function ComprasResumen({ invoices, orders, period, dateRange, onGo, onNewOrder,
       )}
 
       {topSuppliers.length > 0 && (
-        <section>
+        <section className={PANEL}>
           <div className="mb-1.5 flex items-baseline justify-between gap-3">
             <h3 className="text-[13px] font-semibold uppercase tracking-wide text-gray-400">Dónde compras más</h3>
             <button type="button" onClick={() => onGo('suppliers')} className="text-[13px] font-semibold text-violet-700">Proveedores</button>
@@ -217,7 +224,7 @@ function ComprasResumen({ invoices, orders, period, dateRange, onGo, onNewOrder,
         </section>
       )}
 
-      <section>
+      <section className={`${PANEL} lg:col-start-2 lg:row-start-1 lg:row-span-2`}>
         <div className="mb-1 flex items-baseline justify-between gap-3">
           <h3 className="text-[13px] font-semibold uppercase tracking-wide text-gray-400">Últimas facturas</h3>
           {invoices.length > 0 && <button type="button" onClick={() => onGo('invoices')} className="text-[13px] font-semibold text-violet-700">Ver todas</button>}
@@ -247,6 +254,7 @@ function ComprasResumen({ invoices, orders, period, dateRange, onGo, onNewOrder,
           </ul>
         )}
       </section>
+      </div>
     </div>
   );
 }
@@ -532,7 +540,7 @@ export default function Compras() {
   const dot = (show) => show && <span className="ml-1 inline-block w-1.5 h-1.5 rounded-full bg-amber-500 align-middle" aria-label="Pendiente" />;
 
   return (
-    <div className="w-full space-y-6">
+    <div className={`w-full space-y-6 ${PAGE_BODY}`}>
       <PageHeader title="Compras" subtitle=""
         actions={(
           <>

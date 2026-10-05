@@ -4,7 +4,7 @@ import { useSetMobileHeader } from '../context/MobileHeaderContext';
 import { bookingsApi, apiError } from '../services/bookingsApi';
 import CheckoutModal from './agenda/CheckoutModal';
 import { Section, TimeRow, RowAction } from '../ui/kit';
-import { DayNavigator, StickyBar } from '../ui/PeriodNavigator';
+import { DayNavigator, PAGE_BODY, StickyBar } from '../ui/PeriodNavigator';
 import { queryClient, useData } from '../lib/query';
 import { useResources } from './agenda/queries';
 
@@ -68,7 +68,7 @@ export default function Caja() {
   const methodSum = PAY_METHODS.reduce((sum, m) => sum + (t?.[m.key] || 0), 0) || 1;
 
   return (
-    <div className="w-full" style={{ overflowX: 'clip' }}>
+    <div className={`w-full ${PAGE_BODY}`} style={{ overflowX: 'clip' }}>
       <div className="hidden lg:block mb-4">
         <h1 className="text-2xl font-semibold tracking-tight text-gray-900">Caja</h1>
       </div>
@@ -83,14 +83,17 @@ export default function Caja() {
 
       {data && (
         <>
-          <section className="mb-8 rounded-3xl border border-gray-200 bg-white p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+          <section className="mb-8 rounded-3xl border border-gray-200 bg-white p-5 lg:p-7 shadow-[0_1px_2px_rgba(16,24,40,0.04)] lg:flex lg:items-center lg:gap-12">
+            <div className="lg:w-[34%] lg:shrink-0">
             <p className="text-[13px] font-semibold uppercase tracking-wide text-gray-400">Cobrado</p>
             <p className="mt-1 text-4xl font-semibold tracking-tight tabular-nums text-gray-900">{euros(collected)}</p>
             <p className="mt-1 text-sm text-gray-500">
               {pluralize(t.payments, 'cobro', 'cobros')}{t.packSales ? ` · ${euros(t.packSales)} en bonos vendidos` : ''}{t.packSessions ? ` · ${pluralize(t.packSessions, 'sesión de bono', 'sesiones de bono')}` : ''}{t.tips ? ` · +${euros(t.tips)} propinas` : ''}
             </p>
+            </div>
+            <div className="lg:flex-1 lg:min-w-0 lg:border-l lg:border-gray-100 lg:pl-12">
             {collected > 0 && (
-              <div className="mt-4 h-3 rounded-full overflow-hidden flex bg-gray-100">
+              <div className="mt-4 lg:mt-0 h-3 rounded-full overflow-hidden flex bg-gray-100">
                 {PAY_METHODS.filter((m) => t[m.key] > 0).map((m) => (
                   <div key={m.key} style={{ width: `${(t[m.key] / methodSum) * 100}%`, backgroundColor: METHOD_COLOR[m.key] }} title={`${m.label}: ${euros(t[m.key])}`} />
                 ))}
@@ -115,9 +118,10 @@ export default function Caja() {
                 {t.bizum > 0 && <>Bizum {euros(t.bizum)}</>}{t.bizum > 0 && t.other > 0 && ' · '}{t.other > 0 && <>Otros {euros(t.other)}</>}
               </p>
             )}
+            </div>
           </section>
 
-          <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-x-12 gap-y-9 items-start">
+          <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_340px] gap-x-10 gap-y-9 items-start">
             <div className="space-y-9 min-w-0">
               <Section title="Por cobrar" aside={data.toCharge.length > 0 && <span className="text-xs text-gray-500">{pluralize(data.toCharge.length, 'cita', 'citas')} · {euros(data.toChargeAmount)}</span>}>
                 {data.toCharge.length === 0 ? (

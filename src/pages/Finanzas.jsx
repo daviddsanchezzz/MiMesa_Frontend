@@ -9,7 +9,7 @@ import {
   PageHeader, PrimaryButton, Tabs, Section, SectionLink, FigureLine, Empty, Toggle,
 } from '../ui/kit';
 import { euros } from './agenda/utils';
-import PeriodNavigator, { StickyBar, usePeriod } from '../ui/PeriodNavigator';
+import PeriodNavigator, { PAGE_BODY, StickyBar, usePeriod } from '../ui/PeriodNavigator';
 import { fmtDay, fmtShort, parseIso, previousLabel, shiftRange, toIso } from '../lib/periods';
 
 // ── Color palette (static — color key stored in DB → Tailwind bg class) ───────
@@ -53,6 +53,9 @@ function fmtEur(n) {
 }
 
 // ── Shared UI pieces ──────────────────────────────────────────────────────────
+
+/** Sections stay plain on every screen; on desktop they sit side by side without boxes. */
+const PANEL = '';
 
 function Loading() {
   return <p className="py-6 text-sm text-gray-400">Cargando…</p>;
@@ -228,7 +231,7 @@ function Stat({ label, value, delta, hint }) {
 }
 
 function ActionPill({ icon, children, onClick, to }) {
-  const cls = 'flex-1 inline-flex items-center justify-center gap-2 h-11 rounded-2xl border border-gray-200 bg-white text-sm font-semibold text-gray-800 active:bg-gray-50 hover:bg-gray-50';
+  const cls = 'flex-1 lg:flex-none lg:px-6 inline-flex items-center justify-center gap-2 h-11 rounded-2xl border border-gray-200 bg-white text-sm font-semibold text-gray-800 active:bg-gray-50 hover:bg-gray-50';
   const inner = <><Icon name={icon} className="w-[18px] h-[18px] text-violet-600" />{children}</>;
   return to ? <Link to={to} className={cls}>{inner}</Link> : <button type="button" onClick={onClick} className={cls}>{inner}</button>;
 }
@@ -308,8 +311,9 @@ function ResumenTab({ period, dateRange, categories, refreshTrigger, onTodayReve
 
   return (
     <div className={`space-y-7 ${loading ? 'opacity-60' : ''}`}>
-      {/* Hero: how much is left */}
-      <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+      {/* Hero: how much is left (desktop: next to the quick actions) */}
+      <div className="space-y-7 lg:space-y-5">
+      <section className="rounded-3xl border border-gray-200 bg-white p-5 lg:p-7 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
         <p className="text-[13px] font-semibold uppercase tracking-wide text-gray-400">Te queda</p>
         <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1">
           <p className={`text-4xl font-semibold tracking-tight tabular-nums ${profit < 0 ? 'text-rose-600' : profit > 0 ? 'text-emerald-600' : 'text-gray-900'}`}>
@@ -334,6 +338,7 @@ function ResumenTab({ period, dateRange, categories, refreshTrigger, onTodayReve
         {hasPurchases && <ActionPill icon="camera" to="/compras/facturas/nueva">Subir factura</ActionPill>}
         <ActionPill icon="plus" onClick={onAddExpense}>Añadir gasto</ActionPill>
       </div>
+      </div>
 
       {hasPurchases && toReview > 0 && (
         <Link to="/compras/facturas" className="flex items-center gap-3 rounded-2xl bg-amber-50 px-4 py-3.5 active:bg-amber-100">
@@ -346,8 +351,9 @@ function ResumenTab({ period, dateRange, categories, refreshTrigger, onTodayReve
         </Link>
       )}
 
+      <div className="space-y-7 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-x-14 lg:gap-y-8 lg:items-start">
       {/* Where the money goes */}
-      <Section title="En qué se va el dinero" aside={cats.length > 0 && <SectionLink onClick={onViewExpenses}>Ver gastos</SectionLink>}>
+      <Section className={PANEL} title="En qué se va el dinero" aside={cats.length > 0 && <SectionLink onClick={onViewExpenses}>Ver gastos</SectionLink>}>
         {cats.length === 0 ? (
           <p className="py-4 text-sm text-gray-500">Sin gastos en este periodo.</p>
         ) : (
@@ -373,7 +379,7 @@ function ResumenTab({ period, dateRange, categories, refreshTrigger, onTodayReve
       </Section>
 
       {/* Day by day, tucked away */}
-      <Section title="Día a día" aside={<SectionLink onClick={() => setShowDays((v) => !v)}>{showDays ? 'Ocultar' : 'Ver detalle'}</SectionLink>}>
+      <Section className={PANEL} title="Día a día" aside={<SectionLink onClick={() => setShowDays((v) => !v)}>{showDays ? 'Ocultar' : 'Ver detalle'}</SectionLink>}>
         {!showDays ? (
           <p className="py-1 text-[13px] text-gray-500">{appt ? 'Lo facturado y lo cobrado cada día; desde aquí puedes corregir un cobro.' : 'Comensales y lo ingresado cada día; apunta aquí lo que realmente has cobrado para afinar el resultado.'}</p>
         ) : visibleDays.length === 0 ? (
@@ -412,6 +418,7 @@ function ResumenTab({ period, dateRange, categories, refreshTrigger, onTodayReve
           </>
         )}
       </Section>
+      </div>
     </div>
   );
 }
@@ -1317,7 +1324,7 @@ export default function Finanzas() {
   useEffect(() => { loadSuppliers(); loadCategories(); }, [loadSuppliers, loadCategories]);
 
   return (
-    <div className="w-full space-y-5" style={{ overflowX: 'clip' }}>
+    <div className={`w-full space-y-5 ${PAGE_BODY}`} style={{ overflowX: 'clip' }}>
       <div className="hidden lg:block">
         <PageHeader title="Finanzas" actions={<PrimaryButton onClick={() => setQuickAction('expense')}>Nuevo gasto</PrimaryButton>} />
       </div>

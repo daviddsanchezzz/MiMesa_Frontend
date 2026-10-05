@@ -4,7 +4,7 @@ import { useSetMobileHeader } from '../context/MobileHeaderContext';
 import { useData } from '../lib/query';
 import { publicBookingUrl } from '../lib/publicUrl';
 import { Empty, PageHeader } from '../ui/kit';
-import PeriodNavigator, { StickyBar, usePeriod } from '../ui/PeriodNavigator';
+import PeriodNavigator, { PAGE_BODY, StickyBar, usePeriod } from '../ui/PeriodNavigator';
 import { previousLabel, shiftRange } from '../lib/periods';
 import { euros, waLink } from './agenda/utils';
 
@@ -88,7 +88,7 @@ export default function Estadisticas() {
   const empty = d && s.appointments === 0 && s.scheduled === 0;
 
   return (
-    <div className="w-full space-y-7">
+    <div className={`w-full space-y-7 ${PAGE_BODY}`}>
       <div className="hidden lg:block"><PageHeader title="Estadísticas" subtitle="Qué servicios funcionan, cuándo vienen y quién vuelve." /></div>
 
       <StickyBar>
@@ -106,8 +106,9 @@ export default function Estadisticas() {
       {d && empty && <Empty>Todavía no hay citas en este periodo.</Empty>}
 
       {d && !empty && (
-        <div className={`space-y-8 ${q.isFetching ? 'opacity-60' : ''}`}>
-          <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+        <div className={`space-y-8 lg:space-y-6 ${q.isFetching ? 'opacity-60' : ''}`}>
+          <section className="rounded-3xl border border-gray-200 bg-white p-5 lg:p-7 shadow-[0_1px_2px_rgba(16,24,40,0.04)] lg:flex lg:items-center lg:justify-between lg:gap-12">
+            <div className="lg:shrink-0">
             <p className="text-[13px] font-semibold uppercase tracking-wide text-gray-400">Has atendido</p>
             <div className="mt-1 flex flex-wrap items-baseline gap-x-3">
               <p className="text-4xl font-semibold tracking-tight tabular-nums text-gray-900">{s.appointments} <span className="text-lg font-medium text-gray-500">{s.appointments === 1 ? 'cita' : 'citas'}</span></p>
@@ -117,13 +118,15 @@ export default function Estadisticas() {
                 </span>
               )}
             </div>
-            <div className="mt-5 flex divide-x divide-gray-100 border-t border-gray-100 pt-4">
+            </div>
+            <div className="mt-5 flex divide-x divide-gray-100 border-t border-gray-100 pt-4 lg:mt-0 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-12 lg:flex-1 lg:max-w-2xl">
               <Stat label="Facturado" value={euros(s.billed)} delta={<Delta now={s.billed} before={p.billed} />} />
               <Stat label="Ticket medio" value={euros(s.averageTicket)} delta={<Delta now={s.averageTicket} before={p.averageTicket} />} />
               <Stat label="Clientes" value={s.customers} delta={<Delta now={s.customers} before={p.customers} />} />
             </div>
           </section>
 
+          <div className="space-y-8 lg:space-y-0 lg:grid lg:grid-cols-2 lg:gap-x-14 lg:gap-y-10 lg:items-start">
           <Card title="Servicios que más facturan">
             {d.services.length === 0 ? <p className="text-sm text-gray-500">Aún no hay servicios atendidos.</p> : (
               <ul className="space-y-3.5">
@@ -235,6 +238,7 @@ export default function Estadisticas() {
               </>
             )}
           </Card>
+          </div>
         </div>
       )}
     </div>

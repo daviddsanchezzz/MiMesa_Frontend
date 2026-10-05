@@ -244,7 +244,7 @@ export const PAY_METHODS = [
   { key: 'bizum', label: 'Bizum', icon: '📱' },
   { key: 'other', label: 'Otro', icon: '•' },
 ];
-export const payMethodLabel = (k) => PAY_METHODS.find((m) => m.key === k)?.label || k;
+export const payMethodLabel = (k) => (k === 'pack' ? 'Bono' : PAY_METHODS.find((m) => m.key === k)?.label || k);
 
 // Minutes [start, end) of an absence inside one local day, or null if it does not touch it.
 export function absenceSpan(a, date, tz = DEFAULT_TZ) {

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import Modal from '../../components/Modal';
 import { bookingsApi, apiError } from '../../services/bookingsApi';
 import { PAY_METHODS, btnSecondary, centsToInput, euros, inputCls, labelCls, parseEuros, timeInTz } from './utils';
@@ -19,10 +19,24 @@ export default function CheckoutModal({ booking, tz, onClose, onPaid }) {
   const [note, setNote] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  // The customer's packs (bonos) that cover this appointment, and the one chosen for it
+  const [packs, setPacks] = useState([]);
+  const [packId, setPackId] = useState('');
+  useEffect(() => {
+    if (!booking.customerId) return undefined;
+    let live = true;
+    const serviceIds = booking.segments.map((x) => String(x.serviceId));
+    bookingsApi.customerPacks(booking.customerId).then((rows) => {
+      if (!live) return;
+      setPacks(rows.filter((p) => p.status === 'active' && (!(p.serviceIds || []).length || serviceIds.every((id) => p.serviceIds.map(String).includes(id)))));
+    }).catch(() => {});
+    return () => { live = false; };
+  }, [booking.customerId]); // eslint-disable-line react-hooks/exhaustive-deps
+  const pack = packs.find((p) => p._id === packId) || null;
 
   const calc = useMemo(() => {
-    const s = parseEuros(services);
-    const d = parseEuros(discount);
+    const s = packId ? 0 : parseEuros(services);
+    const d = packId ? 0 : parseEuros(discount);
     const t = parseEuros(tip);
     const ex = extras.map((x) => ({ ...x, cents: parseEuros(x.price), q: Math.max(1, Number(x.qty) || 1) }));
     const exTotal = ex.reduce((sum, x) => sum + (x.cents || 0) * x.q, 0);
@@ -31,22 +45,23 @@ export default function CheckoutModal({ booking, tz, onClose, onPaid }) {
     const charged = total + (t || 0);
     const g = parseEuros(given);
     return { s, d, t, ex, exTotal, invalid, total, charged, change: g ? g - charged : null };
-  }, [services, discount, tip, extras, given]);
+  }, [services, discount, tip, extras, given, packId]);
 
   const setExtra = (i, patch) => setExtras((list) => list.map((x, idx) => (idx === i ? { ...x, ...patch } : x)));
   const pctDiscount = (pct) => setDiscount(centsToInput(Math.round(((calc.s || 0) + calc.exTotal) * pct / 100)));
 
   async function pay() {
     setError('');
-    if (!method) return setError('Elige cómo ha pagado');
+    if (!method && !(packId && calc.charged === 0)) return setError('Elige cómo ha pagado');
     if (calc.invalid) return setError('Revisa los importes');
     if (calc.total < 0) return setError('El descuento es mayor que el total');
     if (calc.ex.some((x) => !x.name.trim())) return setError('Pon nombre a los productos');
     setSaving(true);
     try {
       const updated = await bookingsApi.checkout(booking._id, {
-        method,
-        services: calc.s,
+        ...(packId ? { packId } : {}),
+        ...(method ? { method } : {}),
+        ...(packId ? {} : { services: calc.s }),
         extras: calc.ex.map((x) => ({ name: x.name.trim(), price: x.cents || 0, qty: x.q })),
         discount: calc.d || 0,
         tip: calc.t || 0,
@@ -63,15 +78,38 @@ export default function CheckoutModal({ booking, tz, onClose, onPaid }) {
   return (
     <Modal title={`Cobrar · ${booking.guestName}`} subtitle={`${timeInTz(booking.start, tz)} · ${booking.segments.map((x) => x.serviceName).join(' + ')}`} onClose={onClose} size="md">
       <div className="space-y-4">
+        {packs.length > 0 && (
+          <div className={`rounded-xl border px-3.5 py-3 ${packId ? 'border-violet-300 bg-violet-50' : 'border-gray-200 bg-gray-50'}`}>
+            {packs.length > 1 && !packId && (
+              <p className="text-xs font-semibold text-gray-500 mb-1.5">Tiene {packs.length} bonos que valen para esta cita</p>
+            )}
+            <ul className="space-y-1.5">
+              {packs.filter((p) => !packId || p._id === packId).map((p) => (
+                <li key={p._id} className="flex items-center gap-3">
+                  <span aria-hidden="true">🎟️</span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-semibold text-gray-900 truncate">{p.name}</span>
+                    <span className="block text-xs text-gray-500">Quedan {p.remaining} de {p.sessions} sesiones{p.expiresAt ? ` · caduca el ${new Date(p.expiresAt).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' })}` : ''}</span>
+                  </span>
+                  <button type="button" onClick={() => setPackId(packId ? '' : p._id)}
+                    className={`shrink-0 h-8 px-3 rounded-full text-xs font-semibold ${packId ? 'bg-white text-violet-700 border border-violet-300' : 'bg-violet-600 text-white'}`}>
+                    {packId ? 'Quitar' : 'Usar una sesión'}
+                  </button>
+                </li>
+              ))}
+            </ul>
+            {packId && <p className="mt-2 text-xs text-violet-800">La cita se paga con el bono. Si vendes productos o hay propina, eso sí se cobra aparte.</p>}
+          </div>
+        )}
         <div className="grid grid-cols-2 gap-3">
           <div className="col-span-2 sm:col-span-1">
             <label className={labelCls}>Servicios (€)</label>
-            <input className={moneyInput} inputMode="decimal" value={services} onChange={(e) => setServices(e.target.value)} />
+            <input className={moneyInput} inputMode="decimal" value={packId ? 'Bono' : services} disabled={!!packId} onChange={(e) => setServices(e.target.value)} />
           </div>
           <div className="col-span-2 sm:col-span-1">
             <label className={labelCls}>Descuento (€)</label>
             <div className="flex gap-1.5">
-              <input className={moneyInput} inputMode="decimal" placeholder="0" value={discount} onChange={(e) => setDiscount(e.target.value)} />
+              <input className={moneyInput} inputMode="decimal" placeholder="0" value={discount} disabled={!!packId} onChange={(e) => setDiscount(e.target.value)} />
               {[10, 20].map((p) => (
                 <button key={p} type="button" onClick={() => pctDiscount(p)} className="shrink-0 px-2 rounded-lg border border-gray-200 text-xs font-semibold text-gray-600 hover:bg-gray-50">{p}%</button>
               ))}
@@ -94,7 +132,7 @@ export default function CheckoutModal({ booking, tz, onClose, onPaid }) {
         </div>
 
         <div>
-          <p className={labelCls}>Cómo paga</p>
+          <p className={labelCls}>{packId ? 'Cómo paga lo demás (si hay)' : 'Cómo paga'}</p>
           <div className="grid grid-cols-4 gap-2">
             {PAY_METHODS.map((m) => (
               <button key={m.key} type="button" onClick={() => setMethod(m.key)}
@@ -127,7 +165,7 @@ export default function CheckoutModal({ booking, tz, onClose, onPaid }) {
         <input className={inputCls} placeholder="Nota (opcional)" value={note} onChange={(e) => setNote(e.target.value)} maxLength={300} />
 
         <div className="rounded-xl bg-gray-50 border border-gray-100 px-4 py-3 space-y-1 text-sm">
-          <div className="flex justify-between text-gray-600"><span>Servicios</span><span className="tabular-nums">{euros(calc.s || 0)}</span></div>
+          <div className="flex justify-between text-gray-600"><span>Servicios</span><span className="tabular-nums">{packId ? `Bono (${pack?.name || ''})` : euros(calc.s || 0)}</span></div>
           {calc.exTotal > 0 && <div className="flex justify-between text-gray-600"><span>Productos</span><span className="tabular-nums">{euros(calc.exTotal)}</span></div>}
           {(calc.d || 0) > 0 && <div className="flex justify-between text-gray-600"><span>Descuento</span><span className="tabular-nums">−{euros(calc.d)}</span></div>}
           {(calc.t || 0) > 0 && <div className="flex justify-between text-gray-600"><span>Propina</span><span className="tabular-nums">{euros(calc.t)}</span></div>}
@@ -140,7 +178,7 @@ export default function CheckoutModal({ booking, tz, onClose, onPaid }) {
           <button type="button" className={btnSecondary} onClick={onClose}>Cancelar</button>
           <button type="button" onClick={pay} disabled={saving}
             className="flex-1 inline-flex items-center justify-center px-4 py-3 rounded-xl bg-emerald-600 text-white text-base font-bold hover:bg-emerald-700 disabled:opacity-50">
-            {saving ? 'Cobrando…' : `Cobrar ${euros(calc.charged)}`}
+            {saving ? 'Cobrando…' : packId && calc.charged === 0 ? 'Cobrar con bono' : `Cobrar ${euros(calc.charged)}`}
           </button>
         </div>
       </div>

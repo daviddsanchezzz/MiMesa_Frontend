@@ -10,6 +10,7 @@ import { publicBookingUrl } from '../../lib/publicUrl';
 import { bookingTone, reservationTone } from '../../lib/status';
 import { dayLabel } from '../../lib/dates';
 import CustomerForm from '../../components/CustomerForm';
+import CustomerPacks from './CustomerPacks';
 import ReservationForm from '../../components/ReservationForm';
 import Modal from '../../components/Modal';
 import { Section, FigureLine, StatusText, TimeRow, Empty } from '../../ui/kit';
@@ -220,6 +221,8 @@ export default function CustomerFile() {
             )}
             {file.habits.length > 0 && <div className="mt-3 space-y-1.5 text-sm text-gray-600">{file.habits.map((h, i) => <p key={i}>{h}</p>)}</div>}
           </Section>
+
+          {isAppointments && <CustomerPacks customer={customer} />}
 
           <Section title="Notas">
             <textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={5} maxLength={2000} placeholder={file.notesPlaceholder}

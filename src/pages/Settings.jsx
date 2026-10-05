@@ -13,6 +13,7 @@ import { PagosSection } from './settings/PagosSection';
 import { SpacesSettings, ServicesSettings, HoursSettings } from './agenda/AgendaSettings';
 import { BookingLinkSettings } from './agenda/BookingLinkSettings';
 import FollowUpSettings from './agenda/FollowUpSettings';
+import PacksSettings from './agenda/PacksSettings';
 import PolicySettings from './agenda/PolicySettings';
 import { useSetMobileHeader } from '../context/MobileHeaderContext';
 import Icon from '../ui/Icon';
@@ -27,6 +28,9 @@ const GROUPS = {
       { key: 'servicios', label: 'Servicios', desc: 'Duración, precio y quién lo hace', icon: 'list' },
     ] },
     { title: 'Cuándo', items: [{ key: 'horario', label: 'Horario y cierres', desc: 'Cuándo abres, festivos y vacaciones', icon: 'clock' }] },
+    { title: 'Clientes', items: [
+      { key: 'bonos', label: 'Bonos y packs', desc: 'Sesiones que vendes por adelantado', icon: 'receipt' },
+    ] },
     { title: 'Reservas online', items: [
       { key: 'enlace', label: 'Tu página de reservas', desc: 'El enlace que compartes con tus clientes', icon: 'link' },
       { key: 'normas', label: 'Normas de reserva', desc: 'Hasta cuándo pueden cambiar o cancelar', icon: 'alert' },
@@ -63,7 +67,7 @@ const SECTIONS = {
   espacios: SpacesSettings,
   negocio: NegocioSection, mesas: TablesAndRooms, turnos: ShiftsAndClosures, normas: PolicySettings,
   limites: LimitesSection, publico: BookingLinkSettings, suscripcion: BillingSection, pagos: PagosSection,
-  servicios: ServicesSettings, horario: HoursSettings, enlace: BookingLinkSettings, avisos: FollowUpSettings,
+  servicios: ServicesSettings, horario: HoursSettings, enlace: BookingLinkSettings, avisos: FollowUpSettings, bonos: PacksSettings,
 };
 
 /**

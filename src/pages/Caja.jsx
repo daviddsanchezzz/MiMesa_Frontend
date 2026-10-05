@@ -61,7 +61,10 @@ export default function Caja() {
     run(() => bookingsApi.closeCash({ date, countedCash: counted === '' ? null : countedCents, note }).then(() => { setCounted(''); setNote(''); }));
   };
 
-  const METHOD_COLOR = { cash: '#10b981', card: '#8b5cf6', bizum: '#0ea5e9', other: '#94a3b8' };
+  const METHOD_COLOR = { cash: '#10b981', card: '#8b5cf6', bizum: '#0ea5e9', other: '#94a3b8', pack: '#f59e0b' };
+  // What came in: appointments charged plus packs sold that day
+  const collected = (t?.total || 0) + (t?.packSales || 0);
+  const methodSum = PAY_METHODS.reduce((sum, m) => sum + (t?.[m.key] || 0), 0) || 1;
 
   return (
     <div className="w-full">
@@ -85,19 +88,19 @@ export default function Caja() {
           <section className="mb-8">
             <p className="text-[13px] font-semibold uppercase tracking-wide text-gray-400">Cobrado</p>
             <div className="flex items-baseline gap-3 flex-wrap">
-              <p className="text-4xl lg:text-5xl font-semibold tracking-tight tabular-nums text-gray-900">{euros(t.total)}</p>
-              <p className="text-sm text-gray-500">{pluralize(t.payments, 'cobro', 'cobros')}{t.tips ? ` · +${euros(t.tips)} propinas` : ''}
+              <p className="text-4xl lg:text-5xl font-semibold tracking-tight tabular-nums text-gray-900">{euros(collected)}</p>
+              <p className="text-sm text-gray-500">{pluralize(t.payments, 'cobro', 'cobros')}{t.packSales ? ` · ${euros(t.packSales)} en bonos vendidos` : ''}{t.packSessions ? ` · ${pluralize(t.packSessions, 'sesión de bono', 'sesiones de bono')}` : ''}{t.tips ? ` · +${euros(t.tips)} propinas` : ''}
                 {data.toCharge.length > 0 && <> · <b className="text-orange-600">{euros(data.toChargeAmount)}</b> por cobrar</>}</p>
             </div>
-            {t.total > 0 && (
+            {collected > 0 && (
               <div className="mt-4 h-3 rounded-full overflow-hidden flex bg-gray-100">
                 {PAY_METHODS.filter((m) => t[m.key] > 0).map((m) => (
-                  <div key={m.key} style={{ width: `${(t[m.key] / t.total) * 100}%`, backgroundColor: METHOD_COLOR[m.key] }} title={`${m.label}: ${euros(t[m.key])}`} />
+                  <div key={m.key} style={{ width: `${(t[m.key] / methodSum) * 100}%`, backgroundColor: METHOD_COLOR[m.key] }} title={`${m.label}: ${euros(t[m.key])}`} />
                 ))}
               </div>
             )}
             <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1.5">
-              {PAY_METHODS.filter((m) => t[m.key] > 0 || (!t.total && m.key === 'cash')).map((m) => (
+              {PAY_METHODS.filter((m) => t[m.key] > 0 || (!collected && m.key === 'cash')).map((m) => (
                 <span key={m.key} className="inline-flex items-center gap-2 text-sm">
                   <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: METHOD_COLOR[m.key] }} />
                   <span className="text-gray-500">{m.label}</span>
@@ -164,6 +167,29 @@ export default function Caja() {
                   </ul>
                 )}
               </Section>
+
+              {(data.packSales || []).length > 0 && (
+                <Section title="Bonos vendidos">
+                  <ul className="divide-y divide-gray-100">
+                    {data.packSales.map((x) => (
+                      <li key={x._id} className="py-3 flex items-center gap-3">
+                        <span className="w-12 shrink-0 text-right text-[13px] text-gray-400 tabular-nums">{timeInTz(x.paidAt, tz)}</span>
+                        <span className="w-[3px] self-stretch rounded-full shrink-0" style={{ backgroundColor: METHOD_COLOR.pack }} />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[15px] font-medium text-gray-900 truncate">{x.customerName}</p>
+                          <p className="text-[13px] text-gray-500 truncate">{x.name} · {payMethodLabel(x.method)}</p>
+                        </div>
+                        <span className="text-sm font-semibold tabular-nums text-gray-900">{euros(x.amount)}</span>
+                        {hasRole('manager') && !closed && (
+                          <button type="button" disabled={busy} title="Anular venta" aria-label="Anular venta"
+                            onClick={() => { if (window.confirm(`¿Anular la venta de «${x.name}» a ${x.customerName}?`)) run(() => bookingsApi.voidPackSale(x._id)); }}
+                            className="w-8 h-8 rounded-full text-gray-300 hover:text-rose-600 hover:bg-rose-50">↺</button>
+                        )}
+                      </li>
+                    ))}
+                  </ul>
+                </Section>
+              )}
             </div>
 
             <Section title="Cierre de caja">

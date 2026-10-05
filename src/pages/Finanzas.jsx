@@ -977,20 +977,27 @@ function GastosTab({ dateRange, suppliers, categories, refreshTrigger, onCreate,
   return (
     <div className="space-y-5">
       <div className="space-y-3">
-        <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
           <div>
             <p className="text-xs text-gray-500">Gastos del periodo</p>
             <p className="text-3xl font-semibold tracking-tight tabular-nums text-gray-900">{fmtEur(totalFiltered)}</p>
             <p className="mt-1 text-[13px] text-gray-500 tabular-nums">Automáticos {fmtEur(automaticTotal)} · Registrados {fmtEur(registeredTotal)}</p>
           </div>
-          <div className="flex flex-col items-end gap-1.5">
-            <button type="button" onClick={() => setSubView('recurrentes')} className="inline-flex items-center gap-1 text-[13px] font-semibold text-gray-600 hover:text-violet-700">
-              <Icon name="clock" className="w-4 h-4" />Recurrentes →
+        </div>
+        <div className="grid grid-cols-2 gap-2.5">
+          {[
+            ['recurrentes', 'clock', 'Recurrentes', 'Gastos fijos'],
+            ['categorias', 'list', 'Categorías', 'Ordena tus gastos'],
+          ].map(([view, icon, label, hint]) => (
+            <button key={view} type="button" onClick={() => setSubView(view)}
+              className="flex items-center gap-3 rounded-2xl border border-gray-200 bg-white px-3.5 py-3 text-left active:bg-gray-50 hover:bg-gray-50">
+              <span className="w-9 h-9 rounded-xl bg-violet-50 text-violet-600 flex items-center justify-center shrink-0"><Icon name={icon} className="w-[18px] h-[18px]" /></span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-sm font-semibold text-gray-900">{label}</span>
+                <span className="block text-xs text-gray-500 truncate">{hint}</span>
+              </span>
             </button>
-            <button type="button" onClick={() => setSubView('categorias')} className="inline-flex items-center gap-1 text-[13px] font-semibold text-gray-600 hover:text-violet-700">
-              <Icon name="list" className="w-4 h-4" />Categorías →
-            </button>
-          </div>
+          ))}
         </div>
         {expenses.length > 0 && (
           <div className="flex gap-1 overflow-x-auto [scrollbar-width:none]">
@@ -1462,26 +1469,21 @@ export default function Finanzas() {
 
   const shiftPeriod = (direction) => setDateRange(shiftRange(period, dateRange, direction));
 
-  const usesPeriod = true;
-
   return (
     <div className="w-full space-y-5" style={{ overflowX: 'clip' }}>
-      <PageHeader
-        title="Finanzas"
-        subtitle="Cuánto ganas, en qué gastas y qué te queda."
-        actions={<PrimaryButton onClick={() => setQuickAction('expense')}>Nuevo gasto</PrimaryButton>}
-      />
+      <div className="hidden lg:block">
+        <PageHeader title="Finanzas" actions={<PrimaryButton onClick={() => setQuickAction('expense')}>Nuevo gasto</PrimaryButton>} />
+      </div>
 
-      <div className="space-y-3">
-        {usesPeriod && (
-          <PeriodNavigator
-            period={period}
-            dateRange={dateRange}
-            onPeriodChange={handlePeriodChange}
-            onShift={shiftPeriod}
-            onRangeChange={(range) => { setPeriod('custom'); setDateRange(range); }}
-          />
-        )}
+      {/* Period + tabs stay put; the page scrolls underneath */}
+      <div className="sticky top-[-1rem] lg:top-[-1.75rem] !mt-[-1rem] lg:!mt-[-1.75rem] z-20 -mx-4 lg:-mx-8 px-4 lg:px-8 pt-4 lg:pt-7 pb-3 bg-white border-b border-gray-100 space-y-3">
+        <PeriodNavigator
+          period={period}
+          dateRange={dateRange}
+          onPeriodChange={handlePeriodChange}
+          onShift={shiftPeriod}
+          onRangeChange={(range) => { setPeriod('custom'); setDateRange(range); }}
+        />
         <Tabs full value={tab} options={TABS} onChange={setTab} />
       </div>
 

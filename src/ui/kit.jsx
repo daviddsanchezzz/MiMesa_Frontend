@@ -111,15 +111,20 @@ export function TodoLink({ to, onClick, children }) {
 }
 
 /** Figures in one line: "11 citas · 308 € · 72 % ocupado". */
-/** Inline figures. With `large`, desktop (lg+) shows them as bigger stacked figures; mobile is unchanged. */
-export function FigureLine({ items, large = false }) {
+/** Inline figures. With `stacked`, mobile shows them as equal columns (big number, label below); lg+ stays inline. */
+export function FigureLine({ items, stacked = false }) {
   const shown = items.filter(Boolean);
+  const tone = (t) => (t === 'good' ? 'text-emerald-600' : t === 'warn' ? 'text-amber-600' : 'text-gray-900');
   return (
-    <div className={`flex flex-wrap items-baseline gap-x-5 gap-y-1 ${large ? 'lg:gap-x-0 lg:gap-y-0 lg:items-stretch lg:divide-x lg:divide-gray-200' : ''}`}>
+    <div className={stacked
+      ? 'flex divide-x divide-gray-200 lg:divide-x-0 lg:flex-wrap lg:items-baseline lg:gap-x-5 lg:gap-y-1'
+      : 'flex flex-wrap items-baseline gap-x-5 gap-y-1'}>
       {shown.map((it) => (
-        <div key={it.label} className={`flex items-baseline gap-1.5 ${large ? 'lg:flex-col-reverse lg:items-start lg:gap-0.5 lg:px-8 lg:first:pl-0 lg:last:pr-0' : ''}`}>
-          <span className={`text-lg font-semibold tabular-nums ${large ? 'lg:text-4xl lg:tracking-tight' : ''} ${it.tone === 'good' ? 'text-emerald-600' : it.tone === 'warn' ? 'text-amber-600' : 'text-gray-900'}`}>{it.value}</span>
-          <span className={`text-[13px] text-gray-500 ${large ? 'lg:text-sm' : ''}`}>{it.label}</span>
+        <div key={it.label} className={stacked
+          ? 'flex-1 min-w-0 flex flex-col px-3 first:pl-0 last:pr-0 lg:flex-none lg:flex-row lg:items-baseline lg:gap-1.5 lg:p-0'
+          : 'flex items-baseline gap-1.5'}>
+          <span className={`font-semibold tabular-nums ${stacked ? 'text-2xl tracking-tight lg:text-lg lg:tracking-normal' : 'text-lg'} ${tone(it.tone)}`}>{it.value}</span>
+          <span className={`text-gray-500 ${stacked ? 'text-xs leading-tight mt-0.5 lg:mt-0 lg:text-[13px]' : 'text-[13px]'}`}>{it.label}</span>
         </div>
       ))}
     </div>

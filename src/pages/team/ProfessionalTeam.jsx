@@ -160,7 +160,7 @@ function TeamContent() {
   const active = resources.filter((r) => r.active !== false);
   return (
     <div
-      className="w-full max-w-5xl flex flex-1 min-h-0 flex-col"
+      className="w-full flex flex-1 min-h-0 flex-col"
     >
       {error && (
         <p role="alert" className="shrink-0 text-sm text-rose-700">
@@ -294,6 +294,14 @@ function TeamContent() {
               citas.
             </p>
           )}
+          {resources.length > 0 && (
+            <div className="hidden lg:grid grid-cols-12 gap-4 px-2 pb-2 border-b border-gray-200 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+              <span className="col-span-4">Profesional</span>
+              <span className="col-span-5">Servicios</span>
+              <span className="col-span-2">Acceso a Vetra</span>
+              <span className="col-span-1" />
+            </div>
+          )}
           <ul className="divide-y divide-gray-100">
             {resources
               .filter((r) => inactive || r.active !== false)
@@ -302,13 +310,15 @@ function TeamContent() {
                 const pending = invitations.some(
                   (i) => String(i.links?.resourceId) === String(r._id),
                 );
-                const serviceCount = servicesOf(r, services).length;
+                const serviceList = servicesOf(r, services);
+                const serviceCount = serviceList.length;
                 return (
                   <li key={r._id}>
                     <button
-                      className="w-full text-left flex items-center gap-3 py-3 min-h-11 hover:bg-gray-50 rounded-xl"
+                      className="w-full text-left flex items-center gap-3 lg:grid lg:grid-cols-12 lg:gap-4 py-3 lg:px-2 min-h-11 hover:bg-gray-50 rounded-xl"
                       onClick={() => open(r)}
                     >
+                      <div className="flex items-center gap-3 min-w-0 flex-1 lg:col-span-4">
                       <ProfessionalAvatar
                         name={r.name}
                         photo={r.photo}
@@ -324,7 +334,7 @@ function TeamContent() {
                             </span>
                           )}
                         </p>
-                        <div className="flex flex-wrap items-center gap-x-2 text-xs text-gray-500 mt-1">
+                        <div className="flex flex-wrap items-center gap-x-2 text-xs text-gray-500 mt-1 lg:hidden">
                           <span>
                             {serviceCount}{' '}
                             {serviceCount === 1 ? 'servicio' : 'servicios'}
@@ -347,7 +357,14 @@ function TeamContent() {
                           </span>
                         </div>
                       </div>
-                      <span className="text-gray-400" aria-hidden="true">
+                      </div>
+                      <span className="hidden lg:block lg:col-span-5 text-sm text-gray-600 truncate">
+                        {serviceCount ? serviceList.map((x) => x.name).join(', ') : <span className="text-gray-300">—</span>}
+                      </span>
+                      <span className={`hidden lg:block lg:col-span-2 text-sm ${member ? 'text-emerald-700' : pending ? 'text-amber-700' : 'text-gray-500'}`}>
+                        {member ? 'Con acceso' : pending ? 'Invitación pendiente' : 'Sin acceso'}
+                      </span>
+                      <span className="text-gray-400 lg:col-span-1 lg:text-right" aria-hidden="true">
                         ›
                       </span>
                     </button>

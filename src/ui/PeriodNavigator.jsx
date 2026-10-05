@@ -40,18 +40,17 @@ export function usePeriod(initial = 'month') {
 }
 
 /**
- * Desktop: the content of a page sits in a centred column instead of stretching across a wide
- * screen. Put it on the root of the page: everything but the sticky bar follows (the bar keeps
- * its full-width background, and its content is aligned with the page by StickyBar itself).
+ * Desktop: the content of a page uses the whole width of the screen. Put it on the root of the
+ page; the sticky bar keeps its own full-width background.
  */
-export const PAGE_BODY = 'lg:[&>:not(.sticky)]:w-full lg:[&>:not(.sticky)]:max-w-[1500px] lg:[&>:not(.sticky)]:mx-auto';
+export const PAGE_BODY = 'lg:[&>:not(.sticky)]:w-full';
 export const PAGE_BODY_NARROW = 'lg:[&>:not(.sticky)]:w-full lg:[&>:not(.sticky)]:max-w-2xl lg:[&>:not(.sticky)]:mx-auto';
 
 /** Keeps the period selector (and tabs) in view while the page scrolls underneath. */
 export function StickyBar({ children, narrow = false }) {
   return (
     <div className="sticky top-[-1rem] lg:top-[-1.75rem] !mt-[-1rem] lg:!mt-0 z-20 -mx-4 lg:-mx-8 px-4 lg:px-8 pt-4 lg:pt-7 pb-3 bg-white border-b border-gray-100">
-      <div className={`space-y-3 lg:w-full ${narrow ? 'lg:max-w-2xl' : 'lg:max-w-[1500px]'} lg:mx-auto`}>{children}</div>
+      <div className={`space-y-3 lg:w-full ${narrow ? 'lg:max-w-2xl lg:mx-auto' : ''}`}>{children}</div>
     </div>
   );
 }

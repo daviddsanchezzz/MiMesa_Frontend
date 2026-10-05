@@ -232,14 +232,16 @@ export default function AppointmentTeam() {
 
   return (
     <div className="w-full flex flex-1 min-h-0 flex-col">
-      <div className="shrink-0 flex items-center justify-center lg:justify-between pb-4 lg:pb-5">
-        <div className="hidden lg:block min-w-0">
+      <div className="shrink-0 pb-4 lg:pb-5">
+        <div className="hidden lg:block min-w-0 pb-3">
           <h1 className="text-2xl font-semibold tracking-tight text-gray-900">Rendimiento</h1>
           <p className="text-sm text-gray-500 mt-0.5">Facturación, costes y margen de cada profesional.</p>
         </div>
-        <PeriodNavigator period="month" dateRange={{ from, to: fullTo }} periods={['month']}
-          onShift={(direction) => setMonth(shiftMonth(month, direction))} canNext={month < today.slice(0, 7)}
-          onPeriodChange={() => {}} onRangeChange={() => {}} />
+        <div className="flex justify-center">
+          <PeriodNavigator period="month" dateRange={{ from, to: fullTo }} periods={['month']}
+            onShift={(direction) => setMonth(shiftMonth(month, direction))} canNext={month < today.slice(0, 7)}
+            onPeriodChange={() => {}} onRangeChange={() => {}} />
+        </div>
       </div>
 
       <div key={month} data-page-scroll className="flex-1 min-h-0 overflow-y-auto overscroll-contain pb-6 space-y-6 lg:space-y-8">
@@ -248,7 +250,8 @@ export default function AppointmentTeam() {
 
       {data && (
         <>
-          <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04)]" aria-labelledby="team-margin-title">
+          <section className="rounded-3xl border border-gray-200 bg-white p-5 lg:p-7 shadow-[0_1px_2px_rgba(16,24,40,0.04)] xl:flex xl:items-center xl:gap-12" aria-labelledby="team-margin-title">
+            <div className="xl:w-[38%] xl:shrink-0">
             <p id="team-margin-title" className="text-[13px] font-semibold uppercase tracking-wide text-gray-400">Margen del equipo</p>
             <p className={`mt-1 text-4xl font-semibold tracking-tight tabular-nums ${(t.leaves || 0) >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{eur(t.leaves)}</p>
 
@@ -265,7 +268,9 @@ export default function AppointmentTeam() {
               </div>
             )}
 
-            <div className="mt-5 flex divide-x divide-gray-100 border-t border-gray-100 pt-4">
+            </div>
+            <div className="xl:flex-1 xl:min-w-0 xl:border-l xl:border-gray-100 xl:pl-12">
+            <div className="mt-5 flex divide-x divide-gray-100 border-t border-gray-100 pt-4 xl:mt-0 xl:border-t-0 xl:pt-0">
               <div className="min-w-0 flex-1 px-3.5 first:pl-0 last:pr-0">
                 <p className="text-xs text-gray-500">Facturado</p>
                 <p className="mt-0.5 text-xl font-semibold tracking-tight tabular-nums text-gray-900">{eurRound(billed)}</p>
@@ -285,6 +290,7 @@ export default function AppointmentTeam() {
             <p className="mt-3 text-xs text-gray-500 tabular-nums">
               {eur(t.salary)} en sueldos · {eur(t.commission)} en comisiones{t.tips > 0 ? ` · ${eur(t.tips)} en propinas` : ''}
             </p>
+            </div>
           </section>
 
           <Section title="Profesionales">

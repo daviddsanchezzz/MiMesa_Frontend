@@ -85,7 +85,7 @@ export default function ProfessionalGeneral({
     .filter((o) => o.closed && (o.to || o.from) >= today)
     .sort((a, b) => a.from.localeCompare(b.from));
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 xl:space-y-0 xl:columns-2 2xl:columns-3 xl:gap-x-14 xl:[&>*]:break-inside-avoid xl:[&>*]:pb-8">
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -244,7 +244,7 @@ export default function ProfessionalGeneral({
         </button>
       </section>
       {error && (
-        <p role="alert" className="text-sm text-rose-700">
+        <p role="alert" className="text-sm text-rose-700 xl:[column-span:all]">
           {error}
         </p>
       )}

@@ -4,6 +4,7 @@ import { useSetMobileHeader } from '../context/MobileHeaderContext';
 import { bookingsApi, apiError } from '../services/bookingsApi';
 import CheckoutModal from './agenda/CheckoutModal';
 import { Section, TimeRow, RowAction } from '../ui/kit';
+import { DayNavigator, StickyBar } from '../ui/PeriodNavigator';
 import { queryClient, useData } from '../lib/query';
 import { useResources } from './agenda/queries';
 
@@ -67,31 +68,27 @@ export default function Caja() {
   const methodSum = PAY_METHODS.reduce((sum, m) => sum + (t?.[m.key] || 0), 0) || 1;
 
   return (
-    <div className="w-full">
-      <div className="flex items-center justify-between gap-3 mb-5">
-        <div>
-          <h1 className="hidden lg:block text-2xl font-semibold tracking-tight text-gray-900">Caja</h1>
-          <p className="text-sm text-gray-500 lg:mt-0.5">{longDate(date)}{closed && ' · cerrada'}</p>
-        </div>
-        <div className="flex items-center gap-1">
-          <button type="button" className="w-9 h-9 rounded-full hover:bg-gray-100 text-gray-600" onClick={() => setDate(addDays(date, -1))} aria-label="Día anterior">‹</button>
-          <button type="button" className="h-9 px-3 rounded-full text-sm font-semibold text-violet-700 hover:bg-violet-50 disabled:text-gray-300 disabled:hover:bg-transparent" onClick={() => setDate(today)} disabled={date === today}>Hoy</button>
-          <button type="button" className="w-9 h-9 rounded-full hover:bg-gray-100 text-gray-600 disabled:text-gray-300" onClick={() => setDate(addDays(date, 1))} disabled={date >= today} aria-label="Día siguiente">›</button>
-        </div>
+    <div className="w-full" style={{ overflowX: 'clip' }}>
+      <div className="hidden lg:block mb-4">
+        <h1 className="text-2xl font-semibold tracking-tight text-gray-900">Caja</h1>
       </div>
+      <StickyBar>
+        <DayNavigator date={date} today={today} onChange={setDate} canNext={date < today}
+          label={`${new Date(`${date}T12:00:00`).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}${closed ? ' · cerrada' : ''}`} />
+      </StickyBar>
+      <div className="h-5" />
 
       {error && <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2 mb-4">{error}</p>}
       {!data && !error && <p className="text-sm text-gray-400">Cargando…</p>}
 
       {data && (
         <>
-          <section className="mb-8">
+          <section className="mb-8 rounded-3xl border border-gray-200 bg-white p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
             <p className="text-[13px] font-semibold uppercase tracking-wide text-gray-400">Cobrado</p>
-            <div className="flex items-baseline gap-3 flex-wrap">
-              <p className="text-4xl lg:text-5xl font-semibold tracking-tight tabular-nums text-gray-900">{euros(collected)}</p>
-              <p className="text-sm text-gray-500">{pluralize(t.payments, 'cobro', 'cobros')}{t.packSales ? ` · ${euros(t.packSales)} en bonos vendidos` : ''}{t.packSessions ? ` · ${pluralize(t.packSessions, 'sesión de bono', 'sesiones de bono')}` : ''}{t.tips ? ` · +${euros(t.tips)} propinas` : ''}
-                {data.toCharge.length > 0 && <> · <b className="text-orange-600">{euros(data.toChargeAmount)}</b> por cobrar</>}</p>
-            </div>
+            <p className="mt-1 text-4xl font-semibold tracking-tight tabular-nums text-gray-900">{euros(collected)}</p>
+            <p className="mt-1 text-sm text-gray-500">
+              {pluralize(t.payments, 'cobro', 'cobros')}{t.packSales ? ` · ${euros(t.packSales)} en bonos vendidos` : ''}{t.packSessions ? ` · ${pluralize(t.packSessions, 'sesión de bono', 'sesiones de bono')}` : ''}{t.tips ? ` · +${euros(t.tips)} propinas` : ''}
+            </p>
             {collected > 0 && (
               <div className="mt-4 h-3 rounded-full overflow-hidden flex bg-gray-100">
                 {PAY_METHODS.filter((m) => t[m.key] > 0).map((m) => (
@@ -99,15 +96,25 @@ export default function Caja() {
                 ))}
               </div>
             )}
-            <div className="mt-3 flex flex-wrap gap-x-6 gap-y-1.5">
-              {PAY_METHODS.filter((m) => t[m.key] > 0 || (!collected && m.key === 'cash')).map((m) => (
-                <span key={m.key} className="inline-flex items-center gap-2 text-sm">
-                  <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: METHOD_COLOR[m.key] }} />
-                  <span className="text-gray-500">{m.label}</span>
-                  <b className="tabular-nums text-gray-900">{euros(t[m.key])}</b>
-                </span>
-              ))}
+            <div className="mt-4 flex divide-x divide-gray-100 border-t border-gray-100 pt-4">
+              <div className="min-w-0 flex-1 px-3.5 first:pl-0 last:pr-0">
+                <p className="flex items-center gap-1.5 text-xs text-gray-500"><span className="w-2 h-2 rounded-full" style={{ backgroundColor: METHOD_COLOR.cash }} />Efectivo</p>
+                <p className="mt-0.5 text-xl font-semibold tracking-tight tabular-nums text-gray-900">{euros(t.cash)}</p>
+              </div>
+              <div className="min-w-0 flex-1 px-3.5 first:pl-0 last:pr-0">
+                <p className="flex items-center gap-1.5 text-xs text-gray-500"><span className="w-2 h-2 rounded-full" style={{ backgroundColor: METHOD_COLOR.card }} />Tarjeta</p>
+                <p className="mt-0.5 text-xl font-semibold tracking-tight tabular-nums text-gray-900">{euros(t.card)}</p>
+              </div>
+              <div className="min-w-0 flex-1 px-3.5 first:pl-0 last:pr-0">
+                <p className="text-xs text-gray-500">Por cobrar</p>
+                <p className={`mt-0.5 text-xl font-semibold tracking-tight tabular-nums ${data.toCharge.length > 0 ? 'text-amber-600' : 'text-gray-900'}`}>{euros(data.toChargeAmount)}</p>
+              </div>
             </div>
+            {(t.bizum > 0 || t.other > 0) && (
+              <p className="mt-3 text-xs text-gray-500 tabular-nums">
+                {t.bizum > 0 && <>Bizum {euros(t.bizum)}</>}{t.bizum > 0 && t.other > 0 && ' · '}{t.other > 0 && <>Otros {euros(t.other)}</>}
+              </p>
+            )}
           </section>
 
           <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-x-12 gap-y-9 items-start">
@@ -193,6 +200,7 @@ export default function Caja() {
             </div>
 
             <Section title="Cierre de caja">
+              <div className="rounded-2xl border border-gray-200 bg-white p-4">
               {closed ? (
                 <div className="space-y-3">
                   <dl className="text-sm divide-y divide-gray-100 border-y border-gray-100">
@@ -235,6 +243,7 @@ export default function Caja() {
                   <p className="text-xs text-gray-400">Lo cobrado aparece en Finanzas como «Cobrado» del día. Al cerrar, los cobros de este día quedan bloqueados.</p>
                 </div>
               )}
+              </div>
             </Section>
           </div>
         </>

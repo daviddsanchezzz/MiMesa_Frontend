@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import Icon from './Icon';
-import { fmtRange, getMonthRange, getWeekRange, parseIso, shiftRange } from '../lib/periods';
+import { fmtRange, getMonthRange, getWeekRange, parseIso, shiftRange, toIso } from '../lib/periods';
 
 function CustomRange({ dateRange, onRangeChange }) {
   const cls = 'rounded-xl border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 min-w-0 flex-1 sm:flex-none appearance-none bg-white';
@@ -98,3 +98,38 @@ export default function PeriodNavigator({ period, dateRange, onPeriodChange, onS
   );
 }
 
+
+/**
+ * The same pill as PeriodNavigator for a single day (Caja): ‹ Lunes 5 de octubre 📅 ›, with a date
+ * picker behind the calendar icon and "Hoy" when you are looking at another day.
+ */
+export function DayNavigator({ date, today, onChange, label, canNext = true }) {
+  const shift = (n) => {
+    const d = parseIso(date);
+    d.setDate(d.getDate() + n);
+    onChange(toIso(d));
+  };
+  return (
+    <div className="flex items-center justify-center gap-1">
+      <button type="button" onClick={() => shift(-1)} aria-label="Día anterior"
+        className="w-9 h-9 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-100">
+        <Icon name="left" className="w-4 h-4" strokeWidth={2} />
+      </button>
+      <label className="relative min-w-[180px] h-9 px-3 rounded-full inline-flex items-center justify-center gap-2 text-sm font-semibold text-gray-900 hover:bg-gray-100 cursor-pointer">
+        <span className="first-letter:uppercase">{label}</span>
+        <Icon name="calendar" className="w-4 h-4 text-gray-500" />
+        <input type="date" value={date} max={canNext ? undefined : today} aria-label="Elegir día"
+          onChange={(e) => e.target.value && onChange(e.target.value)}
+          onClick={(e) => { try { e.currentTarget.showPicker?.(); } catch { /* ignore */ } }}
+          className="absolute inset-0 opacity-0 cursor-pointer" />
+      </label>
+      <button type="button" onClick={() => shift(1)} disabled={!canNext} aria-label="Día siguiente"
+        className="w-9 h-9 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-100 disabled:opacity-30 disabled:hover:bg-transparent">
+        <Icon name="right" className="w-4 h-4" strokeWidth={2} />
+      </button>
+      {date !== today && (
+        <button type="button" onClick={() => onChange(today)} className="ml-1 h-8 px-3 rounded-full text-xs font-semibold text-violet-700 bg-violet-50 hover:bg-violet-100">Hoy</button>
+      )}
+    </div>
+  );
+}

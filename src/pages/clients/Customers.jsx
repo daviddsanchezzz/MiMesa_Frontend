@@ -138,15 +138,8 @@ export default function Customers() {
   return (
     <div className="w-full flex flex-1 min-h-0 flex-col">
       <div className="shrink-0 space-y-5 pb-4">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="hidden lg:block text-2xl font-semibold tracking-tight text-gray-900">Clientes</h1>
-          <p className="text-sm text-gray-500 lg:mt-0.5">
-            {customers ? pluralize(customers.length, 'cliente', 'clientes') : 'Cargando…'}
-            {counts.due > 0 && <> · <button type="button" className="font-semibold text-emerald-700 hover:underline" onClick={() => setFilter('due')}>{pluralize(counts.due, 'le toca volver', 'les toca volver')}</button></>}
-            {counts.upcoming > 0 && <> · {counts.upcoming} con {isAppointments ? 'cita' : 'reserva'}</>}
-          </p>
-        </div>
+      <div className="hidden lg:flex flex-wrap items-end justify-between gap-3">
+        <h1 className="text-2xl font-semibold tracking-tight text-gray-900">Clientes</h1>
         <div className="flex items-center gap-2">
           <CustomerListTools onImported={load} />
           <button type="button" onClick={() => setCreating(true)}
@@ -158,12 +151,33 @@ export default function Customers() {
 
       {error && <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</p>}
 
+      {customers && (
+        <div className="flex divide-x divide-gray-100 rounded-2xl border border-gray-200 bg-white px-4 py-3 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+          <div className="min-w-0 flex-1 pr-3.5">
+            <p className="text-xs text-gray-500">Clientes</p>
+            <p className="mt-0.5 text-xl font-semibold tracking-tight tabular-nums text-gray-900">{customers.length}</p>
+          </div>
+          <button type="button" onClick={() => counts.due > 0 && setFilter('due')} disabled={counts.due === 0}
+            className="min-w-0 flex-1 px-3.5 text-left disabled:cursor-default">
+            <p className="text-xs text-gray-500">{counts.due === 1 ? 'Le toca volver' : 'Les toca volver'}</p>
+            <p className={`mt-0.5 text-xl font-semibold tracking-tight tabular-nums ${counts.due > 0 ? 'text-emerald-600' : 'text-gray-900'}`}>{counts.due}</p>
+          </button>
+          <div className="min-w-0 flex-1 pl-3.5">
+            <p className="text-xs text-gray-500">Con {isAppointments ? 'cita' : 'reserva'}</p>
+            <p className="mt-0.5 text-xl font-semibold tracking-tight tabular-nums text-gray-900">{counts.upcoming}</p>
+          </div>
+        </div>
+      )}
+
       <div className="space-y-3">
-        <label className="relative block">
+        <div className="flex items-center gap-2">
+        <label className="relative block flex-1 min-w-0">
           <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" className="w-4 h-4 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none"><circle cx="9" cy="9" r="5.5" /><path d="m13.5 13.5 3 3" strokeLinecap="round" /></svg>
           <input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar por nombre, teléfono o email"
             className="w-full rounded-full bg-gray-100 border border-transparent pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:bg-white focus:border-gray-300 focus:ring-2 focus:ring-violet-500/30" />
         </label>
+        <div className="lg:hidden shrink-0"><CustomerListTools onImported={load} /></div>
+        </div>
         <div className="flex items-center gap-2">
           <div className="flex-1 min-w-0 flex gap-1.5 overflow-x-auto -mx-1 px-1 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {cfg.filters.map(([key, label]) => (

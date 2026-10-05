@@ -51,7 +51,7 @@ export default function DayStrip({ date, today, counts = {}, onChange, closedDay
           className="absolute inset-0 opacity-0 cursor-pointer" />
       </label>
       <button type="button" onClick={() => onChange(today)} disabled={date === today}
-        className="shrink-0 h-8 px-2.5 rounded-lg text-xs font-semibold text-violet-700 hover:bg-violet-50 disabled:text-gray-300 disabled:hover:bg-transparent">
+        className="shrink-0 h-8 px-3 rounded-full text-xs font-semibold text-violet-700 bg-violet-50 hover:bg-violet-100 disabled:bg-transparent disabled:text-gray-300">
         Hoy
       </button>
       {extra && <div className="shrink-0 pl-1 border-l border-gray-100 ml-0.5">{extra}</div>}

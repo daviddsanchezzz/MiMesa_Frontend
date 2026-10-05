@@ -168,7 +168,7 @@ export default function Agenda() {
   // Day/week: the page fits the screen and only the grid scrolls.
   const ready = !loading && staff.length > 0 && services.length > 0;
 
-  const scopeChips = (withBlock) => (staff.length > 1 || (withBlock && canBlock)) && (
+  const scopeChips = (withBlock) => (staff.length > 1 || withBlock) && (
             <div className="shrink-0 flex gap-1.5 overflow-x-auto -mx-1 px-1 pb-0.5" role="tablist" aria-label="Qué agenda ver">
               {staff.length > 1 && [{ id: 'all', label: 'Todo el equipo' }, ...(me ? [{ id: me._id, label: 'Mi agenda', person: me }] : []),
                 ...staff.filter((r) => r._id !== me?._id).map((r) => ({ id: r._id, label: r.name, person: r }))].map((o) => {
@@ -182,9 +182,15 @@ export default function Agenda() {
                   </button>
                 );
               })}
+              {withBlock && (
+                <button type="button" onClick={() => setShowCancelled((v) => !v)} aria-pressed={showCancelled}
+                  className={`shrink-0 ml-auto h-7 px-3 rounded-full border text-xs font-semibold transition-colors ${showCancelled ? 'bg-gray-900 border-gray-900 text-white' : 'bg-white border-gray-200 text-gray-600 hover:border-gray-300'}`}>
+                  Canceladas
+                </button>
+              )}
               {withBlock && canBlock && (
                 <button type="button" onClick={() => setBlocking(true)}
-                  className="shrink-0 ml-auto inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold border border-dashed border-gray-300 text-gray-600 hover:border-gray-400 hover:text-gray-800">
+                  className="shrink-0 inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-semibold border border-dashed border-gray-300 text-gray-600 hover:border-gray-400 hover:text-gray-800">
                   <svg viewBox="0 0 20 20" className="w-3.5 h-3.5" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="10" cy="10" r="7" /><path d="M5 15 15 5" strokeLinecap="round" /></svg>
                   Ausencia
                 </button>
@@ -212,13 +218,9 @@ export default function Agenda() {
     <div className="flex flex-1 min-h-0 flex-col gap-3">
       <div className="flex flex-wrap items-center gap-2 shrink-0">
         <h1 className="hidden lg:block text-2xl font-semibold tracking-tight text-gray-900 mr-auto">Agenda</h1>
-        <Segmented value={activeView} onChange={chooseView} options={views} />
-        {ready && (
+        <Segmented full value={activeView} onChange={chooseView} options={views} />
+        {ready && activeView !== 'list' && (
           <div className="ml-auto lg:ml-0 flex items-center gap-2">
-            <label className="flex items-center gap-1.5 text-xs text-gray-500 whitespace-nowrap">
-              <input type="checkbox" checked={showCancelled} onChange={(e) => setShowCancelled(e.target.checked)} />
-              Canceladas
-            </label>
             {activeView !== 'list' && (
               <button type="button" onClick={() => setExpanded(true)} title="Pantalla completa" aria-label="Ver el calendario a pantalla completa"
                 className="inline-flex items-center gap-1.5 h-8 px-2.5 sm:px-3 rounded-full border border-gray-200 text-xs font-semibold text-gray-700 hover:bg-gray-50">

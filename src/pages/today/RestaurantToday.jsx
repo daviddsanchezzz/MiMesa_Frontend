@@ -1,3 +1,4 @@
+import Icon from '../../ui/Icon';
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../../services/api';
@@ -120,15 +121,21 @@ export default function RestaurantToday() {
       </header>
 
       {hasShifts && myWeek.data?.linked && (
-        <Link to="/mi-horario" className="mb-6 flex items-center gap-3 rounded-2xl border border-violet-200 bg-violet-50/60 px-4 py-3 active:bg-violet-50">
-          <span aria-hidden="true">🕒</span>
+        <Link to="/mi-horario" className={`mb-6 flex items-center gap-3 rounded-2xl border px-4 py-3.5 active:bg-gray-50 ${myShiftsToday.length ? 'border-violet-200 bg-violet-50/60' : 'border-gray-200 bg-white'}`}>
           <span className="min-w-0 flex-1">
-            <span className="block text-[15px] font-semibold text-gray-900">
-              {myShiftsToday.length ? `Tu turno de hoy: ${myShiftsToday.map((s) => `${s.start}–${s.end}`).join(' y ')}` : 'Hoy no tienes turno'}
-            </span>
-            {myShiftsToday[0]?.coworkers?.length > 0 && <span className="block text-[13px] text-gray-600 truncate">Con {myShiftsToday[0].coworkers.join(', ')}</span>}
+            <span className={`block text-[11px] font-semibold uppercase tracking-wide ${myShiftsToday.length ? 'text-violet-700' : 'text-gray-400'}`}>Tu turno de hoy</span>
+            {myShiftsToday.length ? (
+              <>
+                <span className="block mt-0.5 text-[22px] leading-7 font-semibold tabular-nums text-gray-900 whitespace-nowrap">
+                  {myShiftsToday.map((s) => `${s.start}–${s.end}`).join(' · ')}
+                </span>
+                {myShiftsToday[0]?.coworkers?.length > 0 && <span className="block text-[13px] text-gray-600 truncate">Con {myShiftsToday[0].coworkers.join(', ')}</span>}
+              </>
+            ) : (
+              <span className="block mt-0.5 text-[15px] text-gray-600">Hoy libras</span>
+            )}
           </span>
-          <span className="text-[13px] font-semibold text-violet-700">Ver semana</span>
+          <span className="shrink-0 inline-flex items-center gap-0.5 text-[13px] font-semibold text-violet-700">Mi semana <Icon name="right" className="w-4 h-4" strokeWidth={2} /></span>
         </Link>
       )}
 

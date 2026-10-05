@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import api from '../../services/api';
 import Modal from '../../components/Modal';
-import { Notice, currencySymbol, formatMoney } from './shared';
+import { Notice, currencySymbol, formatMoney, staffTimes } from './shared';
 
 export function EmployeeAssignmentsModal({ employee, onClose, onDeleted }) {
   const [assignments, setAssignments] = useState([]);
@@ -18,8 +18,8 @@ export function EmployeeAssignmentsModal({ employee, onClose, onDeleted }) {
 
   const assignmentMinutes = (assignment) => {
     const shift = assignment?.shiftId || {};
-    const start = assignment?.startTime || shift?.startTime;
-    const end = assignment?.endTime || shift?.endTime;
+    const start = assignment?.startTime || staffTimes(shift).start;
+    const end = assignment?.endTime || staffTimes(shift).end;
     if (!start || !end) return 0;
     const [sh, sm] = String(start).split(':').map(Number);
     const [ehRaw, emRaw] = String(end).split(':').map(Number);
@@ -144,7 +144,7 @@ export function EmployeeAssignmentsModal({ employee, onClose, onDeleted }) {
                     <div className="min-w-0 flex-1">
                       <p className="text-[15px] font-medium text-gray-900 truncate first-letter:uppercase">{dateLabel}</p>
                       <p className="text-[13px] text-gray-500 truncate">
-                        {shift?.name || '—'}{shift?.startTime && shift?.endTime ? ` · ${shift.startTime}–${shift.endTime}` : ''}
+                        {shift?.name || '—'}{staffTimes(shift).start && staffTimes(shift).end ? ` · ${staffTimes(shift).start}–${staffTimes(shift).end}` : ''}
                       </p>
                     </div>
                     {!isEditingPrice && (

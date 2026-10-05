@@ -24,6 +24,7 @@ export function TurnosSection() {
       manualSlots: s.subShifts.length > 0 ? s.subShifts.map(ss => ss.time) : [],
       days: s.days || [0,1,2,3,4,5,6],
       startDate: s.startDate || '', endDate: s.endDate || '',
+      staffStartTime: s.staffStartTime || '', staffEndTime: s.staffEndTime || '',
     });
     setError(''); setModal(s);
   };
@@ -53,6 +54,7 @@ export function TurnosSection() {
 
       const payload = {
         name: form.name, startTime, endTime,
+        staffStartTime: form.staffStartTime || '', staffEndTime: form.staffEndTime || '',
         days: form.days, subShifts,
         startDate: form.startDate || null, endDate: form.endDate || null,
         interval: form.slotMode === 'auto' ? form.interval : 30,
@@ -139,6 +141,10 @@ export function TurnosSection() {
                     {shift.startTime} – {shift.endTime}
                   </span>
                 </div>
+
+                {(shift.staffStartTime || shift.staffEndTime) && (
+                  <p className="text-xs text-gray-500">Personal: <span className="font-medium text-gray-700 tabular-nums">{shift.staffStartTime || shift.startTime} – {shift.staffEndTime || shift.endTime}</span></p>
+                )}
 
                 {/* Specific badge */}
                 {isSpecific && (
@@ -273,6 +279,33 @@ export function TurnosSection() {
                   </button>
                 </div>
               )}
+            </div>
+
+            {/* Staff hours (restaurants plan people around the service) */}
+            <div>
+              <label className={labelCls}>
+                Horario del personal
+                <span className="text-gray-400 font-normal ml-1 text-xs">(opcional)</span>
+              </label>
+              <div className="flex items-end gap-2">
+                <div className="flex-1 min-w-0">
+                  <span className="block text-xs text-gray-500 mb-1">Llegan</span>
+                  <input type="time" value={form.staffStartTime}
+                    onChange={e => setForm(f => ({ ...f, staffStartTime: e.target.value }))}
+                    className={`${inputCls} w-full`} />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <span className="block text-xs text-gray-500 mb-1">Se van</span>
+                  <input type="time" value={form.staffEndTime}
+                    onChange={e => setForm(f => ({ ...f, staffEndTime: e.target.value }))}
+                    className={`${inputCls} w-full`} />
+                </div>
+                {(form.staffStartTime || form.staffEndTime) && (
+                  <button type="button" onClick={() => setForm(f => ({ ...f, staffStartTime: '', staffEndTime: '' }))}
+                    className="h-[42px] px-2 text-xs font-semibold text-gray-500 hover:text-gray-800">Quitar</button>
+                )}
+              </div>
+              <p className="mt-1.5 text-xs text-gray-400">Si el personal llega antes de abrir o se va después de cerrar, indícalo. Así verán su horario real y se cuentan bien sus horas. Vacío = el mismo que el de los clientes.</p>
             </div>
 
             {/* Days */}

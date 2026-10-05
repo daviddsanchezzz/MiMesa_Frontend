@@ -65,6 +65,12 @@ export const weekDays = (weekStart) => [...Array(7)].map((_, i) => {
   };
 });
 
+/** The hours the staff work a shift: they may arrive before opening and leave after closing. */
+export const staffTimes = (shift) => ({
+  start: shift?.staffStartTime || shift?.startTime || '',
+  end: shift?.staffEndTime || shift?.endTime || '',
+});
+
 export const compareShiftTime = (a, b) => (a.startTime || '').localeCompare(b.startTime || '');
 
 export const shiftAppliesToDate = (shift, date) => {

@@ -7,7 +7,7 @@ import { useSetMobileHeader } from '../context/MobileHeaderContext';
 import Icon from '../ui/Icon';
 import PeriodNavigator from '../ui/PeriodNavigator';
 import { BigFigure, Empty, FigureLine, GhostButton, MenuButton, PageHeader, PrimaryButton, RowAction, Section, Segmented, Tabs } from '../ui/kit';
-import { Notice, addDays, compTypeLabel, compareShiftTime, formatMoney, mondayOf, normalizeDateOnly, shiftAppliesToDate, todayIso, weekDays } from './personal/shared';
+import { Notice, addDays, compTypeLabel, compareShiftTime, formatMoney, staffTimes, mondayOf, normalizeDateOnly, shiftAppliesToDate, todayIso, weekDays } from './personal/shared';
 import { ShiftStaffChips, assignPersonColors } from './personal/ShiftStaffChips';
 import { EmployeeRow, MoreIcon, StateText } from './personal/MobileEmployeeRow';
 import { EmployeeFormModal } from './personal/EmployeeFormModal';
@@ -587,7 +587,7 @@ export default function Personal() {
       >
         <span className="flex items-baseline justify-between gap-2 min-w-0">
           <span className="text-[13px] font-semibold text-gray-900 truncate">{shift.name}</span>
-          <span className="text-[11px] text-gray-400 tabular-nums whitespace-nowrap">{shift.startTime}–{shift.endTime}</span>
+          <span className="text-[11px] text-gray-400 tabular-nums whitespace-nowrap">{staffTimes(shift).start}–{staffTimes(shift).end}</span>
         </span>
         {count === 0 ? (
           <span className="inline-flex items-center gap-1 text-xs text-gray-400 group-hover:text-violet-700">
@@ -756,8 +756,8 @@ export default function Personal() {
                           <button type="button" onClick={() => setSlotEditor({ day: currentMobileDay, shift })}
                             className="w-full flex items-start gap-3 px-3 py-3.5 text-left hover:bg-gray-50 active:bg-gray-100">
                             <span className="w-12 shrink-0 text-right pt-px">
-                              <span className="block text-[15px] font-semibold tabular-nums text-gray-900 leading-5">{shift.startTime}</span>
-                              <span className="block text-[11px] text-gray-400 tabular-nums leading-4">{shift.endTime}</span>
+                              <span className="block text-[15px] font-semibold tabular-nums text-gray-900 leading-5">{staffTimes(shift).start}</span>
+                              <span className="block text-[11px] text-gray-400 tabular-nums leading-4">{staffTimes(shift).end}</span>
                             </span>
                             <span className="w-[3px] self-stretch rounded-full shrink-0 bg-violet-200" aria-hidden="true" />
                             <span className="min-w-0 flex-1 space-y-1.5">
@@ -867,7 +867,7 @@ export default function Personal() {
                           return (
                             <div key={shift._id} style={{ backgroundColor: '#fff', borderRadius: '20px', border: '2px solid #e5e7eb', padding: '28px', marginBottom: '14px' }}>
                               <p style={{ fontSize: '34px', fontWeight: 800, color: '#111827', margin: '0 0 6px', letterSpacing: '-0.01em', lineHeight: 1.1 }}>{shift.name}</p>
-                              <p style={{ fontSize: '26px', fontWeight: 600, color: '#9ca3af', margin: '0 0 20px', letterSpacing: '-0.01em' }}>{shift.startTime}–{shift.endTime}</p>
+                              <p style={{ fontSize: '26px', fontWeight: 600, color: '#9ca3af', margin: '0 0 20px', letterSpacing: '-0.01em' }}>{staffTimes(shift).start}–{staffTimes(shift).end}</p>
                               {rawList.length === 0 ? (
                                 <p style={{ fontSize: '24px', color: '#d1d5db', fontStyle: 'italic', margin: 0 }}>Sin empleados</p>
                               ) : (

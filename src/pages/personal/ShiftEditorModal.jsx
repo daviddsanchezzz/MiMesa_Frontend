@@ -4,7 +4,7 @@ import Modal from '../../components/Modal';
 import Icon from '../../ui/Icon';
 import { Section } from '../../ui/kit';
 import { assignPersonColors } from './ShiftStaffChips';
-import { Notice, SheetFooter, initialsOf } from './shared';
+import { Notice, SheetFooter, initialsOf, staffTimes } from './shared';
 
 export function ShiftEditorModal({ day, shift, assignments, activeEmployees, positions, onClose, onRefresh }) {
   const [saving, setSaving] = useState(false);
@@ -314,7 +314,7 @@ export function ShiftEditorModal({ day, shift, assignments, activeEmployees, pos
       title={shift.name}
       subtitle={
         <span className="first-letter:uppercase">
-          {day.fullLabel} · {shift.startTime}–{shift.endTime}
+          {day.fullLabel} · {staffTimes(shift).start}–{staffTimes(shift).end}{(staffTimes(shift).start !== shift.startTime || staffTimes(shift).end !== shift.endTime) && ` (servicio ${shift.startTime}–${shift.endTime})`}
           {reservationStats && reservationStats.count > 0 && (
             <span className="text-violet-700 font-semibold">
               {' '}· {reservationStats.count} {reservationStats.count === 1 ? 'reserva' : 'reservas'}, {reservationStats.covers} {reservationStats.covers === 1 ? 'comensal' : 'comensales'}

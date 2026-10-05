@@ -128,6 +128,7 @@ export const INTERVAL_OPTIONS = [
 export const emptyShiftForm = () => ({
   name: '', slotMode: 'auto',
   startTime: '12:00', endTime: '16:00', interval: 30,
+  staffStartTime: '', staffEndTime: '',
   manualSlots: [],
   days: [1,2,3,4,5,6,0],
   startDate: '', endDate: '',

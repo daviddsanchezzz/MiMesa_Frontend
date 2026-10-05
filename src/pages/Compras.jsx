@@ -4,8 +4,9 @@ import api from '../services/api';
 import { useSetMobileHeader } from '../context/MobileHeaderContext';
 import Modal from '../components/Modal';
 import Icon from '../ui/Icon';
-import { Empty, GhostButton, MenuButton, PageHeader, PrimaryButton, Tabs, Toggle } from '../ui/kit';
+import { Empty, GhostButton, MenuButton, PageHeader, PrimaryButton, Segmented, Tabs, Toggle } from '../ui/kit';
 import Invoices from './invoices/Invoices';
+import InvoiceStatus from './invoices/InvoiceStatus';
 
 const inputCls = 'w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white';
 const labelCls = 'block text-xs font-medium text-gray-500 mb-1';
@@ -96,12 +97,172 @@ function generateWhatsAppOrderMessage(order, supplier) {
   return messageParts.join('\n\n').trim();
 }
 
+const monthOf = (offset = 0) => {
+  const d = new Date();
+  d.setDate(1);
+  d.setMonth(d.getMonth() + offset);
+  return d;
+};
+const monthKey = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+const monthTitle = (d) => {
+  const text = d.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+  return text.charAt(0).toUpperCase() + text.slice(1);
+};
+
+/** The first screen of Compras: what you spent, what is waiting for you, who you buy from. */
+function ComprasResumen({ invoices, orders, onGo, onNewOrder, onOpenInvoice }) {
+  const navigate = useNavigate();
+  const [offset, setOffset] = useState(0);
+  const month = monthOf(offset);
+  const key = monthKey(month);
+  const prevKey = monthKey(monthOf(offset - 1));
+
+  const counted = (k) => invoices.filter((i) => i.status === 'CONFIRMED' && String(i.invoiceDate || '').startsWith(k));
+  const monthInvoices = counted(key);
+  const total = monthInvoices.reduce((s, i) => s + Number(i.total || 0), 0);
+  const prevTotal = counted(prevKey).reduce((s, i) => s + Number(i.total || 0), 0);
+  const change = prevTotal > 0 ? Math.round(((total - prevTotal) / prevTotal) * 100) : null;
+
+  const bySupplier = Object.values(monthInvoices.reduce((acc, i) => {
+    const name = i.supplier?.name || 'Sin proveedor';
+    acc[name] = acc[name] || { name, total: 0, count: 0 };
+    acc[name].total += Number(i.total || 0);
+    acc[name].count += 1;
+    return acc;
+  }, {})).sort((a, b) => b.total - a.total);
+  const topSuppliers = bySupplier.slice(0, 4);
+  const maxSupplier = topSuppliers[0]?.total || 1;
+
+  const toReview = invoices.filter((i) => i.status === 'REVIEW' || i.status === 'FAILED');
+  const processing = invoices.filter((i) => i.status === 'PROCESSING');
+  const drafts = orders.filter((o) => o.status === 'draft');
+  const awaiting = orders.filter((o) => o.status === 'sent' || o.status === 'confirmed');
+
+  const todo = [
+    toReview.length > 0 && { key: 'review', icon: 'receipt', tint: 'bg-amber-50 text-amber-600', title: `${toReview.length} ${toReview.length === 1 ? 'factura por revisar' : 'facturas por revisar'}`, hint: 'Confírmalas para que cuenten como gasto.', onClick: () => onGo('invoices') },
+    processing.length > 0 && { key: 'processing', icon: 'clock', tint: 'bg-violet-50 text-violet-600', title: `${processing.length} ${processing.length === 1 ? 'factura procesándose' : 'facturas procesándose'}`, hint: 'En un momento estará lista para revisar.', onClick: () => onGo('invoices') },
+    drafts.length > 0 && { key: 'drafts', icon: 'edit', tint: 'bg-gray-100 text-gray-600', title: `${drafts.length} ${drafts.length === 1 ? 'pedido en borrador' : 'pedidos en borrador'}`, hint: 'Aún no los has enviado al proveedor.', onClick: () => onGo('orders') },
+    awaiting.length > 0 && { key: 'awaiting', icon: 'cart', tint: 'bg-violet-50 text-violet-600', title: `${awaiting.length} ${awaiting.length === 1 ? 'pedido por recibir' : 'pedidos por recibir'}`, hint: 'Enviados, pendientes de llegar.', onClick: () => onGo('orders') },
+  ].filter(Boolean);
+
+  return (
+    <div className="space-y-7">
+      <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-[13px] font-semibold uppercase tracking-wide text-gray-400">Has comprado</p>
+          <div className="flex items-center -mr-2">
+            <button type="button" onClick={() => setOffset((o) => o - 1)} aria-label="Mes anterior" className="w-8 h-8 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-100"><Icon name="left" className="w-4 h-4" strokeWidth={2} /></button>
+            <span className="min-w-[110px] text-center text-[13px] font-semibold text-gray-700">{monthTitle(month)}</span>
+            <button type="button" onClick={() => setOffset((o) => Math.min(0, o + 1))} disabled={offset >= 0} aria-label="Mes siguiente" className="w-8 h-8 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-100 disabled:opacity-30"><Icon name="right" className="w-4 h-4" strokeWidth={2} /></button>
+          </div>
+        </div>
+        <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+          <p className="text-4xl font-semibold tracking-tight tabular-nums text-gray-900">{money(total)}</p>
+          {change !== null && change !== 0 && (
+            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full tabular-nums ${change > 0 ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700'}`}>
+              {change > 0 ? '▲' : '▼'} {Math.abs(change)} % vs mes anterior
+            </span>
+          )}
+        </div>
+        <p className="mt-2 text-[15px] text-gray-600">
+          {monthInvoices.length === 0
+            ? 'Sin facturas confirmadas este mes.'
+            : `${monthInvoices.length} ${monthInvoices.length === 1 ? 'factura' : 'facturas'} de ${bySupplier.length} ${bySupplier.length === 1 ? 'proveedor' : 'proveedores'}.`}
+        </p>
+      </section>
+
+      <div className="flex gap-2.5">
+        <button type="button" onClick={() => navigate('/compras/facturas/nueva')}
+          className="flex-[1.4] inline-flex items-center justify-center gap-2 h-12 rounded-2xl bg-violet-600 text-white text-[15px] font-semibold active:bg-violet-700 hover:bg-violet-700">
+          <Icon name="camera" className="w-5 h-5" />Subir factura
+        </button>
+        <button type="button" onClick={onNewOrder}
+          className="flex-1 inline-flex items-center justify-center gap-2 h-12 rounded-2xl border border-gray-200 bg-white text-[15px] font-semibold text-gray-800 active:bg-gray-50 hover:bg-gray-50">
+          <Icon name="plus" className="w-[18px] h-[18px] text-violet-600" />Pedido
+        </button>
+      </div>
+
+      {todo.length > 0 && (
+        <section>
+          <h3 className="mb-1.5 text-[13px] font-semibold uppercase tracking-wide text-gray-400">Pendiente</h3>
+          <ul className="rounded-2xl border border-gray-200 divide-y divide-gray-100 overflow-hidden">
+            {todo.map((t) => (
+              <li key={t.key}>
+                <button type="button" onClick={t.onClick} className="w-full flex items-center gap-3 px-4 py-3 text-left active:bg-gray-50 hover:bg-gray-50">
+                  <span className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${t.tint}`}><Icon name={t.icon} className="w-[18px] h-[18px]" /></span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-[15px] font-medium text-gray-900">{t.title}</span>
+                    <span className="block text-[13px] text-gray-500 truncate">{t.hint}</span>
+                  </span>
+                  <Icon name="right" className="w-4 h-4 text-gray-300 shrink-0" strokeWidth={2} />
+                </button>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {topSuppliers.length > 0 && (
+        <section>
+          <div className="mb-1.5 flex items-baseline justify-between gap-3">
+            <h3 className="text-[13px] font-semibold uppercase tracking-wide text-gray-400">Dónde compras más</h3>
+            <button type="button" onClick={() => onGo('suppliers')} className="text-[13px] font-semibold text-violet-700">Proveedores</button>
+          </div>
+          <ul className="space-y-3 pt-1">
+            {topSuppliers.map((s) => (
+              <li key={s.name}>
+                <div className="flex items-baseline justify-between gap-3">
+                  <span className="min-w-0 truncate text-[15px] font-medium text-gray-900">{s.name}</span>
+                  <span className="shrink-0 text-[15px] font-semibold tabular-nums text-gray-900">{money(s.total)}</span>
+                </div>
+                <div className="mt-1.5 h-2 rounded-full bg-gray-100"><div className="h-2 rounded-full bg-violet-500" style={{ width: `${Math.max(4, (s.total / maxSupplier) * 100)}%` }} /></div>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      <section>
+        <div className="mb-1 flex items-baseline justify-between gap-3">
+          <h3 className="text-[13px] font-semibold uppercase tracking-wide text-gray-400">Últimas facturas</h3>
+          {invoices.length > 0 && <button type="button" onClick={() => onGo('invoices')} className="text-[13px] font-semibold text-violet-700">Ver todas</button>}
+        </div>
+        {invoices.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-gray-200 px-5 py-8 text-center">
+            <div className="mx-auto w-11 h-11 rounded-2xl bg-violet-50 text-violet-600 flex items-center justify-center mb-3"><Icon name="receipt" className="w-6 h-6" /></div>
+            <p className="text-[15px] font-medium text-gray-900">Todavía no hay facturas</p>
+            <p className="mt-1 text-sm text-gray-500">Haz una foto a una factura y se rellenará sola.</p>
+          </div>
+        ) : (
+          <ul className="divide-y divide-gray-100">
+            {invoices.slice(0, 4).map((invoice) => (
+              <li key={invoice._id}>
+                <button type="button" onClick={() => onOpenInvoice(invoice)} className="w-full flex items-center gap-3 rounded-xl px-2 py-3 text-left hover:bg-gray-50 active:bg-gray-100">
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-[15px] font-medium text-gray-900">{invoice.supplier?.name || 'Sin proveedor'}</p>
+                    <p className="truncate text-[13px] text-gray-500">{invoice.invoiceNumber || 'Sin número'} · {niceDate(invoice.invoiceDate)}</p>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <p className="text-sm font-semibold tabular-nums text-gray-900">{money(invoice.total)}</p>
+                    <InvoiceStatus status={invoice.status} />
+                  </div>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+    </div>
+  );
+}
+
 export default function Compras() {
   const location = useLocation();
   const navigate = useNavigate();
   const pathTab = location.pathname.split('/')[2];
-  const initialTab = ({ resumen: 'summary', facturas: 'invoices', pedidos: 'orders', productos: 'products', proveedores: 'suppliers' })[pathTab] || 'summary';
+  const initialTab = ({ resumen: 'summary', facturas: 'invoices', pedidos: 'orders', productos: 'suppliers', proveedores: 'suppliers' })[pathTab] || 'summary';
   const [tab, setTab] = useState(initialTab);
+  const [supView, setSupView] = useState(pathTab === 'productos' ? 'products' : 'suppliers'); // inside the Proveedores tab
   const [suppliers, setSuppliers] = useState([]);
   const [products, setProducts] = useState([]);
   const [orders, setOrders] = useState([]);
@@ -147,7 +308,11 @@ export default function Compras() {
   }, []);
 
   useEffect(() => { loadAll(); }, [loadAll]);
-  useEffect(() => { setTab(initialTab); }, [initialTab]);
+  useEffect(() => {
+    setTab(initialTab);
+    if (pathTab === 'productos') setSupView('products');
+    if (pathTab === 'proveedores') setSupView('suppliers');
+  }, [initialTab, pathTab]);
 
   const openSupplier = useCallback(async (supplier) => {
     setSupplierDetailLoading(true);
@@ -168,9 +333,15 @@ export default function Compras() {
   }, [location.search, suppliers, supplierDetail, supplierDetailLoading, openSupplier]);
 
   const selectTab = (next) => {
-    const slug = { summary: 'resumen', invoices: 'facturas', orders: 'pedidos', products: 'productos', suppliers: 'proveedores' }[next];
+    const slug = { summary: 'resumen', invoices: 'facturas', orders: 'pedidos', suppliers: 'proveedores' }[next];
     setTab(next);
+    if (next === 'suppliers') setSupView('suppliers');
     navigate(`/compras/${slug}`);
+  };
+
+  const selectSupView = (next) => {
+    setSupView(next);
+    navigate(next === 'products' ? '/compras/productos' : '/compras/proveedores');
   };
 
   const activeSuppliers = useMemo(() => suppliers.filter((supplier) => supplier.isActive), [suppliers]);
@@ -354,21 +525,22 @@ export default function Compras() {
   const primary = {
     invoices: { label: 'Añadir factura', short: 'Factura', onClick: () => navigate('/compras/facturas/nueva') },
     orders: { label: 'Nuevo pedido', short: 'Pedido', onClick: () => setOrderModal({}) },
-    products: { label: 'Nuevo producto', short: 'Producto', onClick: () => setProductModal({}) },
-    suppliers: { label: 'Nuevo proveedor', short: 'Proveedor', onClick: () => setSupplierModal({}) },
+    suppliers: supView === 'products'
+      ? { label: 'Nuevo producto', short: 'Producto', onClick: () => setProductModal({}) }
+      : { label: 'Nuevo proveedor', short: 'Proveedor', onClick: () => setSupplierModal({}) },
   }[tab];
   useSetMobileHeader({ title: 'Compras', action: primary ? { label: primary.short, onClick: primary.onClick } : false });
 
-  const monthPrefix = todayIso().slice(0, 7);
-  const confirmedThisMonth = invoices.filter((invoice) => invoice.status === 'CONFIRMED' && String(invoice.invoiceDate || '').startsWith(monthPrefix));
-  const monthTotal = confirmedThisMonth.reduce((sum, invoice) => sum + Number(invoice.total || 0), 0);
+  const reviewCount = invoices.filter((invoice) => invoice.status === 'REVIEW' || invoice.status === 'FAILED').length;
+  const pendingOrders = orders.filter((order) => order.status === 'draft').length;
+  const dot = (show) => show && <span className="ml-1 inline-block w-1.5 h-1.5 rounded-full bg-amber-500 align-middle" aria-label="Pendiente" />;
 
   return (
     <div className="w-full space-y-6">
-      <PageHeader title="Compras" subtitle="Gestiona proveedores, pedidos, facturas y productos."
+      <PageHeader title="Compras" subtitle="Facturas, pedidos y proveedores en un solo sitio."
         actions={(
           <>
-            {tab === 'suppliers' && (
+            {tab === 'suppliers' && supView === 'suppliers' && (
               <MenuButton ariaLabel="Exportar" className="h-9 px-3.5 border border-gray-200"
                 items={[{ label: 'Exportar Excel', onClick: exportSuppliersProductsCsv }, { label: 'Exportar PDF', onClick: exportSuppliersProductsPdf }]}>
                 Exportar<Icon name="down" className="w-3.5 h-3.5" strokeWidth={2} />
@@ -378,40 +550,19 @@ export default function Compras() {
           </>
         )} />
 
-      <Tabs value={tab} onChange={selectTab} options={[
+      <Tabs full value={tab} onChange={selectTab} options={[
         ['summary', 'Resumen'],
-        ['invoices', `Facturas${invoices.length ? ` · ${invoices.length}` : ''}`],
-        ['orders', `Pedidos${orders.length ? ` · ${orders.length}` : ''}`],
-        ['products', `Productos${products.length ? ` · ${products.length}` : ''}`],
-        ['suppliers', `Proveedores${suppliers.length ? ` · ${suppliers.length}` : ''}`],
+        ['invoices', <span key="i">Facturas{dot(reviewCount > 0)}</span>],
+        ['orders', <span key="o">Pedidos{dot(pendingOrders > 0)}</span>],
+        ['suppliers', 'Proveedores'],
       ]} />
 
       {loading && <p className="text-sm text-gray-400">Cargando…</p>}
       {error && <p className="rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>}
 
       {!loading && tab === 'summary' && (
-        <div className="space-y-7">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="rounded-2xl border border-gray-200 p-4"><p className="text-xs font-medium text-gray-500">Compras en facturas este mes</p><p className="mt-2 text-2xl font-semibold tabular-nums text-gray-900">{money(monthTotal)}</p></div>
-            <div className="rounded-2xl border border-gray-200 p-4"><p className="text-xs font-medium text-gray-500">Facturas este mes</p><p className="mt-2 text-2xl font-semibold tabular-nums text-gray-900">{confirmedThisMonth.length}</p></div>
-            <div className="rounded-2xl border border-gray-200 p-4"><p className="text-xs font-medium text-gray-500">Proveedores activos</p><p className="mt-2 text-2xl font-semibold tabular-nums text-gray-900">{activeSuppliers.length}</p></div>
-          </div>
-          <section>
-            <div className="mb-2 flex items-center justify-between gap-3"><h2 className="text-sm font-semibold text-gray-900">Últimas facturas</h2><button type="button" onClick={() => selectTab('invoices')} className="text-sm font-semibold text-violet-700">Ver todas</button></div>
-            {invoices.length === 0 ? <Empty>Todavía no hay facturas.</Empty> : (
-              <ul className="divide-y divide-gray-100">
-                {invoices.slice(0, 5).map((invoice) => (
-                  <li key={invoice._id}>
-                    <button type="button" onClick={() => navigate(`/compras/facturas/${invoice._id}`)} className="w-full flex items-center gap-3 rounded-xl px-2 py-3 text-left hover:bg-gray-50">
-                      <div className="min-w-0 flex-1"><p className="truncate text-[15px] font-medium text-gray-900">{invoice.supplier?.name || 'Sin proveedor'}</p><p className="truncate text-[13px] text-gray-500">{invoice.invoiceNumber || 'Sin número'} · {niceDate(invoice.invoiceDate)}</p></div>
-                      <span className="shrink-0 text-sm font-semibold tabular-nums">{money(invoice.total)}</span><Icon name="right" className="h-4 w-4 text-gray-300" />
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </section>
-        </div>
+        <ComprasResumen invoices={invoices} orders={orders} onGo={selectTab} onNewOrder={() => setOrderModal({})}
+          onOpenInvoice={(invoice) => navigate(`/compras/facturas/${invoice._id}`)} />
       )}
 
       {!loading && tab === 'invoices' && <Invoices embedded />}
@@ -467,7 +618,11 @@ export default function Compras() {
         )
       )}
 
-      {!loading && tab === 'products' && (
+      {!loading && tab === 'suppliers' && (
+        <div className="-mt-2"><Segmented size="sm" value={supView} onChange={selectSupView} options={[['suppliers', `Proveedores${suppliers.length ? ` · ${suppliers.length}` : ''}`], ['products', `Productos${products.length ? ` · ${products.length}` : ''}`]]} /></div>
+      )}
+
+      {!loading && tab === 'suppliers' && supView === 'products' && (
         products.length === 0 ? (
           <Empty action={<button type="button" onClick={() => setProductModal({})} className="text-sm font-semibold text-violet-700">+ Añadir el primero</button>}>
             {suppliers.length ? 'Todavía no hay productos.' : 'Primero añade un proveedor; luego sus productos.'}
@@ -508,7 +663,7 @@ export default function Compras() {
         )
       )}
 
-      {!loading && tab === 'suppliers' && (
+      {!loading && tab === 'suppliers' && supView === 'suppliers' && (
         <>
           <div className="lg:hidden flex gap-2">
             <GhostButton onClick={exportSuppliersProductsCsv}>Exportar Excel</GhostButton>

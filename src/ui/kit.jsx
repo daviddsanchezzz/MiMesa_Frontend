@@ -141,12 +141,12 @@ export function Empty({ children, action }) {
 }
 
 /** Pills to switch views (Lista · Línea · Plano). */
-export function Segmented({ value, options, onChange, size = 'md' }) {
+export function Segmented({ value, options, onChange, size = 'md', full = false }) {
   return (
-    <div className="inline-flex p-0.5 rounded-full bg-gray-100" role="tablist">
+    <div className={`${full ? 'flex w-full lg:inline-flex lg:w-auto' : 'inline-flex'} p-0.5 rounded-full bg-gray-100`} role="tablist">
       {options.map(([key, label]) => (
         <button key={key} type="button" role="tab" aria-selected={value === key} onClick={() => onChange(key)}
-          className={`${size === 'sm' ? 'px-3 py-1 text-xs' : 'px-3.5 py-1.5 text-[13px]'} rounded-full font-semibold whitespace-nowrap transition-colors ${value === key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}>
+          className={`${size === 'sm' ? 'px-3 py-1 text-xs' : full ? 'px-1.5 lg:px-3.5 py-1.5 text-[13px] flex-1 lg:flex-none' : 'px-3.5 py-1.5 text-[13px]'} rounded-full font-semibold whitespace-nowrap transition-colors ${value === key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-800'}`}>
           {label}
         </button>
       ))}
@@ -226,10 +226,10 @@ export function GhostButton({ children, onClick, disabled, className = '' }) {
 }
 
 /** Sections of a screen (Pedidos · Productos · Proveedores): Segmented that scrolls on the phone. */
-export function Tabs({ value, options, onChange }) {
+export function Tabs({ value, options, onChange, full = false }) {
   return (
     <div className="-mx-4 px-4 lg:mx-0 lg:px-0 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-      <Segmented value={value} options={options} onChange={onChange} />
+      <Segmented value={value} options={options} onChange={onChange} full={full} />
     </div>
   );
 }

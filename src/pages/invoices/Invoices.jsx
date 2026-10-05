@@ -1,3 +1,4 @@
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSetMobileHeader } from '../../context/MobileHeaderContext';
 import { useData } from '../../lib/query';
@@ -29,7 +30,16 @@ export default function Invoices({ embedded = false }) {
   useSetMobileHeader({ title: embedded ? 'Compras' : 'Facturas', action: { label: 'Añadir', onClick: addInvoice } });
 
   const invoicesQuery = useData(['invoices', 'list'], invoicesApi.list, { retry: false });
-  const invoices = invoicesQuery.data || [];
+  const all = invoicesQuery.data || [];
+  const [filter, setFilter] = useState('all'); // all | review | confirmed
+  const needsAction = (i) => i.status === 'REVIEW' || i.status === 'FAILED' || i.status === 'PROCESSING';
+  const reviewCount = all.filter(needsAction).length;
+  const confirmedCount = all.length - reviewCount;
+  // What needs your attention first, then the rest as they came.
+  const invoices = useMemo(() => {
+    const shown = filter === 'review' ? all.filter(needsAction) : filter === 'confirmed' ? all.filter((i) => !needsAction(i)) : all;
+    return [...shown].sort((a, b) => Number(needsAction(b)) - Number(needsAction(a)));
+  }, [all, filter]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="w-full space-y-6">
@@ -47,7 +57,7 @@ export default function Invoices({ embedded = false }) {
         </div>
       )}
 
-      {!invoicesQuery.isLoading && !invoicesQuery.isError && invoices.length === 0 && (
+      {!invoicesQuery.isLoading && !invoicesQuery.isError && all.length === 0 && (
         <div className="rounded-2xl border border-dashed border-gray-200 px-5 py-12">
           <div className="mx-auto w-12 h-12 rounded-2xl bg-violet-50 text-violet-600 flex items-center justify-center mb-4">
             <Icon name="receipt" className="w-6 h-6" />
@@ -57,6 +67,21 @@ export default function Invoices({ embedded = false }) {
             <span className="block max-w-md mx-auto">Sube una foto o PDF y Vetra extraerá automáticamente el proveedor, las líneas y los importes.</span>
           </Empty>
         </div>
+      )}
+
+      {!invoicesQuery.isLoading && !invoicesQuery.isError && all.length > 0 && (
+        <div className="flex gap-1.5 overflow-x-auto [scrollbar-width:none]">
+          {[['all', 'Todas'], ['review', reviewCount ? `Por revisar · ${reviewCount}` : 'Por revisar'], ['confirmed', 'Confirmadas']].map(([key, label]) => (
+            <button key={key} type="button" onClick={() => setFilter(key)}
+              className={`shrink-0 rounded-full px-3.5 py-1.5 text-[13px] font-semibold ${filter === key ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:text-gray-900'}`}>
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {!invoicesQuery.isLoading && !invoicesQuery.isError && all.length > 0 && invoices.length === 0 && (
+        <Empty>{filter === 'review' ? 'No tienes facturas por revisar. 🎉' : 'No hay facturas de este tipo.'}</Empty>
       )}
 
       {!invoicesQuery.isLoading && !invoicesQuery.isError && invoices.length > 0 && (

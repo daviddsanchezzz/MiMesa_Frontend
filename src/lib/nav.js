@@ -22,7 +22,7 @@ export function useNav() {
   ].filter(Boolean);
 
   const manage = [
-    isAppointments && isModuleEnabled('bookings') && { to: '/caja', label: 'Caja', icon: 'cash', section: 'Negocio' },
+    isAppointments && isModuleEnabled('bookings') && { to: '/caja', label: 'Caja', hint: 'Cobros del día', icon: 'cash', section: 'Negocio' },
     !isAppointments && isModuleEnabled('bookings') && { to: '/agenda', label: 'Agenda de citas', icon: 'clock', section: 'Negocio' },
     !isAppointments && manager && { to: '/tables', label: 'Mesas y salas', icon: 'map', section: 'Negocio' },
     !isAppointments && manager && { to: '/exceptions', label: 'Cierres y excepciones', icon: 'alert', section: 'Negocio' },
@@ -30,8 +30,8 @@ export function useNav() {
     !isAppointments && !isStaff && !locked && manager && { to: '/team', label: 'Equipo', icon: 'team', section: 'Equipo' },
     isModuleEnabled('staff') && manager && { to: '/personal', label: isAppointments ? 'Rendimiento' : 'Personal', hint: isAppointments ? 'Facturación, costes y margen de cada profesional' : undefined, icon: 'briefcase', section: 'Equipo' },
     !isAppointments && !isStaff && !locked && manager && { to: '/analytics', label: 'Estadísticas', icon: 'chart', section: 'Negocio' },
-    isModuleEnabled('expenses') && hasRole('owner') && { to: '/finanzas', label: 'Finanzas', icon: 'euro', section: 'Negocio' },
-    isModuleEnabled('purchases') && manager && { to: '/compras', label: 'Compras', icon: 'cart', section: 'Negocio' },
+    isModuleEnabled('expenses') && hasRole('owner') && { to: '/finanzas', label: 'Finanzas', hint: 'Cuánto ganas, gastos y beneficio', icon: 'euro', section: 'Negocio' },
+    isModuleEnabled('purchases') && manager && { to: '/compras', label: 'Compras', hint: 'Facturas, pedidos y proveedores', icon: 'cart', section: 'Negocio' },
     !isStaff && isSubscribed && manager && { to: '/publicidad', label: 'Publicidad', icon: 'megaphone', section: 'Crecimiento' },
   ].filter(Boolean);
 

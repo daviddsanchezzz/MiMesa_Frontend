@@ -72,6 +72,26 @@ function parseIso(iso) {
   return new Date(y, m - 1, d);
 }
 
+// The same kind of period, `direction` steps away (-1 = the previous one).
+function shiftRange(period, dateRange, direction) {
+  if (period === 'month') {
+    const anchor = parseIso(dateRange.from);
+    anchor.setMonth(anchor.getMonth() + direction);
+    return getMonthRange(anchor);
+  }
+  if (period === 'week') {
+    const anchor = parseIso(dateRange.from);
+    anchor.setDate(anchor.getDate() + (7 * direction));
+    return getWeekRange(anchor);
+  }
+  const from = parseIso(dateRange.from);
+  const to = parseIso(dateRange.to);
+  const days = Math.round((to - from) / 86400000) + 1;
+  from.setDate(from.getDate() + (days * direction));
+  to.setDate(to.getDate() + (days * direction));
+  return { from: toIso(from), to: toIso(to) };
+}
+
 // "1 oct" (with the year when it isn't this year)
 function fmtShort(iso, withYear = false) {
   if (!iso) return '—';
@@ -299,21 +319,81 @@ function TicketAverageEdit({ value, onSave }) {
 
 const PAGE_SIZE = 10;
 
-function ResumenTab({ dateRange, categories, refreshTrigger, onTodayRevenue, onViewExpenses }) {
+// Built-in categories (they have no row in /categories) still get their own colour in the bar.
+const BUILT_IN_BAR = { staff: 'bg-violet-400', commissions: 'bg-pink-400' };
+function barColor(cats, value) {
+  const c = cats?.find((x) => x.value === value);
+  return c ? (COLOR_DOT[c.color] || 'bg-slate-400') : (BUILT_IN_BAR[value] || 'bg-slate-400');
+}
+
+const MONTH_NAME = (iso) => parseIso(iso).toLocaleDateString('es-ES', { month: 'long' });
+function previousLabel(period, dateRange) {
+  if (period === 'month') return MONTH_NAME(shiftRange('month', dateRange, -1).from);
+  return period === 'week' ? 'la semana anterior' : 'el periodo anterior';
+}
+
+// What the period brought in. Appointments: what was billed. Restaurants: the actual takings when
+// entered, the estimate otherwise (the API folds that into estimatedProfit).
+function incomeOf(d) {
+  if (!d) return null;
+  return d.mode === 'appointments' ? (d.estimatedRevenue || 0) : (d.estimatedProfit || 0) + (d.totalExpenses || 0);
+}
+
+/** ▲ 12 % — green when the movement is good, red when not. */
+function Delta({ now, before, goodWhen = 'up', suffix = '' }) {
+  if (before === null || before === undefined || !before) return null;
+  const pct = Math.round(((now - before) / Math.abs(before)) * 100);
+  if (!Number.isFinite(pct) || pct === 0) return null;
+  const up = pct > 0;
+  const good = goodWhen === 'up' ? up : !up;
+  return (
+    <span className={`text-[11px] font-semibold tabular-nums ${good ? 'text-emerald-600' : 'text-rose-500'}`}>
+      {up ? '▲' : '▼'} {Math.abs(pct)} %{suffix}
+    </span>
+  );
+}
+
+function Stat({ label, value, delta, hint }) {
+  return (
+    <div className="min-w-0 flex-1 px-3.5 first:pl-0 last:pr-0">
+      <p className="text-xs text-gray-500">{label}</p>
+      <p className="mt-0.5 text-xl font-semibold tracking-tight tabular-nums text-gray-900 truncate">{value}</p>
+      <div className="mt-0.5 min-h-4 flex flex-wrap items-center gap-x-1.5 text-[11px] text-gray-400">{delta}{hint}</div>
+    </div>
+  );
+}
+
+function ActionPill({ icon, children, onClick, to }) {
+  const cls = 'flex-1 inline-flex items-center justify-center gap-2 h-11 rounded-2xl border border-gray-200 bg-white text-sm font-semibold text-gray-800 active:bg-gray-50 hover:bg-gray-50';
+  const inner = <><Icon name={icon} className="w-[18px] h-[18px] text-violet-600" />{children}</>;
+  return to ? <Link to={to} className={cls}>{inner}</Link> : <button type="button" onClick={onClick} className={cls}>{inner}</button>;
+}
+
+function ResumenTab({ period, dateRange, categories, refreshTrigger, onTodayRevenue, onViewExpenses, onAddExpense }) {
   const [data, setData] = useState(null);
+  const [previous, setPrevious] = useState(null);
+  const [toReview, setToReview] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [showDays, setShowDays] = useState(false);
   const [page, setPage] = useState(0);
 
   const load = useCallback(async () => {
     if (!dateRange.from || !dateRange.to) return;
     setLoading(true);
     setPage(0);
+    const prev = shiftRange(period, dateRange, -1);
     try {
-      const { data: d } = await api.get(`/revenue/dashboard?from=${dateRange.from}&to=${dateRange.to}`);
+      const [{ data: d }, prevRes, invRes] = await Promise.all([
+        api.get(`/revenue/dashboard?from=${dateRange.from}&to=${dateRange.to}`),
+        api.get(`/revenue/dashboard?from=${prev.from}&to=${prev.to}`).catch(() => null),
+        api.get('/invoices').catch(() => null),
+      ]);
       setData(d);
+      setPrevious(prevRes?.data || null);
+      setToReview((invRes?.data || []).filter((i) => i.status === 'REVIEW' || i.status === 'FAILED').length);
     } catch { /* handled below */ }
     finally { setLoading(false); }
-  }, [dateRange.from, dateRange.to]);
+  }, [period, dateRange.from, dateRange.to]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { load(); }, [load]);
   useEffect(() => { if (refreshTrigger > 0) load(); }, [refreshTrigger]); // eslint-disable-line
@@ -336,105 +416,146 @@ function ResumenTab({ dateRange, categories, refreshTrigger, onTodayRevenue, onV
   if (!data) return <Empty>No se pudieron cargar los datos.</Empty>;
 
   const appt = data.mode === 'appointments';
-  // The income the profit is computed from (real, estimated or a mix).
-  const income = (data.estimatedProfit || 0) + (data.totalExpenses || 0);
+  const income = incomeOf(data);
+  const expenses = data.totalExpenses || 0;
+  const profit = income - expenses;
+  const prevIncome = incomeOf(previous);
+  const prevExpenses = previous ? previous.totalExpenses || 0 : null;
+  const prevProfit = previous ? prevIncome - prevExpenses : null;
+  const vs = previousLabel(period, dateRange);
+  const margin = income > 0 ? Math.round((profit / income) * 100) : null;
+  const verb = appt ? 'facturado' : 'ingresado';
+  const empty = income === 0 && expenses === 0;
+  const diff = previous && (prevIncome || prevExpenses) ? profit - prevProfit : null;
+
+  const sentence = empty
+    ? 'Aún no hay movimientos en este periodo.'
+    : profit >= 0
+      ? `Has ${verb} ${fmtEur(income)} y gastado ${fmtEur(expenses)}: te quedan ${fmtEur(profit)}${margin !== null ? ` (${margin} % de margen)` : ''}.`
+      : `Has gastado ${fmtEur(expenses)} y ${verb} ${fmtEur(income)}: te faltan ${fmtEur(-profit)} para cubrir los gastos.`;
+
   const visibleDays = data.days.filter((day) => {
     const count = appt ? day.appointments : day.covers;
     return day.date === toIso() || count > 0 || day.estimatedRevenue > 0 || day.actualRevenue !== null;
   });
   const pageCount = Math.ceil(visibleDays.length / PAGE_SIZE);
   const slice = visibleDays.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
-  const topExpenses = data.expensesByCategory.slice(0, 3);
-  const otherExpenses = data.expensesByCategory.slice(3).reduce((sum, item) => sum + item.amount, 0);
+
+  const cats = data.expensesByCategory;
+  const topCats = cats.slice(0, 5);
+  const otherAmount = cats.slice(5).reduce((sum, item) => sum + item.amount, 0);
+  const catRows = [...topCats.map((c) => ({ key: c.category, label: catLabel(categories, c.category), cls: barColor(categories, c.category), amount: c.amount })),
+    ...(otherAmount > 0 ? [{ key: '__other', label: 'Otros', cls: 'bg-slate-300', amount: otherAmount }] : [])];
+  const catTotal = catRows.reduce((s, r) => s + r.amount, 0) || 1;
 
   return (
-    <div className={`space-y-8 ${loading ? 'opacity-60' : ''}`}>
-      <section className="space-y-5 border-b border-gray-100 pb-6">
-        <div>
-          <p className="text-[13px] font-semibold uppercase tracking-wide text-gray-400">Resultado estimado</p>
-          <p className={`text-3xl lg:text-4xl font-semibold tracking-tight tabular-nums ${data.estimatedProfit < 0 ? 'text-rose-600' : data.estimatedProfit > 0 ? 'text-emerald-600' : 'text-gray-900'}`}>
-            {fmtEur(data.estimatedProfit)}
+    <div className={`space-y-7 ${loading ? 'opacity-60' : ''}`}>
+      {/* Hero: how much is left, in one sentence */}
+      <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
+        <p className="text-[13px] font-semibold uppercase tracking-wide text-gray-400">Te queda</p>
+        <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+          <p className={`text-4xl font-semibold tracking-tight tabular-nums ${profit < 0 ? 'text-rose-600' : profit > 0 ? 'text-emerald-600' : 'text-gray-900'}`}>
+            {fmtEur(profit)}
           </p>
+          {diff !== null && diff !== 0 && (
+            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full tabular-nums ${diff > 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-600'}`}>
+              {diff > 0 ? '▲ +' : '▼ −'}{fmtEur(Math.abs(diff)).replace('−', '')} vs {vs}
+            </span>
+          )}
         </div>
-        <div className="grid grid-cols-2 gap-6 max-w-md">
-          <div><p className="text-xs text-gray-500">Ingresos</p><p className="text-xl font-semibold tabular-nums text-gray-900">{fmtEur(income)}</p></div>
-          <div><p className="text-xs text-gray-500">Gastos</p><p className="text-xl font-semibold tabular-nums text-gray-900">{fmtEur(data.totalExpenses)}</p></div>
+        <p className="mt-2 text-[15px] leading-6 text-gray-600">{sentence}</p>
+
+        <div className="mt-5 flex divide-x divide-gray-100 border-t border-gray-100 pt-4">
+          <Stat label={appt ? 'Facturado' : 'Ingresos'} value={fmtEur(income)} delta={<Delta now={income} before={prevIncome} />} hint={appt ? `${data.appointments} ${data.appointments === 1 ? 'cita' : 'citas'}` : null} />
+          <Stat label="Gastos" value={fmtEur(expenses)} delta={<Delta now={expenses} before={prevExpenses} goodWhen="down" />} />
+          {appt
+            ? <Stat label="Cobrado" value={fmtEur(data.collectedRevenue || 0)} hint="en caja" />
+            : <Stat label="Comensales" value={data.totalCovers} hint={<span><TicketAverageEdit value={data.ticketAverage} onSave={saveTicketAverage} /> / comensal</span>} />}
         </div>
-        <div>
-          <p className="text-[13px] font-semibold uppercase tracking-wide text-gray-400">{appt ? 'Facturación' : 'Actividad estimada'}</p>
-          <p className="text-2xl font-semibold tabular-nums text-gray-900">{fmtEur(data.estimatedRevenue)}</p>
-          <p className="text-[13px] text-gray-500">
-            {appt
-              ? `${data.appointments} ${data.appointments === 1 ? 'cita' : 'citas'} · ${fmtEur(data.averageTicket)} ticket medio`
-              : <>{data.totalCovers} comensales · <TicketAverageEdit value={data.ticketAverage} onSave={saveTicketAverage} /> por comensal</>}
-          </p>
-        </div>
-        <p className="text-xs leading-5 text-gray-400">
-          El resultado utiliza los ingresos registrados en Caja. {appt ? 'La facturación corresponde a servicios realizados.' : 'La actividad corresponde a las reservas atendidas.'}
-        </p>
       </section>
 
-      <div className="space-y-8 min-w-0">
-          {/* Daily breakdown */}
-          <Section title="Ingresos" aside={<SectionLink onClick={onTodayRevenue}>+ Ingreso de hoy</SectionLink>}>
-            {visibleDays.length === 0 ? (
-              <Empty>Sin días en este periodo.</Empty>
-            ) : (
-              <>
-                <TableHead cols={[
-                  ['Día', 'col-span-4'],
-                  [appt ? 'Citas' : 'Comensales', 'col-span-2 text-right'],
-                  [appt ? 'En citas' : 'Estimado', 'col-span-3 text-right'],
-                  ['Cobrado', 'col-span-3 text-right'],
-                ]} />
-                <ul className="divide-y divide-gray-100">
-                  {slice.map((day) => {
-                    const count = appt ? day.appointments : day.covers;
-                    return (
-                      <li key={day.date} className="px-2 py-2 flex items-center gap-3 md:grid md:grid-cols-12 md:gap-4">
-                        <div className="min-w-0 flex-1 md:col-span-4">
-                          <p className="text-[15px] font-medium text-gray-900 first-letter:uppercase">{fmtDay(day.date)}</p>
-                          <p className="text-[13px] text-gray-500 md:hidden">
-                            {count ? `${count} ${appt ? (count === 1 ? 'cita' : 'citas') : 'comensales'}` : appt ? 'Sin citas' : 'Sin reservas'}
-                            {day.estimatedRevenue > 0 && ` · ${fmtEur(day.estimatedRevenue)} ${appt ? 'facturados' : 'estimado'}`}
-                          </p>
-                        </div>
-                        <span className="hidden md:block md:col-span-2 text-right text-sm tabular-nums text-gray-600">{count || '—'}</span>
-                        <span className="hidden md:block md:col-span-3 text-right text-sm tabular-nums text-gray-600">{day.estimatedRevenue > 0 ? fmtEur(day.estimatedRevenue) : '—'}</span>
-                        <div className="shrink-0 md:col-span-3 text-right">
-                          <InlineRevenueEdit
-                            date={day.date}
-                            value={day.actualRevenue}
-                            source={appt ? day.actualSource : null}
-                            onSave={(v) => saveActual(day.date, v)}
-                          />
-                        </div>
-                      </li>
-                    );
-                  })}
-                </ul>
-                <Pager page={page} pageCount={pageCount} setPage={setPage} />
-              </>
-            )}
-          </Section>
+      <div className="flex gap-2.5">
+        <ActionPill icon="camera" to="/compras/facturas/nueva">Subir factura</ActionPill>
+        <ActionPill icon="plus" onClick={onAddExpense}>Añadir gasto</ActionPill>
+      </div>
 
-        <Section title="Gastos" aside={<SectionLink onClick={onViewExpenses}>Ver todos →</SectionLink>}>
-          {data.expensesByCategory.length === 0 ? (
-            <p className="py-4 text-sm text-gray-500">Sin gastos en este periodo.</p>
-          ) : (
-            <ul className="divide-y divide-gray-100">
-              {[...topExpenses, ...(otherExpenses > 0 ? [{ category: '__other', amount: otherExpenses }] : [])].map((cat) => (
-                <li key={cat.category} className="py-2.5 flex items-center gap-2.5">
-                  <Dot cls={cat.category === '__other' ? 'bg-slate-300' : catDot(categories, cat.category)} />
-                  <span className="min-w-0 flex-1 truncate text-[15px] text-gray-700">{cat.category === '__other' ? 'Otros' : catLabel(categories, cat.category)}</span>
-                  <span className="text-sm font-semibold tabular-nums text-gray-900">{fmtEur(cat.amount)}</span>
+      {toReview > 0 && (
+        <Link to="/compras/facturas" className="flex items-center gap-3 rounded-2xl bg-amber-50 px-4 py-3.5 active:bg-amber-100">
+          <span className="w-9 h-9 rounded-xl bg-white text-amber-600 flex items-center justify-center shrink-0"><Icon name="receipt" className="w-5 h-5" /></span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[15px] font-semibold text-gray-900">{toReview} {toReview === 1 ? 'factura por revisar' : 'facturas por revisar'}</span>
+            <span className="block text-[13px] text-gray-600">Confírmalas para que cuenten en tus gastos.</span>
+          </span>
+          <Icon name="right" className="w-4 h-4 text-amber-500" strokeWidth={2} />
+        </Link>
+      )}
+
+      {/* Where the money goes */}
+      <Section title="En qué se va el dinero" aside={cats.length > 0 && <SectionLink onClick={onViewExpenses}>Ver gastos</SectionLink>}>
+        {cats.length === 0 ? (
+          <p className="py-4 text-sm text-gray-500">Sin gastos en este periodo.</p>
+        ) : (
+          <>
+            <div className="mt-2 flex h-3 w-full overflow-hidden rounded-full bg-gray-100" role="img" aria-label="Reparto de gastos por categoría">
+              {catRows.map((r) => <span key={r.key} className={`${r.cls} first:rounded-l-full last:rounded-r-full`} style={{ width: `${(r.amount / catTotal) * 100}%` }} />)}
+            </div>
+            <ul className="mt-1 divide-y divide-gray-100">
+              {catRows.map((r) => (
+                <li key={r.key}>
+                  <button type="button" onClick={onViewExpenses} className="w-full py-3 flex items-center gap-2.5 text-left">
+                    <Dot cls={r.cls} />
+                    <span className="min-w-0 flex-1 truncate text-[15px] text-gray-800">{r.label}</span>
+                    <span className="text-xs tabular-nums text-gray-400">{Math.round((r.amount / catTotal) * 100)} %</span>
+                    <span className="w-24 text-right text-[15px] font-semibold tabular-nums text-gray-900">{fmtEur(r.amount)}</span>
+                  </button>
                 </li>
               ))}
             </ul>
-          )}
-          {appt && <Link to="/personal" className="mt-3 inline-flex text-[13px] font-semibold text-violet-700 hover:text-violet-900">Ver rendimiento del equipo →</Link>}
-        </Section>
-      </div>
+          </>
+        )}
+        {appt && <Link to="/personal" className="mt-2 inline-flex text-[13px] font-semibold text-violet-700 hover:text-violet-900">Ver rendimiento del equipo →</Link>}
+      </Section>
+
+      {/* Day by day, tucked away */}
+      <Section title="Día a día" aside={<SectionLink onClick={() => setShowDays((v) => !v)}>{showDays ? 'Ocultar' : 'Ver detalle'}</SectionLink>}>
+        {!showDays ? (
+          <p className="py-1 text-[13px] text-gray-500">Lo facturado y lo cobrado cada día; desde aquí puedes corregir un cobro.</p>
+        ) : visibleDays.length === 0 ? (
+          <Empty>Sin días en este periodo.</Empty>
+        ) : (
+          <>
+            <div className="flex justify-end pb-1"><SectionLink onClick={onTodayRevenue}>+ Ingreso de hoy</SectionLink></div>
+            <TableHead cols={[
+              ['Día', 'col-span-4'],
+              [appt ? 'Citas' : 'Comensales', 'col-span-2 text-right'],
+              [appt ? 'En citas' : 'Estimado', 'col-span-3 text-right'],
+              ['Cobrado', 'col-span-3 text-right'],
+            ]} />
+            <ul className="divide-y divide-gray-100">
+              {slice.map((day) => {
+                const count = appt ? day.appointments : day.covers;
+                return (
+                  <li key={day.date} className="px-2 py-2 flex items-center gap-3 md:grid md:grid-cols-12 md:gap-4">
+                    <div className="min-w-0 flex-1 md:col-span-4">
+                      <p className="text-[15px] font-medium text-gray-900 first-letter:uppercase">{fmtDay(day.date)}</p>
+                      <p className="text-[13px] text-gray-500 md:hidden">
+                        {count ? `${count} ${appt ? (count === 1 ? 'cita' : 'citas') : 'comensales'}` : appt ? 'Sin citas' : 'Sin reservas'}
+                        {day.estimatedRevenue > 0 && ` · ${fmtEur(day.estimatedRevenue)} ${appt ? 'facturados' : 'estimado'}`}
+                      </p>
+                    </div>
+                    <span className="hidden md:block md:col-span-2 text-right text-sm tabular-nums text-gray-600">{count || '—'}</span>
+                    <span className="hidden md:block md:col-span-3 text-right text-sm tabular-nums text-gray-600">{day.estimatedRevenue > 0 ? fmtEur(day.estimatedRevenue) : '—'}</span>
+                    <div className="shrink-0 md:col-span-3 text-right">
+                      <InlineRevenueEdit date={day.date} value={day.actualRevenue} source={appt ? day.actualSource : null} onSave={(v) => saveActual(day.date, v)} />
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+            <Pager page={page} pageCount={pageCount} setPage={setPage} />
+          </>
+        )}
+      </Section>
     </div>
   );
 }
@@ -758,9 +879,9 @@ function ExpenseModal({ expense, suppliers, categories, onSave, onClose, scope =
 
 // ── Gastos tab ────────────────────────────────────────────────────────────────
 
-function GastosTab({ dateRange, suppliers, categories, refreshTrigger, onCreate }) {
+function GastosTab({ dateRange, suppliers, categories, refreshTrigger, onCreate, onCategoriesChanged }) {
   const navigate = useNavigate();
-  const [subView, setSubView] = useState('list'); // 'list' | 'recurrentes'
+  const [subView, setSubView] = useState('list'); // 'list' | 'recurrentes' | 'categorias'
   const [expenses, setExpenses] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(null);       // null | { expense?, scope? }
@@ -839,14 +960,16 @@ function GastosTab({ dateRange, suppliers, categories, refreshTrigger, onCreate 
     return true;
   });
 
-  if (subView === 'recurrentes') {
+  if (subView === 'recurrentes' || subView === 'categorias') {
     return (
       <div className="space-y-5">
         <button type="button" onClick={() => setSubView('list')}
           className="inline-flex items-center gap-1 text-[13px] font-semibold text-gray-600 hover:text-gray-900">
           <Icon name="left" className="w-4 h-4" strokeWidth={2} />Gastos
         </button>
-        <RecurrentesTab categories={categories} suppliers={suppliers} />
+        {subView === 'recurrentes'
+          ? <RecurrentesTab categories={categories} suppliers={suppliers} />
+          : <CategoryManagerModal inline onRefresh={onCategoriesChanged} />}
       </div>
     );
   }
@@ -860,9 +983,14 @@ function GastosTab({ dateRange, suppliers, categories, refreshTrigger, onCreate 
             <p className="text-3xl font-semibold tracking-tight tabular-nums text-gray-900">{fmtEur(totalFiltered)}</p>
             <p className="mt-1 text-[13px] text-gray-500 tabular-nums">Automáticos {fmtEur(automaticTotal)} · Registrados {fmtEur(registeredTotal)}</p>
           </div>
-          <button type="button" onClick={() => setSubView('recurrentes')} className="inline-flex items-center gap-1 text-[13px] font-semibold text-gray-600 hover:text-violet-700">
-            <Icon name="clock" className="w-4 h-4" />Recurrentes →
-          </button>
+          <div className="flex flex-col items-end gap-1.5">
+            <button type="button" onClick={() => setSubView('recurrentes')} className="inline-flex items-center gap-1 text-[13px] font-semibold text-gray-600 hover:text-violet-700">
+              <Icon name="clock" className="w-4 h-4" />Recurrentes →
+            </button>
+            <button type="button" onClick={() => setSubView('categorias')} className="inline-flex items-center gap-1 text-[13px] font-semibold text-gray-600 hover:text-violet-700">
+              <Icon name="list" className="w-4 h-4" />Categorías →
+            </button>
+          </div>
         </div>
         {expenses.length > 0 && (
           <div className="flex gap-1 overflow-x-auto [scrollbar-width:none]">
@@ -1295,9 +1423,8 @@ function RevenueModal({ date = toIso(), initialValue = null, onClose, onSave }) 
 // ── Main page ─────────────────────────────────────────────────────────────────
 
 const TABS = [
-  ['dashboard',  'Resumen'],
-  ['expenses',   'Gastos'],
-  ['categories', 'Categorías'],
+  ['dashboard', 'Resumen'],
+  ['expenses',  'Gastos'],
 ];
 
 export default function Finanzas() {
@@ -1333,34 +1460,15 @@ export default function Finanzas() {
     if (p === 'month') setDateRange(getMonthRange());
   };
 
-  const shiftPeriod = (direction) => {
-    if (period === 'month') {
-      const anchor = parseIso(dateRange.from);
-      anchor.setMonth(anchor.getMonth() + direction);
-      setDateRange(getMonthRange(anchor));
-      return;
-    }
-    if (period === 'week') {
-      const anchor = parseIso(dateRange.from);
-      anchor.setDate(anchor.getDate() + (7 * direction));
-      setDateRange(getWeekRange(anchor));
-      return;
-    }
-    const from = parseIso(dateRange.from);
-    const to = parseIso(dateRange.to);
-    const days = Math.round((to - from) / 86400000) + 1;
-    from.setDate(from.getDate() + (days * direction));
-    to.setDate(to.getDate() + (days * direction));
-    setDateRange({ from: toIso(from), to: toIso(to) });
-  };
+  const shiftPeriod = (direction) => setDateRange(shiftRange(period, dateRange, direction));
 
-  const usesPeriod = tab === 'dashboard' || tab === 'expenses';
+  const usesPeriod = true;
 
   return (
     <div className="w-full space-y-5" style={{ overflowX: 'clip' }}>
       <PageHeader
         title="Finanzas"
-        subtitle={usesPeriod ? null : 'Ingresos, gastos y resultado'}
+        subtitle="Cuánto ganas, en qué gastas y qué te queda."
         actions={<PrimaryButton onClick={() => setQuickAction('expense')}>Nuevo gasto</PrimaryButton>}
       />
 
@@ -1374,12 +1482,11 @@ export default function Finanzas() {
             onRangeChange={(range) => { setPeriod('custom'); setDateRange(range); }}
           />
         )}
-        <Tabs value={tab} options={TABS} onChange={setTab} />
+        <Tabs full value={tab} options={TABS} onChange={setTab} />
       </div>
 
-      {tab === 'dashboard'  && <ResumenTab dateRange={dateRange} categories={categories} refreshTrigger={refresh} onTodayRevenue={() => setQuickAction('revenue')} onViewExpenses={() => setTab('expenses')} />}
-      {tab === 'expenses'   && <GastosTab dateRange={dateRange} suppliers={suppliers} categories={categories} refreshTrigger={refresh} onCreate={() => setQuickAction('expense')} />}
-      {tab === 'categories' && <CategoryManagerModal inline onRefresh={loadCategories} />}
+      {tab === 'dashboard' && <ResumenTab period={period} dateRange={dateRange} categories={categories} refreshTrigger={refresh} onTodayRevenue={() => setQuickAction('revenue')} onViewExpenses={() => setTab('expenses')} onAddExpense={() => setQuickAction('expense')} />}
+      {tab === 'expenses'  && <GastosTab dateRange={dateRange} suppliers={suppliers} categories={categories} refreshTrigger={refresh} onCreate={() => setQuickAction('expense')} onCategoriesChanged={loadCategories} />}
 
       {quickAction === 'revenue' && (
         <RevenueModal

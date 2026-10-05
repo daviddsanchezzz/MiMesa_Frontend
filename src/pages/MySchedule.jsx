@@ -1,7 +1,12 @@
+import { useState } from 'react';
 import api from '../services/api';
 import { useSetMobileHeader } from '../context/MobileHeaderContext';
 import { useData } from '../lib/query';
-import { Empty, PageHeader } from '../ui/kit';
+import { Empty, PageHeader, PrimaryButton } from '../ui/kit';
+import MyRequests from './personal/MyRequests';
+import SwapRequestModal from './personal/SwapRequestModal';
+import TimeOffModal from './personal/TimeOffModal';
+import { timeOffLabel } from './personal/timeOff';
 import PeriodNavigator, { StickyBar, usePeriod } from '../ui/PeriodNavigator';
 import { toIso } from '../lib/periods';
 
@@ -17,17 +22,23 @@ const dayLabel = (iso) => {
 
 /** The signed-in employee's own week: which shifts they work and with whom. */
 export default function MySchedule() {
-  useSetMobileHeader({ title: 'Mi horario', action: false });
+  const [timeOffOpen, setTimeOffOpen] = useState(false);
+  const [swapShift, setSwapShift] = useState(null);
+  useSetMobileHeader({ title: 'Mi horario', action: { label: 'Pedir libre', onClick: () => setTimeOffOpen(true) } });
   const { period, dateRange, onPeriodChange, onShift, onRangeChange } = usePeriod('week');
   const today = toIso();
   const q = useData(['staff', 'me', 'schedule', dateRange.from], () => api.get(`/staff/me/schedule?weekStart=${dateRange.from}`).then((r) => r.data), { retry: false });
   const d = q.data;
+  const offQ = useData(['staff', 'me', 'time-off'], () => api.get('/staff/me/time-off').then((r) => r.data.items), { enabled: Boolean(d?.linked), retry: false });
+  const swapsQ = useData(['staff', 'me', 'swaps'], () => api.get('/staff/me/swaps').then((r) => r.data), { enabled: Boolean(d?.linked), retry: false });
+  const refreshAll = () => Promise.all([q.refetch(), offQ.refetch(), swapsQ.refetch()]);
 
   const todayShifts = d?.linked ? (d.days.find((x) => x.date === today)?.shifts || []) : [];
 
   return (
     <div className="w-full space-y-6">
-      <div className="hidden lg:block"><PageHeader title="Mi horario" subtitle="Tus turnos de la semana y con quién trabajas." /></div>
+      <div className="hidden lg:block"><PageHeader title="Mi horario" subtitle="Tus turnos de la semana y con quién trabajas."
+        actions={d?.linked ? <PrimaryButton icon={null} onClick={() => setTimeOffOpen(true)}>Pedir libre</PrimaryButton> : null} /></div>
 
       <StickyBar>
         <PeriodNavigator period={period} dateRange={dateRange} onPeriodChange={onPeriodChange} onShift={onShift} onRangeChange={onRangeChange} periods={['week']} />
@@ -45,7 +56,18 @@ export default function MySchedule() {
         <Empty>Tu usuario todavía no está enlazado a ningún empleado, así que no podemos mostrarte turnos. Pídele a tu encargado que te enlace en Personal.</Empty>
       )}
 
-      {d?.linked && (() => {
+      {d?.linked && (
+        <MyRequests part="top" incoming={swapsQ.data?.incoming || []} mine={swapsQ.data?.mine || []} timeOff={offQ.data || []} onChanged={refreshAll} />
+      )}
+
+      {d?.linked && d.published === false && (
+        <div className="rounded-3xl border border-dashed border-gray-300 px-5 py-10 text-center">
+          <p className="text-[17px] font-semibold text-gray-900">Esta semana todavía no está publicada</p>
+          <p className="mt-1 text-sm text-gray-500">Tu encargado aún la está preparando. Te avisaremos cuando la publique.</p>
+        </div>
+      )}
+
+      {d?.linked && d.published !== false && (() => {
         const now = new Date();
         const nowMin = now.getHours() * 60 + now.getMinutes();
         const toMin = (t) => { const [h, m] = String(t).split(':').map(Number); return h * 60 + m; };
@@ -116,15 +138,20 @@ export default function MySchedule() {
                       <p className={`text-[20px] leading-6 font-semibold tabular-nums ${isToday ? 'text-violet-700' : 'text-gray-900'}`}>{dt.getDate()}</p>
                     </div>
                     <div className="min-w-0 flex-1 flex flex-col justify-center">
+                      {(day.timeOff || []).map((t) => (
+                        <p key={t.id} className={`mb-1.5 w-fit rounded-full px-2.5 py-0.5 text-[12px] font-semibold ${t.status === 'approved' ? 'bg-emerald-50 text-emerald-800' : 'bg-amber-50 text-amber-800'}`}>
+                          {timeOffLabel(t.type)}{t.fromTime || t.toTime ? ` ${t.fromTime || ''}–${t.toTime || ''}` : ''}{t.status === 'pending' ? ' · pendiente' : ''}
+                        </p>
+                      ))}
                       {day.shifts.length === 0 ? (
-                        <p className="text-sm text-gray-400">Libre</p>
+                        <p className="text-sm text-gray-400">{(day.timeOff || []).length ? '' : 'Libre'}</p>
                       ) : (
                         <ul className="space-y-3">
                           {day.shifts.map((sh) => (
                             <li key={sh.id} className="flex items-start gap-3">
                               <span className={`w-[3px] self-stretch rounded-full shrink-0 ${past ? 'bg-gray-300' : 'bg-violet-500'}`} aria-hidden="true" />
                               <div className="min-w-0 flex-1">
-                                <p className="flex items-center gap-2 text-[17px] font-semibold tabular-nums text-gray-900">
+                                <p className="flex flex-wrap items-center gap-x-2 text-[17px] font-semibold tabular-nums text-gray-900 whitespace-nowrap">
                                   {sh.start}–{sh.end}
                                   <span className="text-[13px] font-normal text-gray-500">{hoursText(sh.minutes)}</span>
                                   {isNow(day, sh) && <span className="text-[10px] font-semibold px-1.5 py-px rounded-full bg-emerald-100 text-emerald-700">Ahora</span>}
@@ -132,21 +159,30 @@ export default function MySchedule() {
                                 {(sh.shiftName || sh.roleLabel) && <p className="text-[13px] text-gray-600">{[sh.shiftName, sh.roleLabel].filter(Boolean).join(' · ')}</p>}
                                 {sh.coworkers.length > 0 && <p className="text-[13px] text-gray-500">Con {sh.coworkers.join(', ')}</p>}
                                 {sh.notes && <p className="mt-0.5 text-[13px] text-amber-700">“{sh.notes}”</p>}
+                                {sh.swap ? (
+                                  <p className="mt-1 text-[12px] font-semibold text-violet-700">Cesión en curso · {sh.swap.status === 'pending_manager' ? 'falta tu encargado' : 'esperando respuesta'}</p>
+                                ) : !past && (
+                                  <button type="button" onClick={() => setSwapShift({ shift: sh, dateText: dayLabel(day.date) })}
+                                    className="mt-1 text-[13px] font-semibold text-violet-700 hover:text-violet-900">Ceder turno</button>
+                                )}
                               </div>
                             </li>
                           ))}
                         </ul>
                       )}
                     </div>
-                    {isToday && <span className="self-start text-[11px] font-semibold px-2 py-0.5 rounded-full bg-violet-600 text-white">Hoy</span>}
                   </li>
                 );
               })}
             </ul>
+            <MyRequests part="bottom" incoming={swapsQ.data?.incoming || []} mine={swapsQ.data?.mine || []} timeOff={offQ.data || []} onChanged={refreshAll} />
             <p className="text-xs text-gray-400">Si algo no te cuadra, habla con tu encargado.</p>
           </div>
         );
       })()}
+
+      {timeOffOpen && <TimeOffModal onClose={() => setTimeOffOpen(false)} onSaved={refreshAll} />}
+      {swapShift && <SwapRequestModal shift={swapShift.shift} dateText={swapShift.dateText} onClose={() => setSwapShift(null)} onSaved={refreshAll} />}
     </div>
   );
 }

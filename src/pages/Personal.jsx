@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useData } from '../lib/query';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
@@ -6,6 +7,9 @@ import { useAuth } from '../context/AuthContext';
 import { useSetMobileHeader } from '../context/MobileHeaderContext';
 import Icon from '../ui/Icon';
 import PeriodNavigator from '../ui/PeriodNavigator';
+import PublishBar from './personal/PublishBar';
+import RequestsTab from './personal/RequestsTab';
+import { timeOffLabel } from './personal/timeOff';
 import { BigFigure, Empty, FigureLine, GhostButton, MenuButton, PageHeader, PrimaryButton, RowAction, Section, Segmented, Tabs } from '../ui/kit';
 import { Notice, addDays, compTypeLabel, compareShiftTime, formatMoney, staffTimes, mondayOf, normalizeDateOnly, shiftAppliesToDate, todayIso, weekDays } from './personal/shared';
 import { ShiftStaffChips, assignPersonColors } from './personal/ShiftStaffChips';
@@ -17,12 +21,13 @@ import { CompensationModal } from './personal/CompensationModal';
 import { ShiftEditorModal } from './personal/ShiftEditorModal';
 import { EmployeeAssignmentsModal } from './personal/EmployeeAssignmentsModal';
 
-const TAB_LABELS = { planner: 'Planificación', employees: 'Empleados', costs: 'Costes' };
-const TAB_ORDER = ['planner', 'employees', 'costs'];
+const TAB_LABELS = { planner: 'Planificación', employees: 'Empleados', costs: 'Costes', requests: 'Solicitudes' };
+const TAB_ORDER = ['planner', 'employees', 'costs', 'requests'];
 const SUBTITLES = {
   planner: 'Quién trabaja en cada turno de la semana.',
   employees: 'Tu equipo, sus puestos y cómo cobra cada uno.',
   costs: 'Lo que cuesta el personal y lo que queda por pagar.',
+  requests: 'Días libres y cambios de turno que te pide tu equipo.',
 };
 
 function NavArrow({ dir, onClick, label }) {
@@ -87,12 +92,16 @@ export default function Personal() {
   }, [role]);
 
   const allowedTabs = useMemo(() => {
-    if (role === 'owner') return ['employees', 'planner', 'costs'];
-    if (role === 'manager') return ['planner'];
+    if (role === 'owner') return ['employees', 'planner', 'costs', 'requests'];
+    if (role === 'manager') return ['planner', 'requests'];
     return [];
   }, [role]);
 
   const [tab, setTab] = useState('planner');
+  useEffect(() => {
+    const wanted = new URLSearchParams(window.location.search).get('tab');
+    if (wanted && allowedTabs.includes(wanted)) setTab(wanted);
+  }, [allowedTabs]);
 
   const [weekStart, setWeekStart] = useState(mondayOf(todayIso()));
   const [mobileDayIndex, setMobileDayIndex] = useState(() => {
@@ -104,6 +113,8 @@ export default function Personal() {
   const [employees, setEmployees] = useState([]);
   const [positions, setPositions] = useState([]);
   const [assignments, setAssignments] = useState([]);
+  const [timeOff, setTimeOff] = useState([]);
+  const [pubStatus, setPubStatus] = useState(null);
   const [costs, setCosts] = useState({ employeeCosts: [], totalsByCurrency: {}, monthlyEstimateByCurrency: {} });
   const [shifts, setShifts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -131,7 +142,18 @@ export default function Personal() {
   const weekDataRequestSeqRef = useRef(0);
   const EMPTY_COSTS = { employeeCosts: [], totalsByCurrency: {}, monthlyEstimateByCurrency: {} };
 
-  const tabOptions = TAB_ORDER.filter((key) => allowedTabs.includes(key)).map((key) => [key, TAB_LABELS[key]]);
+  const hasRequests = allowedTabs.includes('requests');
+  const offQ = useData(['staff', 'time-off', 'manager'], () => api.get('/staff/time-off?status=all').then((r) => r.data.items), { enabled: hasRequests });
+  const swapsQ = useData(['staff', 'swaps', 'manager'], () => api.get('/staff/swaps').then((r) => r.data.items), { enabled: hasRequests });
+  const pendingRequests = (offQ.data || []).filter((t) => t.status === 'pending').length + (swapsQ.data || []).filter((x) => x.status === 'pending_manager').length;
+  const tabOptions = TAB_ORDER.filter((key) => allowedTabs.includes(key)).map((key) => [key, key === 'requests' && pendingRequests > 0 ? `${TAB_LABELS[key]} ${pendingRequests}` : TAB_LABELS[key]]);
+
+  const loadPubStatus = useCallback(async () => {
+    if (!allowedTabs.includes('planner')) return;
+    try { setPubStatus((await api.get(`/staff/schedule/status?weekStart=${weekStart}`)).data); } catch { setPubStatus(null); }
+  }, [weekStart, allowedTabs]);
+  useEffect(() => { loadPubStatus(); }, [loadPubStatus, assignments]);
+
   const newEmployeeOrPosition = () => (employeeSubTab === 'employees' ? setEmployeeModal({}) : setPositionModal({}));
   useSetMobileHeader({
     title: 'Personal',
@@ -175,6 +197,7 @@ export default function Personal() {
         }))
         .filter((assignment) => assignment.date && assignment.date >= targetWeekStart && assignment.date <= weekEnd);
       setAssignments(safeAssignments);
+      setTimeOff(aRes.data?.timeOff || []);
       setCosts(cRes.data || EMPTY_COSTS);
     } catch (err) {
       if (requestSeq !== weekDataRequestSeqRef.current) return;
@@ -193,6 +216,7 @@ export default function Personal() {
         }))
         .filter((assignment) => assignment.date && assignment.date >= weekStart && assignment.date <= weekEnd);
       setAssignments(safeAssignments);
+      setTimeOff(aRes.data?.timeOff || []);
     } catch (err) {
       setError(err?.response?.data?.message || 'No se pudieron cargar asignaciones');
     }
@@ -719,6 +743,8 @@ export default function Personal() {
             weekCostSummary && { label: 'coste estimado', value: weekCostSummary },
           ]} /></div>
 
+          <PublishBar status={pubStatus} weekStart={weekStart} onChanged={loadPubStatus} />
+
           {shifts.length === 0 && (
             <p className="rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-900">
               Todavía no hay turnos. Créalos en Configuración para poder asignar personal.
@@ -743,6 +769,18 @@ export default function Personal() {
                 );
               })}
             </div>
+            {currentMobileDay && (() => {
+              const absent = timeOff.filter((t) => currentMobileDay.date >= t.from && currentMobileDay.date <= t.to)
+                .map((t) => {
+                  const e = employees.find((x) => String(x._id) === String(t.employeeId));
+                  return e ? { id: t._id || `${t.employeeId}-${t.from}`, name: e.firstName, label: timeOffLabel(t.type), pending: t.status === 'pending' } : null;
+                }).filter(Boolean);
+              return absent.length > 0 ? (
+                <p className="rounded-xl bg-amber-50 px-3 py-2 text-[13px] text-amber-900">
+                  <b>Ausentes:</b> {absent.map((a) => `${a.name} (${a.pending ? 'pide ' : ''}${a.label.toLowerCase()})`).join(' · ')}
+                </p>
+              ) : null;
+            })()}
             {currentMobileDay && (
               <Section title={currentMobileDay.fullLabel}>
                 {(shiftRowsByDay[currentMobileDay.date] || []).length === 0 ? (
@@ -1032,6 +1070,11 @@ export default function Personal() {
         </div>
       )}
 
+      {/* -- SOLICITUDES -- */}
+      {!loading && tab === 'requests' && allowedTabs.includes('requests') && (
+        <RequestsTab employees={employees} onChanged={loadWeekData} />
+      )}
+
       {/* -- COSTES -- */}
       {!loading && tab === 'costs' && allowedTabs.includes('costs') && (
         <div className="space-y-6">
@@ -1219,6 +1262,7 @@ export default function Personal() {
           day={slotEditor.day}
           shift={slotEditor.shift}
           assignments={assignmentsByDayShift[`${slotEditor.day.date}__${slotEditor.shift._id}`]}
+          timeOff={timeOff}
           activeEmployees={activeEmployees}
           positions={positions}
           onClose={() => setSlotEditor(null)}

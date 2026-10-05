@@ -5,8 +5,9 @@ import Icon from '../../ui/Icon';
 import { Section } from '../../ui/kit';
 import { assignPersonColors } from './ShiftStaffChips';
 import { Notice, SheetFooter, initialsOf, staffTimes } from './shared';
+import { timeOffLabel } from './timeOff';
 
-export function ShiftEditorModal({ day, shift, assignments, activeEmployees, positions, onClose, onRefresh }) {
+export function ShiftEditorModal({ day, shift, assignments, timeOff = [], activeEmployees, positions, onClose, onRefresh }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [reservationStats, setReservationStats] = useState(null); // { count, covers }
@@ -120,12 +121,13 @@ export function ShiftEditorModal({ day, shift, assignments, activeEmployees, pos
     return assignPersonColors(names);
   }, [activeEmployees, activePositions.length]);
 
-  const addEmployeeDirectly = (position, employee) => {
+  const addEmployeeDirectly = (position, employee, force = false) => {
     if (assignedEmployeeIds.has(String(employee._id))) return;
     const tempId = `tmp_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
     setDraftAssignments((prev) => [...prev, {
       _id: tempId,
       __temp: true,
+      __force: force,
       date: day.date,
       shiftId: shift,
       roleLabel: position?.name || '',
@@ -252,6 +254,7 @@ export function ShiftEditorModal({ day, shift, assignments, activeEmployees, pos
         date: day.date,
         shiftId: shift._id,
         roleLabel: assignment.roleLabel || '',
+        ...(assignment.__force ? { force: true } : {}),
       })));
 
       await onRefresh();
@@ -277,8 +280,16 @@ export function ShiftEditorModal({ day, shift, assignments, activeEmployees, pos
     </label>
   );
 
-  const personChip = (emp, color, onClick) => {
+  // People who are away that day (approved) or have asked to be (pending)
+  const absence = (emp) => timeOff.find((t) => String(t.employeeId) === String(emp._id) && day.date >= t.from && day.date <= t.to);
+
+  const personChip = (emp, color, onAdd) => {
     const name = `${emp.firstName || ''} ${emp.lastName || ''}`.trim();
+    const away = absence(emp);
+    const onClick = () => {
+      if (away?.status === 'approved' && !window.confirm(`${emp.firstName} tiene ${timeOffLabel(away.type).toLowerCase()} este día. ¿Asignarle el turno igualmente?`)) return;
+      onAdd(Boolean(away?.status === 'approved'));
+    };
     return (
       <button key={emp._id} type="button" onClick={onClick} disabled={saving}
         className="inline-flex items-center gap-2 h-9 pl-1 pr-3 rounded-full bg-gray-50 hover:bg-violet-50 text-left transition-colors disabled:opacity-50">
@@ -286,6 +297,7 @@ export function ShiftEditorModal({ day, shift, assignments, activeEmployees, pos
           {initialsOf(name)}
         </span>
         <span className="text-sm font-medium text-gray-800 truncate max-w-[9rem]">{emp.firstName}</span>
+        {away && <span className="text-[10px] font-semibold rounded-full bg-amber-100 text-amber-800 px-1.5 py-px">{away.status === 'pending' ? 'Pide libre' : 'Ausente'}</span>}
         <Icon name="plus" className="w-3.5 h-3.5 text-gray-400" strokeWidth={2} />
       </button>
     );
@@ -375,7 +387,7 @@ export function ShiftEditorModal({ day, shift, assignments, activeEmployees, pos
                   <div className="flex flex-wrap gap-1.5">
                     {list.map((emp) => {
                       const name = `${emp.firstName || ''} ${emp.lastName || ''}`.trim();
-                      return personChip(emp, noPositionPersonColors?.get(name) || '#64748B', () => addEmployeeDirectly(null, emp));
+                      return personChip(emp, noPositionPersonColors?.get(name) || '#64748B', (force) => addEmployeeDirectly(null, emp, force));
                     })}
                   </div>
                 );
@@ -419,7 +431,7 @@ export function ShiftEditorModal({ day, shift, assignments, activeEmployees, pos
                     <div className="flex flex-wrap gap-1.5">
                       {filteredEligibleEmployees.map((emp) => {
                         const pos = activePositions.find((p) => String(p._id) === String(selectedPositionId));
-                        return personChip(emp, pos?.color || '#64748B', () => addEmployeeDirectly(pos, emp));
+                        return personChip(emp, pos?.color || '#64748B', (force) => addEmployeeDirectly(pos, emp, force));
                       })}
                     </div>
                   )}

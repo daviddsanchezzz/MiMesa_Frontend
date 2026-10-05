@@ -423,16 +423,8 @@ function ResumenTab({ period, dateRange, categories, refreshTrigger, onTodayReve
   const prevExpenses = previous ? previous.totalExpenses || 0 : null;
   const prevProfit = previous ? prevIncome - prevExpenses : null;
   const vs = previousLabel(period, dateRange);
-  const margin = income > 0 ? Math.round((profit / income) * 100) : null;
-  const verb = appt ? 'facturado' : 'ingresado';
-  const empty = income === 0 && expenses === 0;
   const diff = previous && (prevIncome || prevExpenses) ? profit - prevProfit : null;
 
-  const sentence = empty
-    ? 'Aún no hay movimientos en este periodo.'
-    : profit >= 0
-      ? `Has ${verb} ${fmtEur(income)} y gastado ${fmtEur(expenses)}: te quedan ${fmtEur(profit)}${margin !== null ? ` (${margin} % de margen)` : ''}.`
-      : `Has gastado ${fmtEur(expenses)} y ${verb} ${fmtEur(income)}: te faltan ${fmtEur(-profit)} para cubrir los gastos.`;
 
   const visibleDays = data.days.filter((day) => {
     const count = appt ? day.appointments : day.covers;
@@ -450,7 +442,7 @@ function ResumenTab({ period, dateRange, categories, refreshTrigger, onTodayReve
 
   return (
     <div className={`space-y-7 ${loading ? 'opacity-60' : ''}`}>
-      {/* Hero: how much is left, in one sentence */}
+      {/* Hero: how much is left */}
       <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
         <p className="text-[13px] font-semibold uppercase tracking-wide text-gray-400">Te queda</p>
         <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1">
@@ -463,8 +455,6 @@ function ResumenTab({ period, dateRange, categories, refreshTrigger, onTodayReve
             </span>
           )}
         </div>
-        <p className="mt-2 text-[15px] leading-6 text-gray-600">{sentence}</p>
-
         <div className="mt-5 flex divide-x divide-gray-100 border-t border-gray-100 pt-4">
           <Stat label={appt ? 'Facturado' : 'Ingresos'} value={fmtEur(income)} delta={<Delta now={income} before={prevIncome} />} hint={appt ? `${data.appointments} ${data.appointments === 1 ? 'cita' : 'citas'}` : null} />
           <Stat label="Gastos" value={fmtEur(expenses)} delta={<Delta now={expenses} before={prevExpenses} goodWhen="down" />} />

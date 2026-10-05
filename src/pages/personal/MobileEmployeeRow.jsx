@@ -34,20 +34,22 @@ export function EmployeeRow({ employee, onEdit, onPago, onToggle, onAccess }) {
     <li>
       <div role="button" tabIndex={0} onClick={onEdit}
         onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onEdit(); } }}
-        className="flex items-center gap-3 md:grid md:grid-cols-12 md:gap-4 px-2 py-3 rounded-xl cursor-pointer hover:bg-gray-50 active:bg-gray-100">
+        className="flex items-center gap-3 md:grid md:grid-cols-12 md:gap-4 px-3 md:px-2 py-3 md:rounded-xl cursor-pointer hover:bg-gray-50 active:bg-gray-100">
         <div className="md:col-span-4 flex items-center gap-3 min-w-0 flex-1">
           <span className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold shrink-0 ${active ? 'text-white' : 'text-gray-500 bg-gray-100'}`}
             style={active ? { backgroundColor: color } : undefined}>
             {initialsOf(fullName)}
           </span>
           <div className="min-w-0">
-            <p className={`text-[15px] font-medium truncate ${active ? 'text-gray-900' : 'text-gray-500'}`}>{fullName}</p>
-            <p className="text-[13px] text-gray-500 truncate">{employee.email || employee.phone || 'Sin contacto'}</p>
+            <p className="flex items-center gap-2 min-w-0">
+              <span className={`text-[15px] font-medium truncate ${active ? 'text-gray-900' : 'text-gray-500'}`}>{fullName}</span>
+              {employee.member && <span className="md:hidden shrink-0 rounded-full bg-emerald-50 px-1.5 py-px text-[10px] font-semibold text-emerald-700">Con acceso</span>}
+              {!employee.member && employee.pendingInvitation && <span className="md:hidden shrink-0 rounded-full bg-amber-50 px-1.5 py-px text-[10px] font-semibold text-amber-700">Invitado</span>}
+            </p>
+            <p className="hidden md:block text-[13px] text-gray-500 truncate">{employee.email || employee.phone || 'Sin contacto'}</p>
             <p className="md:hidden text-[13px] truncate">
               {positions.length > 0 && <span className="text-gray-500">{positions.map((p) => p.name).join(', ')} · </span>}
               {comp ? <span className="text-gray-500">{compLabel(comp)}</span> : <span className="text-amber-700">Sin condiciones de pago</span>}
-              {employee.member && <span className="text-emerald-700"> · Con acceso</span>}
-              {!employee.member && employee.pendingInvitation && <span className="text-amber-700"> · Invitado</span>}
               {!active && <span className="text-gray-400"> · Inactivo</span>}
             </p>
           </div>
@@ -89,7 +91,7 @@ export function EmployeeRow({ employee, onEdit, onPago, onToggle, onAccess }) {
         </div>
       </div>
       {employee.notes && (
-        <p className="-mt-1.5 pb-3 pl-[60px] pr-2 text-[13px] text-gray-500 truncate">“{employee.notes}”</p>
+        <p className="hidden md:block -mt-1.5 pb-3 pl-[60px] pr-2 text-[13px] text-gray-500 truncate">“{employee.notes}”</p>
       )}
     </li>
   );

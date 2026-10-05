@@ -5,6 +5,7 @@ import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useSetMobileHeader } from '../context/MobileHeaderContext';
 import Icon from '../ui/Icon';
+import PeriodNavigator from '../ui/PeriodNavigator';
 import { BigFigure, Empty, FigureLine, GhostButton, MenuButton, PageHeader, PrimaryButton, RowAction, Section, Segmented, Tabs } from '../ui/kit';
 import { Notice, addDays, compTypeLabel, compareShiftTime, formatMoney, mondayOf, normalizeDateOnly, shiftAppliesToDate, todayIso, weekDays } from './personal/shared';
 import { ShiftStaffChips, assignPersonColors } from './personal/ShiftStaffChips';
@@ -30,6 +31,47 @@ function NavArrow({ dir, onClick, label }) {
       className="w-9 h-9 rounded-full hover:bg-gray-100 text-gray-600 flex items-center justify-center">
       <Icon name={dir} className="w-4 h-4" strokeWidth={2} />
     </button>
+  );
+}
+
+const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
+const fmtHours = (h) => `${Number(Number(h || 0).toFixed(2)).toLocaleString('es-ES')} h`;
+const heroCard = 'rounded-3xl border border-gray-200 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]';
+// Phone: a grouped card; from md up the rows are a plain table again.
+const listCard = 'rounded-2xl border border-gray-200 bg-white overflow-hidden md:rounded-none md:border-0 md:bg-transparent md:overflow-visible';
+
+/** The three numbers of a screen, side by side (phone only). */
+function StatRow({ items }) {
+  return (
+    <div className={`${heroCard} flex divide-x divide-gray-100 py-3.5 md:hidden`}>
+      {items.filter(Boolean).map((item) => (
+        <div key={item.label} className="flex-1 min-w-0 px-2 text-center">
+          <p className={`text-[17px] font-semibold tabular-nums truncate ${item.tone === 'warn' ? 'text-amber-600' : 'text-gray-900'}`}>{item.value}</p>
+          <p className="text-[11px] text-gray-500 truncate">{item.label}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/** Big number with its label, and a stat row under it (phone only). */
+function HeroFigure({ label, value, sub, tone, stats }) {
+  return (
+    <div className={`${heroCard} p-5 md:hidden`}>
+      <p className="text-[13px] text-gray-500">{label}</p>
+      <p className={`mt-1 text-[32px] leading-9 font-semibold tracking-tight tabular-nums ${tone === 'warn' ? 'text-amber-600' : 'text-gray-900'}`}>{value}</p>
+      {sub && <p className="mt-1 text-[13px] text-gray-500">{sub}</p>}
+      {stats && (
+        <div className="mt-4 pt-4 border-t border-gray-100 flex divide-x divide-gray-100">
+          {stats.map((st) => (
+            <div key={st.label} className="flex-1 min-w-0 px-2 first:pl-0 last:pr-0 text-center first:text-left last:text-right">
+              <p className="text-[15px] font-semibold tabular-nums text-gray-900 truncate">{st.value}</p>
+              <p className="text-[11px] text-gray-500">{st.label}</p>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -594,9 +636,25 @@ export default function Personal() {
 
   return (
     <div className="w-full space-y-6">
-      <PageHeader title="Personal" subtitle={SUBTITLES[tab]} actions={headerAction} />
+      <div className="hidden lg:block"><PageHeader title="Personal" subtitle={SUBTITLES[tab]} actions={headerAction} /></div>
 
-      {tabOptions.length > 1 && <Tabs value={tab} options={tabOptions} onChange={setTab} />}
+      {/* Phone: tabs (and the week) stay put while the page scrolls underneath */}
+      <div className="lg:hidden sticky top-[-1rem] !mt-[-1rem] z-20 -mx-4 px-4 pt-4 pb-3 bg-white border-b border-gray-100 space-y-3">
+        {tabOptions.length > 1 && <Tabs full value={tab} options={tabOptions} onChange={setTab} />}
+        {tab === 'planner' && allowedTabs.includes('planner') && (
+          <div className="flex items-center gap-1">
+            <div className="flex-1 min-w-0">
+              <PeriodNavigator period="week" periods={['week']} dateRange={{ from: weekStart, to: addDays(weekStart, 6) }}
+                onShift={(dir) => setWeekStart((v) => addDays(v, dir * 7))} onPeriodChange={() => {}} onRangeChange={() => {}} />
+            </div>
+            <MenuButton ariaLabel="Más opciones" className="w-9 h-9 justify-center border border-gray-200 text-gray-600"
+              items={[weekStart !== mondayOf(todayIso()) && { label: 'Ir a esta semana', onClick: () => setWeekStart(mondayOf(todayIso())) }, ...plannerMenuItems].filter(Boolean)}>
+              <MoreIcon />
+            </MenuButton>
+          </div>
+        )}
+      </div>
+      {tabOptions.length > 1 && <div className="hidden lg:block"><Tabs value={tab} options={tabOptions} onChange={setTab} /></div>}
 
       <Notice>{error}</Notice>
       {loading && <div className="h-28 rounded-2xl bg-gray-100 animate-pulse" />}
@@ -604,8 +662,8 @@ export default function Personal() {
       {/* -- PLANIFICACIÓN -- */}
       {!loading && tab === 'planner' && allowedTabs.includes('planner') && (
         <div className="space-y-5">
-          {/* Week navigation + actions */}
-          <div className="flex items-center justify-between gap-2">
+          {/* Week navigation + actions (desktop; the phone has it in the sticky bar) */}
+          <div className="hidden lg:flex items-center justify-between gap-2">
             <div className="flex items-center gap-0.5 min-w-0">
               <NavArrow dir="left" label="Semana anterior" onClick={() => setWeekStart((v) => addDays(v, -7))} />
               <label className="relative cursor-pointer">
@@ -647,19 +705,19 @@ export default function Personal() {
                   <Icon name="down" className="w-3.5 h-3.5" strokeWidth={2} />
                 </MenuButton>
               </div>
-              <div className="lg:hidden">
-                <MenuButton ariaLabel="Más opciones" className="w-9 h-9 justify-center border border-gray-200 text-gray-600" items={plannerMenuItems}>
-                  <MoreIcon />
-                </MenuButton>
-              </div>
             </div>
           </div>
 
-          <FigureLine items={[
+          <StatRow items={[
+            { label: visibleWeekAssignments.length === 1 ? 'turno' : 'turnos', value: visibleWeekAssignments.length },
+            { label: activeEmployees.length === 1 ? 'empleado' : 'empleados', value: activeEmployees.length },
+            weekCostSummary && { label: 'coste est.', value: weekCostSummary },
+          ]} />
+          <div className="hidden md:block"><FigureLine items={[
             { label: visibleWeekAssignments.length === 1 ? 'turno asignado' : 'turnos asignados', value: visibleWeekAssignments.length },
             { label: activeEmployees.length === 1 ? 'empleado activo' : 'empleados activos', value: activeEmployees.length },
             weekCostSummary && { label: 'coste estimado', value: weekCostSummary },
-          ]} />
+          ]} /></div>
 
           {shifts.length === 0 && (
             <p className="rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-900">
@@ -669,7 +727,7 @@ export default function Personal() {
 
           {/* Phone: pick a day, then its shifts as rows */}
           <div className="lg:hidden space-y-3">
-            <div ref={mobileDayScrollerRef} className="grid grid-cols-7 gap-1">
+            <div ref={mobileDayScrollerRef} className={`${heroCard} !rounded-2xl grid grid-cols-7 gap-1 p-1.5`}>
               {days.map((day, i) => {
                 const selected = i === mobileDayIndex;
                 const isToday = day.date === today;
@@ -688,15 +746,15 @@ export default function Personal() {
             {currentMobileDay && (
               <Section title={currentMobileDay.fullLabel}>
                 {(shiftRowsByDay[currentMobileDay.date] || []).length === 0 ? (
-                  <p className="py-6 text-sm text-gray-500">Sin turnos este día.</p>
+                  <p className="rounded-2xl border border-dashed border-gray-200 py-8 text-center text-sm text-gray-500">Sin turnos este día.</p>
                 ) : (
-                  <ul className="divide-y divide-gray-100">
+                  <ul className="rounded-2xl border border-gray-200 bg-white overflow-hidden divide-y divide-gray-100">
                     {(shiftRowsByDay[currentMobileDay.date] || []).map((shift) => {
                       const { count, groups } = shiftGroups(currentMobileDay, shift);
                       return (
                         <li key={shift._id}>
                           <button type="button" onClick={() => setSlotEditor({ day: currentMobileDay, shift })}
-                            className="w-full flex items-start gap-3 px-2 -mx-2 py-3 rounded-xl text-left hover:bg-gray-50 active:bg-gray-100">
+                            className="w-full flex items-start gap-3 px-3 py-3.5 text-left hover:bg-gray-50 active:bg-gray-100">
                             <span className="w-12 shrink-0 text-right pt-px">
                               <span className="block text-[15px] font-semibold tabular-nums text-gray-900 leading-5">{shift.startTime}</span>
                               <span className="block text-[11px] text-gray-400 tabular-nums leading-4">{shift.endTime}</span>
@@ -705,7 +763,7 @@ export default function Personal() {
                             <span className="min-w-0 flex-1 space-y-1.5">
                               <span className="flex items-center justify-between gap-2">
                                 <span className="text-[15px] font-medium text-gray-900 truncate">{shift.name}</span>
-                                <span className="text-[13px] text-gray-500 shrink-0">{count === 0 ? 'Asignar' : `${count} ${count === 1 ? 'persona' : 'personas'}`}</span>
+                                <span className={`text-[13px] shrink-0 ${count === 0 ? 'font-semibold text-violet-700' : 'text-gray-500'}`}>{count === 0 ? 'Asignar' : plural(count, 'persona', 'personas')}</span>
                               </span>
                               {count > 0 && <span className="block"><ShiftStaffChips personColorByName={staffColorByName} groups={groups} /></span>}
                             </span>
@@ -838,11 +896,23 @@ export default function Personal() {
       {/* -- EMPLEADOS -- */}
       {!loading && tab === 'employees' && allowedTabs.includes('employees') && (
         <div className="space-y-5">
-          <Segmented size="sm" value={employeeSubTab} onChange={setEmployeeSubTab}
-            options={[['employees', `Empleados · ${employeeStats.total}`], ['positions', `Puestos · ${positions.length}`]]} />
+          {(() => {
+            const subOptions = [['employees', `Empleados · ${employeeStats.total}`], ['positions', `Puestos · ${positions.length}`]];
+            return (
+              <>
+                <div className="md:hidden"><Segmented full value={employeeSubTab} onChange={setEmployeeSubTab} options={subOptions} /></div>
+                <div className="hidden md:block"><Segmented size="sm" value={employeeSubTab} onChange={setEmployeeSubTab} options={subOptions} /></div>
+              </>
+            );
+          })()}
 
           {employeeSubTab === 'employees' && (
             <>
+              <StatRow items={[
+                { label: 'activos', value: employeeStats.active },
+                { label: 'con acceso', value: employees.filter((e) => e.member).length },
+                { label: 'sin pago', value: employeeStats.noPay, tone: employeeStats.noPay > 0 ? 'warn' : undefined },
+              ]} />
               <div className="space-y-3">
                 <label className="relative block">
                   <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.8" className="w-4 h-4 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none"><circle cx="9" cy="9" r="5.5" /><path d="m13.5 13.5 3 3" strokeLinecap="round" /></svg>
@@ -869,7 +939,7 @@ export default function Personal() {
                   {search ? 'No hay resultados para tu búsqueda.' : employees.length === 0 ? 'Todavía no hay empleados.' : 'No hay empleados con este filtro.'}
                 </Empty>
               ) : (
-                <div>
+                <div className={listCard}>
                   <div className={tableHead}>
                     <span className="col-span-4">Empleado</span>
                     <span className="col-span-3">Puestos</span>
@@ -904,7 +974,7 @@ export default function Personal() {
               {positions.length === 0 ? (
                 <Empty action={<PrimaryButton onClick={() => setPositionModal({})}>Nuevo puesto</PrimaryButton>}>Sin puestos definidos.</Empty>
               ) : (
-                <div>
+                <div className={listCard}>
                   <div className={tableHead}>
                     <span className="col-span-5">Puesto</span>
                     <span className="col-span-3">Empleados activos</span>
@@ -917,7 +987,7 @@ export default function Personal() {
                       const active = position.status === 'active';
                       return (
                         <li key={position._id}>
-                          <div className="flex items-center gap-3 md:grid md:grid-cols-12 md:gap-4 px-2 py-3 rounded-xl hover:bg-gray-50">
+                          <div className="flex items-center gap-3 md:grid md:grid-cols-12 md:gap-4 px-3 md:px-2 py-3 md:rounded-xl hover:bg-gray-50">
                             <button type="button" onClick={() => setPositionModal(position)} className="md:col-span-5 flex items-center gap-3 min-w-0 flex-1 text-left">
                               <span className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: `${position.color || '#64748B'}1f` }}>
                                 <span className="w-3 h-3 rounded-full" style={{ backgroundColor: position.color || '#64748B' }} />
@@ -965,7 +1035,14 @@ export default function Personal() {
       {/* -- COSTES -- */}
       {!loading && tab === 'costs' && allowedTabs.includes('costs') && (
         <div className="space-y-6">
-          <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="md:hidden space-y-3">
+            <Segmented full value={costsSubTab} onChange={setCostsSubTab} options={[['monthly', 'Mes'], ['balance', 'Balance acumulado']]} />
+            {costsSubTab === 'monthly' && (
+              <PeriodNavigator period="month" periods={['month']} dateRange={{ from: `${costMonth}-01`, to: `${costMonth}-01` }}
+                onShift={(dir) => setCostMonth((v) => addMonths(v, dir))} onPeriodChange={() => {}} onRangeChange={() => {}} />
+            )}
+          </div>
+          <div className="hidden md:flex flex-wrap items-center justify-between gap-3">
             <Segmented size="sm" value={costsSubTab} onChange={setCostsSubTab} options={[['monthly', 'Mes'], ['balance', 'Balance acumulado']]} />
             {costsSubTab === 'monthly' && (
               <div className="flex items-center gap-0.5">
@@ -998,9 +1075,12 @@ export default function Personal() {
               const totalHours = rows.reduce((n, r) => n + (Number(r.totalHours) || 0), 0);
               return (
                 <>
-                  <BigFigure label={`Coste de ${monthLabel}`} value={moneyByCurrency(monthlyCosts.totalsByCurrency)}
-                    sub={`${totalShifts} ${totalShifts === 1 ? 'turno' : 'turnos'} · ${Number(totalHours.toFixed(2)).toLocaleString('es-ES')} h · ${rows.length} ${rows.length === 1 ? 'empleado' : 'empleados'}`} />
+                  <HeroFigure label={`Coste de ${monthLabel}`} value={moneyByCurrency(monthlyCosts.totalsByCurrency)}
+                    stats={[{ label: totalShifts === 1 ? 'turno' : 'turnos', value: totalShifts }, { label: 'horas', value: fmtHours(totalHours) }, { label: rows.length === 1 ? 'empleado' : 'empleados', value: rows.length }]} />
+                  <div className="hidden md:block"><BigFigure label={`Coste de ${monthLabel}`} value={moneyByCurrency(monthlyCosts.totalsByCurrency)}
+                    sub={`${totalShifts} ${totalShifts === 1 ? 'turno' : 'turnos'} · ${Number(totalHours.toFixed(2)).toLocaleString('es-ES')} h · ${rows.length} ${rows.length === 1 ? 'empleado' : 'empleados'}`} /></div>
                   <Section title="Por empleado">
+                    <div className={listCard}>
                     <div className={tableHead}>
                       <span className="col-span-4">Empleado</span>
                       <span className="col-span-3">Cómo cobra</span>
@@ -1010,18 +1090,19 @@ export default function Personal() {
                     </div>
                     <ul className="divide-y divide-gray-100">
                       {rows.map((row) => (
-                        <li key={String(row.employeeId)} className="flex items-center gap-3 md:grid md:grid-cols-12 md:gap-4 px-2 py-3">
+                        <li key={String(row.employeeId)} className="flex items-center gap-3 md:grid md:grid-cols-12 md:gap-4 px-4 md:px-2 py-3.5 md:py-3">
                           <div className="md:col-span-4 min-w-0 flex-1">
                             <p className="text-[15px] font-medium text-gray-900 truncate">{row.employeeName}</p>
-                            <p className="md:hidden text-[13px] text-gray-500 truncate">{row.assignments} turnos · {row.totalHours} h · {compTypeLabel(row.compensation?.paymentType)}</p>
+                            <p className="md:hidden text-[13px] text-gray-500 truncate">{plural(row.assignments, 'turno', 'turnos')} · {fmtHours(row.totalHours)}{row.compensation?.paymentType ? ` · ${compTypeLabel(row.compensation.paymentType)}` : ''}</p>
                           </div>
                           <span className="hidden md:block col-span-3 text-sm text-gray-600">{compTypeLabel(row.compensation?.paymentType)}</span>
                           <span className="hidden md:block col-span-1 text-right text-sm tabular-nums text-gray-700">{row.assignments}</span>
-                          <span className="hidden md:block col-span-2 text-right text-sm tabular-nums text-gray-700">{row.totalHours} h</span>
+                          <span className="hidden md:block col-span-2 text-right text-sm tabular-nums text-gray-700">{fmtHours(row.totalHours)}</span>
                           <span className="md:col-span-2 text-right text-sm font-semibold tabular-nums text-gray-900 shrink-0">{formatMoney(row.monthlyCost, row.currency)}</span>
                         </li>
                       ))}
                     </ul>
+                    </div>
                   </Section>
                 </>
               );
@@ -1039,10 +1120,14 @@ export default function Personal() {
             const pendingCount = visibleRows.filter((r) => r.balance > 0).length;
             return (
               <>
-                <BigFigure label="Pendiente de pagar" value={moneyByCurrency(totalPendingByCurrency)}
+                <HeroFigure label="Pendiente de pagar" value={moneyByCurrency(totalPendingByCurrency)}
                   tone={pendingCount > 0 ? 'warn' : undefined}
-                  sub={pendingCount > 0 ? `${pendingCount} ${pendingCount === 1 ? 'empleado' : 'empleados'} con saldo` : 'Todo pagado'} />
+                  sub={pendingCount > 0 ? `${plural(pendingCount, 'empleado', 'empleados')} con saldo` : 'Todo pagado'} />
+                <div className="hidden md:block"><BigFigure label="Pendiente de pagar" value={moneyByCurrency(totalPendingByCurrency)}
+                  tone={pendingCount > 0 ? 'warn' : undefined}
+                  sub={pendingCount > 0 ? `${pendingCount} ${pendingCount === 1 ? 'empleado' : 'empleados'} con saldo` : 'Todo pagado'} /></div>
                 <Section title="Por empleado" aside={<span className="text-xs text-gray-500 hidden sm:inline">Lo generado menos los pagos registrados</span>}>
+                  <div className={listCard}>
                   <div className={tableHead}>
                     <span className="col-span-4">Empleado</span>
                     <span className="col-span-3">Último pago</span>
@@ -1054,7 +1139,7 @@ export default function Personal() {
                       const isConfirming = confirmingPayment === String(row.employeeId);
                       const empObj = employees.find((e) => String(e._id) === String(row.employeeId));
                       return (
-                        <li key={String(row.employeeId)} className="px-2 py-3 md:grid md:grid-cols-12 md:gap-4 md:items-center">
+                        <li key={String(row.employeeId)} className="px-4 md:px-2 py-3.5 md:py-3 md:grid md:grid-cols-12 md:gap-4 md:items-center">
                           <div className="md:col-span-4 flex items-center justify-between gap-3 min-w-0">
                             <div className="min-w-0">
                               <p className="text-[15px] font-medium text-gray-900 truncate">{row.employeeName}</p>
@@ -1082,6 +1167,7 @@ export default function Personal() {
                       );
                     })}
                   </ul>
+                  </div>
                   <p className="mt-3 text-xs text-gray-400">Pulsa <b className="font-semibold">Pagado</b> para registrar el pago y dejar su saldo a cero.</p>
                 </Section>
               </>

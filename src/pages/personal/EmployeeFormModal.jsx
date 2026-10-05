@@ -59,7 +59,7 @@ export function EmployeeFormModal({ employee, positions, onClose, onSaved }) {
       footer={<SheetFooter onCancel={onClose} saving={saving} form="employee-form" />}>
       <form id="employee-form" onSubmit={submit} className="space-y-4">
         <Notice>{error}</Notice>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="grid grid-cols-2 gap-3">
           <div><label className={labelCls}>Nombre</label><input className={inputCls} value={form.firstName} onChange={(e) => setForm((f) => ({ ...f, firstName: e.target.value }))} required /></div>
           <div><label className={labelCls}>Apellidos</label><input className={inputCls} value={form.lastName} onChange={(e) => setForm((f) => ({ ...f, lastName: e.target.value }))} /></div>
         </div>

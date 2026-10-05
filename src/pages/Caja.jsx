@@ -206,7 +206,7 @@ export default function Caja() {
                   </div>
                   <input className={inputCls} placeholder="Nota (opcional)" value={note} onChange={(e) => setNote(e.target.value)} maxLength={500} />
                   <button type="button" className="w-full h-11 rounded-xl bg-gray-900 text-white text-sm font-semibold hover:bg-black disabled:opacity-50" disabled={busy} onClick={closeDay}>Cerrar caja del día</button>
-                  <p className="text-xs text-gray-400">Lo cobrado aparece en Finanzas como ingreso real del día. Al cerrar, los cobros de este día quedan bloqueados.</p>
+                  <p className="text-xs text-gray-400">Lo cobrado aparece en Finanzas como «Cobrado» del día. Al cerrar, los cobros de este día quedan bloqueados.</p>
                 </div>
               )}
             </Section>

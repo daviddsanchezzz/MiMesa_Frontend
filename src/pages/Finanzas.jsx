@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, Fragment } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import { useAuth } from '../context/AuthContext';
 import { useSetMobileHeader } from '../context/MobileHeaderContext';
 import Modal from '../components/Modal';
 import Icon from '../ui/Icon';
@@ -233,6 +234,8 @@ function ActionPill({ icon, children, onClick, to }) {
 }
 
 function ResumenTab({ period, dateRange, categories, refreshTrigger, onTodayRevenue, onViewExpenses, onAddExpense }) {
+  const { isModuleEnabled } = useAuth();
+  const hasPurchases = isModuleEnabled('purchases'); // invoices live in Compras
   const [data, setData] = useState(null);
   const [previous, setPrevious] = useState(null);
   const [toReview, setToReview] = useState(0);
@@ -249,14 +252,14 @@ function ResumenTab({ period, dateRange, categories, refreshTrigger, onTodayReve
       const [{ data: d }, prevRes, invRes] = await Promise.all([
         api.get(`/revenue/dashboard?from=${dateRange.from}&to=${dateRange.to}`),
         api.get(`/revenue/dashboard?from=${prev.from}&to=${prev.to}`).catch(() => null),
-        api.get('/invoices').catch(() => null),
+        hasPurchases ? api.get('/invoices').catch(() => null) : Promise.resolve(null),
       ]);
       setData(d);
       setPrevious(prevRes?.data || null);
       setToReview((invRes?.data || []).filter((i) => i.status === 'REVIEW' || i.status === 'FAILED').length);
     } catch { /* handled below */ }
     finally { setLoading(false); }
-  }, [period, dateRange.from, dateRange.to]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [period, dateRange.from, dateRange.to, hasPurchases]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => { load(); }, [load]);
   useEffect(() => { if (refreshTrigger > 0) load(); }, [refreshTrigger]); // eslint-disable-line
@@ -328,11 +331,11 @@ function ResumenTab({ period, dateRange, categories, refreshTrigger, onTodayReve
       </section>
 
       <div className="flex gap-2.5">
-        <ActionPill icon="camera" to="/compras/facturas/nueva">Subir factura</ActionPill>
+        {hasPurchases && <ActionPill icon="camera" to="/compras/facturas/nueva">Subir factura</ActionPill>}
         <ActionPill icon="plus" onClick={onAddExpense}>Añadir gasto</ActionPill>
       </div>
 
-      {toReview > 0 && (
+      {hasPurchases && toReview > 0 && (
         <Link to="/compras/facturas" className="flex items-center gap-3 rounded-2xl bg-amber-50 px-4 py-3.5 active:bg-amber-100">
           <span className="w-9 h-9 rounded-xl bg-white text-amber-600 flex items-center justify-center shrink-0"><Icon name="receipt" className="w-5 h-5" /></span>
           <span className="min-w-0 flex-1">

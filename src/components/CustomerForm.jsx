@@ -11,7 +11,6 @@ export default function CustomerForm({ customer, onSave, onCancel, onDeleted }) 
     phone: customer?.phone || '',
     email: customer?.email || '',
     notes: customer?.notes || '',
-    birthday: customer?.birthday || '', // 'MM-DD'
   });
   const [marketing, setMarketing] = useState(!!customer?.marketingSubscribed);
   const unsubscribed = !!customer?.marketingUnsubscribed;
@@ -84,24 +83,6 @@ export default function CustomerForm({ customer, onSave, onCancel, onDeleted }) 
           <input type="email" value={form.email} onChange={field('email')}
             placeholder="email@ejemplo.com"
             className={inputCls} />
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className={labelCls}>Cumpleaños <span className="text-gray-400 font-normal">(opcional)</span></label>
-          <div className="grid grid-cols-2 gap-2">
-            <select aria-label="Día" value={form.birthday.slice(3, 5)} className={inputCls}
-              onChange={(e) => setForm((f) => ({ ...f, birthday: e.target.value ? `${f.birthday.slice(0, 2) || '01'}-${e.target.value}` : '' }))}>
-              <option value="">Día</option>
-              {Array.from({ length: 31 }, (_, i) => String(i + 1).padStart(2, '0')).map((d) => <option key={d} value={d}>{Number(d)}</option>)}
-            </select>
-            <select aria-label="Mes" value={form.birthday.slice(0, 2)} className={inputCls}
-              onChange={(e) => setForm((f) => ({ ...f, birthday: e.target.value ? `${e.target.value}-${f.birthday.slice(3, 5) || '01'}` : '' }))}>
-              <option value="">Mes</option>
-              {['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'].map((m, i) => <option key={m} value={String(i + 1).padStart(2, '0')}>{m}</option>)}
-            </select>
-          </div>
         </div>
       </div>
 

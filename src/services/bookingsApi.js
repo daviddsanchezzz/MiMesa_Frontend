@@ -40,6 +40,10 @@ export const bookingsApi = {
   cashDay: (date) => unwrap(api.get('/bookings/cash', { params: date ? { date } : {} })),
   closeCash: (data) => unwrap(api.post('/bookings/cash/close', data)),
   reopenCash: (date) => unwrap(api.delete('/bookings/cash/close', { params: { date } })),
+  // loyalty: a reward every Nth paid visit
+  loyalty: () => unwrap(api.get('/bookings/loyalty')),
+  saveLoyalty: (data) => unwrap(api.put('/bookings/loyalty', data)),
+  customerLoyalty: (customerId) => unwrap(api.get(`/bookings/customers/${customerId}/loyalty`)),
   // packs (bonos): catalogue, sold to a customer
   packs: (includeInactive = false) => unwrap(api.get('/bookings/packs', { params: { includeInactive } })),
   createPack: (data) => unwrap(api.post('/bookings/packs', data)),

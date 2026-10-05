@@ -17,7 +17,6 @@ const AUDIENCES = [
   ['lapsed', 'Hace tiempo que no vienen'],
   ['new', 'Clientes nuevos'],
   ['frequent', 'Clientes habituales'],
-  ['birthday', 'Cumplen años este mes'],
 ];
 const LAPSED_OPTIONS = [[60, '2 meses'], [90, '3 meses'], [120, '4 meses'], [180, '6 meses']];
 const NEW_OPTIONS = [[30, 'el último mes'], [60, 'los últimos 2 meses'], [90, 'los últimos 3 meses']];

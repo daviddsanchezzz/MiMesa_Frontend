@@ -33,6 +33,14 @@ export default function CheckoutModal({ booking, tz, onClose, onPaid }) {
     return () => { live = false; };
   }, [booking.customerId]); // eslint-disable-line react-hooks/exhaustive-deps
   const pack = packs.find((p) => p._id === packId) || null;
+  // Loyalty: is this the visit that earns the reward?
+  const [loyalty, setLoyalty] = useState(null);
+  useEffect(() => {
+    if (!booking.customerId) return undefined;
+    let live = true;
+    bookingsApi.customerLoyalty(booking.customerId).then((l) => { if (live) setLoyalty(l); }).catch(() => {});
+    return () => { live = false; };
+  }, [booking.customerId]);
 
   const calc = useMemo(() => {
     const s = packId ? 0 : parseEuros(services);
@@ -48,6 +56,11 @@ export default function CheckoutModal({ booking, tz, onClose, onPaid }) {
   }, [services, discount, tip, extras, given, packId]);
 
   const setExtra = (i, patch) => setExtras((list) => list.map((x, idx) => (idx === i ? { ...x, ...patch } : x)));
+  // The reward of this visit, as a discount on what is being charged (never more than the ticket)
+  const rewardCents = loyalty?.rewardDue
+    ? Math.max(0, Math.min(loyalty.reward.type === 'percent' ? Math.round(((calc.s || 0) + calc.exTotal) * loyalty.reward.value / 100) : loyalty.reward.value, (calc.s || 0) + calc.exTotal))
+    : 0;
+  const rewardApplied = rewardCents > 0 && calc.d === rewardCents;
   const pctDiscount = (pct) => setDiscount(centsToInput(Math.round(((calc.s || 0) + calc.exTotal) * pct / 100)));
 
   async function pay() {
@@ -78,6 +91,19 @@ export default function CheckoutModal({ booking, tz, onClose, onPaid }) {
   return (
     <Modal title={`Cobrar · ${booking.guestName}`} subtitle={`${timeInTz(booking.start, tz)} · ${booking.segments.map((x) => x.serviceName).join(' + ')}`} onClose={onClose} size="md">
       <div className="space-y-4">
+        {loyalty?.rewardDue && !packId && (
+          <div className="rounded-xl border border-amber-200 bg-amber-50 px-3.5 py-3 flex items-center gap-3">
+            <span aria-hidden="true">🎁</span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-sm font-semibold text-gray-900">Es su visita nº {loyalty.nextVisit}: tiene premio</span>
+              <span className="block text-xs text-gray-600">{loyalty.reward.type === 'percent' ? `${loyalty.reward.value} % de descuento` : `${euros(loyalty.reward.value)} de descuento`}</span>
+            </span>
+            <button type="button" disabled={rewardApplied || rewardCents === 0} onClick={() => setDiscount(centsToInput(rewardCents))}
+              className="shrink-0 h-8 px-3 rounded-full bg-amber-500 text-white text-xs font-semibold disabled:bg-white disabled:text-amber-700 disabled:border disabled:border-amber-300">
+              {rewardApplied ? 'Aplicado ✓' : 'Aplicar premio'}
+            </button>
+          </div>
+        )}
         {packs.length > 0 && (
           <div className={`rounded-xl border px-3.5 py-3 ${packId ? 'border-violet-300 bg-violet-50' : 'border-gray-200 bg-gray-50'}`}>
             {packs.length > 1 && !packId && (

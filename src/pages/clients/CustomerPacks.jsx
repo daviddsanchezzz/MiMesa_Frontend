@@ -151,3 +151,27 @@ export default function CustomerPacks({ customer }) {
     </Section>
   );
 }
+
+/** Ficha del cliente: how close the customer is to the next loyalty reward. */
+export function CustomerLoyalty({ customer }) {
+  const [l, setL] = useState(null);
+  useEffect(() => { bookingsApi.customerLoyalty(customer._id).then(setL).catch(() => {}); }, [customer._id]);
+  if (!l?.enabled) return null;
+  const done = l.paidVisits % l.every;
+  const reward = l.reward.type === 'percent' ? `${l.reward.value} % de descuento` : `${euros(l.reward.value)} de descuento`;
+  return (
+    <Section title="Fidelización">
+      <p className="text-sm text-gray-700">
+        {l.rewardDue
+          ? <><b className="text-amber-700">En su próxima visita tiene premio:</b> {reward}.</>
+          : <>Le {l.toNext === 1 ? 'falta' : 'faltan'} <b className="text-gray-900">{l.toNext}</b> {l.toNext === 1 ? 'visita' : 'visitas'} para el premio ({reward}).</>}
+      </p>
+      <div className="mt-2 flex gap-1" aria-label={`${done} de ${l.every} visitas`}>
+        {Array.from({ length: Math.min(l.every, 20) }, (_, i) => (
+          <span key={i} className={`h-1.5 flex-1 rounded-full ${i < done ? 'bg-amber-400' : 'bg-gray-200'}`} />
+        ))}
+      </div>
+      <p className="mt-1.5 text-xs text-gray-500">{l.paidVisits} {l.paidVisits === 1 ? 'visita pagada' : 'visitas pagadas'} en total</p>
+    </Section>
+  );
+}

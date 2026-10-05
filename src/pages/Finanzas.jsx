@@ -927,6 +927,7 @@ function GastosTab({ dateRange, suppliers, categories, refreshTrigger, onCreate,
                       {!automatic && <RowMenu items={exp.sourceType === 'INVOICE'
                         ? [{ label: 'Ver factura', onClick: () => handleEditClick(exp) }]
                         : [{ label: 'Editar', onClick: () => handleEditClick(exp) }, { label: 'Eliminar', danger: true, disabled: deleting === exp._id, onClick: () => handleDeleteClick(exp) }]} />}
+                      {automatic && <span className="w-8 h-8 shrink-0" aria-hidden="true" />}
                     </div>
                   </div>
                 </li>

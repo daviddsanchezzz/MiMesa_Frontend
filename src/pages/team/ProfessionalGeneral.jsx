@@ -15,6 +15,7 @@ import {
   euros,
 } from '../agenda/utils';
 import { useUnsavedChanges } from '../../lib/unsavedChanges';
+import CalendarLink from './CalendarLink';
 
 export default function ProfessionalGeneral({
   resource,
@@ -211,6 +212,7 @@ export default function ProfessionalGeneral({
           Ver agenda de {resource.name} →
         </Link>
       </section>
+      {resource.active !== false && <CalendarLink resource={resource} />}
       <section className="space-y-2">
         <h2 className="font-semibold">Disponibilidad</h2>
         <label className="flex items-center gap-2 min-h-11 text-sm">

@@ -170,8 +170,8 @@ export default function AppointmentsToday() {
           <p className="text-sm text-gray-500">{longDate(today)}</p>
           <h1 className="text-2xl lg:text-3xl font-semibold tracking-tight text-gray-900 mt-0.5">{greeting(session?.user?.name)}</h1>
           {s && (
-            <div className="mt-3">
-              <FigureLine items={[
+            <div className="mt-3 lg:mt-5">
+              <FigureLine large items={[
                 { label: s.today.appointments === 1 ? 'cita hoy' : 'citas hoy', value: s.today.appointments },
                 s.today.remaining > 0 && { label: 'por delante', value: s.today.remaining },
                 !s.restricted && { label: 'previsto', value: euros(s.today.expectedRevenue) },

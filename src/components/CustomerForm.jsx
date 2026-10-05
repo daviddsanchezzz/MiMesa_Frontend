@@ -11,7 +11,10 @@ export default function CustomerForm({ customer, onSave, onCancel, onDeleted }) 
     phone: customer?.phone || '',
     email: customer?.email || '',
     notes: customer?.notes || '',
+    birthday: customer?.birthday || '', // 'MM-DD'
   });
+  const [marketing, setMarketing] = useState(!!customer?.marketingSubscribed);
+  const unsubscribed = !!customer?.marketingUnsubscribed;
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -23,9 +26,12 @@ export default function CustomerForm({ customer, onSave, onCancel, onDeleted }) 
     setSaving(true);
     try {
       if (customer?._id) {
-        await api.put(`/customers/${customer._id}`, form);
+        // Only tell the server about the emails consent when it was changed here
+        const consent = marketing !== !!customer.marketingSubscribed ? { marketingSubscribed: marketing } : {};
+        await api.put(`/customers/${customer._id}`, { ...form, ...consent });
       } else {
-        await api.post('/customers', form);
+        const { data } = await api.post('/customers', form);
+        if (marketing && form.email && data?._id) await api.put(`/customers/${data._id}`, { marketingSubscribed: true });
       }
       onSave();
     } catch (err) {
@@ -80,6 +86,34 @@ export default function CustomerForm({ customer, onSave, onCancel, onDeleted }) 
             className={inputCls} />
         </div>
       </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className={labelCls}>Cumpleaños <span className="text-gray-400 font-normal">(opcional)</span></label>
+          <div className="grid grid-cols-2 gap-2">
+            <select aria-label="Día" value={form.birthday.slice(3, 5)} className={inputCls}
+              onChange={(e) => setForm((f) => ({ ...f, birthday: e.target.value ? `${f.birthday.slice(0, 2) || '01'}-${e.target.value}` : '' }))}>
+              <option value="">Día</option>
+              {Array.from({ length: 31 }, (_, i) => String(i + 1).padStart(2, '0')).map((d) => <option key={d} value={d}>{Number(d)}</option>)}
+            </select>
+            <select aria-label="Mes" value={form.birthday.slice(0, 2)} className={inputCls}
+              onChange={(e) => setForm((f) => ({ ...f, birthday: e.target.value ? `${e.target.value}-${f.birthday.slice(3, 5) || '01'}` : '' }))}>
+              <option value="">Mes</option>
+              {['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'].map((m, i) => <option key={m} value={String(i + 1).padStart(2, '0')}>{m}</option>)}
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <label className={`flex items-start gap-2 text-sm ${unsubscribed ? 'text-gray-400' : 'text-gray-700'}`}>
+        <input type="checkbox" className="mt-0.5" checked={marketing} disabled={unsubscribed || !form.email.trim()}
+          onChange={(e) => setMarketing(e.target.checked)} />
+        <span>
+          Acepta recibir ofertas y novedades por email
+          {unsubscribed && <span className="block text-xs">Se dio de baja y no se le puede volver a suscribir.</span>}
+          {!unsubscribed && !form.email.trim() && <span className="block text-xs text-gray-400">Hace falta un email.</span>}
+        </span>
+      </label>
 
       <div>
         <label className={labelCls}>Notas <span className="text-gray-400 font-normal">(opcional)</span></label>

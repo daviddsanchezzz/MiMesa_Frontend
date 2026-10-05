@@ -71,7 +71,7 @@ export default function NewBookingModal({ date: initialDate, time: initialTime, 
   const [items, setItems] = useState(() => initialService ? [{ serviceId: initialService._id }] : []);
   const [resourceId, setResourceId] = useState(initialResource || '');
   const [partySize, setPartySize] = useState(1);
-  const [guest, setGuest] = useState({ guestName: '', guestPhone: '', guestEmail: '', notes: '', internalNotes: '', ...(initialGuest || {}) });
+  const [guest, setGuest] = useState({ guestName: '', guestPhone: '', guestEmail: '', notes: '', internalNotes: '', marketingConsent: false, ...(initialGuest || {}) });
   const [picked, setPicked] = useState(() => (initialGuest?.guestName ? { name: initialGuest.guestName } : null));
   const [customerOpen, setCustomerOpen] = useState(false);
   const [showContact, setShowContact] = useState(false);
@@ -257,6 +257,12 @@ export default function NewBookingModal({ date: initialDate, time: initialTime, 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-1">
               <input className={fieldCls} type="tel" placeholder="Teléfono" value={guest.guestPhone} onChange={(event) => setGuest((current) => ({ ...current, guestPhone: event.target.value }))} maxLength={30} />
               <input className={fieldCls} type="email" placeholder="Email (opcional)" value={guest.guestEmail} onChange={(event) => setGuest((current) => ({ ...current, guestEmail: event.target.value }))} maxLength={200} />
+              {guest.guestEmail.trim() && (
+                <label className="sm:col-span-2 flex items-start gap-2 text-xs text-gray-600">
+                  <input type="checkbox" className="mt-0.5" checked={guest.marketingConsent} onChange={(event) => setGuest((current) => ({ ...current, marketingConsent: event.target.checked }))} />
+                  <span>El cliente acepta recibir ofertas y novedades por email</span>
+                </label>
+              )}
             </div>
           )}
         </section>

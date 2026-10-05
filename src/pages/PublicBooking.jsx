@@ -52,7 +52,7 @@ export default function PublicBooking({ businessId: businessIdProp, slug = null 
   const [slotsByDay, setSlotsByDay] = useState(null);
   const [day, setDay] = useState('');
   const [time, setTime] = useState('');
-  const [form, setForm] = useState({ guestName: '', guestPhone: '', guestEmail: '', notes: '', consent: false });
+  const [form, setForm] = useState({ guestName: '', guestPhone: '', guestEmail: '', notes: '', consent: false, marketing: false });
   const [sending, setSending] = useState(false);
   const [error, setError] = useState('');
   const [result, setResult] = useState(null);
@@ -159,7 +159,7 @@ export default function PublicBooking({ businessId: businessIdProp, slug = null 
         date: day, time,
         items: [{ serviceId: service.id, ...(staffId ? { resourceId: staffId } : {}) }],
         guestName: form.guestName, guestPhone: form.guestPhone, guestEmail: form.guestEmail,
-        notes: form.notes, consent: true,
+        notes: form.notes, consent: true, marketingConsent: form.marketing,
       });
       setResult(booking);
       setStep('done');
@@ -385,6 +385,13 @@ export default function PublicBooking({ businessId: businessIdProp, slug = null 
             <span>
               Acepto que {biz.name} use mis datos para gestionar esta cita y contactarme sobre ella. Como cliente, también podrá
               avisarme de cuándo me toca volver o pedirme mi opinión; puedo darme de baja de esos avisos en cualquier momento
+              desde el enlace de cada email.
+            </span>
+          </label>
+          <label className="flex items-start gap-2 text-xs text-gray-600">
+            <input type="checkbox" className="mt-0.5" checked={form.marketing} onChange={(e) => setForm({ ...form, marketing: e.target.checked })} />
+            <span>
+              Quiero recibir por email ofertas y novedades de {biz.name} (opcional). Puedo darme de baja cuando quiera
               desde el enlace de cada email.
             </span>
           </label>

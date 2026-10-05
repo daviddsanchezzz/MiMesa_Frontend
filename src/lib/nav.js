@@ -31,6 +31,7 @@ export function useNav() {
     isModuleEnabled('staff') && manager && { to: '/personal', label: isAppointments ? 'Rendimiento' : 'Personal', hint: isAppointments ? 'Facturación, costes y margen de cada profesional' : undefined, icon: 'briefcase', section: 'Equipo' },
     !isAppointments && !isStaff && !locked && manager && { to: '/analytics', label: 'Estadísticas', icon: 'chart', section: 'Negocio' },
     isModuleEnabled('expenses') && hasRole('owner') && { to: '/finanzas', label: 'Finanzas', hint: 'Cuánto ganas, gastos y beneficio', icon: 'euro', section: 'Negocio' },
+    isAppointments && isModuleEnabled('bookings') && manager && { to: '/analytics', label: 'Estadísticas', hint: 'Servicios, horas punta y clientes', icon: 'chart', section: 'Negocio' },
     isModuleEnabled('purchases') && manager && { to: '/compras', label: 'Compras', hint: 'Facturas, pedidos y proveedores', icon: 'cart', section: 'Negocio' },
     !isStaff && isSubscribed && manager && { to: '/publicidad', label: 'Publicidad', icon: 'megaphone', section: 'Crecimiento' },
   ].filter(Boolean);

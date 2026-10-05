@@ -25,6 +25,7 @@ const Onboarding = lazy(() => import('./pages/Onboarding'));
 const SetupWizard = lazy(() => import('./pages/SetupWizard'));
 const Publicidad = lazy(() => import('./pages/Publicidad'));
 const Analytics = lazy(() => import('./pages/Analytics'));
+const Estadisticas = lazy(() => import('./pages/Estadisticas'));
 const Personal = lazy(() => import('./pages/Personal'));
 const Finanzas = lazy(() => import('./pages/Finanzas'));
 const Compras = lazy(() => import('./pages/Compras'));
@@ -320,6 +321,12 @@ function RestaurantRoute({ children }) {
   return children;
 }
 
+// Estadísticas: one address, a screen per kind of business.
+function StatsPage() {
+  const { isAppointments } = useAuth();
+  return isAppointments ? <Estadisticas /> : <Analytics />;
+}
+
 const Caja = lazy(() => import('./pages/Caja'));
 const AppointmentTeam = lazy(() => import('./pages/team/AppointmentTeam'));
 const ProfessionalTeam = lazy(() => import('./pages/team/ProfessionalTeam'));
@@ -387,7 +394,7 @@ export default function App() {
           <Route path="/profile"       element={<PrivateLayout><Profile /></PrivateLayout>} />
           <Route path="/team"         element={<RoleRoute minRole="manager"><PrivateLayout><TeamPage /></PrivateLayout></RoleRoute>} />
           <Route path="/equipo"       element={<RoleRoute minRole="manager"><PrivateLayout><ProfessionalTeam /></PrivateLayout></RoleRoute>} />
-          <Route path="/analytics"    element={<RestaurantRoute><RoleRoute minRole="manager"><PrivateLayout><Analytics /></PrivateLayout></RoleRoute></RestaurantRoute>} />
+          <Route path="/analytics"    element={<RoleRoute minRole="manager"><PrivateLayout><StatsPage /></PrivateLayout></RoleRoute>} />
           <Route path="/calendario"   element={<Navigate to="/reservations?view=calendar" replace />} />
           <Route path="/publicidad"   element={<RoleRoute minRole="manager"><PrivateLayout><Publicidad /></PrivateLayout></RoleRoute>} />
           <Route path="/personal"     element={<ModuleRoute moduleKey="staff"><RoleRoute minRole="manager"><PrivateLayout><PersonalPage /></PrivateLayout></RoleRoute></ModuleRoute>} />

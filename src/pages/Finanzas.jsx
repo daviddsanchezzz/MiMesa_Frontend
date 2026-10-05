@@ -8,6 +8,8 @@ import {
   PageHeader, PrimaryButton, Tabs, Section, SectionLink, FigureLine, Empty, Toggle,
 } from '../ui/kit';
 import { euros } from './agenda/utils';
+import PeriodNavigator, { StickyBar, usePeriod } from '../ui/PeriodNavigator';
+import { fmtDay, fmtShort, parseIso, previousLabel, shiftRange, toIso } from '../lib/periods';
 
 // ── Color palette (static — color key stored in DB → Tailwind bg class) ───────
 
@@ -41,74 +43,6 @@ function catDot(cats, value) {
 const BUILT_IN_LABELS = { staff: 'Personal', commissions: 'Comisiones' };
 function catLabel(cats, value) {
   return cats?.find((x) => x.value === value)?.label || BUILT_IN_LABELS[value] || value;
-}
-
-// ── Date helpers ──────────────────────────────────────────────────────────────
-
-// Uses local date parts to avoid UTC offset shifting the date (e.g. Spain CEST = UTC+2)
-function toIso(d = new Date()) {
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-}
-
-function getWeekRange(anchor = new Date()) {
-  const today = new Date(anchor);
-  const day = today.getDay();
-  const diff = day === 0 ? -6 : 1 - day;
-  const mon = new Date(today); mon.setDate(today.getDate() + diff);
-  const sun = new Date(mon);   sun.setDate(mon.getDate() + 6);
-  return { from: toIso(mon), to: toIso(sun) };
-}
-
-function getMonthRange(anchor = new Date()) {
-  const today = new Date(anchor);
-  return {
-    from: toIso(new Date(today.getFullYear(), today.getMonth(), 1)),
-    to:   toIso(new Date(today.getFullYear(), today.getMonth() + 1, 0)),
-  };
-}
-
-function parseIso(iso) {
-  const [y, m, d] = iso.split('-').map(Number);
-  return new Date(y, m - 1, d);
-}
-
-// The same kind of period, `direction` steps away (-1 = the previous one).
-function shiftRange(period, dateRange, direction) {
-  if (period === 'month') {
-    const anchor = parseIso(dateRange.from);
-    anchor.setMonth(anchor.getMonth() + direction);
-    return getMonthRange(anchor);
-  }
-  if (period === 'week') {
-    const anchor = parseIso(dateRange.from);
-    anchor.setDate(anchor.getDate() + (7 * direction));
-    return getWeekRange(anchor);
-  }
-  const from = parseIso(dateRange.from);
-  const to = parseIso(dateRange.to);
-  const days = Math.round((to - from) / 86400000) + 1;
-  from.setDate(from.getDate() + (days * direction));
-  to.setDate(to.getDate() + (days * direction));
-  return { from: toIso(from), to: toIso(to) };
-}
-
-// "1 oct" (with the year when it isn't this year)
-function fmtShort(iso, withYear = false) {
-  if (!iso) return '—';
-  const d = parseIso(iso);
-  const showYear = withYear || d.getFullYear() !== new Date().getFullYear();
-  return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', ...(showYear ? { year: 'numeric' } : {}) }).replace('.', '');
-}
-
-// "mié 1 oct"
-function fmtDay(iso) {
-  if (!iso) return '—';
-  return parseIso(iso).toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' }).replace(/[.,]/g, '');
-}
-
-function fmtRange({ from, to }) {
-  if (!from || !to) return '';
-  return `${fmtShort(from)} – ${fmtShort(to, true)}`;
 }
 
 // Amounts here are euros (not cents): 12 € · 12,50 € · −1.099,20 €
@@ -195,71 +129,6 @@ function Pager({ page, pageCount, setPage }) {
   );
 }
 
-// ── Period selector ───────────────────────────────────────────────────────────
-
-function CustomRange({ dateRange, onRangeChange }) {
-  const cls = 'rounded-xl border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 min-w-0 flex-1 sm:flex-none appearance-none bg-white';
-  return (
-    <div className="flex items-center gap-2">
-      <input type="date" aria-label="Desde" value={dateRange.from} onChange={(e) => onRangeChange({ ...dateRange, from: e.target.value })} className={cls} />
-      <span className="text-gray-400 text-sm">–</span>
-      <input type="date" aria-label="Hasta" value={dateRange.to} onChange={(e) => onRangeChange({ ...dateRange, to: e.target.value })} className={cls} />
-    </div>
-  );
-}
-
-function periodLabel(period, dateRange) {
-  if (period === 'month') {
-    const text = parseIso(dateRange.from).toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
-    return text.charAt(0).toUpperCase() + text.slice(1);
-  }
-  return fmtRange(dateRange);
-}
-
-function PeriodNavigator({ period, dateRange, onPeriodChange, onShift, onRangeChange }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div className="relative">
-      <div className="flex items-center justify-center gap-1">
-        <button type="button" onClick={() => onShift(-1)} aria-label="Periodo anterior"
-          className="w-9 h-9 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-100">
-          <Icon name="left" className="w-4 h-4" strokeWidth={2} />
-        </button>
-        <button type="button" onClick={() => setOpen((value) => !value)}
-          className="min-w-[180px] h-9 px-3 rounded-full inline-flex items-center justify-center gap-2 text-sm font-semibold text-gray-900 hover:bg-gray-100">
-          {periodLabel(period, dateRange)}
-          <Icon name="calendar" className="w-4 h-4 text-gray-500" />
-        </button>
-        <button type="button" onClick={() => onShift(1)} aria-label="Periodo siguiente"
-          className="w-9 h-9 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-100">
-          <Icon name="right" className="w-4 h-4" strokeWidth={2} />
-        </button>
-      </div>
-      {open && (
-        <>
-          <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} />
-          <div className="absolute z-40 top-full mt-2 left-1/2 -translate-x-1/2 w-[min(22rem,calc(100vw-2rem))] rounded-2xl border border-gray-200 bg-white p-3 shadow-lg">
-            <div className="grid grid-cols-3 gap-1 rounded-xl bg-gray-100 p-1">
-              {[['week', 'Semana'], ['month', 'Mes'], ['custom', 'Personalizado']].map(([key, label]) => (
-                <button key={key} type="button" onClick={() => { onPeriodChange(key); if (key !== 'custom') setOpen(false); }}
-                  className={`rounded-lg px-2 py-2 text-xs font-semibold ${period === key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'}`}>
-                  {label}
-                </button>
-              ))}
-            </div>
-            {period === 'custom' && (
-              <div className="mt-3">
-                <CustomRange dateRange={dateRange} onRangeChange={onRangeChange} />
-                <button type="button" onClick={() => setOpen(false)} className="mt-3 w-full h-9 rounded-xl bg-violet-600 text-sm font-semibold text-white">Aplicar</button>
-              </div>
-            )}
-          </div>
-        </>
-      )}
-    </div>
-  );
-}
-
 // ── Resumen tab ───────────────────────────────────────────────────────────────
 
 function InlineRevenueEdit({ date, value, source, onSave }) {
@@ -324,12 +193,6 @@ const BUILT_IN_BAR = { staff: 'bg-violet-400', commissions: 'bg-pink-400' };
 function barColor(cats, value) {
   const c = cats?.find((x) => x.value === value);
   return c ? (COLOR_DOT[c.color] || 'bg-slate-400') : (BUILT_IN_BAR[value] || 'bg-slate-400');
-}
-
-const MONTH_NAME = (iso) => parseIso(iso).toLocaleDateString('es-ES', { month: 'long' });
-function previousLabel(period, dateRange) {
-  if (period === 'month') return MONTH_NAME(shiftRange('month', dateRange, -1).from);
-  return period === 'week' ? 'la semana anterior' : 'el periodo anterior';
 }
 
 // What the period brought in. Appointments: what was billed. Restaurants: the actual takings when
@@ -1426,8 +1289,7 @@ const TABS = [
 
 export default function Finanzas() {
   const [tab, setTab] = useState('dashboard');
-  const [period, setPeriod] = useState('month');
-  const [dateRange, setDateRange] = useState(getMonthRange());
+  const { period, dateRange, onPeriodChange, onShift, onRangeChange } = usePeriod('month');
   const [suppliers, setSuppliers] = useState([]);
   const [categories, setCategories] = useState([]);
   const [quickAction, setQuickAction] = useState(null); // null | 'revenue' | 'expense'
@@ -1451,14 +1313,6 @@ export default function Finanzas() {
 
   useEffect(() => { loadSuppliers(); loadCategories(); }, [loadSuppliers, loadCategories]);
 
-  const handlePeriodChange = (p) => {
-    setPeriod(p);
-    if (p === 'week') setDateRange(getWeekRange());
-    if (p === 'month') setDateRange(getMonthRange());
-  };
-
-  const shiftPeriod = (direction) => setDateRange(shiftRange(period, dateRange, direction));
-
   return (
     <div className="w-full space-y-5" style={{ overflowX: 'clip' }}>
       <div className="hidden lg:block">
@@ -1466,16 +1320,10 @@ export default function Finanzas() {
       </div>
 
       {/* Period + tabs stay put; the page scrolls underneath */}
-      <div className="sticky top-[-1rem] lg:top-[-1.75rem] !mt-[-1rem] lg:!mt-[-1.75rem] z-20 -mx-4 lg:-mx-8 px-4 lg:px-8 pt-4 lg:pt-7 pb-3 bg-white border-b border-gray-100 space-y-3">
-        <PeriodNavigator
-          period={period}
-          dateRange={dateRange}
-          onPeriodChange={handlePeriodChange}
-          onShift={shiftPeriod}
-          onRangeChange={(range) => { setPeriod('custom'); setDateRange(range); }}
-        />
+      <StickyBar>
+        <PeriodNavigator period={period} dateRange={dateRange} onPeriodChange={onPeriodChange} onShift={onShift} onRangeChange={onRangeChange} />
         <Tabs full value={tab} options={TABS} onChange={setTab} />
-      </div>
+      </StickyBar>
 
       {tab === 'dashboard' && <ResumenTab period={period} dateRange={dateRange} categories={categories} refreshTrigger={refresh} onTodayRevenue={() => setQuickAction('revenue')} onViewExpenses={() => setTab('expenses')} onAddExpense={() => setQuickAction('expense')} />}
       {tab === 'expenses'  && <GastosTab dateRange={dateRange} suppliers={suppliers} categories={categories} refreshTrigger={refresh} onCreate={() => setQuickAction('expense')} onCategoriesChanged={loadCategories} />}

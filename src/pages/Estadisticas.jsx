@@ -1,42 +1,25 @@
-import { useState } from 'react';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useSetMobileHeader } from '../context/MobileHeaderContext';
 import { useData } from '../lib/query';
 import { publicBookingUrl } from '../lib/publicUrl';
-import Icon from '../ui/Icon';
-import { Empty, PageHeader, Section, Segmented } from '../ui/kit';
+import { Empty, PageHeader } from '../ui/kit';
+import PeriodNavigator, { StickyBar, usePeriod } from '../ui/PeriodNavigator';
+import { previousLabel, shiftRange } from '../lib/periods';
 import { euros, waLink } from './agenda/utils';
 
 // Estadísticas for appointment businesses (restaurants have Analytics).
 
-const PERIODS = [['month', 'Mes'], ['30', '30 días'], ['90', '90 días']];
 const SOURCE_LABEL = { online: 'Reserva online', phone: 'Por teléfono', walk_in: 'Sin cita previa', staff: 'Creadas por el equipo' };
 const WEEKDAY_FULL = { Lun: 'lunes', Mar: 'martes', Mié: 'miércoles', Jue: 'jueves', Vie: 'viernes', Sáb: 'sábado', Dom: 'domingo' };
 
 const pad = (n) => String(n).padStart(2, '0');
-const iso = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-
-function rangeFor(mode, offset) {
-  const today = new Date();
-  if (mode === 'month') {
-    const first = new Date(today.getFullYear(), today.getMonth() + offset, 1);
-    const last = new Date(first.getFullYear(), first.getMonth() + 1, 0);
-    const prevFirst = new Date(first.getFullYear(), first.getMonth() - 1, 1);
-    const prevLast = new Date(first.getFullYear(), first.getMonth(), 0);
-    return { from: iso(first), to: iso(last), compare: { from: iso(prevFirst), to: iso(prevLast) }, first };
-  }
-  const days = Number(mode);
-  const to = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  const from = new Date(to); from.setDate(to.getDate() - (days - 1));
-  return { from: iso(from), to: iso(to), compare: null, first: null };
-}
 
 /** ▲ 12 % in green when the move is good, red when not. */
 function Delta({ now, before, upIsBad = false }) {
   if (!before) return null;
   const pct = Math.round(((now - before) / before) * 100);
-  if (!pct) return null;
+  if (!pct || Math.abs(pct) > 300) return null; // a jump that big says nothing
   const good = upIsBad ? pct < 0 : pct > 0;
   return <span className={`text-[11px] font-semibold tabular-nums ${good ? 'text-emerald-600' : 'text-rose-500'}`}>{pct > 0 ? '▲' : '▼'} {Math.abs(pct)} %</span>;
 }
@@ -87,19 +70,13 @@ function WeekdayBars({ data }) {
 export default function Estadisticas() {
   const { business } = useAuth();
   useSetMobileHeader({ title: 'Estadísticas' });
-  const [mode, setMode] = useState('month');
-  const [offset, setOffset] = useState(0);
-  const range = rangeFor(mode, mode === 'month' ? offset : 0);
-  const query = `from=${range.from}&to=${range.to}${range.compare ? `&compareFrom=${range.compare.from}&compareTo=${range.compare.to}` : ''}`;
+  const { period, dateRange, onPeriodChange, onShift, onRangeChange } = usePeriod('month');
+  // Month and week compare with the one before; a custom range lets the server pick the same length right before
+  const compare = period === 'custom' ? null : shiftRange(period, dateRange, -1);
+  const query = `from=${dateRange.from}&to=${dateRange.to}${compare ? `&compareFrom=${compare.from}&compareTo=${compare.to}` : ''}`;
   const q = useData(['bookings', 'insights', query], () => api.get(`/bookings/insights?${query}`).then((r) => r.data), { retry: false });
   const d = q.data;
-
-  const title = mode === 'month'
-    ? (() => { const t = range.first.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' }); return t.charAt(0).toUpperCase() + t.slice(1); })()
-    : `Últimos ${mode} días`;
-  const vsLabel = mode === 'month'
-    ? `vs ${new Date(range.first.getFullYear(), range.first.getMonth() - 1, 1).toLocaleDateString('es-ES', { month: 'long' })}`
-    : 'vs periodo anterior';
+  const vsLabel = `vs ${previousLabel(period, dateRange)}`;
 
   const s = d?.summary;
   const p = d?.previous;
@@ -112,16 +89,11 @@ export default function Estadisticas() {
 
   return (
     <div className="w-full space-y-7">
-      <PageHeader title="Estadísticas" subtitle="Qué servicios funcionan, cuándo vienen y quién vuelve." />
+      <div className="hidden lg:block"><PageHeader title="Estadísticas" subtitle="Qué servicios funcionan, cuándo vienen y quién vuelve." /></div>
 
-      <div className="space-y-3">
-        <Segmented value={mode} onChange={(m) => { setMode(m); setOffset(0); }} options={PERIODS} />
-        <div className="flex items-center gap-1">
-          {mode === 'month' && <button type="button" onClick={() => setOffset((o) => o - 1)} aria-label="Mes anterior" className="w-9 h-9 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-100"><Icon name="left" className="w-4 h-4" strokeWidth={2} /></button>}
-          <span className="text-[15px] font-semibold text-gray-900">{title}</span>
-          {mode === 'month' && <button type="button" onClick={() => setOffset((o) => Math.min(0, o + 1))} disabled={offset >= 0} aria-label="Mes siguiente" className="w-9 h-9 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-100 disabled:opacity-30"><Icon name="right" className="w-4 h-4" strokeWidth={2} /></button>}
-        </div>
-      </div>
+      <StickyBar>
+        <PeriodNavigator period={period} dateRange={dateRange} onPeriodChange={onPeriodChange} onShift={onShift} onRangeChange={onRangeChange} />
+      </StickyBar>
 
       {q.isLoading && <p className="text-sm text-gray-400">Cargando…</p>}
       {q.isError && (
@@ -139,7 +111,7 @@ export default function Estadisticas() {
             <p className="text-[13px] font-semibold uppercase tracking-wide text-gray-400">Has atendido</p>
             <div className="mt-1 flex flex-wrap items-baseline gap-x-3">
               <p className="text-4xl font-semibold tracking-tight tabular-nums text-gray-900">{s.appointments} <span className="text-lg font-medium text-gray-500">{s.appointments === 1 ? 'cita' : 'citas'}</span></p>
-              {p.appointments > 0 && s.appointments !== p.appointments && (
+              {p.appointments > 0 && s.appointments !== p.appointments && Math.abs(Math.round(((s.appointments - p.appointments) / p.appointments) * 100)) <= 300 && (
                 <span className={`text-xs font-semibold px-2 py-0.5 rounded-full tabular-nums ${s.appointments > p.appointments ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-600'}`}>
                   {s.appointments > p.appointments ? '▲' : '▼'} {Math.abs(Math.round(((s.appointments - p.appointments) / p.appointments) * 100))} % {vsLabel}
                 </span>

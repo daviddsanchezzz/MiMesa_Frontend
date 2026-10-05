@@ -7,6 +7,8 @@ import Icon from '../ui/Icon';
 import { Empty, GhostButton, MenuButton, PageHeader, PrimaryButton, Segmented, Tabs, Toggle } from '../ui/kit';
 import Invoices from './invoices/Invoices';
 import InvoiceStatus from './invoices/InvoiceStatus';
+import PeriodNavigator, { StickyBar, usePeriod } from '../ui/PeriodNavigator';
+import { previousLabel, shiftRange } from '../lib/periods';
 
 const inputCls = 'w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white';
 const labelCls = 'block text-xs font-medium text-gray-500 mb-1';
@@ -97,31 +99,20 @@ function generateWhatsAppOrderMessage(order, supplier) {
   return messageParts.join('\n\n').trim();
 }
 
-const monthOf = (offset = 0) => {
-  const d = new Date();
-  d.setDate(1);
-  d.setMonth(d.getMonth() + offset);
-  return d;
-};
-const monthKey = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-const monthTitle = (d) => {
-  const text = d.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
-  return text.charAt(0).toUpperCase() + text.slice(1);
-};
-
 /** The first screen of Compras: what you spent, what is waiting for you, who you buy from. */
-function ComprasResumen({ invoices, orders, onGo, onNewOrder, onOpenInvoice }) {
+function ComprasResumen({ invoices, orders, period, dateRange, onGo, onNewOrder, onOpenInvoice }) {
   const navigate = useNavigate();
-  const [offset, setOffset] = useState(0);
-  const month = monthOf(offset);
-  const key = monthKey(month);
-  const prevKey = monthKey(monthOf(offset - 1));
+  const prev = shiftRange(period, dateRange, -1);
 
-  const counted = (k) => invoices.filter((i) => i.status === 'CONFIRMED' && String(i.invoiceDate || '').startsWith(k));
-  const monthInvoices = counted(key);
+  const counted = (range) => invoices.filter((i) => {
+    const day = String(i.invoiceDate || '').slice(0, 10);
+    return i.status === 'CONFIRMED' && day >= range.from && day <= range.to;
+  });
+  const monthInvoices = counted(dateRange);
   const total = monthInvoices.reduce((s, i) => s + Number(i.total || 0), 0);
-  const prevTotal = counted(prevKey).reduce((s, i) => s + Number(i.total || 0), 0);
-  const change = prevTotal > 0 ? Math.round(((total - prevTotal) / prevTotal) * 100) : null;
+  const prevTotal = counted(prev).reduce((s, i) => s + Number(i.total || 0), 0);
+  const rawChange = prevTotal > 0 ? Math.round(((total - prevTotal) / prevTotal) * 100) : null;
+  const change = rawChange !== null && Math.abs(rawChange) > 300 ? null : rawChange; // a jump that big says nothing
 
   const bySupplier = Object.values(monthInvoices.reduce((acc, i) => {
     const name = i.supplier?.name || 'Sin proveedor';
@@ -148,25 +139,18 @@ function ComprasResumen({ invoices, orders, onGo, onNewOrder, onOpenInvoice }) {
   return (
     <div className="space-y-7">
       <section className="rounded-3xl border border-gray-200 bg-white p-5 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
-        <div className="flex items-center justify-between gap-2">
-          <p className="text-[13px] font-semibold uppercase tracking-wide text-gray-400">Has comprado</p>
-          <div className="flex items-center -mr-2">
-            <button type="button" onClick={() => setOffset((o) => o - 1)} aria-label="Mes anterior" className="w-8 h-8 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-100"><Icon name="left" className="w-4 h-4" strokeWidth={2} /></button>
-            <span className="min-w-[110px] text-center text-[13px] font-semibold text-gray-700">{monthTitle(month)}</span>
-            <button type="button" onClick={() => setOffset((o) => Math.min(0, o + 1))} disabled={offset >= 0} aria-label="Mes siguiente" className="w-8 h-8 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-100 disabled:opacity-30"><Icon name="right" className="w-4 h-4" strokeWidth={2} /></button>
-          </div>
-        </div>
+        <p className="text-[13px] font-semibold uppercase tracking-wide text-gray-400">Has comprado</p>
         <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1">
           <p className="text-4xl font-semibold tracking-tight tabular-nums text-gray-900">{money(total)}</p>
           {change !== null && change !== 0 && (
             <span className={`text-xs font-semibold px-2 py-0.5 rounded-full tabular-nums ${change > 0 ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700'}`}>
-              {change > 0 ? '▲' : '▼'} {Math.abs(change)} % vs mes anterior
+              {change > 0 ? '▲' : '▼'} {Math.abs(change)} % vs {previousLabel(period, dateRange)}
             </span>
           )}
         </div>
         <p className="mt-2 text-[15px] text-gray-600">
           {monthInvoices.length === 0
-            ? 'Sin facturas confirmadas este mes.'
+            ? 'Sin facturas confirmadas en este periodo.'
             : `${monthInvoices.length} ${monthInvoices.length === 1 ? 'factura' : 'facturas'} de ${bySupplier.length} ${bySupplier.length === 1 ? 'proveedor' : 'proveedores'}.`}
         </p>
       </section>
@@ -262,6 +246,7 @@ export default function Compras() {
   const pathTab = location.pathname.split('/')[2];
   const initialTab = ({ resumen: 'summary', facturas: 'invoices', pedidos: 'orders', productos: 'suppliers', proveedores: 'suppliers' })[pathTab] || 'summary';
   const [tab, setTab] = useState(initialTab);
+  const { period, dateRange, onPeriodChange, onShift, onRangeChange } = usePeriod('month');
   const [supView, setSupView] = useState(pathTab === 'productos' ? 'products' : 'suppliers'); // inside the Proveedores tab
   const [suppliers, setSuppliers] = useState([]);
   const [products, setProducts] = useState([]);
@@ -537,7 +522,7 @@ export default function Compras() {
 
   return (
     <div className="w-full space-y-6">
-      <PageHeader title="Compras" subtitle="Facturas, pedidos y proveedores en un solo sitio."
+      <PageHeader title="Compras" subtitle=""
         actions={(
           <>
             {tab === 'suppliers' && supView === 'suppliers' && (
@@ -550,18 +535,21 @@ export default function Compras() {
           </>
         )} />
 
-      <Tabs full value={tab} onChange={selectTab} options={[
+      <StickyBar>
+        {tab === 'summary' && <PeriodNavigator period={period} dateRange={dateRange} onPeriodChange={onPeriodChange} onShift={onShift} onRangeChange={onRangeChange} />}
+        <Tabs full value={tab} onChange={selectTab} options={[
         ['summary', 'Resumen'],
         ['invoices', <span key="i">Facturas{dot(reviewCount > 0)}</span>],
         ['orders', <span key="o">Pedidos{dot(pendingOrders > 0)}</span>],
         ['suppliers', 'Proveedores'],
       ]} />
+      </StickyBar>
 
       {loading && <p className="text-sm text-gray-400">Cargando…</p>}
       {error && <p className="rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>}
 
       {!loading && tab === 'summary' && (
-        <ComprasResumen invoices={invoices} orders={orders} onGo={selectTab} onNewOrder={() => setOrderModal({})}
+        <ComprasResumen invoices={invoices} orders={orders} period={period} dateRange={dateRange} onGo={selectTab} onNewOrder={() => setOrderModal({})}
           onOpenInvoice={(invoice) => navigate(`/compras/facturas/${invoice._id}`)} />
       )}
 

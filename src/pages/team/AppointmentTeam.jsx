@@ -6,7 +6,7 @@ import { bookingsApi, apiError } from '../../services/bookingsApi';
 import Modal from '../../components/Modal';
 import StaffAvatar from '../agenda/StaffAvatar';
 import { DEFAULT_TZ, inputCls, labelCls, staffColors, todayIn } from '../agenda/utils';
-import Icon from '../../ui/Icon';
+import PeriodNavigator from '../../ui/PeriodNavigator';
 import { Empty, FigureLine, GhostButton, PrimaryButton, Section, SectionLink } from '../../ui/kit';
 
 const MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
@@ -237,11 +237,9 @@ export default function AppointmentTeam() {
           <h1 className="text-2xl font-semibold tracking-tight text-gray-900">Rendimiento</h1>
           <p className="text-sm text-gray-500 mt-0.5">Facturación, costes y margen de cada profesional.</p>
         </div>
-        <div className="flex items-center gap-1" aria-label="Mes del informe">
-          <button type="button" className="w-9 h-9 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-100" onClick={() => setMonth(shiftMonth(month, -1))} aria-label="Mes anterior"><Icon name="left" className="w-4 h-4" strokeWidth={2} /></button>
-          <span className="px-1 text-sm font-semibold text-gray-900 first-letter:uppercase min-w-[9.5rem] text-center">{MONTHS[m - 1]} de {y}</span>
-          <button type="button" className="w-9 h-9 rounded-full flex items-center justify-center text-gray-500 hover:bg-gray-100 disabled:opacity-30 disabled:hover:bg-transparent" onClick={() => setMonth(shiftMonth(month, 1))} disabled={month >= today.slice(0, 7)} aria-label="Mes siguiente"><Icon name="right" className="w-4 h-4" strokeWidth={2} /></button>
-        </div>
+        <PeriodNavigator period="month" dateRange={{ from, to: fullTo }} periods={['month']}
+          onShift={(direction) => setMonth(shiftMonth(month, direction))} canNext={month < today.slice(0, 7)}
+          onPeriodChange={() => {}} onRangeChange={() => {}} />
       </div>
 
       <div key={month} data-page-scroll className="flex-1 min-h-0 overflow-y-auto overscroll-contain pb-6 space-y-6 lg:space-y-8">

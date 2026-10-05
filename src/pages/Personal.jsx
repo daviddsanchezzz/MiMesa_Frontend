@@ -115,6 +115,7 @@ export default function Personal() {
   const [assignments, setAssignments] = useState([]);
   const [timeOff, setTimeOff] = useState([]);
   const [pubStatus, setPubStatus] = useState(null);
+  const [openSwapIds, setOpenSwapIds] = useState(() => new Set());
   const [costs, setCosts] = useState({ employeeCosts: [], totalsByCurrency: {}, monthlyEstimateByCurrency: {} });
   const [shifts, setShifts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -153,6 +154,13 @@ export default function Personal() {
     try { setPubStatus((await api.get(`/staff/schedule/status?weekStart=${weekStart}`)).data); } catch { setPubStatus(null); }
   }, [weekStart, allowedTabs]);
   useEffect(() => { loadPubStatus(); }, [loadPubStatus, assignments]);
+  // Assignments of this week that have a shift change in progress
+  useEffect(() => {
+    if (!hasRequests) return;
+    api.get(`/staff/swaps/by-week?weekStart=${weekStart}`)
+      .then((r) => setOpenSwapIds(new Set((r.data.items || []).flatMap((i) => i.assignmentIds))))
+      .catch(() => setOpenSwapIds(new Set()));
+  }, [weekStart, assignments, hasRequests, offQ.dataUpdatedAt, swapsQ.dataUpdatedAt]);
 
   const newEmployeeOrPosition = () => (employeeSubTab === 'employees' ? setEmployeeModal({}) : setPositionModal({}));
   useSetMobileHeader({
@@ -600,6 +608,8 @@ export default function Personal() {
   };
 
   // One shift of one day: name and hours, then who works (chips). Tap to edit.
+  const hasSwap = (day, shift) => (assignmentsByDayShift[`${day.date}__${shift._id}`] || []).some((a) => openSwapIds.has(String(a._id)));
+
   const renderShiftCell = (day, shift, cardKey) => {
     const { count, groups } = shiftGroups(day, shift);
     return (
@@ -610,7 +620,7 @@ export default function Personal() {
         className="group w-full h-full text-left rounded-lg px-2 py-2 hover:bg-gray-50 transition-colors flex flex-col gap-1.5"
       >
         <span className="flex items-baseline justify-between gap-2 min-w-0">
-          <span className="text-[13px] font-semibold text-gray-900 truncate">{shift.name}</span>
+          <span className="text-[13px] font-semibold text-gray-900 truncate">{shift.name}{hasSwap(day, shift) && <span title="Cambio de turno en curso" className="ml-1 text-violet-600">⇄</span>}</span>
           <span className="text-[11px] text-gray-400 tabular-nums whitespace-nowrap">{staffTimes(shift).start}–{staffTimes(shift).end}</span>
         </span>
         {count === 0 ? (
@@ -801,7 +811,10 @@ export default function Personal() {
                             <span className="min-w-0 flex-1 space-y-1.5">
                               <span className="flex items-center justify-between gap-2">
                                 <span className="text-[15px] font-medium text-gray-900 truncate">{shift.name}</span>
-                                <span className={`text-[13px] shrink-0 ${count === 0 ? 'font-semibold text-violet-700' : 'text-gray-500'}`}>{count === 0 ? 'Asignar' : plural(count, 'persona', 'personas')}</span>
+                                <span className={`text-[13px] shrink-0 ${count === 0 ? 'font-semibold text-violet-700' : 'text-gray-500'}`}>
+                                  {hasSwap(currentMobileDay, shift) && <span className="mr-1.5 rounded-full bg-violet-50 px-1.5 py-px text-[10px] font-semibold text-violet-700">⇄ Cambio</span>}
+                                  {count === 0 ? 'Asignar' : plural(count, 'persona', 'personas')}
+                                </span>
                               </span>
                               {count > 0 && <span className="block"><ShiftStaffChips personColorByName={staffColorByName} groups={groups} /></span>}
                             </span>
@@ -1072,7 +1085,7 @@ export default function Personal() {
 
       {/* -- SOLICITUDES -- */}
       {!loading && tab === 'requests' && allowedTabs.includes('requests') && (
-        <RequestsTab employees={employees} onChanged={loadWeekData} />
+        <RequestsTab employees={employees} shifts={shifts} positions={positions} onChanged={loadWeekData} />
       )}
 
       {/* -- COSTES -- */}
@@ -1263,6 +1276,7 @@ export default function Personal() {
           shift={slotEditor.shift}
           assignments={assignmentsByDayShift[`${slotEditor.day.date}__${slotEditor.shift._id}`]}
           timeOff={timeOff}
+          openSwapIds={openSwapIds}
           activeEmployees={activeEmployees}
           positions={positions}
           onClose={() => setSlotEditor(null)}

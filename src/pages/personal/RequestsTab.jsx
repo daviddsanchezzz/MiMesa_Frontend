@@ -4,6 +4,7 @@ import { useData } from '../../lib/query';
 import { Empty, MenuButton, RowAction, Section } from '../../ui/kit';
 import { MoreIcon } from './MobileEmployeeRow';
 import { Notice, initialsOf } from './shared';
+import OpenShiftModal from './OpenShiftModal';
 import TimeOffModal from './TimeOffModal';
 import { plural, timeOffLabel, timeOffWhen } from './timeOff';
 
@@ -15,14 +16,17 @@ const Avatar = ({ name }) => (
 );
 
 /** Manager's inbox: days off to answer, shift swaps to approve, and what is coming up. */
-export default function RequestsTab({ employees, onChanged }) {
+export default function RequestsTab({ employees, shifts = [], positions = [], onChanged }) {
   const off = useData(['staff', 'time-off', 'manager'], () => api.get('/staff/time-off?status=all').then((r) => r.data.items));
   const swaps = useData(['staff', 'swaps', 'manager'], () => api.get('/staff/swaps').then((r) => r.data.items));
+  const history = useData(['staff', 'swaps', 'history'], () => api.get('/staff/swaps?status=history').then((r) => r.data.items));
   const [modal, setModal] = useState(false);
+  const [openShift, setOpenShift] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
   const [busy, setBusy] = useState(null);
   const [error, setError] = useState('');
 
-  const refresh = async () => { await Promise.all([off.refetch(), swaps.refetch()]); onChanged?.(); };
+  const refresh = async () => { await Promise.all([off.refetch(), swaps.refetch(), history.refetch()]); onChanged?.(); };
   const act = async (key, fn) => {
     setBusy(key);
     setError('');
@@ -39,7 +43,11 @@ export default function RequestsTab({ employees, onChanged }) {
   return (
     <div className="space-y-6">
       <Notice>{error}</Notice>
-      <div className="flex justify-end">
+      <div className="flex flex-wrap justify-end gap-2">
+        {shifts.length > 0 && (
+          <button type="button" onClick={() => setOpenShift(true)}
+            className="h-9 px-4 rounded-full border border-gray-200 text-[13px] font-semibold text-gray-700 hover:bg-gray-50">+ Turno libre</button>
+        )}
         <button type="button" onClick={() => setModal(true)}
           className="h-9 px-4 rounded-full border border-gray-200 text-[13px] font-semibold text-gray-700 hover:bg-gray-50">+ Añadir ausencia</button>
       </div>
@@ -52,12 +60,23 @@ export default function RequestsTab({ employees, onChanged }) {
           <ul className={card}>
             {toApprove.map((s) => (
               <li key={s.id} className="px-4 py-3.5">
-                <p className="text-[15px] font-medium text-gray-900">{s.from.name} <span className="text-gray-400">→</span> {s.acceptedBy?.name}</p>
-                <p className="text-[13px] text-gray-600">{dayText(s.date)} · {s.start}–{s.end}{s.shiftName ? ` · ${s.shiftName}` : ''}</p>
+                <p className="text-[15px] font-medium text-gray-900">
+                  {s.type === 'open' ? <>{s.acceptedBy?.name} cubrirá un turno libre</> : <>{s.from?.name} <span className="text-gray-400">{s.type === 'exchange' ? '⇄' : '→'}</span> {s.acceptedBy?.name}</>}
+                </p>
+                <p className="text-[13px] text-gray-600 first-letter:uppercase">{dayText(s.date)} · {s.start}–{s.end}{s.shiftName ? ` · ${s.shiftName}` : ''}{s.roleLabel ? ` · ${s.roleLabel}` : ''}</p>
+                {s.counter && <p className="text-[13px] text-gray-600">A cambio: <span className="first-letter:uppercase">{dayText(s.counter.date)}</span> · {s.counter.start}–{s.counter.end}{s.counter.shiftName ? ` · ${s.counter.shiftName}` : ''}</p>}
                 {s.note && <p className="mt-0.5 text-[13px] text-gray-500">“{s.note}”</p>}
+                {s.review?.warnings?.length > 0 && (
+                  <ul className="mt-2 rounded-xl bg-amber-50 px-3 py-2 text-[13px] text-amber-900 space-y-0.5">
+                    {s.review.warnings.map((w) => <li key={w}>⚠ {w}</li>)}
+                  </ul>
+                )}
+                {s.review && s.review.cost.delta !== 0 && (
+                  <p className="mt-1.5 text-[13px] text-gray-600">Coste: {s.review.cost.before.toLocaleString('es-ES')} € → {s.review.cost.after.toLocaleString('es-ES')} € <span className={s.review.cost.delta > 0 ? 'text-rose-700' : 'text-emerald-700'}>({s.review.cost.delta > 0 ? '+' : ''}{s.review.cost.delta.toLocaleString('es-ES')} €)</span></p>
+                )}
                 <div className="mt-3 flex gap-2">
                   <RowAction tone="primary" disabled={busy === s.id} onClick={() => act(s.id, () => api.patch(`/staff/swaps/${s.id}/decision`, { status: 'approved' }))}>Aprobar</RowAction>
-                  <RowAction disabled={busy === s.id} onClick={() => act(s.id, () => api.patch(`/staff/swaps/${s.id}/decision`, { status: 'rejected' }))}>Rechazar</RowAction>
+                  <RowAction disabled={busy === s.id} onClick={() => act(s.id, () => api.patch(`/staff/swaps/${s.id}/decision`, { status: 'rejected' }))}>{s.type === 'open' ? 'Elegir a otra persona' : 'Rechazar'}</RowAction>
                 </div>
               </li>
             ))}
@@ -94,12 +113,18 @@ export default function RequestsTab({ employees, onChanged }) {
       )}
 
       {waiting.length > 0 && (
-        <Section title="Esperando a un compañero">
+        <Section title="Esperando respuesta">
           <ul className={card}>
             {waiting.map((s) => (
-              <li key={s.id} className="px-4 py-3">
-                <p className="text-[15px] text-gray-900">{s.from.name} busca quien cubra su turno</p>
-                <p className="text-[13px] text-gray-500">{dayText(s.date)} · {s.start}–{s.end} · {s.to ? `se lo ha pedido a ${s.to.name}` : 'abierto a todos'}</p>
+              <li key={s.id} className="flex items-center gap-3 px-4 py-3">
+                <div className="min-w-0 flex-1">
+                  <p className="text-[15px] text-gray-900">
+                    {s.type === 'open' ? `Turno libre${s.roleLabel ? ` · ${s.roleLabel}` : ''}` : s.type === 'exchange' ? `${s.from?.name} propone cambiar a ${s.to?.name}` : `${s.from?.name} busca quien cubra su turno`}
+                  </p>
+                  <p className="text-[13px] text-gray-500 first-letter:uppercase">{dayText(s.date)} · {s.start}–{s.end}{s.type === 'give' ? ` · ${s.to ? `se lo ha pedido a ${s.to.name}` : 'abierto a todos'}` : ''}</p>
+                </div>
+                <button type="button" disabled={busy === s.id} onClick={() => window.confirm('¿Cerrar esta solicitud?') && act(s.id, () => api.delete(`/staff/swaps/${s.id}`))}
+                  className="text-[13px] font-semibold text-gray-500 hover:text-gray-800">Cerrar</button>
               </li>
             ))}
           </ul>
@@ -127,6 +152,29 @@ export default function RequestsTab({ employees, onChanged }) {
         </Section>
       )}
 
+      {(history.data || []).length > 0 && (
+        <div>
+          <button type="button" onClick={() => setShowHistory((v) => !v)} className="text-[13px] font-semibold text-gray-500 hover:text-gray-800">
+            {showHistory ? 'Ocultar historial' : 'Ver historial de cambios'}
+          </button>
+          {showHistory && (
+            <ul className={`${card} mt-2`}>
+              {history.data.map((s) => (
+                <li key={s.id} className="px-4 py-3">
+                  <p className="text-[14px] text-gray-900">
+                    {s.type === 'open' ? `Turno libre → ${s.acceptedBy?.name || '—'}` : `${s.from?.name} ${s.type === 'exchange' ? '⇄' : '→'} ${s.acceptedBy?.name || s.to?.name || 'nadie'}`}
+                  </p>
+                  <p className="text-[12px] text-gray-500 first-letter:uppercase">
+                    {dayText(s.date)} · {s.start}–{s.end} · <span className={s.status === 'approved' ? 'text-emerald-700' : 'text-gray-500'}>{{ approved: 'Aprobado', rejected: 'Rechazado', declined: 'Lo rechazó el compañero', cancelled: 'Cancelado' }[s.status]}</span>
+                  </p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      )}
+
+      {openShift && <OpenShiftModal shifts={shifts} positions={positions} onClose={() => setOpenShift(false)} onSaved={refresh} />}
       {modal && <TimeOffModal employees={employees} onClose={() => setModal(false)} onSaved={refresh} />}
     </div>
   );

@@ -32,12 +32,24 @@ export default function MyRequests({ part = 'top', incoming = [], mine = [], tim
           <ul className="rounded-2xl border border-violet-200 bg-violet-50/50 overflow-hidden divide-y divide-violet-100">
             {incoming.map((s) => (
               <li key={s.id} className="px-4 py-3.5">
-                <p className="text-[15px] font-semibold text-gray-900">{s.from.name} no puede venir</p>
-                <p className="text-[13px] text-gray-700 first-letter:uppercase">{dayText(s.date)} · {s.start}–{s.end}{s.shiftName ? ` · ${s.shiftName}` : ''}</p>
+                <p className="text-[15px] font-semibold text-gray-900">
+                  {s.type === 'open' ? `Hace falta alguien${s.roleLabel ? ` en ${s.roleLabel}` : ''}` : s.type === 'exchange' ? `${s.from.name} te propone cambiar` : `${s.from.name} no puede venir`}
+                </p>
+                {s.type === 'exchange' ? (
+                  <>
+                    <p className="text-[13px] text-gray-700">Tú harías: <span className="first-letter:uppercase">{dayText(s.date)}</span> · {s.start}–{s.end}</p>
+                    <p className="text-[13px] text-gray-700">Él haría: <span className="first-letter:uppercase">{dayText(s.counter.date)}</span> · {s.counter.start}–{s.counter.end}</p>
+                  </>
+                ) : (
+                  <p className="text-[13px] text-gray-700 first-letter:uppercase">{dayText(s.date)} · {s.start}–{s.end}{s.shiftName ? ` · ${s.shiftName}` : ''}</p>
+                )}
                 {s.note && <p className="text-[13px] text-gray-500">“{s.note}”</p>}
                 {s.blockedReason && <p className="mt-1 text-[13px] text-amber-800">{s.blockedReason}</p>}
+                {!s.blockedReason && s.warnings?.length > 0 && <p className="mt-1 text-[13px] text-amber-800">{s.warnings.join(' · ')}</p>}
                 <div className="mt-3 flex gap-2">
-                  <RowAction tone="primary" disabled={busy === s.id || Boolean(s.blockedReason)} onClick={() => act(s.id, () => api.post(`/staff/me/swaps/${s.id}/accept`))}>Cubrirlo yo</RowAction>
+                  <RowAction tone="primary" disabled={busy === s.id || Boolean(s.blockedReason)} onClick={() => act(s.id, () => api.post(`/staff/me/swaps/${s.id}/accept`))}>
+                    {s.type === 'exchange' ? 'Aceptar cambio' : 'Cubrirlo yo'}
+                  </RowAction>
                   {s.to && <RowAction disabled={busy === s.id} onClick={() => act(s.id, () => api.post(`/staff/me/swaps/${s.id}/decline`))}>No puedo</RowAction>}
                 </div>
               </li>
@@ -52,7 +64,7 @@ export default function MyRequests({ part = 'top', incoming = [], mine = [], tim
             {[...openMine, ...decided].map((s) => (
               <li key={s.id} className="flex items-center gap-3 px-4 py-3">
                 <div className="min-w-0 flex-1">
-                  <p className="text-[15px] text-gray-900 first-letter:uppercase">{dayText(s.date)} · {s.start}–{s.end}</p>
+                  <p className="text-[15px] text-gray-900 first-letter:uppercase">{dayText(s.date)} · {s.start}–{s.end}{s.counter ? ` ⇄ ${dayText(s.counter.date).split(',')[0]} ${s.counter.start}` : ''}</p>
                   <p className="text-[13px] text-gray-500">
                     {s.to ? `Para ${s.to.name}` : 'Para cualquiera'}{s.acceptedBy && !s.to ? ` · acepta ${s.acceptedBy.name}` : ''} · {SWAP_STATUS[s.status]}
                   </p>

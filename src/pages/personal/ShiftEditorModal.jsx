@@ -7,7 +7,7 @@ import { assignPersonColors } from './ShiftStaffChips';
 import { Notice, SheetFooter, initialsOf, staffTimes } from './shared';
 import { timeOffLabel } from './timeOff';
 
-export function ShiftEditorModal({ day, shift, assignments, timeOff = [], activeEmployees, positions, onClose, onRefresh }) {
+export function ShiftEditorModal({ day, shift, assignments, timeOff = [], openSwapIds = new Set(), activeEmployees, positions, onClose, onRefresh }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [reservationStats, setReservationStats] = useState(null); // { count, covers }
@@ -303,6 +303,18 @@ export function ShiftEditorModal({ day, shift, assignments, timeOff = [], active
     );
   };
 
+  const findReplacement = async (assignment) => {
+    const name = assignment.employeeId?.firstName || 'esa persona';
+    if (!window.confirm(`Se avisará a quien pueda cubrir el turno de ${name}. Seguirá siendo suyo hasta que apruebes el cambio. ¿Buscar sustituto?`)) return;
+    try {
+      await api.post('/staff/swaps', { assignmentId: assignment._id });
+      await onRefresh();
+      onClose();
+    } catch (err) {
+      setError(err?.response?.data?.message || 'No se pudo buscar sustituto');
+    }
+  };
+
   const assignedRow = (assignment, color) => {
     const emp = assignment.employeeId || {};
     const name = emp?.firstName ? `${emp.firstName} ${emp.lastName || ''}`.trim() : 'Empleado';
@@ -313,6 +325,10 @@ export function ShiftEditorModal({ day, shift, assignments, timeOff = [], active
         </span>
         <span className="text-[15px] text-gray-900 flex-1 min-w-0 truncate">{name}</span>
         {assignment.__temp && <span className="text-[11px] font-semibold px-1.5 py-px rounded bg-violet-50 text-violet-800">Nuevo</span>}
+        {!assignment.__temp && openSwapIds.has(String(assignment._id)) && <span className="text-[11px] font-semibold px-1.5 py-px rounded bg-violet-50 text-violet-800">Cambio en curso</span>}
+        {!assignment.__temp && !openSwapIds.has(String(assignment._id)) && day.date >= new Date().toISOString().slice(0, 10) && (
+          <button type="button" onClick={() => findReplacement(assignment)} disabled={saving} className="text-[12px] font-semibold text-violet-700 hover:text-violet-900 shrink-0">Buscar sustituto</button>
+        )}
         <button type="button" onClick={() => removeFromDraft(assignment._id)} disabled={saving} aria-label={`Quitar a ${name}`}
           className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:text-rose-600 hover:bg-rose-50 shrink-0 disabled:cursor-not-allowed">
           <Icon name="x" className="w-4 h-4" strokeWidth={2} />

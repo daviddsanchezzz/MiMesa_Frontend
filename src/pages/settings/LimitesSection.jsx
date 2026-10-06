@@ -39,114 +39,57 @@ export function LimitesSection() {
     }
   };
 
+  const field = 'h-11 rounded-xl border border-gray-200 bg-white px-3 text-base text-gray-900 tabular-nums outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100 disabled:opacity-60';
   return (
     <div className="space-y-6">
-      <div className="bg-white rounded-2xl p-6 border border-gray-200">
-        <h3 className="text-sm font-semibold text-gray-900 mb-2">Antelación Mínima de Reserva</h3>
-        <p className="text-sm text-gray-600 mb-4">
-          Los clientes no podran reservar online con menos de esta antelación respecto a la hora del turno. Deja en 0 para no aplicar limite. El personal siempre puede crear reservas manuales desde el panel sin esta restricción.
-        </p>
-        <div className="flex items-center gap-3">
-          <input
-            type="number"
-            min="0"
-            placeholder="0"
-            value={minBookingNoticeHours}
-            onChange={(e) => setMinBookingNoticeHours(e.target.value)}
-            className="w-20 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
-            disabled={saving}
-          />
-          <div>
-            <p className="text-sm font-medium text-gray-900">horas mínimo</p>
-            <p className="text-xs text-gray-500">Antes de la hora de la reserva</p>
-          </div>
-        </div>
+      <div className="divide-y divide-gray-100 border-y border-gray-100">
+        <Setting title="Antelación mínima" hint="Los clientes no podrán reservar online con menos antelación que esta respecto a la hora del turno. Con 0 no hay límite; el personal siempre puede crear reservas a mano.">
+          <input type="number" min="0" placeholder="0" value={minBookingNoticeHours} onChange={(e) => setMinBookingNoticeHours(e.target.value)} className={`${field} w-24`} disabled={saving} />
+          <Unit main="horas" sub="antes de la hora de la reserva" />
+        </Setting>
+
+        <Setting title="Personas por reserva" hint="El máximo de personas que pueden reservar juntas en una sola solicitud.">
+          <input type="number" min="1" value={maxReservationPeople} onChange={(e) => setMaxReservationPeople(e.target.value)} className={`${field} w-24`} disabled={saving} />
+          <Unit main="personas como máximo" sub="por reserva" />
+        </Setting>
+
+        <PlanGate paid>
+          <Setting title="Personas por turno" hint="Déjalo vacío para no poner límite por turno.">
+            <input type="number" min="1" placeholder="Sin límite" value={maxPeoplePerSlot} onChange={(e) => setMaxPeoplePerSlot(e.target.value)} className={`${field} w-28`} disabled={saving} />
+            <Unit main="personas como máximo" sub="a la vez en cada franja" />
+          </Setting>
+
+          <Setting title="Duración por mesa" hint="Déjalo vacío para no bloquear las franjas siguientes.">
+            <input type="number" min="1" placeholder="Sin bloqueo" value={reservationDuration} onChange={(e) => setReservationDuration(e.target.value)} className={`${field} w-28`} disabled={saving} />
+            <Unit main="minutos" sub="que se bloquea la mesa por reserva" />
+          </Setting>
+        </PlanGate>
       </div>
 
-      <div className="bg-white rounded-2xl p-6 border border-gray-200">
-        <h3 className="text-sm font-semibold text-gray-900 mb-2">Máximo de Personas por Reserva</h3>
-        <p className="text-sm text-gray-600 mb-4">
-          Establece el número máximo de personas que pueden hacer una reserva en una sola solicitud.
-        </p>
-        <div className="flex items-center gap-3">
-          <input
-            type="number"
-            min="1"
-            value={maxReservationPeople}
-            onChange={(e) => setMaxReservationPeople(e.target.value)}
-            className="w-20 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
-            disabled={saving}
-          />
-          <div>
-            <p className="text-sm font-medium text-gray-900">personas máximo</p>
-            <p className="text-xs text-gray-500">Por reserva individual</p>
-          </div>
-        </div>
-      </div>
-
-      <PlanGate paid>
-        <div className="bg-white rounded-2xl p-6 border border-gray-200">
-          <div className="flex items-center gap-2 mb-2">
-            <h3 className="text-sm font-semibold text-gray-900">Máximo de Personas por Turno</h3>
-          </div>
-          <p className="text-sm text-gray-600 mb-4">
-            Deja vacio para no establecer limite por turno.
-          </p>
-          <div className="flex items-center gap-3">
-            <input
-              type="number"
-              min="1"
-              placeholder="Sin limite"
-              value={maxPeoplePerSlot}
-              onChange={(e) => setMaxPeoplePerSlot(e.target.value)}
-              className="w-24 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
-              disabled={saving}
-            />
-            <div>
-              <p className="text-sm font-medium text-gray-900">personas máximo</p>
-              <p className="text-xs text-gray-500">Por franja horaria simultanea</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-2xl p-6 border border-gray-200">
-          <div className="flex items-center gap-2 mb-2">
-            <h3 className="text-sm font-semibold text-gray-900">Duración por Mesa</h3>
-          </div>
-          <p className="text-sm text-gray-600 mb-4">
-            Deja vacio para no bloquear franjas posteriores.
-          </p>
-          <div className="flex items-center gap-3">
-            <input
-              type="number"
-              min="1"
-              placeholder="Sin bloqueo"
-              value={reservationDuration}
-              onChange={(e) => setReservationDuration(e.target.value)}
-              className="w-24 border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent"
-              disabled={saving}
-            />
-            <div>
-              <p className="text-sm font-medium text-gray-900">minutos</p>
-              <p className="text-xs text-gray-500">Tiempo bloqueado por reserva</p>
-            </div>
-          </div>
-        </div>
-      </PlanGate>
-
-      <div className="flex items-center gap-3">
-        <button
-          type="button"
-          onClick={handleSaveLimits}
-          disabled={saving}
-          className="px-5 py-2.5 bg-violet-600 text-white text-sm font-medium rounded-xl hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-        >
-          {saving ? 'Guardando...' : 'Guardar cambios'}
-        </button>
-        {saving && (
-          <div className="w-4 h-4 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin" />
-        )}
-      </div>
+      <button type="button" onClick={handleSaveLimits} disabled={saving}
+        className="w-full sm:w-auto h-11 px-6 bg-violet-600 text-white text-sm font-semibold rounded-xl hover:bg-violet-700 disabled:opacity-50 transition-colors">
+        {saving ? 'Guardando…' : 'Guardar cambios'}
+      </button>
     </div>
+  );
+}
+
+/** One rule: its name and what it does, then the field. No box: the lines between rules are enough. */
+function Setting({ title, hint, children }) {
+  return (
+    <div className="py-5">
+      <h3 className="text-[15px] font-semibold text-gray-900">{title}</h3>
+      <p className="text-[13px] leading-5 text-gray-500 mt-0.5 mb-3">{hint}</p>
+      <div className="flex items-center gap-3">{children}</div>
+    </div>
+  );
+}
+
+function Unit({ main, sub }) {
+  return (
+    <span className="min-w-0">
+      <span className="block text-sm font-medium text-gray-900">{main}</span>
+      <span className="block text-xs text-gray-500">{sub}</span>
+    </span>
   );
 }

@@ -129,7 +129,7 @@ export default function PacksSettings() {
       </div>
 
       {active.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-gray-200 px-5 py-10 text-center">
+        <div className="px-5 py-10 text-center">
           <p className="text-[15px] font-medium text-gray-900">Todavía no tienes bonos</p>
           <p className="mt-1 text-sm text-gray-500">Por ejemplo «5 sesiones de láser» a un precio cerrado. Lo vendes desde la ficha del cliente.</p>
         </div>

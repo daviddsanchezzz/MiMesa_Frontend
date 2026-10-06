@@ -47,7 +47,7 @@ export default function LoyaltySettings() {
     <section className="space-y-5">
       <p className="text-sm text-gray-500">Premia a quien vuelve: cada cierto número de visitas pagadas, la siguiente tiene descuento. Al cobrar, la caja te avisa y lo aplica con un toque.</p>
 
-      <div className="flex items-center justify-between gap-3 rounded-2xl border border-gray-200 px-4 py-3">
+      <div className="flex items-center justify-between gap-3 py-3 border-y border-gray-100">
         <div>
           <p className="text-[15px] font-medium text-gray-900">Premio por visitas</p>
           <p className="text-xs text-gray-500">Cuenta las citas cobradas de cada cliente (también las pagadas con bono).</p>

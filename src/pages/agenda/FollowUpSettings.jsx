@@ -15,7 +15,7 @@ function Toggle({ checked, onChange, label }) {
 
 function Card({ title, desc, checked, onToggle, children, sent, paused = false }) {
   return (
-    <section className="bg-white rounded-2xl border border-gray-200 p-5 space-y-3">
+    <section className="py-5 space-y-3 border-b border-gray-100 first:border-t">
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0">
           <h3 className="text-sm font-semibold text-gray-900">{title}</h3>

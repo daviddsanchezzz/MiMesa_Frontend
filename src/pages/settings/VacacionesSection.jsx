@@ -49,7 +49,7 @@ export function VacacionesSection() {
           Has alcanzado el límite de {planLimit('maxVacations')} período{planLimit('maxVacations') !== 1 ? 's' : ''} de cierre de tu plan actual. Elimina uno existente para añadir otro.
         </div>
       ) : (
-        <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5">
+        <div className="pb-5 border-b border-gray-100">
           <h3 className="text-sm font-semibold text-gray-900 mb-4">Añadir período de cierre</h3>
           <ErrorBanner msg={error} />
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -86,7 +86,7 @@ export function VacacionesSection() {
       {upcoming.length > 0 && (
         <div>
           <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2">Próximos cierres</h3>
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm divide-y divide-gray-100 overflow-hidden">
+          <div className="divide-y divide-gray-100 border-t border-gray-100">
             {upcoming.map(v => (
               <div key={v._id} className="flex items-center justify-between px-4 py-3.5 hover:bg-gray-50 transition-colors">
                 <div className="flex items-center gap-3">
@@ -116,7 +116,7 @@ export function VacacionesSection() {
       {past.length > 0 && (
         <div>
           <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-widest mb-2">Cierres pasados</h3>
-          <div className="bg-white rounded-2xl border border-gray-200 shadow-sm divide-y divide-gray-100 overflow-hidden opacity-60">
+          <div className="divide-y divide-gray-100 border-t border-gray-100 opacity-60">
             {past.map(v => (
               <div key={v._id} className="flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors">
                 <div>
@@ -136,7 +136,7 @@ export function VacacionesSection() {
       )}
 
       {vacations.length === 0 && (
-        <div className="text-center py-12 bg-white rounded-2xl border border-dashed border-gray-200">
+        <div className="text-center py-12">
           <p className="text-gray-400 text-sm">Sin períodos de cierre configurados</p>
         </div>
       )}

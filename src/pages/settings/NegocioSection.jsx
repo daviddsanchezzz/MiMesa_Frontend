@@ -51,7 +51,7 @@ function BookingPreview({ form, logoUrl, color, services, restaurant }) {
           </>
         ) : <p className="text-xs font-semibold text-gray-900">Elige un servicio</p>}
         {!restaurant && sample.map((s) => (
-          <div key={s._id} className="bg-white border border-gray-200 rounded-xl px-3 py-2 flex justify-between gap-2">
+          <div key={s._id} className="py-2.5 flex justify-between gap-2 border-b border-gray-100">
             <div className="min-w-0"><p className="text-xs font-semibold text-gray-900 truncate">{s.name}</p><p className="text-[10px] text-gray-500">{s.durationMin} min</p></div>
             <span className="text-xs font-semibold text-gray-900">{euros(s.price?.amount)}</span>
           </div>

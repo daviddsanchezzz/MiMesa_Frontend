@@ -150,7 +150,7 @@ export function BillingSection() {
       {isFree && (
         <>
           {/* Current state */}
-          <div className={`bg-white rounded-2xl p-6 border ${expired ? 'border-rose-200' : 'border-gray-200'}`}>
+          <div className={`pb-6 border-b ${expired ? 'border-rose-200' : 'border-gray-100'}`}>
             <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Tu plan</p>
             <div className="flex items-center justify-between gap-4 flex-wrap">
               <div>
@@ -327,7 +327,7 @@ export function BillingSection() {
           )}
 
           {/* Plan card */}
-          <div className="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+          <div className="border-t border-gray-100 overflow-hidden">
             <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between gap-4 flex-wrap">
               <div>
                 <div className="flex items-center gap-2.5 mb-1">

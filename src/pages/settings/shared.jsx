@@ -78,7 +78,7 @@ export function ErrorBanner({ msg }) {
 
 export function EmptyState({ onAction, actionLabel, text }) {
   return (
-    <div className="text-center py-16 bg-white rounded-2xl border border-dashed border-gray-200">
+    <div className="text-center py-16">
       <div className="w-10 h-10 rounded-xl bg-gray-100 flex items-center justify-center mx-auto mb-3">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" className="w-5 h-5 text-gray-300">
           <path d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z" />

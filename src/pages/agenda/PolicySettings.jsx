@@ -28,7 +28,7 @@ export default function PolicySettings() {
   }, []);
 
   if (!form) {
-    return <section className="bg-white rounded-2xl border border-gray-200 p-5">{error ? <p className="text-sm text-rose-600">{error}</p> : <div className="h-24 animate-pulse bg-gray-100 rounded-xl" />}</section>;
+    return <section>{error ? <p className="text-sm text-rose-600">{error}</p> : <div className="h-24 animate-pulse bg-gray-100 rounded-xl" />}</section>;
   }
   const changed = JSON.stringify(form) !== JSON.stringify(saved);
 
@@ -46,7 +46,7 @@ export default function PolicySettings() {
   }
 
   return (
-    <section className="bg-white rounded-2xl border border-gray-200 p-5 space-y-4">
+    <section className="space-y-5">
       <div>
         <h3 className="text-base font-semibold text-gray-900">Cambios y cancelaciones</h3>
         <p className="text-xs text-gray-500 mt-0.5">

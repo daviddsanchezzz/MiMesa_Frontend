@@ -119,14 +119,14 @@ export function TurnosSection() {
           actionLabel="Crear el primer turno"
         />
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="divide-y divide-gray-100 border-t border-gray-100">
           {shifts.map((shift, idx) => {
             const clr        = colorOf(idx);
             const isSpecific = !!(shift.startDate && shift.endDate);
             const locked     = !!shift.isLocked;
             return (
               <div key={shift._id}
-                className={`rounded-2xl border shadow-sm p-5 flex flex-col gap-3 ${locked ? 'bg-gray-50 border-gray-200 opacity-60' : 'bg-white border-gray-200'}`}>
+                className={`py-5 flex flex-col gap-3 ${locked ? 'opacity-60' : ''}`}>
                 {/* Name + time range */}
                 <div className="flex items-center justify-between gap-2">
                   <div className="flex items-center gap-2 min-w-0">

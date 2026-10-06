@@ -71,7 +71,7 @@ export function PagosSection() {
   };
 
   if (!hasPayments) return (
-    <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-8 text-center space-y-3">
+    <div className="py-10 text-center space-y-3">
       <div className="w-12 h-12 rounded-2xl bg-violet-50 flex items-center justify-center mx-auto">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-6 h-6 text-violet-500">
           <path fillRule="evenodd" d="M2.5 4A1.5 1.5 0 0 0 1 5.5V6h18v-.5A1.5 1.5 0 0 0 17.5 4h-15ZM19 8.5H1v6A1.5 1.5 0 0 0 2.5 16h15a1.5 1.5 0 0 0 1.5-1.5v-6ZM6 13.25a.75.75 0 0 1 .75-.75h.5a.75.75 0 0 1 0 1.5h-.5a.75.75 0 0 1-.75-.75Zm4-.75a.75.75 0 0 0 0 1.5h.5a.75.75 0 0 0 0-1.5h-.5Z" clipRule="evenodd" />
@@ -109,8 +109,8 @@ export function PagosSection() {
   ].filter(Boolean);
 
   return (
-    <div className="space-y-5">
-      <div className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 space-y-3">
+    <div className="divide-y divide-gray-100 border-t border-gray-100">
+      <div className="py-5 space-y-3">
         <div>
           <h3 className="text-sm font-semibold text-gray-900">Cuenta Stripe</h3>
           <p className="text-xs text-gray-500 mt-0.5">
@@ -145,7 +145,7 @@ export function PagosSection() {
         </div>
       </div>
 
-      <form onSubmit={handleSave} className="bg-white rounded-2xl border border-gray-200 shadow-sm p-5 space-y-5">
+      <form onSubmit={handleSave} className="py-5 space-y-5">
         <div>
           <h3 className="text-sm font-semibold text-gray-900">Pagos en reservas</h3>
           <p className="text-xs text-gray-500 mt-0.5">Elige si tus clientes deben pagar un depósito antes de confirmar la reserva.</p>
@@ -175,7 +175,7 @@ export function PagosSection() {
         </div>
 
         {mode === 'deposit' && (
-          <div className="space-y-3 p-4 bg-gray-50 rounded-xl border border-gray-200">
+          <div className="space-y-3 pl-4 border-l-2 border-gray-100">
             <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wide">Configuración del depósito</h4>
             <div>
               <label className={labelCls}>Importe del depósito (EUR)</label>
@@ -194,7 +194,7 @@ export function PagosSection() {
         )}
 
         {mode !== 'none' && (
-          <div className="p-4 bg-gray-50 rounded-xl border border-gray-200">
+          <div className="pl-4 border-l-2 border-gray-100">
             <h4 className="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-3">Política de cancelación</h4>
             <label className={labelCls}>Cancelación gratuita hasta (horas antes)</label>
             <div className="flex items-center gap-3">
@@ -204,8 +204,8 @@ export function PagosSection() {
           </div>
         )}
 
-        <div className="flex justify-end">
-          <button type="submit" disabled={saving} className="px-5 py-2.5 bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold rounded-xl transition-colors disabled:opacity-60">
+        <div className="flex sm:justify-end">
+          <button type="submit" disabled={saving} className="w-full sm:w-auto h-11 px-6 bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold rounded-xl transition-colors disabled:opacity-60">
             {saving ? 'Guardando...' : 'Guardar configuración'}
           </button>
         </div>

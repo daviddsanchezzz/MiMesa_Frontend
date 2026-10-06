@@ -123,10 +123,14 @@ export default function ImportMenuModal({ onClose, onDone }) {
       {table && !plan && (
         <div className="space-y-4">
           <p className="text-sm text-gray-600"><b className="text-gray-900">{fileName}</b> · {built.rows.length} platos encontrados</p>
+          <div>
+            <p className="text-xs font-semibold text-gray-500">¿Qué columna de tu archivo es cada cosa?</p>
+            <p className="text-xs text-gray-400 mt-0.5">Ya está adivinado por los títulos de tu archivo; cambia lo que no sea correcto. Cada desplegable lista las columnas de tu archivo.</p>
+          </div>
           <div className="grid grid-cols-2 gap-x-3 gap-y-2.5">
             {MENU_FIELDS.map((f) => (
               <label key={f.key} className="block">
-                <span className="block text-[11px] font-medium text-gray-500 mb-1">{f.label}{f.required && ' *'}</span>
+                <span className="block text-[11px] font-medium text-gray-500 mb-1">{f.label}{f.required && ' *'}{f.key === 'externalId' && ' (opcional)'}</span>
                 <select className={selectCls} value={mapping[f.key] ?? ''} onChange={(e) => setField(f.key, e.target.value)}>
                   <option value="">— no está —</option>
                   {headers.map((h, i) => <option key={i} value={i}>{h || `Columna ${i + 1}`}</option>)}
@@ -146,7 +150,7 @@ export default function ImportMenuModal({ onClose, onDone }) {
               ))}
             </div>
           </fieldset>
-          {mapping.externalId === undefined && <p className="text-xs text-gray-500">Sin columna de código, los platos se reconocen por su nombre. Con código, un cambio de nombre en el TPV no duplica el plato.</p>}
+          {fromTill === true && mapping.externalId === undefined && <p className="text-xs text-gray-500">Sin columna de código, los platos se reconocen por su nombre. Con código, un cambio de nombre en el TPV no duplica el plato.</p>}
           {built.rows.length > 0 && (
             <ul className="divide-y divide-gray-100 rounded-xl border border-gray-200 text-sm">
               {built.rows.slice(0, 3).map((r, i) => (

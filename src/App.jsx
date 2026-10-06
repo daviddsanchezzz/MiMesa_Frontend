@@ -34,6 +34,11 @@ const Finanzas = lazy(() => import('./pages/Finanzas'));
 const Compras = lazy(() => import('./pages/Compras'));
 const Carta = lazy(() => import('./pages/Carta'));
 const Horarios = lazy(() => import('./pages/Horarios'));
+const SettingPage = lazy(() => import('./pages/SettingPage'));
+const ServicesSettings = lazy(() => import('./pages/agenda/AgendaSettings').then((m) => ({ default: m.ServicesSettings })));
+const HoursSettings = lazy(() => import('./pages/agenda/AgendaSettings').then((m) => ({ default: m.HoursSettings })));
+const PacksSettings = lazy(() => import('./pages/agenda/PacksSettings'));
+const LoyaltySettings = lazy(() => import('./pages/agenda/LoyaltySettings'));
 const PaginaReservas = lazy(() => import('./pages/PaginaReservas'));
 const InvoiceUpload = lazy(() => import('./pages/invoices/InvoiceUpload'));
 const InvoiceDetail = lazy(() => import('./pages/invoices/InvoiceDetail'));
@@ -419,7 +424,11 @@ export default function App() {
           <Route path="/customers/:id" element={<RoleRoute minRole="manager"><PrivateLayout><CustomerFile /></PrivateLayout></RoleRoute>} />
           <Route path="/exceptions"   element={<Navigate to="/horarios?tab=cierres" replace />} />
           <Route path="/horarios"     element={<RestaurantRoute><RoleRoute minRole="manager"><PrivateLayout><Horarios /></PrivateLayout></RoleRoute></RestaurantRoute>} />
-          <Route path="/pagina-reservas" element={<RestaurantRoute><RoleRoute minRole="manager"><PrivateLayout><PaginaReservas /></PrivateLayout></RoleRoute></RestaurantRoute>} />
+          <Route path="/pagina-reservas" element={<RoleRoute minRole="manager"><PrivateLayout><PaginaReservas /></PrivateLayout></RoleRoute>} />
+          <Route path="/servicios"    element={<ModuleRoute moduleKey="bookings"><RoleRoute minRole="manager"><PrivateLayout><SettingPage title="Servicios" subtitle="Duración, precio y quién lo hace"><ServicesSettings /></SettingPage></PrivateLayout></RoleRoute></ModuleRoute>} />
+          <Route path="/horario"      element={<ModuleRoute moduleKey="bookings"><RoleRoute minRole="manager"><PrivateLayout><SettingPage title="Horario y cierres" subtitle="Cuándo abres, festivos y vacaciones"><HoursSettings /></SettingPage></PrivateLayout></RoleRoute></ModuleRoute>} />
+          <Route path="/bonos"        element={<ModuleRoute moduleKey="bookings"><RoleRoute minRole="manager"><PrivateLayout><SettingPage title="Bonos y packs" subtitle="Sesiones que vendes por adelantado"><PacksSettings /></SettingPage></PrivateLayout></RoleRoute></ModuleRoute>} />
+          <Route path="/fidelizacion" element={<ModuleRoute moduleKey="bookings"><RoleRoute minRole="manager"><PrivateLayout><SettingPage title="Fidelización" subtitle="Premio cada cierto número de visitas"><LoyaltySettings /></SettingPage></PrivateLayout></RoleRoute></ModuleRoute>} />
           <Route path="/configuracion" element={<RoleRoute minRole="manager"><PrivateLayout><Settings /></PrivateLayout></RoleRoute>} />
           <Route path="/settings"      element={<Navigate to="/configuracion" replace />} />
           <Route path="/mas"           element={<PrivateLayout><More /></PrivateLayout>} />

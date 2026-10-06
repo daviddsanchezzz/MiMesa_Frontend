@@ -26,15 +26,8 @@ const GROUPS = {
     { title: 'Negocio', items: [{ key: 'negocio', label: 'Datos del negocio', desc: 'Nombre, logo, dirección y contacto', icon: 'building' }] },
     { title: 'Qué se reserva', items: [
       { key: 'espacios', label: 'Salas y equipamiento', desc: 'Recursos adicionales para las reservas', icon: 'map' },
-      { key: 'servicios', label: 'Servicios', desc: 'Duración, precio y quién lo hace', icon: 'list' },
-    ] },
-    { title: 'Cuándo', items: [{ key: 'horario', label: 'Horario y cierres', desc: 'Cuándo abres, festivos y vacaciones', icon: 'clock' }] },
-    { title: 'Clientes', items: [
-      { key: 'bonos', label: 'Bonos y packs', desc: 'Sesiones que vendes por adelantado', icon: 'receipt' },
-      { key: 'fidelizacion', label: 'Fidelización', desc: 'Premio cada cierto número de visitas', icon: 'sparkle' },
     ] },
     { title: 'Reservas online', items: [
-      { key: 'enlace', label: 'Tu página de reservas', desc: 'El enlace que compartes con tus clientes', icon: 'link' },
       { key: 'normas', label: 'Normas de reserva', desc: 'Hasta cuándo pueden cambiar o cancelar', icon: 'alert' },
       { key: 'avisos', label: 'Avisos a clientes', desc: 'Recordatorios, te toca volver y opiniones', icon: 'chat' },
     ] },
@@ -54,6 +47,8 @@ const GROUPS = {
 const ALIASES = { salas: 'mesas', vacaciones: 'turnos' };
 // Restaurant: these are no longer settings but part of Tu local / Clientes
 const MOVED = { mesas: '/tables', salas: '/tables', turnos: '/horarios', vacaciones: '/horarios?tab=vacaciones', publico: '/pagina-reservas' };
+// Appointments: the same idea (services, hours, packs, loyalty and the booking page have their own screen)
+const MOVED_APPOINTMENTS = { servicios: '/servicios', horario: '/horario', bonos: '/bonos', fidelizacion: '/fidelizacion', enlace: '/pagina-reservas' };
 
 function TablesAndRooms() {
   return <TablesSummary />;
@@ -135,7 +130,8 @@ export default function Settings() {
 
   if (isAppointments && askedTab === 'profesionales') return <Navigate to="/equipo" replace />;
   // What moved out of Configuración into its own screen (old links keep working)
-  if (!isAppointments && MOVED[searchParams.get('tab')]) return <Navigate to={MOVED[searchParams.get('tab')]} replace />;
+  const moved = (isAppointments ? MOVED_APPOINTMENTS : MOVED)[searchParams.get('tab')];
+  if (moved) return <Navigate to={moved} replace />;
   return (
     <div className="w-full">
       <h1 className="hidden lg:block text-2xl font-semibold tracking-tight text-gray-900 mb-6">Configuración</h1>

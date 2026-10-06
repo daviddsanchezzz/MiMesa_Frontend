@@ -526,7 +526,7 @@ export default function Calendar() {
         {shifts.length === 0 && !loading && (
           <ConfigWarning icon="⏰" title="Sin turnos configurados"
             desc="Configura al menos un turno para que el calendario sepa qué rango horario mostrar."
-            linkTo="/configuracion?tab=turnos" linkLabel="Ir a Turnos" />
+            linkTo="/horarios" linkLabel="Ir a Turnos" />
         )}
         {shifts.length > 0 && !reservationDuration && !loading && (
           <ConfigWarning icon="⏱️" title="Duración por mesa no configurada"

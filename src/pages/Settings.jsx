@@ -42,12 +42,7 @@ const GROUPS = {
   ],
   restaurant: [
     { title: 'Negocio', items: [{ key: 'negocio', label: 'Datos del negocio', desc: 'Nombre, logo, dirección y contacto', icon: 'building' }] },
-    { title: 'Qué se reserva', items: [
-      { key: 'mesas', label: 'Mesas y salas', desc: 'Zonas del local y sus mesas', icon: 'map' },
-    ] },
-    { title: 'Cuándo', items: [{ key: 'turnos', label: 'Turnos y cierres', desc: 'Comida y cena, festivos y vacaciones', icon: 'clock' }] },
     { title: 'Reservas online', items: [
-      { key: 'publico', label: 'Tu página de reservas', desc: 'Lo que ven tus clientes al reservar', icon: 'link' },
       { key: 'limites', label: 'Normas de reserva', desc: 'Antelación, personas máximas y duración', icon: 'alert' },
       { key: 'pagos', label: 'Señales y garantías', desc: 'Cobrar por adelantado o con tarjeta', icon: 'euro', owner: true },
     ] },
@@ -57,6 +52,8 @@ const GROUPS = {
 
 // Old tabs that now live inside another screen (links keep working).
 const ALIASES = { salas: 'mesas', vacaciones: 'turnos' };
+// Restaurant: these are no longer settings but part of Tu local / Clientes
+const MOVED = { mesas: '/tables', salas: '/tables', turnos: '/horarios', vacaciones: '/horarios?tab=vacaciones', publico: '/pagina-reservas' };
 
 function TablesAndRooms() {
   return <TablesSummary />;
@@ -137,6 +134,8 @@ export default function Settings() {
   );
 
   if (isAppointments && askedTab === 'profesionales') return <Navigate to="/equipo" replace />;
+  // What moved out of Configuración into its own screen (old links keep working)
+  if (!isAppointments && MOVED[searchParams.get('tab')]) return <Navigate to={MOVED[searchParams.get('tab')]} replace />;
   return (
     <div className="w-full">
       <h1 className="hidden lg:block text-2xl font-semibold tracking-tight text-gray-900 mb-6">Configuración</h1>

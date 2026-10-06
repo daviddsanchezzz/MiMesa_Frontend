@@ -33,6 +33,8 @@ const Personal = lazy(() => import('./pages/Personal'));
 const Finanzas = lazy(() => import('./pages/Finanzas'));
 const Compras = lazy(() => import('./pages/Compras'));
 const Carta = lazy(() => import('./pages/Carta'));
+const Horarios = lazy(() => import('./pages/Horarios'));
+const PaginaReservas = lazy(() => import('./pages/PaginaReservas'));
 const InvoiceUpload = lazy(() => import('./pages/invoices/InvoiceUpload'));
 const InvoiceDetail = lazy(() => import('./pages/invoices/InvoiceDetail'));
 const Agenda = lazy(() => import('./pages/Agenda'));
@@ -415,7 +417,9 @@ export default function App() {
           <Route path="/reservations" element={<RestaurantRoute><PrivateLayout><Reservas /></PrivateLayout></RestaurantRoute>} />
           <Route path="/customers"    element={<RoleRoute minRole="manager"><PrivateLayout><Customers /></PrivateLayout></RoleRoute>} />
           <Route path="/customers/:id" element={<RoleRoute minRole="manager"><PrivateLayout><CustomerFile /></PrivateLayout></RoleRoute>} />
-          <Route path="/exceptions"   element={<RestaurantRoute><RoleRoute minRole="manager"><PrivateLayout><Exceptions /></PrivateLayout></RoleRoute></RestaurantRoute>} />
+          <Route path="/exceptions"   element={<Navigate to="/horarios?tab=cierres" replace />} />
+          <Route path="/horarios"     element={<RestaurantRoute><RoleRoute minRole="manager"><PrivateLayout><Horarios /></PrivateLayout></RoleRoute></RestaurantRoute>} />
+          <Route path="/pagina-reservas" element={<RestaurantRoute><RoleRoute minRole="manager"><PrivateLayout><PaginaReservas /></PrivateLayout></RoleRoute></RestaurantRoute>} />
           <Route path="/configuracion" element={<RoleRoute minRole="manager"><PrivateLayout><Settings /></PrivateLayout></RoleRoute>} />
           <Route path="/settings"      element={<Navigate to="/configuracion" replace />} />
           <Route path="/mas"           element={<PrivateLayout><More /></PrivateLayout>} />

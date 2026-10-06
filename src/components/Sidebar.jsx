@@ -25,7 +25,7 @@ function Item({ to, label, icon, end, collapsed, onClick }) {
  */
 export default function Sidebar({ collapsed = false, onDesktopToggleCollapse, devMode = false, onNew }) {
   const { business, memberships, logout, switchBusiness, session } = useAuth();
-  const { primary, manage, account, newLabel } = useNav();
+  const { primary, manage, sections, account, newLabel } = useNav();
   const navigate = useNavigate();
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -35,8 +35,8 @@ export default function Sidebar({ collapsed = false, onDesktopToggleCollapse, de
   const userName = session?.user?.name || business?.userName || business?.name || 'Usuario';
   const userEmail = session?.user?.email || business?.userEmail || business?.email || '';
   const initial = userName?.[0]?.toUpperCase() || 'U';
-  const manageSections = ['Negocio', 'Equipo', 'Crecimiento']
-    .map((title) => ({ title, links: manage.filter((link) => (link.section || 'Negocio') === title) }))
+  const manageSections = sections
+    .map((title) => ({ title, links: manage.filter((link) => link.section === title) }))
     .filter((section) => section.links.length > 0);
 
   useEffect(() => {

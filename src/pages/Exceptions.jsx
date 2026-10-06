@@ -67,8 +67,8 @@ function Chip({ active, children, onClick }) {
   );
 }
 
-export default function Exceptions() {
-  useSetMobileHeader({ title: 'Cierres', action: { label: 'Nueva', onClick: () => openCreate() } });
+export default function Exceptions({ embedded = false }) {
+  useSetMobileHeader({ title: embedded ? undefined : 'Cierres', action: { label: 'Nueva', onClick: () => openCreate() } });
   const today = new Date().toISOString().slice(0, 10);
   const [rows, setRows] = useState([]);
   const [formSlots, setFormSlots] = useState([]);
@@ -206,11 +206,16 @@ export default function Exceptions() {
 
   return (
     <div className="w-full space-y-8">
-      <PageHeader
-        title="Cierres y excepciones"
-        subtitle="Días y turnos con cierre, aforo completo o reserva solo por teléfono. Solo se muestran los próximos."
-        actions={<PrimaryButton onClick={openCreate}>Nueva excepción</PrimaryButton>}
-      />
+      {embedded ? (
+        <p className="text-sm text-gray-500">Días y turnos con cierre, aforo completo o reserva solo por teléfono. Solo se muestran los próximos.</p>
+      ) : (
+        <PageHeader
+          title="Cierres y excepciones"
+          subtitle="Días y turnos con cierre, aforo completo o reserva solo por teléfono. Solo se muestran los próximos."
+          actions={<PrimaryButton onClick={openCreate}>Nueva excepción</PrimaryButton>}
+        />
+      )}
+      {embedded && futureRows.length > 0 && <div className="hidden lg:flex justify-end -mt-4"><PrimaryButton onClick={openCreate}>Nueva excepción</PrimaryButton></div>}
 
       {error && !formOpen && (
         <p className="rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>

@@ -80,7 +80,7 @@ export default function Team() {
 
   const isOwner   = hasRole('owner');
   const isManager = hasRole('manager');
-  useSetMobileHeader({ title: 'Equipo', action: isManager ? { label: 'Invitar', onClick: () => setShowModal(true) } : false });
+  useSetMobileHeader({ title: 'Accesos', action: isManager ? { label: 'Invitar', onClick: () => setShowModal(true) } : false });
 
   const fetchAll = useCallback(async () => {
     try {
@@ -193,7 +193,7 @@ export default function Team() {
     <>
       <div className="w-full space-y-8">
         <PageHeader
-          title="Equipo"
+          title="Accesos"
           subtitle={`${members.length} ${members.length === 1 ? 'persona' : 'personas'} en tu negocio`}
           actions={isManager && <PrimaryButton onClick={() => setShowModal(true)}>Invitar persona</PrimaryButton>}
         />

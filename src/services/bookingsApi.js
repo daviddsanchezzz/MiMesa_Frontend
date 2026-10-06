@@ -38,6 +38,7 @@ export const bookingsApi = {
   setTeamPay: (resourceId, data) => unwrap(api.put(`/bookings/team/${resourceId}/pay`, data)),
   addTeamPayment: (resourceId, data) => unwrap(api.post(`/bookings/team/${resourceId}/payments`, data)),
   cashDay: (date) => unwrap(api.get('/bookings/cash', { params: date ? { date } : {} })),
+  quickSale: (data) => unwrap(api.post('/bookings/quick-sale', data)),
   closeCash: (data) => unwrap(api.post('/bookings/cash/close', data)),
   reopenCash: (date) => unwrap(api.delete('/bookings/cash/close', { params: { date } })),
   // calendar feed (.ics) of a professional

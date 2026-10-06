@@ -4,6 +4,8 @@ import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClient } from './lib/query';
+const QuickSaleModal = lazy(() => import('./pages/agenda/QuickSaleModal'));
+const CustomerForm = lazy(() => import('./components/CustomerForm'));
 const Login = lazy(() => import('./pages/Login'));
 const Register = lazy(() => import('./pages/Register'));
 const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
@@ -46,6 +48,8 @@ const More = lazy(() => import('./pages/More'));
 import ErrorBoundary from './components/ErrorBoundary';
 import Sidebar from './components/Sidebar';
 import BottomNav from './components/BottomNav';
+import QuickActionMenu from './components/QuickActionMenu';
+import { useNav } from './lib/nav';
 import Icon from './ui/Icon';
 import BusinessLogo from './ui/BusinessLogo';
 
@@ -156,12 +160,23 @@ function LayoutShell({ children, fullBleed = false, devMode = false }) {
     return window.matchMedia(DESKTOP_QUERY).matches;
   });
   const [newRsvModal, setNewRsvModal] = useState(false);
+  const [quickMenu, setQuickMenu] = useState(false);
+  const [quickModal, setQuickModal] = useState(null); // 'sale' | 'customer'
+  const { quick } = useNav();
 
   const handleReservationCreated = () => {
     window.dispatchEvent(new CustomEvent('reservation:created'));
     toast.success('Reserva creada');
   };
   const openNew = () => (isAppointments ? navigate('/agenda?new=1') : setNewRsvModal(true));
+  // The + opens the menu; with a single option there is nothing to choose
+  const openQuick = () => (quick.length > 1 ? setQuickMenu(true) : openNew());
+  const pickQuick = (key) => {
+    setQuickMenu(false);
+    if (key === 'booking') openNew();
+    else if (key === 'expense') navigate('/finanzas?new=expense');
+    else setQuickModal(key);
+  };
 
   useEffect(() => {
     const onToast = (event) => {
@@ -228,7 +243,7 @@ function LayoutShell({ children, fullBleed = false, devMode = false }) {
           collapsed={desktopSidebarCollapsed}
           onDesktopToggleCollapse={() => setDesktopSidebarCollapsed((v) => !v)}
           devMode={devMode}
-          onNew={openNew}
+          onNew={openQuick}
         />
       )}
       <div className="flex-1 flex flex-col overflow-hidden min-w-0">
@@ -242,7 +257,18 @@ function LayoutShell({ children, fullBleed = false, devMode = false }) {
           <Suspense fallback={<PageFallback />}>{children}</Suspense>
         </main>
       </div>
-      {showBottomNav && <BottomNav onNew={openNew} />}
+      {showBottomNav && <BottomNav onNew={openQuick} />}
+      {!devMode && quickMenu && <QuickActionMenu actions={quick} onPick={pickQuick} onClose={() => setQuickMenu(false)} />}
+      {!devMode && quickModal === 'sale' && (
+        <Suspense fallback={null}><QuickSaleModal onClose={() => setQuickModal(null)} onDone={() => setQuickModal(null)} /></Suspense>
+      )}
+      {!devMode && quickModal === 'customer' && (
+        <Modal title="Nuevo cliente" onClose={() => setQuickModal(null)}>
+          <Suspense fallback={null}>
+            <CustomerForm onSave={() => { setQuickModal(null); toast.success('Cliente añadido'); }} onCancel={() => setQuickModal(null)} />
+          </Suspense>
+        </Modal>
+      )}
       {!devMode && newRsvModal && (
         <Modal title="Nueva reserva" onClose={() => setNewRsvModal(false)} size="md">
           <ReservationForm

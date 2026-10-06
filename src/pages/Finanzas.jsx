@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, Fragment } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useSetMobileHeader } from '../context/MobileHeaderContext';
@@ -1409,6 +1409,13 @@ export default function Finanzas() {
   const [categories, setCategories] = useState([]);
   const [quickAction, setQuickAction] = useState(null); // null | 'revenue' | 'expense'
   const [refresh, setRefresh] = useState(0);
+  // «Nuevo gasto» from the + button arrives as ?new=expense
+  const [params, setParams] = useSearchParams();
+  useEffect(() => {
+    if (params.get('new') !== 'expense') return;
+    setQuickAction('expense');
+    setParams({}, { replace: true });
+  }, [params, setParams]);
 
   useSetMobileHeader({ title: 'Finanzas', action: { label: 'Gasto', onClick: () => setQuickAction('expense') } });
 

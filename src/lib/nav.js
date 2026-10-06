@@ -43,5 +43,13 @@ export function useNav() {
     { to: '/profile', label: 'Mi perfil', icon: 'user' },
   ].filter(Boolean);
 
-  return { primary, manage, account, newLabel: isAppointments ? 'Nueva cita' : 'Nueva reserva' };
+  // The + button: what you can create from anywhere, most urgent first
+  const quick = [
+    isAppointments && isModuleEnabled('bookings') && { key: 'sale', label: 'Cobrar', hint: 'Cliente sin reserva', icon: 'cash', tone: 'primary' },
+    { key: 'booking', label: isAppointments ? 'Nueva cita' : 'Nueva reserva', hint: isAppointments ? 'Reservar un hueco en la agenda' : 'Apuntar una reserva', icon: 'calendar' },
+    isModuleEnabled('expenses') && hasRole('owner') && { key: 'expense', label: 'Nuevo gasto', hint: 'Una factura, un pago o una compra', icon: 'euro' },
+    !isStaff && !locked && { key: 'customer', label: 'Nuevo cliente', hint: 'Añadir su ficha', icon: 'users' },
+  ].filter(Boolean);
+
+  return { primary, manage, account, quick, newLabel: 'Crear' };
 }

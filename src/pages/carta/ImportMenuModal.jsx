@@ -3,7 +3,7 @@ import { toast } from 'sonner';
 import Modal from '../../components/Modal';
 import api from '../../services/api';
 import { MENU_FIELDS, buildMenuRows, findHeaderRow, guessMapping, parseDelimited, readTextFile } from '../../lib/tabular';
-import { eur } from './labels';
+import { ALLERGENS, TAGS, eur, toKeys } from './labels';
 
 const SAVED = 'menu-import:columns';
 const readSaved = () => { try { return JSON.parse(window.localStorage.getItem(SAVED) || '{}'); } catch { return {}; } };
@@ -69,7 +69,7 @@ export default function ImportMenuModal({ onClose, onDone }) {
     setBusy(true);
     setError('');
     try {
-      const { data } = await api.post('/menu/import', { rows: built.rows, apply, retireMissing, priceSource: fromTill ? 'tpv' : 'manual' });
+      const { data } = await api.post('/menu/import', { rows: built.rows.map((r) => ({ ...r, allergens: toKeys(r.allergens, ALLERGENS), tags: toKeys(r.tags, TAGS) })), apply, retireMissing, priceSource: fromTill ? 'tpv' : 'manual' });
       setPlan(data);
       if (apply) {
         writeSaved(Object.fromEntries(Object.entries(mapping).map(([k, i]) => [k, (headers[i] || '').trim().toLowerCase()])));

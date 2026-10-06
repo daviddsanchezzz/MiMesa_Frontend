@@ -113,6 +113,8 @@ export const MENU_FIELDS = [
   { key: 'name', label: 'Nombre del plato', required: true, words: ['nombre', 'articulo', 'descripcion', 'producto', 'plato', 'denominacion'] },
   { key: 'price', label: 'Precio', words: ['precio', 'pvp', 'tarifa', 'precio venta', 'importe', 'p.v.p.'] },
   { key: 'description', label: 'Descripción', words: ['descripcion', 'detalle', 'ingredientes', 'composicion', 'texto'] },
+  { key: 'allergens', label: 'Alérgenos', words: ['alergenos', 'alergeno', 'alergias'] },
+  { key: 'tags', label: 'Etiquetas', words: ['etiquetas', 'etiqueta', 'tags'] },
   { key: 'category', label: 'Categoría', words: ['familia', 'categoria', 'grupo', 'seccion', 'subfamilia', 'tipo'] },
   { key: 'externalId', label: 'Código', words: ['codigo', 'cod', 'referencia', 'ref', 'id', 'cod. articulo', 'sku'] },
 ];
@@ -128,6 +130,9 @@ export function buildMenuRows(table, headerRow, mapping) {
     if (mapping.category !== undefined) row.category = String(cells[mapping.category] ?? '').trim();
     if (mapping.externalId !== undefined) row.externalId = String(cells[mapping.externalId] ?? '').trim();
     if (mapping.description !== undefined) row.description = String(cells[mapping.description] ?? '').trim();
+    // Kept as text here; the screen turns the words into the known allergen/label keys
+    if (mapping.allergens !== undefined) row.allergens = String(cells[mapping.allergens] ?? '').trim();
+    if (mapping.tags !== undefined) row.tags = String(cells[mapping.tags] ?? '').trim();
     if (mapping.price !== undefined) {
       const n = parseNumber(cells[mapping.price]);
       if (n !== null) row.price = n;

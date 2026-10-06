@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { ALLERGENS, TAGS, toKeys } from '../src/pages/carta/labels.js';
 import { MENU_FIELDS, buildMenuRows, buildRows, detectDelimiter, findHeaderRow, guessMapping, parseDate, parseDelimited, parseNumber } from '../src/lib/tabular.js';
 
 test('numbers in Spanish and English formats', () => {
@@ -72,4 +73,15 @@ test('a menu with its own columns: category, name, price and description', () =>
   const { rows } = buildMenuRows(table, header, mapping);
   assert.deepEqual(rows[0], { name: 'Focaccia', category: 'Entrants', price: 5.9, description: 'Amb ceba, olives i all' });
   assert.equal(rows[1].price, undefined);
+});
+
+test('allergens and labels in a file: by key or by name, accents and case ignored, unknown words dropped', () => {
+  assert.deepEqual(toKeys('gluten, Lácteos; frutos secos | Huevos', ALLERGENS), ['gluten', 'lacteos', 'frutos_secos', 'huevos']);
+  assert.deepEqual(toKeys('sulfitos, polvo, sulfitos', ALLERGENS), ['sulfitos']);
+  assert.deepEqual(toKeys('Sin gluten, vegano', TAGS), ['sin_gluten', 'vegano']);
+  assert.deepEqual(toKeys('', ALLERGENS), []);
+  const table = parseDelimited('Nombre;Alérgenos;Etiquetas\nCroquetas;gluten, lacteos;vegetariano');
+  const header = findHeaderRow(table, MENU_FIELDS, 'name');
+  const mapping = guessMapping(table[header], MENU_FIELDS);
+  assert.deepEqual(buildMenuRows(table, header, mapping).rows[0], { name: 'Croquetas', allergens: 'gluten, lacteos', tags: 'vegetariano' });
 });

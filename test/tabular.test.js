@@ -63,3 +63,13 @@ test('articles of a POS: header, columns and rows for the menu', () => {
   assert.equal(rows.length, 3);
   assert.equal(rows[2].category, '');
 });
+
+test('a menu with its own columns: category, name, price and description', () => {
+  const table = parseDelimited('Categoría;Nombre;Precio;Descripción\nEntrants;Focaccia;5,90;Amb ceba, olives i all\nCòctels;Caipirinha;;');
+  const header = findHeaderRow(table, MENU_FIELDS, 'name');
+  const mapping = guessMapping(table[header], MENU_FIELDS);
+  assert.deepEqual(mapping, { name: 1, price: 2, description: 3, category: 0 });
+  const { rows } = buildMenuRows(table, header, mapping);
+  assert.deepEqual(rows[0], { name: 'Focaccia', category: 'Entrants', price: 5.9, description: 'Amb ceba, olives i all' });
+  assert.equal(rows[1].price, undefined);
+});

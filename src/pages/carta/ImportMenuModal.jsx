@@ -24,6 +24,8 @@ export default function ImportMenuModal({ onClose, onDone }) {
   const [headerRow, setHeaderRow] = useState(0);
   const [mapping, setMapping] = useState({});
   const [retireMissing, setRetireMissing] = useState(false);
+  // Prices that come from the till are locked here; a menu copied from a website keeps them editable
+  const [fromTill, setFromTill] = useState(true);
   const [plan, setPlan] = useState(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -66,7 +68,7 @@ export default function ImportMenuModal({ onClose, onDone }) {
     setBusy(true);
     setError('');
     try {
-      const { data } = await api.post('/menu/import', { rows: built.rows, apply, retireMissing });
+      const { data } = await api.post('/menu/import', { rows: built.rows, apply, retireMissing, priceSource: fromTill ? 'tpv' : 'manual' });
       setPlan(data);
       if (apply) {
         writeSaved(Object.fromEntries(Object.entries(mapping).map(([k, i]) => [k, (headers[i] || '').trim().toLowerCase()])));
@@ -111,7 +113,7 @@ export default function ImportMenuModal({ onClose, onDone }) {
           </button>
           <input ref={fileRef} type="file" accept=".csv,.txt,.tsv,text/csv,text/plain" className="hidden" onChange={(e) => pick(e.target.files?.[0])} />
           <p className="text-[13px] text-gray-500">
-            Exporta los artículos de tu TPV (si sale en Excel: <b>Archivo → Guardar como → CSV</b>). Lo que controla el TPV es el <b>precio</b>: el nombre, la descripción, los alérgenos y las traducciones son tuyos y una importación nunca los cambia.
+            Exporta los artículos de tu TPV (si sale en Excel: <b>Archivo → Guardar como → CSV</b>). Si vienen del TPV, lo que él controla es el <b>precio</b>; el nombre, la descripción, los alérgenos y las traducciones son tuyos y una importación nunca los cambia. Con una columna de descripción, se rellena en los platos nuevos.
           </p>
           {error && <p className="text-sm text-rose-600">{error}</p>}
         </div>
@@ -131,6 +133,10 @@ export default function ImportMenuModal({ onClose, onDone }) {
               </label>
             ))}
           </div>
+          <label className="flex items-start gap-2.5 text-sm text-gray-700">
+            <input type="checkbox" className="mt-0.5" checked={fromTill} onChange={(e) => setFromTill(e.target.checked)} />
+            <span>Los precios vienen del TPV <span className="text-gray-400">(se bloquean aquí; quítalo si es una carta copiada de otro sitio y quieres poder cambiarlos)</span></span>
+          </label>
           {mapping.externalId === undefined && <p className="text-xs text-gray-500">Sin columna de código, los platos se reconocen por su nombre. Con código, un cambio de nombre en el TPV no duplica el plato.</p>}
           {built.rows.length > 0 && (
             <ul className="divide-y divide-gray-100 rounded-xl border border-gray-200 text-sm">

@@ -112,6 +112,7 @@ export function findHeaderRow(table, fields = FIELDS, anchor = 'date') {
 export const MENU_FIELDS = [
   { key: 'name', label: 'Nombre del plato', required: true, words: ['nombre', 'articulo', 'descripcion', 'producto', 'plato', 'denominacion'] },
   { key: 'price', label: 'Precio', words: ['precio', 'pvp', 'tarifa', 'precio venta', 'importe', 'p.v.p.'] },
+  { key: 'description', label: 'Descripción', words: ['descripcion', 'detalle', 'ingredientes', 'composicion', 'texto'] },
   { key: 'category', label: 'Categoría', words: ['familia', 'categoria', 'grupo', 'seccion', 'subfamilia', 'tipo'] },
   { key: 'externalId', label: 'Código', words: ['codigo', 'cod', 'referencia', 'ref', 'id', 'cod. articulo', 'sku'] },
 ];
@@ -126,6 +127,7 @@ export function buildMenuRows(table, headerRow, mapping) {
     const row = { name };
     if (mapping.category !== undefined) row.category = String(cells[mapping.category] ?? '').trim();
     if (mapping.externalId !== undefined) row.externalId = String(cells[mapping.externalId] ?? '').trim();
+    if (mapping.description !== undefined) row.description = String(cells[mapping.description] ?? '').trim();
     if (mapping.price !== undefined) {
       const n = parseNumber(cells[mapping.price]);
       if (n !== null) row.price = n;

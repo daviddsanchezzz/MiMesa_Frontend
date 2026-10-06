@@ -10,6 +10,7 @@ import DailyMenuModal from './carta/DailyMenuModal';
 import ImportMenuModal from './carta/ImportMenuModal';
 import ItemModal from './carta/ItemModal';
 import LanguagesModal from './carta/LanguagesModal';
+import ClearMenuModal from './carta/ClearMenuModal';
 import { ALLERGENS, TAGS, eur, languageName, textOf } from './carta/labels';
 
 const ICONS = Object.fromEntries([...ALLERGENS, ...TAGS].map((x) => [x.key, x.icon]));
@@ -53,6 +54,7 @@ function dailyWhen(d) {
 export default function Carta() {
   const { hasRole } = useAuth();
   const manager = hasRole('manager');
+  const owner = hasRole('owner');
   const q = useData(['menu'], () => api.get('/menu').then((r) => r.data), { retry: false });
   const [search, setSearch] = useState('');
   const [modal, setModal] = useState(null); // { type: 'item'|'category'|'languages'|'import', ... }
@@ -135,7 +137,7 @@ export default function Carta() {
 
       {manager && (
         <div className="flex flex-wrap gap-2">
-          <GhostButton onClick={() => setModal({ type: 'import' })}>Importar del TPV</GhostButton>
+          <GhostButton onClick={() => setModal({ type: 'import' })}>Importar platos</GhostButton>
           <GhostButton onClick={() => setModal({ type: 'category' })}>+ Categoría</GhostButton>
           <GhostButton onClick={() => setModal({ type: 'languages' })}>Idiomas</GhostButton>
           {missing > 0 && (
@@ -176,10 +178,10 @@ export default function Carta() {
       {q.isLoading && <p className="text-sm text-gray-400">Cargando…</p>}
       {menu && categories.length === 0 && (
         <Empty>
-          Aún no hay carta.{manager ? ' Importa los platos de tu TPV o crea la primera categoría.' : ''}
+          Aún no hay carta.{manager ? ' Importa tus platos o crea la primera categoría.' : ''}
           {manager && (
             <span className="mt-3 flex flex-wrap justify-center gap-2">
-              <PrimaryButton icon={null} onClick={() => setModal({ type: 'import' })}>Importar del TPV</PrimaryButton>
+              <PrimaryButton icon={null} onClick={() => setModal({ type: 'import' })}>Importar platos</PrimaryButton>
               <GhostButton onClick={() => setModal({ type: 'category' })}>Crear categoría</GhostButton>
             </span>
           )}
@@ -220,11 +222,19 @@ export default function Carta() {
         ))}
       </div>
 
+      {owner && categories.length > 0 && (
+        <div className="pt-6 border-t border-gray-100">
+          <button type="button" onClick={() => setModal({ type: 'clear' })} className="text-[13px] font-semibold text-rose-600 hover:text-rose-700">Eliminar toda la carta</button>
+          <p className="text-xs text-gray-400 mt-0.5">Borra todos los platos, categorías, fotos y el menú del día para empezar de cero.</p>
+        </div>
+      )}
+
       {modal?.type === 'item' && (
         <ItemModal item={modal.item} categoryId={modal.categoryId} categories={categories} languages={languages} canMove={!!modal.item}
           onMove={(dir) => { moveItem(modal.item, dir); }} onClose={() => setModal(null)} onSaved={done} />
       )}
       {modal?.type === 'category' && <CategoryModal category={modal.category} languages={languages} onClose={() => setModal(null)} onSaved={done} />}
+      {modal?.type === 'clear' && <ClearMenuModal items={items.length} categories={categories.length} onClose={() => setModal(null)} onDone={done} />}
       {modal?.type === 'daily' && <DailyMenuModal daily={menu.daily} languages={languages} onClose={() => setModal(null)} onSaved={done} />}
       {modal?.type === 'languages' && <LanguagesModal languages={languages} onClose={() => setModal(null)} onSaved={done} />}
       {modal?.type === 'import' && <ImportMenuModal onClose={() => setModal(null)} onDone={done} />}

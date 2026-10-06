@@ -24,15 +24,16 @@ export default function ImportMenuModal({ onClose, onDone }) {
   const [headerRow, setHeaderRow] = useState(0);
   const [mapping, setMapping] = useState({});
   const [retireMissing, setRetireMissing] = useState(false);
-  // Prices that come from the till are locked here; a menu copied from a website keeps them editable
-  const [fromTill, setFromTill] = useState(true);
+  // Where the prices come from is asked every time, never assumed: from the till they are locked here,
+  // from anywhere else (a website, a PDF…) they stay editable. null = not answered yet.
+  const [fromTill, setFromTill] = useState(null);
   const [plan, setPlan] = useState(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
   const headers = table ? table[headerRow] || [] : [];
   const built = useMemo(() => (table ? buildMenuRows(table, headerRow, mapping) : { rows: [], skipped: 0 }), [table, headerRow, mapping]);
-  const ready = mapping.name !== undefined && built.rows.length > 0;
+  const ready = mapping.name !== undefined && built.rows.length > 0 && fromTill !== null;
 
   async function pick(file) {
     if (!file) return;
@@ -91,7 +92,7 @@ export default function ImportMenuModal({ onClose, onDone }) {
         <button type="button" onClick={() => (plan ? setPlan(null) : onClose())} className="h-11 px-4 rounded-xl border border-gray-300 text-sm font-medium text-gray-700">{plan ? 'Atrás' : 'Cancelar'}</button>
         {table && !plan && (
           <button type="button" disabled={!ready || busy} onClick={() => send(false)} className="flex-1 h-11 rounded-xl bg-violet-600 text-white text-sm font-semibold disabled:opacity-40">
-            {busy ? 'Revisando…' : `Revisar ${built.rows.length} platos`}
+            {busy ? 'Revisando…' : fromTill === null && mapping.name !== undefined && built.rows.length > 0 ? 'Elige de dónde vienen los precios' : `Revisar ${built.rows.length} platos`}
           </button>
         )}
         {plan && (
@@ -104,7 +105,7 @@ export default function ImportMenuModal({ onClose, onDone }) {
   );
 
   return (
-    <Modal title="Importar platos del TPV" subtitle="Listado de artículos con su precio" onClose={() => !busy && onClose()} size="lg" footer={footer}>
+    <Modal title="Importar platos" subtitle="Listado de platos con su precio" onClose={() => !busy && onClose()} size="lg" footer={footer}>
       {!table && (
         <div className="space-y-3">
           <button type="button" onClick={() => fileRef.current?.click()} className="w-full rounded-2xl border-2 border-dashed border-gray-300 hover:border-violet-400 px-4 py-10 text-center transition-colors">
@@ -113,7 +114,7 @@ export default function ImportMenuModal({ onClose, onDone }) {
           </button>
           <input ref={fileRef} type="file" accept=".csv,.txt,.tsv,text/csv,text/plain" className="hidden" onChange={(e) => pick(e.target.files?.[0])} />
           <p className="text-[13px] text-gray-500">
-            Exporta los artículos de tu TPV (si sale en Excel: <b>Archivo → Guardar como → CSV</b>). Si vienen del TPV, lo que él controla es el <b>precio</b>; el nombre, la descripción, los alérgenos y las traducciones son tuyos y una importación nunca los cambia. Con una columna de descripción, se rellena en los platos nuevos.
+            Sube el listado de tus platos, del TPV o de donde lo tengas (si sale en Excel: <b>Archivo → Guardar como → CSV</b>). Una importación nunca cambia el nombre, la descripción, los alérgenos ni las traducciones de un plato que ya tienes; solo el precio. Con una columna de descripción, se rellena en los platos nuevos.
           </p>
           {error && <p className="text-sm text-rose-600">{error}</p>}
         </div>
@@ -133,10 +134,18 @@ export default function ImportMenuModal({ onClose, onDone }) {
               </label>
             ))}
           </div>
-          <label className="flex items-start gap-2.5 text-sm text-gray-700">
-            <input type="checkbox" className="mt-0.5" checked={fromTill} onChange={(e) => setFromTill(e.target.checked)} />
-            <span>Los precios vienen del TPV <span className="text-gray-400">(se bloquean aquí; quítalo si es una carta copiada de otro sitio y quieres poder cambiarlos)</span></span>
-          </label>
+          <fieldset>
+            <legend className="text-xs font-semibold text-gray-500 mb-2">¿De dónde vienen estos precios? *</legend>
+            <div className="space-y-2">
+              {[[true, 'De mi TPV', 'Se bloquean aquí: para cambiar un precio lo cambias en el TPV y vuelves a importar.'],
+                [false, 'De otro sitio (web, PDF, carta en papel…)', 'Quedan editables aquí.']].map(([value, label, hint]) => (
+                <label key={label} className={`flex items-start gap-3 rounded-xl border px-3.5 py-3 cursor-pointer transition-colors ${fromTill === value ? 'border-violet-500 bg-violet-50' : 'border-gray-200 hover:border-gray-300'}`}>
+                  <input type="radio" name="price-source" className="mt-1 accent-violet-600" checked={fromTill === value} onChange={() => setFromTill(value)} />
+                  <span><span className="block text-sm font-semibold text-gray-900">{label}</span><span className="block text-xs text-gray-500 mt-0.5">{hint}</span></span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
           {mapping.externalId === undefined && <p className="text-xs text-gray-500">Sin columna de código, los platos se reconocen por su nombre. Con código, un cambio de nombre en el TPV no duplica el plato.</p>}
           {built.rows.length > 0 && (
             <ul className="divide-y divide-gray-100 rounded-xl border border-gray-200 text-sm">

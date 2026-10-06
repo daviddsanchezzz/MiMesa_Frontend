@@ -24,9 +24,10 @@ function ItemRow({ item, language, manager, onOpen, onSoldOut }) {
         <span className={`block text-[15px] font-medium truncate ${item.soldOut ? 'text-gray-400 line-through' : 'text-gray-900'}`}>{textOf(item.name, language)}</span>
         <span className="block text-[13px] text-gray-500 truncate">
           {flags}
+          {item.extras?.length > 0 && <span className="ml-1.5">· {item.extras.length} {item.extras.length === 1 ? 'extra' : 'extras'}</span>}
           {item.hidden && <span className="ml-1.5">· Oculto de la web</span>}
           {item.retired && <span className="ml-1.5 text-amber-700">· Ya no está en el TPV</span>}
-          {!flags && !item.hidden && !item.retired && (textOf(item.description, language) || ' ')}
+          {!flags && !item.extras?.length && !item.hidden && !item.retired && (textOf(item.description, language) || ' ')}
         </span>
       </button>
       <span className="shrink-0 text-right">
@@ -208,6 +209,11 @@ export default function Carta() {
                 </MenuButton>
               )}
             </div>
+            {c.extras?.length > 0 && (
+              <p className="pt-1.5 text-[13px] text-gray-500">
+                Extras en todos los platos: {c.extras.map((x) => `${textOf(x.name, language)}${x.price !== null && x.price !== undefined ? ` +${eur(x.price)}` : ''}`).join(' · ')}
+              </p>
+            )}
             {list.length === 0 ? (
               <p className="py-3 text-sm text-gray-400">Sin platos.{manager && <button type="button" className="ml-2 font-semibold text-violet-700" onClick={() => setModal({ type: 'item', categoryId: c._id })}>+ Añadir</button>}</p>
             ) : (

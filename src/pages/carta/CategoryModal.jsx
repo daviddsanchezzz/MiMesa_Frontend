@@ -2,10 +2,12 @@ import { useState } from 'react';
 import Modal from '../../components/Modal';
 import api from '../../services/api';
 import { inputCls, languageName } from './labels';
+import ExtrasEditor, { fromEditor, toEditor } from './ExtrasEditor';
 
 export default function CategoryModal({ category, languages, onClose, onSaved }) {
   const [name, setName] = useState(category?.name || {});
   const [hidden, setHidden] = useState(!!category?.hidden);
+  const [extras, setExtras] = useState(() => toEditor(category?.extras));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
@@ -31,7 +33,7 @@ export default function CategoryModal({ category, languages, onClose, onSaved })
     setSaving(true);
     setError('');
     try {
-      const body = { name, hidden };
+      const body = { name, hidden, extras: fromEditor(extras) };
       if (category?._id) await api.put(`/menu/categories/${category._id}`, body);
       else await api.post('/menu/categories', body);
       onSaved();
@@ -55,7 +57,7 @@ export default function CategoryModal({ category, languages, onClose, onSaved })
   );
 
   return (
-    <Modal title={category?._id ? 'Editar categoría' : 'Nueva categoría'} onClose={onClose} size="sm" footer={footer}>
+    <Modal title={category?._id ? 'Editar categoría' : 'Nueva categoría'} onClose={onClose} size="md" footer={footer}>
       <div className="space-y-3">
         {languages.map((lang, i) => (
           <label key={lang} className="block">
@@ -64,6 +66,7 @@ export default function CategoryModal({ category, languages, onClose, onSaved })
               onChange={(e) => setName((n) => ({ ...n, [lang]: e.target.value }))} />
           </label>
         ))}
+        <ExtrasEditor rows={extras} onChange={setExtras} languages={languages} scope="category" />
         <label className="flex items-center gap-2.5 text-sm text-gray-700">
           <input type="checkbox" checked={hidden} onChange={(e) => setHidden(e.target.checked)} />
           Ocultar de la web (sigue aquí, pero no se publica)

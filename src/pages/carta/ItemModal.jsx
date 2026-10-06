@@ -3,6 +3,7 @@ import Modal from '../../components/Modal';
 import api from '../../services/api';
 import { Segmented } from '../../ui/kit';
 import { shrinkImage } from '../../lib/image';
+import ExtrasEditor, { fromEditor, toEditor } from './ExtrasEditor';
 import { ALLERGENS, TAGS, chipCls, inputCls, languageName } from './labels';
 
 const toggle = (list, key) => (list.includes(key) ? list.filter((x) => x !== key) : [...list, key]);
@@ -19,6 +20,7 @@ export default function ItemModal({ item, categoryId, categories, languages, can
   const [allergens, setAllergens] = useState(item?.allergens || []);
   const [tags, setTags] = useState(item?.tags || []);
   const [hidden, setHidden] = useState(!!item?.hidden);
+  const [extras, setExtras] = useState(() => toEditor(item?.extras));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   // Photo: the one already saved, a new one picked (shrunk in the browser) or "removed"
@@ -74,7 +76,7 @@ export default function ItemModal({ item, categoryId, categories, languages, can
     setError('');
     try {
       const body = {
-        categoryId: category, name, description, allergens, tags, hidden,
+        categoryId: category, name, description, allergens, tags, hidden, extras: fromEditor(extras),
         ...(locked ? {} : { price: price.trim() === '' ? null : Number(price.replace(',', '.')) }),
       };
       const saved = editing ? (await api.put(`/menu/items/${item._id}`, body)).data : (await api.post('/menu/items', body)).data;
@@ -189,6 +191,8 @@ export default function ItemModal({ item, categoryId, categories, languages, can
             {TAGS.map((t) => <button key={t.key} type="button" className={chipCls(tags.includes(t.key))} onClick={() => setTags((l) => toggle(l, t.key))}><span aria-hidden="true">{t.icon}</span>{t.label}</button>)}
           </div>
         </div>
+
+        <ExtrasEditor rows={extras} onChange={setExtras} languages={languages} scope="dish" />
 
         <label className="flex items-center gap-2.5 text-sm text-gray-700">
           <input type="checkbox" checked={hidden} onChange={(e) => setHidden(e.target.checked)} />

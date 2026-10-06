@@ -63,6 +63,30 @@ export default function Carta() {
   const categories = menu?.categories || [];
   const items = menu?.items || [];
 
+  const missingQ = useData(['menu', 'missing'], () => api.get('/menu/translate-missing').then((r) => r.data), { enabled: manager && languages.length > 1, retry: false });
+  const missing = languages.length > 1 ? missingQ.data?.texts || 0 : 0;
+  const [translating, setTranslating] = useState(false);
+
+  async function translateAll() {
+    setTranslating(true);
+    let total = 0;
+    try {
+      // The server translates up to a batch at a time; keep asking while there is more
+      for (let i = 0; i < 6; i++) {
+        const { data } = await api.post('/menu/translate-missing');
+        total += data.translated;
+        if (!data.remaining || !data.translated) break;
+      }
+      toast.success(total ? `${total} textos traducidos` : 'No había nada que traducir');
+    } catch (err) {
+      toast.error(err?.response?.data?.message || 'No se ha podido traducir');
+    } finally {
+      setTranslating(false);
+      q.refetch();
+      missingQ.refetch();
+    }
+  }
+
   useSetMobileHeader({ title: 'Carta', action: manager && categories.length ? { label: 'Plato', onClick: () => setModal({ type: 'item' }) } : undefined });
 
   const needle = search.trim().toLocaleLowerCase('es');
@@ -114,6 +138,11 @@ export default function Carta() {
           <GhostButton onClick={() => setModal({ type: 'import' })}>Importar del TPV</GhostButton>
           <GhostButton onClick={() => setModal({ type: 'category' })}>+ Categoría</GhostButton>
           <GhostButton onClick={() => setModal({ type: 'languages' })}>Idiomas</GhostButton>
+          {missing > 0 && (
+            <GhostButton onClick={translateAll} disabled={translating} className="!text-violet-700 !border-violet-200">
+              {translating ? 'Traduciendo…' : `✨ Traducir lo que falta (${missing})`}
+            </GhostButton>
+          )}
         </div>
       )}
 

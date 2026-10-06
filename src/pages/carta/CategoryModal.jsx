@@ -9,6 +9,24 @@ export default function CategoryModal({ category, languages, onClose, onSaved })
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
+  const [translating, setTranslating] = useState(false);
+  async function autoTranslate() {
+    const main = languages[0];
+    const to = languages.slice(1).filter((l) => !name[l]?.trim());
+    if (!name[main]?.trim()) return setError('Escribe primero el nombre en el idioma principal');
+    if (!to.length) return setError('Ya está todo traducido');
+    setError('');
+    setTranslating(true);
+    try {
+      const { data } = await api.post('/menu/translate', { from: main, to, items: [{ id: 'name', kind: 'category', text: name[main] }] });
+      setName((n) => ({ ...(data.translations?.name || {}), ...Object.fromEntries(Object.entries(n).filter(([, t]) => t?.trim())) }));
+    } catch (err) {
+      setError(err?.response?.data?.message || 'No se ha podido traducir');
+    } finally {
+      setTranslating(false);
+    }
+  }
+
   async function save() {
     setSaving(true);
     setError('');
@@ -27,6 +45,11 @@ export default function CategoryModal({ category, languages, onClose, onSaved })
   const footer = (
     <div className="space-y-2">
       {error && <p className="text-sm text-rose-600">{error}</p>}
+      {languages.length > 1 && (
+        <button type="button" disabled={translating} onClick={autoTranslate} className="w-full h-10 rounded-xl border border-gray-200 text-sm font-semibold text-violet-700 hover:bg-violet-50 disabled:opacity-50">
+          {translating ? 'Traduciendo…' : '✨ Traducir a los demás idiomas'}
+        </button>
+      )}
       <button type="button" disabled={saving} onClick={save} className="w-full h-12 rounded-xl bg-violet-600 text-white font-semibold disabled:opacity-50">{saving ? 'Guardando…' : 'Guardar'}</button>
     </div>
   );

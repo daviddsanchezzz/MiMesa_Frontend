@@ -42,6 +42,30 @@ export default function ItemModal({ item, categoryId, categories, languages, can
     }
   }
 
+  // Fills the empty languages from the main one (never touches what is written)
+  const [translating, setTranslating] = useState(false);
+  async function autoTranslate() {
+    const main = languages[0];
+    const items = [];
+    if (name[main]?.trim()) items.push({ id: 'name', kind: 'dish', text: name[main] });
+    if (description[main]?.trim()) items.push({ id: 'desc', kind: 'description', text: description[main] });
+    const to = languages.slice(1).filter((l) => (name[main]?.trim() && !name[l]?.trim()) || (description[main]?.trim() && !description[l]?.trim()));
+    if (!items.length) return setError('Escribe primero el nombre en el idioma principal');
+    if (!to.length) return setError('Ya está todo traducido');
+    setError('');
+    setTranslating(true);
+    try {
+      const { data } = await api.post('/menu/translate', { from: main, to, items });
+      const tr = data.translations || {};
+      setName((n) => ({ ...Object.fromEntries(Object.entries(tr.name || {}).filter(([l]) => !n[l]?.trim())), ...n }));
+      setDescription((d) => ({ ...Object.fromEntries(Object.entries(tr.desc || {}).filter(([l]) => !d[l]?.trim())), ...d }));
+    } catch (err) {
+      setError(err?.response?.data?.message || 'No se ha podido traducir');
+    } finally {
+      setTranslating(false);
+    }
+  }
+
   // A dot on the languages that still lack the name
   const options = useMemo(() => languages.map((l) => [l, `${languageName(l)}${name[l] ? '' : ' •'}`]), [languages, name]);
 
@@ -117,7 +141,14 @@ export default function ItemModal({ item, categoryId, categories, languages, can
           <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => { pickPhoto(e.target.files?.[0]); e.target.value = ''; }} />
         </div>
 
-        {languages.length > 1 && <Segmented value={lang} onChange={setLang} options={options} size="sm" />}
+        {languages.length > 1 && (
+          <div className="flex items-center justify-between gap-3">
+            <Segmented value={lang} onChange={setLang} options={options} size="sm" />
+            <button type="button" disabled={translating} onClick={autoTranslate} className="shrink-0 h-9 px-3.5 rounded-full border border-gray-200 text-[13px] font-semibold text-violet-700 hover:bg-violet-50 disabled:opacity-50">
+              {translating ? 'Traduciendo…' : '✨ Traducir'}
+            </button>
+          </div>
+        )}
         <div className="space-y-3">
           <label className="block">
             <span className="block text-xs font-medium text-gray-500 mb-1">Nombre{lang === languages[0] && ' *'}</span>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, Fragment } from 'react';
+import { useState, useEffect, useCallback, Fragment, lazy, Suspense } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -144,7 +144,7 @@ function InlineRevenueEdit({ date, value, source, onSave }) {
         {value !== null
           ? <span className="text-sm font-semibold tabular-nums text-gray-900">{fmtEur(value)}</span>
           : <span className="text-[13px] font-semibold text-violet-700">+ Registrar ingreso</span>}
-        {value !== null && <span className="text-[11px] text-gray-400 leading-4">{source === 'manual' ? 'A mano' : 'Cobrado'}</span>}
+        {value !== null && <span className="text-[11px] text-gray-400 leading-4">{source === 'manual' ? 'A mano' : source === 'import' ? 'Del TPV' : 'Cobrado'}</span>}
       </button>
       {modal && (
         <RevenueModal
@@ -496,6 +496,8 @@ function CategoryForm({ form, setForm, onSave, onCancel, saving, saveLabel = 'Gu
     </div>
   );
 }
+
+const ImportSalesModal = lazy(() => import('./finanzas/ImportSalesModal'));
 
 function CategoryManagerModal({ onClose, onRefresh, inline = false }) {
   const [cats, setCats] = useState([]);
@@ -1285,7 +1287,7 @@ const TABS = [
 const METHOD_LABEL = { cash: 'Efectivo', card: 'Tarjeta', bizum: 'Bizum', other: 'Otros' };
 const METHOD_COLOR = { cash: '#10b981', card: '#8b5cf6', bizum: '#0ea5e9', other: '#94a3b8' };
 
-function IngresosTab({ period, dateRange, refreshTrigger, onTodayRevenue }) {
+function IngresosTab({ period, dateRange, refreshTrigger, onTodayRevenue, onImport }) {
   const [data, setData] = useState(null);
   const [previous, setPrevious] = useState(null);
   const [till, setTill] = useState(null);
@@ -1359,7 +1361,12 @@ function IngresosTab({ period, dateRange, refreshTrigger, onTodayRevenue }) {
           { label: 'Calculado sobre', value: data.profitBasis === 'actual' ? 'Lo real' : 'Lo estimado', sub: 'apunta lo cobrado para afinar' },
         ]} />
 
-      <Section title="Día a día" aside={<SectionLink onClick={onTodayRevenue}>+ Ingreso de hoy</SectionLink>}>
+      <Section title="Día a día" aside={(
+        <span className="flex items-center gap-4">
+          {!appt && <SectionLink onClick={onImport}>Importar del TPV</SectionLink>}
+          <SectionLink onClick={onTodayRevenue}>+ Ingreso de hoy</SectionLink>
+        </span>
+      )}>
         <p className="mb-2 text-[13px] text-gray-500">
           {appt ? 'Lo facturado y lo cobrado cada día; desde aquí puedes corregir un cobro.' : 'Comensales y lo ingresado cada día; apunta aquí lo que realmente has cobrado para afinar el resultado.'}
         </p>
@@ -1388,7 +1395,7 @@ function IngresosTab({ period, dateRange, refreshTrigger, onTodayRevenue }) {
                     <span className="hidden md:block md:col-span-2 text-right text-sm tabular-nums text-gray-600">{count || '—'}</span>
                     <span className="hidden md:block md:col-span-3 text-right text-sm tabular-nums text-gray-600">{day.estimatedRevenue > 0 ? fmtEur(day.estimatedRevenue) : '—'}</span>
                     <div className="shrink-0 md:col-span-3 text-right">
-                      <InlineRevenueEdit date={day.date} value={day.actualRevenue} source={appt ? day.actualSource : null} onSave={(v) => saveActual(day.date, v)} />
+                      <InlineRevenueEdit date={day.date} value={day.actualRevenue} source={appt ? day.actualSource : day.source} onSave={(v) => saveActual(day.date, v)} />
                     </div>
                   </li>
                 );
@@ -1448,9 +1455,14 @@ export default function Finanzas() {
       </StickyBar>
 
       {tab === 'dashboard' && <ResumenTab period={period} dateRange={dateRange} categories={categories} refreshTrigger={refresh} onViewIncome={() => setTab('income')} onViewExpenses={() => setTab('expenses')} onAddExpense={() => setQuickAction('expense')} />}
-      {tab === 'income'    && <IngresosTab period={period} dateRange={dateRange} refreshTrigger={refresh} onTodayRevenue={() => setQuickAction('revenue')} />}
+      {tab === 'income'    && <IngresosTab period={period} dateRange={dateRange} refreshTrigger={refresh} onTodayRevenue={() => setQuickAction('revenue')} onImport={() => setQuickAction('import')} />}
       {tab === 'expenses'  && <GastosTab dateRange={dateRange} suppliers={suppliers} categories={categories} refreshTrigger={refresh} onCreate={() => setQuickAction('expense')} onCategoriesChanged={loadCategories} />}
 
+      {quickAction === 'import' && (
+        <Suspense fallback={null}>
+          <ImportSalesModal onClose={() => setQuickAction(null)} onDone={() => { setQuickAction(null); setRefresh((n) => n + 1); }} />
+        </Suspense>
+      )}
       {quickAction === 'revenue' && (
         <RevenueModal
           onClose={() => setQuickAction(null)}

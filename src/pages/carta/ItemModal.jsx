@@ -1,0 +1,131 @@
+import { useMemo, useState } from 'react';
+import Modal from '../../components/Modal';
+import api from '../../services/api';
+import { Segmented } from '../../ui/kit';
+import { ALLERGENS, TAGS, chipCls, inputCls, languageName } from './labels';
+
+const toggle = (list, key) => (list.includes(key) ? list.filter((x) => x !== key) : [...list, key]);
+
+/** One dish: texts per language, price (locked when it comes from the TPV), allergens and labels. */
+export default function ItemModal({ item, categoryId, categories, languages, canMove, onMove, onClose, onSaved }) {
+  const editing = !!item?._id;
+  const locked = item?.priceSource === 'tpv';
+  const [lang, setLang] = useState(languages[0]);
+  const [name, setName] = useState(item?.name || {});
+  const [description, setDescription] = useState(item?.description || {});
+  const [price, setPrice] = useState(item?.price === null || item?.price === undefined ? '' : String(item.price).replace('.', ','));
+  const [category, setCategory] = useState(item?.categoryId || categoryId || categories[0]?._id || '');
+  const [allergens, setAllergens] = useState(item?.allergens || []);
+  const [tags, setTags] = useState(item?.tags || []);
+  const [hidden, setHidden] = useState(!!item?.hidden);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  // A dot on the languages that still lack the name
+  const options = useMemo(() => languages.map((l) => [l, `${languageName(l)}${name[l] ? '' : ' •'}`]), [languages, name]);
+
+  async function save() {
+    setSaving(true);
+    setError('');
+    try {
+      const body = {
+        categoryId: category, name, description, allergens, tags, hidden,
+        ...(locked ? {} : { price: price.trim() === '' ? null : Number(price.replace(',', '.')) }),
+      };
+      if (editing) await api.put(`/menu/items/${item._id}`, body);
+      else await api.post('/menu/items', body);
+      onSaved();
+    } catch (err) {
+      setError(err?.response?.data?.message || 'No se ha podido guardar');
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function remove() {
+    if (!window.confirm(`¿Borrar «${name[languages[0]] || 'este plato'}» de la carta?`)) return;
+    try {
+      await api.delete(`/menu/items/${item._id}`);
+      onSaved();
+    } catch (err) {
+      setError(err?.response?.data?.message || 'No se ha podido borrar');
+    }
+  }
+
+  const footer = (
+    <div className="space-y-2">
+      {error && <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</p>}
+      <div className="flex gap-2">
+        {editing && <button type="button" onClick={remove} className="h-12 px-4 rounded-xl border border-gray-300 text-sm font-medium text-rose-600">Borrar</button>}
+        <button type="button" disabled={saving} onClick={save} className="flex-1 h-12 rounded-xl bg-violet-600 text-white font-semibold disabled:opacity-50">{saving ? 'Guardando…' : 'Guardar'}</button>
+      </div>
+    </div>
+  );
+
+  return (
+    <Modal title={editing ? 'Editar plato' : 'Nuevo plato'} onClose={onClose} size="lg" footer={footer}>
+      <div className="space-y-5">
+        {item?.retired && (
+          <div className="rounded-xl bg-amber-50 border border-amber-200 px-3 py-2.5 text-sm text-amber-900">
+            Este plato ya no aparece en el TPV. Puedes borrarlo de la carta o mantenerlo.
+            <button type="button" className="block mt-1 font-semibold underline" onClick={async () => { await api.put(`/menu/items/${item._id}`, { retired: false }); onSaved(); }}>Mantenerlo en la carta</button>
+          </div>
+        )}
+
+        {languages.length > 1 && <Segmented value={lang} onChange={setLang} options={options} size="sm" />}
+        <div className="space-y-3">
+          <label className="block">
+            <span className="block text-xs font-medium text-gray-500 mb-1">Nombre{lang === languages[0] && ' *'}</span>
+            <input className={inputCls} value={name[lang] || ''} maxLength={120} autoFocus={!editing}
+              onChange={(e) => setName((n) => ({ ...n, [lang]: e.target.value }))} placeholder={lang === languages[0] ? 'Croquetas de jamón' : 'Traducción (opcional)'} />
+          </label>
+          <label className="block">
+            <span className="block text-xs font-medium text-gray-500 mb-1">Descripción</span>
+            <textarea className={`${inputCls} resize-none`} rows={2} maxLength={500} value={description[lang] || ''}
+              onChange={(e) => setDescription((d) => ({ ...d, [lang]: e.target.value }))} placeholder="Ingredientes, cómo se sirve…" />
+          </label>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <label className="block">
+            <span className="block text-xs font-medium text-gray-500 mb-1">Precio (€, IVA incluido)</span>
+            <input className={`${inputCls} tabular-nums text-right`} inputMode="decimal" value={price} disabled={locked} placeholder="Consultar"
+              onChange={(e) => setPrice(e.target.value)} />
+          </label>
+          <label className="block">
+            <span className="block text-xs font-medium text-gray-500 mb-1">Categoría</span>
+            <select className={inputCls} value={category} onChange={(e) => setCategory(e.target.value)}>
+              {categories.map((c) => <option key={c._id} value={c._id}>{c.name[languages[0]] || Object.values(c.name)[0]}</option>)}
+            </select>
+          </label>
+        </div>
+        {locked && <p className="-mt-3 text-xs text-gray-500">🔒 El precio viene del TPV{item.externalId ? ` (código ${item.externalId})` : ''}. Cámbialo allí y vuelve a importar.</p>}
+
+        <div>
+          <p className="text-xs font-semibold text-gray-500 mb-2">Alérgenos</p>
+          <div className="flex flex-wrap gap-1.5">
+            {ALLERGENS.map((a) => <button key={a.key} type="button" className={chipCls(allergens.includes(a.key))} onClick={() => setAllergens((l) => toggle(l, a.key))}><span aria-hidden="true">{a.icon}</span>{a.label}</button>)}
+          </div>
+        </div>
+        <div>
+          <p className="text-xs font-semibold text-gray-500 mb-2">Etiquetas</p>
+          <div className="flex flex-wrap gap-1.5">
+            {TAGS.map((t) => <button key={t.key} type="button" className={chipCls(tags.includes(t.key))} onClick={() => setTags((l) => toggle(l, t.key))}><span aria-hidden="true">{t.icon}</span>{t.label}</button>)}
+          </div>
+        </div>
+
+        <label className="flex items-center gap-2.5 text-sm text-gray-700">
+          <input type="checkbox" checked={hidden} onChange={(e) => setHidden(e.target.checked)} />
+          Ocultar de la web
+        </label>
+
+        {editing && canMove && (
+          <div className="flex gap-2">
+            <button type="button" onClick={() => onMove(-1)} className="h-9 px-3 rounded-full border border-gray-200 text-[13px] font-semibold text-gray-700">↑ Subir en la lista</button>
+            <button type="button" onClick={() => onMove(1)} className="h-9 px-3 rounded-full border border-gray-200 text-[13px] font-semibold text-gray-700">↓ Bajar</button>
+          </div>
+        )}
+      </div>
+    </Modal>
+  );
+}

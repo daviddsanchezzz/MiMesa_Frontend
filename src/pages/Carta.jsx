@@ -1,0 +1,166 @@
+import { useMemo, useState } from 'react';
+import { toast } from 'sonner';
+import api from '../services/api';
+import { useAuth } from '../context/AuthContext';
+import { useSetMobileHeader } from '../context/MobileHeaderContext';
+import { useData } from '../lib/query';
+import { Empty, GhostButton, MenuButton, PageHeader, PrimaryButton, RowAction } from '../ui/kit';
+import CategoryModal from './carta/CategoryModal';
+import ImportMenuModal from './carta/ImportMenuModal';
+import ItemModal from './carta/ItemModal';
+import LanguagesModal from './carta/LanguagesModal';
+import { ALLERGENS, TAGS, eur, languageName, textOf } from './carta/labels';
+
+const ICONS = Object.fromEntries([...ALLERGENS, ...TAGS].map((x) => [x.key, x.icon]));
+
+function ItemRow({ item, language, manager, onOpen, onSoldOut }) {
+  const flags = [...item.tags, ...item.allergens].map((k) => ICONS[k]).filter(Boolean).join(' ');
+  return (
+    <li className={`flex items-center gap-3 py-2.5 ${item.hidden || item.retired ? 'opacity-60' : ''}`}>
+      <button type="button" disabled={!manager} onClick={onOpen} className="min-w-0 flex-1 text-left disabled:cursor-default">
+        <span className={`block text-[15px] font-medium truncate ${item.soldOut ? 'text-gray-400 line-through' : 'text-gray-900'}`}>{textOf(item.name, language)}</span>
+        <span className="block text-[13px] text-gray-500 truncate">
+          {flags}
+          {item.hidden && <span className="ml-1.5">· Oculto de la web</span>}
+          {item.retired && <span className="ml-1.5 text-amber-700">· Ya no está en el TPV</span>}
+          {!flags && !item.hidden && !item.retired && (textOf(item.description, language) || ' ')}
+        </span>
+      </button>
+      <span className="shrink-0 text-right">
+        <span className="block text-[15px] font-semibold tabular-nums text-gray-900">{eur(item.price)}</span>
+        {item.priceSource === 'tpv' && <span className="block text-[11px] text-gray-400 leading-3">🔒 TPV</span>}
+      </span>
+      <RowAction tone={item.soldOut ? 'warn' : 'neutral'} onClick={onSoldOut}>{item.soldOut ? 'Agotado' : 'Hay'}</RowAction>
+    </li>
+  );
+}
+
+export default function Carta() {
+  const { hasRole } = useAuth();
+  const manager = hasRole('manager');
+  const q = useData(['menu'], () => api.get('/menu').then((r) => r.data), { retry: false });
+  const [search, setSearch] = useState('');
+  const [modal, setModal] = useState(null); // { type: 'item'|'category'|'languages'|'import', ... }
+
+  const menu = q.data;
+  const languages = menu?.languages || ['es'];
+  const language = languages[0];
+  const categories = menu?.categories || [];
+  const items = menu?.items || [];
+
+  useSetMobileHeader({ title: 'Carta', action: manager && categories.length ? { label: 'Plato', onClick: () => setModal({ type: 'item' }) } : undefined });
+
+  const needle = search.trim().toLocaleLowerCase('es');
+  const byCategory = useMemo(() => categories.map((c) => ({
+    category: c,
+    items: items.filter((i) => i.categoryId === c._id && (!needle || Object.values(i.name || {}).some((n) => n.toLocaleLowerCase('es').includes(needle)))),
+  })).filter((g) => !needle || g.items.length), [categories, items, needle]);
+
+  const refresh = () => q.refetch();
+  const done = () => { setModal(null); refresh(); };
+  const fail = (err) => toast.error(err?.response?.data?.message || 'No se ha podido guardar');
+
+  async function toggleSoldOut(item) {
+    try { await api.patch(`/menu/items/${item._id}/sold-out`, { soldOut: !item.soldOut }); refresh(); } catch (err) { fail(err); }
+  }
+  async function moveCategory(id, dir) {
+    const ids = categories.map((c) => c._id);
+    const i = ids.indexOf(id);
+    const j = i + dir;
+    if (j < 0 || j >= ids.length) return;
+    [ids[i], ids[j]] = [ids[j], ids[i]];
+    try { await api.put('/menu/categories/order', { ids }); refresh(); } catch (err) { fail(err); }
+  }
+  async function moveItem(item, dir) {
+    const ids = items.filter((i) => i.categoryId === item.categoryId).map((i) => i._id);
+    const i = ids.indexOf(item._id);
+    const j = i + dir;
+    if (j < 0 || j >= ids.length) return;
+    [ids[i], ids[j]] = [ids[j], ids[i]];
+    try { await api.put('/menu/items/order', { categoryId: item.categoryId, ids }); refresh(); } catch (err) { fail(err); }
+  }
+  async function toggleCategory(c) {
+    try { await api.put(`/menu/categories/${c._id}`, { hidden: !c.hidden }); refresh(); } catch (err) { fail(err); }
+  }
+  async function removeCategory(c) {
+    if (!window.confirm(`¿Borrar la categoría «${textOf(c.name, language)}»?`)) return;
+    try { await api.delete(`/menu/categories/${c._id}`); refresh(); } catch (err) { fail(err); }
+  }
+
+  const subtitle = menu ? `${items.length} ${items.length === 1 ? 'plato' : 'platos'} · ${languages.map(languageName).join(', ')}` : 'Platos, precios y alérgenos';
+
+  return (
+    <div className="w-full space-y-6">
+      <PageHeader title="Carta" subtitle={subtitle}
+        actions={manager && categories.length > 0 ? <PrimaryButton onClick={() => setModal({ type: 'item' })}>Nuevo plato</PrimaryButton> : null} />
+
+      {manager && (
+        <div className="flex flex-wrap gap-2">
+          <GhostButton onClick={() => setModal({ type: 'import' })}>Importar del TPV</GhostButton>
+          <GhostButton onClick={() => setModal({ type: 'category' })}>+ Categoría</GhostButton>
+          <GhostButton onClick={() => setModal({ type: 'languages' })}>Idiomas</GhostButton>
+        </div>
+      )}
+
+      {items.length > 8 && (
+        <input className="w-full lg:max-w-sm h-11 rounded-xl border border-gray-200 px-3.5 text-[15px] outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
+          placeholder="Buscar un plato…" value={search} onChange={(e) => setSearch(e.target.value)} />
+      )}
+
+      {q.isLoading && <p className="text-sm text-gray-400">Cargando…</p>}
+      {menu && categories.length === 0 && (
+        <Empty>
+          Aún no hay carta.{manager ? ' Importa los platos de tu TPV o crea la primera categoría.' : ''}
+          {manager && (
+            <span className="mt-3 flex flex-wrap justify-center gap-2">
+              <PrimaryButton icon={null} onClick={() => setModal({ type: 'import' })}>Importar del TPV</PrimaryButton>
+              <GhostButton onClick={() => setModal({ type: 'category' })}>Crear categoría</GhostButton>
+            </span>
+          )}
+        </Empty>
+      )}
+
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-x-14 gap-y-9 items-start">
+        {byCategory.map(({ category: c, items: list }) => (
+          <section key={c._id} className={c.hidden ? 'opacity-70' : ''}>
+            <div className="flex items-center justify-between gap-3 border-b border-gray-200 pb-1.5">
+              <h2 className="min-w-0 truncate text-[13px] font-semibold uppercase tracking-wide text-gray-500">
+                {textOf(c.name, language)}{c.hidden && <span className="ml-2 normal-case font-medium text-gray-400">· Oculta de la web</span>}
+              </h2>
+              {manager && (
+                <MenuButton ariaLabel="Opciones de la categoría" className="w-8 h-8 justify-center text-gray-400" items={[
+                  { label: 'Añadir plato', onClick: () => setModal({ type: 'item', categoryId: c._id }) },
+                  { label: 'Editar nombre', onClick: () => setModal({ type: 'category', category: c }) },
+                  { label: c.hidden ? 'Mostrar en la web' : 'Ocultar de la web', onClick: () => toggleCategory(c) },
+                  { label: 'Subir', onClick: () => moveCategory(c._id, -1) },
+                  { label: 'Bajar', onClick: () => moveCategory(c._id, 1) },
+                  { label: 'Borrar categoría', onClick: () => removeCategory(c) },
+                ]}>
+                  <span aria-hidden="true" className="text-xl leading-none pb-1">⋯</span>
+                </MenuButton>
+              )}
+            </div>
+            {list.length === 0 ? (
+              <p className="py-3 text-sm text-gray-400">Sin platos.{manager && <button type="button" className="ml-2 font-semibold text-violet-700" onClick={() => setModal({ type: 'item', categoryId: c._id })}>+ Añadir</button>}</p>
+            ) : (
+              <ul className="divide-y divide-gray-100">
+                {list.map((item) => (
+                  <ItemRow key={item._id} item={item} language={language} manager={manager}
+                    onOpen={() => setModal({ type: 'item', item })} onSoldOut={() => toggleSoldOut(item)} />
+                ))}
+              </ul>
+            )}
+          </section>
+        ))}
+      </div>
+
+      {modal?.type === 'item' && (
+        <ItemModal item={modal.item} categoryId={modal.categoryId} categories={categories} languages={languages} canMove={!!modal.item}
+          onMove={(dir) => { moveItem(modal.item, dir); }} onClose={() => setModal(null)} onSaved={done} />
+      )}
+      {modal?.type === 'category' && <CategoryModal category={modal.category} languages={languages} onClose={() => setModal(null)} onSaved={done} />}
+      {modal?.type === 'languages' && <LanguagesModal languages={languages} onClose={() => setModal(null)} onSaved={done} />}
+      {modal?.type === 'import' && <ImportMenuModal onClose={() => setModal(null)} onDone={done} />}
+    </div>
+  );
+}

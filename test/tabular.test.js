@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildRows, detectDelimiter, findHeaderRow, guessMapping, parseDate, parseDelimited, parseNumber } from '../src/lib/tabular.js';
+import { MENU_FIELDS, buildMenuRows, buildRows, detectDelimiter, findHeaderRow, guessMapping, parseDate, parseDelimited, parseNumber } from '../src/lib/tabular.js';
 
 test('numbers in Spanish and English formats', () => {
   assert.equal(parseNumber('1.234,56 €'), 1234.56);
@@ -43,4 +43,23 @@ test('finds the header below the titles and guesses the columns', () => {
   const { rows, skipped } = buildRows(table, header, mapping);
   assert.equal(skipped, 1); // the TOTAL line has no date
   assert.deepEqual(rows[1], { date: '2026-10-02', total: 850.5, cash: 250.5, card: 600, tickets: 35 });
+});
+
+test('articles of a POS: header, columns and rows for the menu', () => {
+  const table = parseDelimited([
+    'Listado de artículos',
+    'Código;Artículo;Familia;PVP',
+    '001;Croquetas caseras;Entrantes;8,50',
+    '002;Entrecot;Carnes;22,00',
+    ';;;',
+    '003;Agua;;2',
+  ].join('\n'));
+  const header = findHeaderRow(table, MENU_FIELDS, 'name');
+  assert.equal(header, 1);
+  const mapping = guessMapping(table[header], MENU_FIELDS);
+  assert.deepEqual(mapping, { name: 1, price: 3, category: 2, externalId: 0 });
+  const { rows } = buildMenuRows(table, header, mapping);
+  assert.deepEqual(rows[0], { name: 'Croquetas caseras', category: 'Entrantes', externalId: '001', price: 8.5 });
+  assert.equal(rows.length, 3);
+  assert.equal(rows[2].category, '');
 });

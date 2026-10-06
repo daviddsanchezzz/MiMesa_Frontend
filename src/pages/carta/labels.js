@@ -1,0 +1,39 @@
+export const ALLERGENS = [
+  { key: 'gluten', label: 'Gluten', icon: '🌾' },
+  { key: 'crustaceos', label: 'Crustáceos', icon: '🦐' },
+  { key: 'huevos', label: 'Huevos', icon: '🥚' },
+  { key: 'pescado', label: 'Pescado', icon: '🐟' },
+  { key: 'cacahuetes', label: 'Cacahuetes', icon: '🥜' },
+  { key: 'soja', label: 'Soja', icon: '🫘' },
+  { key: 'lacteos', label: 'Lácteos', icon: '🥛' },
+  { key: 'frutos_secos', label: 'Frutos secos', icon: '🌰' },
+  { key: 'apio', label: 'Apio', icon: '🥬' },
+  { key: 'mostaza', label: 'Mostaza', icon: '🟡' },
+  { key: 'sesamo', label: 'Sésamo', icon: '⚪' },
+  { key: 'sulfitos', label: 'Sulfitos', icon: '🍷' },
+  { key: 'altramuces', label: 'Altramuces', icon: '🌼' },
+  { key: 'moluscos', label: 'Moluscos', icon: '🐚' },
+];
+
+export const TAGS = [
+  { key: 'recomendado', label: 'Recomendado', icon: '⭐' },
+  { key: 'nuevo', label: 'Nuevo', icon: '✨' },
+  { key: 'vegano', label: 'Vegano', icon: '🌱' },
+  { key: 'vegetariano', label: 'Vegetariano', icon: '🥕' },
+  { key: 'sin_gluten', label: 'Sin gluten', icon: '🚫' },
+  { key: 'picante', label: 'Picante', icon: '🌶️' },
+];
+
+export const LANGUAGES = [
+  ['es', 'Español'], ['en', 'English'], ['ca', 'Català'], ['eu', 'Euskara'], ['gl', 'Galego'], ['fr', 'Français'], ['de', 'Deutsch'],
+  ['it', 'Italiano'], ['pt', 'Português'], ['nl', 'Nederlands'], ['ru', 'Русский'], ['zh', '中文'], ['ja', '日本語'], ['ar', 'العربية'],
+];
+export const languageName = (code) => (LANGUAGES.find(([c]) => c === code) || [code, code.toUpperCase()])[1];
+
+export const eur = (n) => (n === null || n === undefined ? 'Consultar' : `${Number(n).toLocaleString('es-ES', { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2, useGrouping: 'always' })} €`);
+
+/** The text in the main language, or the first one written. */
+export const textOf = (texts, language) => (texts && (texts[language] || Object.values(texts)[0])) || '';
+
+export const inputCls = 'w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-[15px] text-gray-900 outline-none placeholder:text-gray-400 focus:border-violet-400 focus:ring-2 focus:ring-violet-100 disabled:bg-gray-50 disabled:text-gray-500';
+export const chipCls = (on) => `inline-flex items-center gap-1.5 h-9 px-3 rounded-full border text-[13px] font-medium transition-colors ${on ? 'border-violet-600 bg-violet-50 text-violet-800 ring-1 ring-violet-600' : 'border-gray-200 text-gray-700 hover:bg-gray-50'}`;

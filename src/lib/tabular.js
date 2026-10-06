@@ -86,11 +86,11 @@ export const FIELDS = [
 ];
 
 /** { fieldKey: columnIndex } guessed from the header names (each column used at most once). */
-export function guessMapping(headers) {
+export function guessMapping(headers, fields = FIELDS) {
   const norm = headers.map(strip);
   const used = new Set();
   const out = {};
-  for (const f of FIELDS) {
+  for (const f of fields) {
     // exact name first, then "contains"
     let idx = norm.findIndex((h, i) => !used.has(i) && f.words.includes(h));
     if (idx === -1) idx = norm.findIndex((h, i) => !used.has(i) && h && f.words.some((w) => h.includes(w)));
@@ -100,12 +100,39 @@ export function guessMapping(headers) {
 }
 
 /** The header is the first line that names a date and something else (reports start with titles). */
-export function findHeaderRow(table) {
+export function findHeaderRow(table, fields = FIELDS, anchor = 'date') {
   for (let i = 0; i < Math.min(table.length, 25); i++) {
-    const m = guessMapping(table[i]);
-    if (m.date !== undefined && Object.keys(m).length >= 2) return i;
+    const m = guessMapping(table[i], fields);
+    if (m[anchor] !== undefined && Object.keys(m).length >= 2) return i;
   }
   return 0;
+}
+
+/** The articles of a POS, for the menu. */
+export const MENU_FIELDS = [
+  { key: 'name', label: 'Nombre del plato', required: true, words: ['nombre', 'articulo', 'descripcion', 'producto', 'plato', 'denominacion'] },
+  { key: 'price', label: 'Precio', words: ['precio', 'pvp', 'tarifa', 'precio venta', 'importe', 'p.v.p.'] },
+  { key: 'category', label: 'Categoría', words: ['familia', 'categoria', 'grupo', 'seccion', 'subfamilia', 'tipo'] },
+  { key: 'externalId', label: 'Código', words: ['codigo', 'cod', 'referencia', 'ref', 'id', 'cod. articulo', 'sku'] },
+];
+
+/** Lines → { externalId, category, name, price } for the menu import; lines without a name are skipped. */
+export function buildMenuRows(table, headerRow, mapping) {
+  const rows = [];
+  let skipped = 0;
+  for (const cells of table.slice(headerRow + 1)) {
+    const name = mapping.name === undefined ? '' : String(cells[mapping.name] ?? '').trim();
+    if (!name) { skipped++; continue; }
+    const row = { name };
+    if (mapping.category !== undefined) row.category = String(cells[mapping.category] ?? '').trim();
+    if (mapping.externalId !== undefined) row.externalId = String(cells[mapping.externalId] ?? '').trim();
+    if (mapping.price !== undefined) {
+      const n = parseNumber(cells[mapping.price]);
+      if (n !== null) row.price = n;
+    }
+    rows.push(row);
+  }
+  return { rows, skipped };
 }
 
 /**

@@ -312,7 +312,7 @@ function ResumenTab({ period, dateRange, categories, refreshTrigger, onTodayReve
   return (
     <div className={`space-y-7 ${loading ? 'opacity-60' : ''}`}>
       {/* Hero: how much is left, and what comes in against what goes out */}
-      <Hero label="Te queda" value={fmtEur(profit)} tone={profit < 0 ? 'bad' : profit > 0 ? 'good' : undefined}
+      <Hero label="Resultado" value={fmtEur(profit)} tone={profit < 0 ? 'bad' : profit > 0 ? 'good' : undefined}
         pill={diff !== null && diff !== 0 && (
           <span className={`text-xs font-semibold px-2 py-0.5 rounded-full tabular-nums ${diff > 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-600'}`}>
             {diff > 0 ? '▲ +' : '▼ −'}{fmtEur(Math.abs(diff)).replace('−', '')} vs {vs}
@@ -320,10 +320,10 @@ function ResumenTab({ period, dateRange, categories, refreshTrigger, onTodayReve
         )}
         bar={income > 0 && expenses > 0 ? {
           segments: [
-            { label: 'Entra', text: fmtEur(income), value: income, color: '#10b981' },
-            { label: 'Sale', text: fmtEur(expenses), value: expenses, color: '#fb7185' },
+            { label: 'Ingresos', text: fmtEur(income), value: income, color: '#10b981' },
+            { label: 'Gastos', text: fmtEur(expenses), value: expenses, color: '#fb7185' },
           ],
-          note: `Por cada 1 € que entra, salen ${(expenses / income).toFixed(2).replace('.', ',')} €`,
+          note: `Margen ${Math.round(((income - expenses) / income) * 100)} % · los gastos son el ${Math.round((expenses / income) * 100)} % de los ingresos`,
         } : null}
         stats={[
           ...(income > 0 && expenses > 0 ? [] : [
@@ -333,7 +333,15 @@ function ResumenTab({ period, dateRange, categories, refreshTrigger, onTodayReve
           ...(appt
             ? [{ label: 'Citas', value: data.appointments, sub: 'atendidas' }, { label: 'Cobrado', value: fmtEur(data.collectedRevenue || 0), sub: 'en caja' }]
             : [{ label: 'Comensales', value: data.totalCovers, sub: <span>ticket <TicketAverageEdit value={data.ticketAverage} onSave={saveTicketAverage} /></span> }]),
-          ...(income > 0 && expenses > 0 ? [{ label: appt ? 'Facturado' : 'Ingresos', value: <span className="text-[17px]">{prevIncome ? `${income >= prevIncome ? '▲' : '▼'} ${Math.abs(Math.round(((income - prevIncome) / prevIncome) * 100))} %` : '—'}</span>, sub: `vs ${vs}`, tone: prevIncome && income < prevIncome ? 'bad' : undefined }] : []),
+          ...(income > 0 && expenses > 0 ? [(() => {
+            const pct = prevIncome ? Math.round(((income - prevIncome) / prevIncome) * 100) : null;
+            // a jump of hundreds of percent says nothing: show the average ticket instead
+            if (pct === null || Math.abs(pct) > 300) {
+              const ticket = appt ? data.averageTicket : data.ticketAverage;
+              return { label: 'Ticket medio', value: fmtEur(ticket || 0), sub: appt ? 'por cita' : 'por comensal' };
+            }
+            return { label: 'Ingresos', value: `${pct >= 0 ? '▲' : '▼'} ${Math.abs(pct)} %`, sub: `vs ${vs}`, tone: pct < 0 ? 'bad' : undefined };
+          })()] : []),
         ].slice(0, 3)} />
 
       <div className="flex gap-2.5">

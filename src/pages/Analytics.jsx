@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import api from '../services/api';
 import { useSetMobileHeader } from '../context/MobileHeaderContext';
 import { useData } from '../lib/query';
-import { BigFigure, FigureLine, PageHeader, Section, Segmented } from '../ui/kit';
+import { PageHeader, Section, Segmented } from '../ui/kit';
 
 const PERIODS = [[7, '7 días'], [30, '30 días'], [90, '90 días']];
 
@@ -21,6 +21,30 @@ function Trend({ value, period, upIsBad = false }) {
     <span className={good ? 'text-emerald-600' : 'text-rose-600'}>
       {value > 0 ? '▲' : '▼'} {Math.abs(value)} % que los {period} días anteriores
     </span>
+  );
+}
+
+const nf = (n, digits = 1) => Number(n || 0).toLocaleString('es-ES', { maximumFractionDigits: digits });
+
+/** "▼ 54 % vs 30 días anteriores" as a small pill (up is good unless `upIsBad`). */
+function TrendPill({ value, period }) {
+  if (value === null || value === undefined || value === 0) return null;
+  const good = value > 0;
+  return (
+    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full tabular-nums ${good ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-600'}`}>
+      {value > 0 ? '▲' : '▼'} {nf(Math.abs(value), 0)} % vs {period} días anteriores
+    </span>
+  );
+}
+
+function Stat({ label, value, sub, tone }) {
+  const color = tone === 'good' ? 'text-emerald-600' : tone === 'warn' ? 'text-amber-600' : 'text-gray-900';
+  return (
+    <div className="min-w-0">
+      <p className="text-xs text-gray-500 truncate">{label}</p>
+      <p className={`mt-0.5 text-xl font-semibold tracking-tight tabular-nums ${color}`}>{value}</p>
+      <p className="mt-0.5 min-h-4 text-[11px] text-gray-400 truncate">{sub}</p>
+    </div>
   );
 }
 
@@ -105,17 +129,21 @@ export default function Estadisticas() {
 
       {!loading && !error && data && (
         <>
-          <section className="space-y-3">
-            <BigFigure label="Reservas" value={s.totalReservations}
-              sub={<Trend value={t?.totalReservations} period={period} />} />
-            <FigureLine items={[
-              { value: s.totalCovers, label: 'comensales' },
-              { value: s.avgPartySize, label: 'personas de media' },
-              { value: s.confirmed, label: `confirmadas (${s.totalReservations ? Math.round((s.confirmed / s.totalReservations) * 100) : 0} %)`, tone: 'good' },
-              { value: s.cancellations, label: `canceladas (${s.cancelRatePct} %)` },
-              { value: s.noShows, label: 'no vinieron', tone: s.noShows ? 'warn' : undefined },
-              s.theforkReservations ? { value: s.theforkReservations, label: 'de TheFork' } : null,
-            ]} />
+          <section className="rounded-3xl border border-gray-200 bg-white p-5 lg:p-7 shadow-[0_1px_2px_rgba(16,24,40,0.04)] xl:flex xl:items-center xl:justify-between xl:gap-12">
+            <div className="xl:shrink-0">
+              <p className="text-[13px] font-semibold uppercase tracking-wide text-gray-400">Reservas</p>
+              <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                <p className="text-4xl font-semibold tracking-tight tabular-nums text-gray-900">{s.totalReservations}</p>
+                <TrendPill value={t?.totalReservations} period={period} />
+              </div>
+            </div>
+            <div className="mt-5 grid grid-cols-2 gap-x-4 gap-y-5 border-t border-gray-100 pt-4 xl:mt-0 xl:flex-1 xl:max-w-4xl xl:grid-cols-6 xl:border-t-0 xl:border-l xl:pt-0 xl:pl-12">
+              <Stat label="Comensales" value={s.totalCovers} sub={`${nf(s.avgPartySize)} por reserva`} />
+              <Stat label="Confirmadas" value={s.confirmed} tone="good" sub={`${s.totalReservations ? Math.round((s.confirmed / s.totalReservations) * 100) : 0} %`} />
+              <Stat label="Canceladas" value={s.cancellations} sub={`${nf(s.cancelRatePct)} %`} />
+              <Stat label="No vinieron" value={s.noShows} tone={s.noShows ? 'warn' : undefined} sub={s.noShows ? 'ojo con estos clientes' : 'ninguno'} />
+              {s.theforkReservations ? <Stat label="De TheFork" value={s.theforkReservations} sub={`${s.totalReservations ? Math.round((s.theforkReservations / s.totalReservations) * 100) : 0} %`} /> : null}
+            </div>
           </section>
 
           <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-x-12 gap-y-9 items-start">

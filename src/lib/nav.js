@@ -28,6 +28,7 @@ export function useNav() {
   const manage = [
     // Tu local / Tu negocio
     !isAppointments && isModuleEnabled('menu') && { to: '/carta', label: 'Carta', hint: 'Platos, precios y alérgenos', icon: 'list', section: local },
+    !isAppointments && isModuleEnabled('web') && manager && { to: '/web', label: 'Mi web', hint: 'Horario, cierres, reservas y redes', icon: 'link', section: local },
     !isAppointments && manager && { to: '/tables', label: 'Mesas y salas', hint: 'Zonas del local y su plano', icon: 'map', section: local },
     !isAppointments && manager && { to: '/horarios', label: 'Horarios y cierres', hint: 'Turnos, festivos y vacaciones', icon: 'clock', section: local },
     !isAppointments && isModuleEnabled('bookings') && { to: '/agenda', label: 'Agenda de citas', icon: 'clock', section: local },

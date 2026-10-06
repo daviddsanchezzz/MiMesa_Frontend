@@ -99,19 +99,19 @@ export default function Settings() {
   useSetMobileHeader({ title: current && !isDesktop ? current.label : 'Configuración' });
 
   const list = (
-    <nav className="space-y-6">
+    <nav className="space-y-7 lg:space-y-6">
       {groups.map((g) => (
         <div key={g.title}>
-          <p className="px-1 lg:px-3 mb-1.5 text-[13px] lg:text-[11px] font-semibold uppercase tracking-wide text-gray-400">{g.title}</p>
-          <ul className="rounded-2xl lg:rounded-none border lg:border-0 border-gray-200 divide-y lg:divide-y-0 divide-gray-100 overflow-hidden bg-white">
+          <p className="px-1 lg:px-3 mb-0.5 lg:mb-1.5 text-[13px] lg:text-[11px] font-semibold uppercase tracking-wide text-gray-400">{g.title}</p>
+          <ul className="border-t lg:border-0 border-gray-100 divide-y lg:divide-y-0 divide-gray-100">
             {g.items.map((t) => {
               const active = isDesktop && t.key === tab;
               return (
                 <li key={t.key}>
                   <button type="button" onClick={() => open(t.key)}
-                    className={`w-full flex items-center gap-3 text-left px-4 py-3 lg:px-3 lg:py-2 lg:rounded-lg transition-colors ${active ? 'bg-gray-100' : 'hover:bg-gray-50'}`}>
-                    <span className={`w-9 h-9 lg:w-auto lg:h-auto rounded-xl lg:rounded-none flex items-center justify-center bg-gray-100 lg:bg-transparent ${active ? 'text-violet-600' : 'text-gray-600 lg:text-gray-400'}`}>
-                      <Icon name={t.icon} className="w-5 h-5" />
+                    className={`w-full flex items-center gap-3.5 lg:gap-3 text-left px-1 py-3.5 lg:px-3 lg:py-2 lg:rounded-lg transition-colors ${active ? 'bg-gray-100' : 'hover:bg-gray-50'}`}>
+                    <span className={`w-7 lg:w-auto flex items-center justify-center ${active ? 'text-violet-600' : 'text-gray-500 lg:text-gray-400'}`}>
+                      <Icon name={t.icon} className="w-[22px] h-[22px] lg:w-5 lg:h-5" strokeWidth={1.6} />
                     </span>
                     <span className="min-w-0 flex-1">
                       <span className={`block text-[15px] lg:text-sm ${active ? 'font-semibold text-gray-900' : 'font-medium text-gray-900 lg:text-gray-600'}`}>{t.label}</span>

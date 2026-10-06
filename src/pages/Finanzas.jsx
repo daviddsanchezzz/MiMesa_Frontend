@@ -236,20 +236,16 @@ function ActionPill({ icon, children, onClick, to }) {
   return to ? <Link to={to} className={cls}>{inner}</Link> : <button type="button" onClick={onClick} className={cls}>{inner}</button>;
 }
 
-function ResumenTab({ period, dateRange, categories, refreshTrigger, onTodayRevenue, onViewExpenses, onAddExpense }) {
+function ResumenTab({ period, dateRange, categories, refreshTrigger, onViewIncome, onViewExpenses, onAddExpense }) {
   const { isModuleEnabled } = useAuth();
   const hasPurchases = isModuleEnabled('purchases'); // invoices live in Compras
   const [data, setData] = useState(null);
   const [previous, setPrevious] = useState(null);
   const [toReview, setToReview] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [showDays, setShowDays] = useState(false);
-  const [page, setPage] = useState(0);
-
   const load = useCallback(async () => {
     if (!dateRange.from || !dateRange.to) return;
     setLoading(true);
-    setPage(0);
     const prev = shiftRange(period, dateRange, -1);
     try {
       const [{ data: d }, prevRes, invRes] = await Promise.all([
@@ -266,13 +262,6 @@ function ResumenTab({ period, dateRange, categories, refreshTrigger, onTodayReve
 
   useEffect(() => { load(); }, [load]);
   useEffect(() => { if (refreshTrigger > 0) load(); }, [refreshTrigger]); // eslint-disable-line
-
-  const saveActual = async (date, actualRevenue) => {
-    try {
-      await api.put('/revenue/actual', { date, actualRevenue });
-      load();
-    } catch { /* ignore */ }
-  };
 
   const saveTicketAverage = async (ticketAverage) => {
     try {
@@ -295,12 +284,11 @@ function ResumenTab({ period, dateRange, categories, refreshTrigger, onTodayReve
   const diff = previous && (prevIncome || prevExpenses) ? profit - prevProfit : null;
 
 
-  const visibleDays = data.days.filter((day) => {
-    const count = appt ? day.appointments : day.covers;
-    return day.date === toIso() || count > 0 || day.estimatedRevenue > 0 || day.actualRevenue !== null;
-  });
-  const pageCount = Math.ceil(visibleDays.length / PAGE_SIZE);
-  const slice = visibleDays.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  // The latest days that brought money in
+  const recent = data.days
+    .filter((day) => (day.actualRevenue ?? day.estimatedRevenue) > 0)
+    .sort((x, y) => y.date.localeCompare(x.date))
+    .slice(0, 5);
 
   const cats = data.expensesByCategory;
   const topCats = cats.slice(0, 5);
@@ -387,44 +375,28 @@ function ResumenTab({ period, dateRange, categories, refreshTrigger, onTodayReve
         {appt && <Link to="/personal" className="mt-2 inline-flex text-[13px] font-semibold text-violet-700 hover:text-violet-900">Ver rendimiento del equipo →</Link>}
       </Section>
 
-      {/* Day by day, tucked away */}
-      <Section className={PANEL} title="Día a día" aside={<SectionLink onClick={() => setShowDays((v) => !v)}>{showDays ? 'Ocultar' : 'Ver detalle'}</SectionLink>}>
-        {!showDays ? (
-          <p className="py-1 text-[13px] text-gray-500">{appt ? 'Lo facturado y lo cobrado cada día; desde aquí puedes corregir un cobro.' : 'Comensales y lo ingresado cada día; apunta aquí lo que realmente has cobrado para afinar el resultado.'}</p>
-        ) : visibleDays.length === 0 ? (
-          <Empty>Sin días en este periodo.</Empty>
+      {/* The last days with income; the full detail lives in the Ingresos tab */}
+      <Section className={PANEL} title="Últimos ingresos" aside={<SectionLink onClick={onViewIncome}>Ver ingresos</SectionLink>}>
+        {recent.length === 0 ? (
+          <p className="py-4 text-sm text-gray-500">Sin ingresos en este periodo.</p>
         ) : (
-          <>
-            <div className="flex justify-end pb-1"><SectionLink onClick={onTodayRevenue}>+ Ingreso de hoy</SectionLink></div>
-            <TableHead cols={[
-              ['Día', 'col-span-4'],
-              [appt ? 'Citas' : 'Comensales', 'col-span-2 text-right'],
-              [appt ? 'En citas' : 'Estimado', 'col-span-3 text-right'],
-              ['Cobrado', 'col-span-3 text-right'],
-            ]} />
-            <ul className="divide-y divide-gray-100">
-              {slice.map((day) => {
-                const count = appt ? day.appointments : day.covers;
-                return (
-                  <li key={day.date} className="px-2 py-2 flex items-center gap-3 md:grid md:grid-cols-12 md:gap-4">
-                    <div className="min-w-0 flex-1 md:col-span-4">
-                      <p className="text-[15px] font-medium text-gray-900 first-letter:uppercase">{fmtDay(day.date)}</p>
-                      <p className="text-[13px] text-gray-500 md:hidden">
-                        {count ? `${count} ${appt ? (count === 1 ? 'cita' : 'citas') : 'comensales'}` : appt ? 'Sin citas' : 'Sin reservas'}
-                        {day.estimatedRevenue > 0 && ` · ${fmtEur(day.estimatedRevenue)} ${appt ? 'facturados' : 'estimado'}`}
-                      </p>
-                    </div>
-                    <span className="hidden md:block md:col-span-2 text-right text-sm tabular-nums text-gray-600">{count || '—'}</span>
-                    <span className="hidden md:block md:col-span-3 text-right text-sm tabular-nums text-gray-600">{day.estimatedRevenue > 0 ? fmtEur(day.estimatedRevenue) : '—'}</span>
-                    <div className="shrink-0 md:col-span-3 text-right">
-                      <InlineRevenueEdit date={day.date} value={day.actualRevenue} source={appt ? day.actualSource : null} onSave={(v) => saveActual(day.date, v)} />
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-            <Pager page={page} pageCount={pageCount} setPage={setPage} />
-          </>
+          <ul className="divide-y divide-gray-100">
+            {recent.map((day) => {
+              const count = appt ? day.appointments : day.covers;
+              const amount = day.actualRevenue !== null && day.actualRevenue !== undefined ? day.actualRevenue : day.estimatedRevenue;
+              return (
+                <li key={day.date}>
+                  <button type="button" onClick={onViewIncome} className="w-full py-3 flex items-center gap-3 text-left">
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-[15px] text-gray-900 first-letter:uppercase">{fmtDay(day.date)}</span>
+                      <span className="block text-[13px] text-gray-500">{count} {appt ? (count === 1 ? 'cita' : 'citas') : 'comensales'}</span>
+                    </span>
+                    <span className="text-[15px] font-semibold tabular-nums text-gray-900">{fmtEur(amount)}</span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
         )}
       </Section>
       </div>
@@ -1304,8 +1276,131 @@ function RevenueModal({ date = toIso(), initialValue = null, onClose, onSave }) 
 
 const TABS = [
   ['dashboard', 'Resumen'],
+  ['income', 'Ingresos'],
   ['expenses',  'Gastos'],
 ];
+
+// ── Ingresos tab ──────────────────────────────────────────────────────────────
+
+const METHOD_LABEL = { cash: 'Efectivo', card: 'Tarjeta', bizum: 'Bizum', other: 'Otros' };
+const METHOD_COLOR = { cash: '#10b981', card: '#8b5cf6', bizum: '#0ea5e9', other: '#94a3b8' };
+
+function IngresosTab({ period, dateRange, refreshTrigger, onTodayRevenue }) {
+  const [data, setData] = useState(null);
+  const [previous, setPrevious] = useState(null);
+  const [till, setTill] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState(0);
+
+  const load = useCallback(async () => {
+    if (!dateRange.from || !dateRange.to) return;
+    setLoading(true);
+    setPage(0);
+    const prev = shiftRange(period, dateRange, -1);
+    try {
+      const [{ data: d }, prevRes] = await Promise.all([
+        api.get(`/revenue/dashboard?from=${dateRange.from}&to=${dateRange.to}`),
+        api.get(`/revenue/dashboard?from=${prev.from}&to=${prev.to}`).catch(() => null),
+      ]);
+      setData(d);
+      setPrevious(prevRes?.data || null);
+      setTill(d.mode === 'appointments' ? (await api.get(`/bookings/cash/summary?from=${dateRange.from}&to=${dateRange.to}`).catch(() => null))?.data || null : null);
+    } catch { /* handled below */ }
+    finally { setLoading(false); }
+  }, [period, dateRange.from, dateRange.to]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  useEffect(() => { load(); }, [load]);
+  useEffect(() => { if (refreshTrigger > 0) load(); }, [refreshTrigger]); // eslint-disable-line
+
+  const saveActual = async (date, actualRevenue) => {
+    try { await api.put('/revenue/actual', { date, actualRevenue }); load(); } catch { /* ignore */ }
+  };
+  const saveTicketAverage = async (ticketAverage) => {
+    try { await api.put('/revenue/ticket-average', { ticketAverage }); load(); } catch { /* ignore */ }
+  };
+
+  if (loading && !data) return <Loading />;
+  if (!data) return <Empty>No se pudieron cargar los datos.</Empty>;
+
+  const appt = data.mode === 'appointments';
+  const income = incomeOf(data);
+  const prevIncome = incomeOf(previous);
+  const vs = previousLabel(period, dateRange);
+  const pct = previous && prevIncome ? Math.round(((income - prevIncome) / prevIncome) * 100) : null;
+  const tt = till?.totals;
+  const collected = tt ? tt.cash + tt.card + tt.bizum + tt.other : 0;
+
+  const visibleDays = data.days.filter((day) => {
+    const count = appt ? day.appointments : day.covers;
+    return day.date === toIso() || count > 0 || day.estimatedRevenue > 0 || day.actualRevenue !== null;
+  });
+  const pageCount = Math.ceil(visibleDays.length / PAGE_SIZE);
+  const slice = visibleDays.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+
+  return (
+    <div className={`space-y-7 ${loading ? 'opacity-60' : ''}`}>
+      <Hero label="Ingresos" value={fmtEur(income)}
+        pill={pct !== null && pct !== 0 && Math.abs(pct) <= 300 && (
+          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full tabular-nums ${pct > 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-600'}`}>
+            {pct > 0 ? '▲' : '▼'} {Math.abs(pct)} % vs {vs}
+          </span>
+        )}
+        bar={appt && collected > 0 ? {
+          segments: Object.keys(METHOD_LABEL).filter((k) => tt[k] > 0).map((k) => ({ label: METHOD_LABEL[k], text: fmtEur(tt[k] / 100), value: tt[k], color: METHOD_COLOR[k] })),
+          note: `${fmtEur(collected / 100)} cobrados en caja${income > 0 ? ` de ${fmtEur(income)} facturados` : ''}`,
+        } : null}
+        stats={appt ? [
+          { label: 'Citas', value: data.appointments, sub: 'atendidas' },
+          { label: 'Ticket medio', value: fmtEur(data.averageTicket || 0), sub: 'por cita' },
+          { label: 'Propinas', value: fmtEur((tt?.tips || 0) / 100), sub: 'no cuentan como ingreso' },
+        ] : [
+          { label: 'Comensales', value: data.totalCovers, sub: 'en el periodo' },
+          { label: 'Ticket medio', value: <TicketAverageEdit value={data.ticketAverage} onSave={saveTicketAverage} />, sub: 'toca para cambiarlo' },
+          { label: 'Calculado sobre', value: data.profitBasis === 'actual' ? 'Lo real' : 'Lo estimado', sub: 'apunta lo cobrado para afinar' },
+        ]} />
+
+      <Section title="Día a día" aside={<SectionLink onClick={onTodayRevenue}>+ Ingreso de hoy</SectionLink>}>
+        <p className="mb-2 text-[13px] text-gray-500">
+          {appt ? 'Lo facturado y lo cobrado cada día; desde aquí puedes corregir un cobro.' : 'Comensales y lo ingresado cada día; apunta aquí lo que realmente has cobrado para afinar el resultado.'}
+        </p>
+        {visibleDays.length === 0 ? (
+          <Empty>Sin días en este periodo.</Empty>
+        ) : (
+          <>
+            <TableHead cols={[
+              ['Día', 'col-span-4'],
+              [appt ? 'Citas' : 'Comensales', 'col-span-2 text-right'],
+              [appt ? 'En citas' : 'Estimado', 'col-span-3 text-right'],
+              ['Cobrado', 'col-span-3 text-right'],
+            ]} />
+            <ul className="divide-y divide-gray-100">
+              {slice.map((day) => {
+                const count = appt ? day.appointments : day.covers;
+                return (
+                  <li key={day.date} className="px-2 py-2 flex items-center gap-3 md:grid md:grid-cols-12 md:gap-4">
+                    <div className="min-w-0 flex-1 md:col-span-4">
+                      <p className="text-[15px] font-medium text-gray-900 first-letter:uppercase">{fmtDay(day.date)}</p>
+                      <p className="text-[13px] text-gray-500 md:hidden">
+                        {count ? `${count} ${appt ? (count === 1 ? 'cita' : 'citas') : 'comensales'}` : appt ? 'Sin citas' : 'Sin reservas'}
+                        {day.estimatedRevenue > 0 && ` · ${fmtEur(day.estimatedRevenue)} ${appt ? 'facturados' : 'estimado'}`}
+                      </p>
+                    </div>
+                    <span className="hidden md:block md:col-span-2 text-right text-sm tabular-nums text-gray-600">{count || '—'}</span>
+                    <span className="hidden md:block md:col-span-3 text-right text-sm tabular-nums text-gray-600">{day.estimatedRevenue > 0 ? fmtEur(day.estimatedRevenue) : '—'}</span>
+                    <div className="shrink-0 md:col-span-3 text-right">
+                      <InlineRevenueEdit date={day.date} value={day.actualRevenue} source={appt ? day.actualSource : null} onSave={(v) => saveActual(day.date, v)} />
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+            <Pager page={page} pageCount={pageCount} setPage={setPage} />
+          </>
+        )}
+      </Section>
+    </div>
+  );
+}
 
 export default function Finanzas() {
   const [tab, setTab] = useState('dashboard');
@@ -1345,7 +1440,8 @@ export default function Finanzas() {
         <Tabs full value={tab} options={TABS} onChange={setTab} />
       </StickyBar>
 
-      {tab === 'dashboard' && <ResumenTab period={period} dateRange={dateRange} categories={categories} refreshTrigger={refresh} onTodayRevenue={() => setQuickAction('revenue')} onViewExpenses={() => setTab('expenses')} onAddExpense={() => setQuickAction('expense')} />}
+      {tab === 'dashboard' && <ResumenTab period={period} dateRange={dateRange} categories={categories} refreshTrigger={refresh} onViewIncome={() => setTab('income')} onViewExpenses={() => setTab('expenses')} onAddExpense={() => setQuickAction('expense')} />}
+      {tab === 'income'    && <IngresosTab period={period} dateRange={dateRange} refreshTrigger={refresh} onTodayRevenue={() => setQuickAction('revenue')} />}
       {tab === 'expenses'  && <GastosTab dateRange={dateRange} suppliers={suppliers} categories={categories} refreshTrigger={refresh} onCreate={() => setQuickAction('expense')} onCategoriesChanged={loadCategories} />}
 
       {quickAction === 'revenue' && (

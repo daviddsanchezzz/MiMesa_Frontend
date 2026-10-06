@@ -84,7 +84,7 @@ export default function ImportMenuModal({ onClose, onDone }) {
   }
 
   const s = plan?.summary;
-  const changes = s ? s.new + s.price + s.link : 0;
+  const changes = s ? s.new + s.price + s.link + (s.fill || 0) : 0;
   const footer = (
     <div className="space-y-2">
       {error && <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</p>}
@@ -170,12 +170,14 @@ export default function ImportMenuModal({ onClose, onDone }) {
             {s.new > 0 && <span><b className="text-gray-900">{s.new}</b> nuevos · </span>}
             {s.price > 0 && <span><b className="text-gray-900">{s.price}</b> cambian de precio · </span>}
             {s.link > 0 && <span><b className="text-gray-900">{s.link}</b> se unen al TPV · </span>}
+            {s.fill > 0 && <span><b className="text-gray-900">{s.fill}</b> se completan · </span>}
             {s.same > 0 && <span>{s.same} iguales</span>}
             {s.newCategories > 0 && <span> · {s.newCategories} categorías nuevas</span>}
           </p>
+          {s.fill > 0 && <p className="text-xs text-gray-500">«Se completan»: platos que ya tienes y a los que les faltaban alérgenos, etiquetas o descripción. Lo que ya habías escrito no se toca.</p>}
           {s.link > 0 && <p className="text-xs text-gray-500">«Se une al TPV»: ya estaba en tu carta; desde ahora su precio lo marca el TPV (su texto, alérgenos y traducciones no cambian).</p>}
           <ul className="divide-y divide-gray-100 rounded-xl border border-gray-200 max-h-72 overflow-y-auto">
-            {plan.plan.filter((p) => p.status !== 'same').map((p, i) => (
+            {plan.plan.filter((p) => p.status !== 'same' || p.fills?.length).map((p, i) => (
               <li key={i} className="px-3 py-2 flex items-center gap-3">
                 <span className="min-w-0 flex-1">
                   <span className="block text-sm text-gray-900 truncate">{p.name}</span>
@@ -183,10 +185,10 @@ export default function ImportMenuModal({ onClose, onDone }) {
                 </span>
                 {p.previous !== null && p.previous !== p.price && <span className="text-xs text-gray-400 line-through tabular-nums">{eur(p.previous)}</span>}
                 <span className="text-sm font-semibold tabular-nums text-gray-900">{eur(p.price)}</span>
-                <span className={`hidden sm:inline text-[11px] font-semibold px-2 py-0.5 rounded-full ${BADGE[p.status][1]}`}>{BADGE[p.status][0]}</span>
+                <span className={`hidden sm:inline text-[11px] font-semibold px-2 py-0.5 rounded-full ${p.status === 'same' ? 'bg-sky-50 text-sky-700' : BADGE[p.status][1]}`}>{p.status === 'same' ? 'Se completa' : BADGE[p.status][0]}</span>
               </li>
             ))}
-            {plan.plan.every((p) => p.status === 'same') && <li className="px-3 py-3 text-sm text-gray-500">Todo está igual que en la carta.</li>}
+            {plan.plan.every((p) => p.status === 'same' && !p.fills?.length) && <li className="px-3 py-3 text-sm text-gray-500">Todo está igual que en la carta.</li>}
           </ul>
           {s.missing > 0 && (
             <div className="rounded-xl bg-amber-50 border border-amber-200 px-3 py-2.5 text-sm text-amber-900">

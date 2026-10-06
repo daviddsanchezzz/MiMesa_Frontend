@@ -4,8 +4,9 @@ import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useSetMobileHeader } from '../context/MobileHeaderContext';
 import { useData } from '../lib/query';
-import { Empty, GhostButton, MenuButton, PageHeader, PrimaryButton, RowAction } from '../ui/kit';
+import { Empty, GhostButton, MenuButton, PageHeader, PrimaryButton, RowAction, Section, SectionLink } from '../ui/kit';
 import CategoryModal from './carta/CategoryModal';
+import DailyMenuModal from './carta/DailyMenuModal';
 import ImportMenuModal from './carta/ImportMenuModal';
 import ItemModal from './carta/ItemModal';
 import LanguagesModal from './carta/LanguagesModal';
@@ -17,6 +18,7 @@ function ItemRow({ item, language, manager, onOpen, onSoldOut }) {
   const flags = [...item.tags, ...item.allergens].map((k) => ICONS[k]).filter(Boolean).join(' ');
   return (
     <li className={`flex items-center gap-3 py-2.5 ${item.hidden || item.retired ? 'opacity-60' : ''}`}>
+      {item.photo?.url && <img src={item.photo.url} alt="" loading="lazy" className="w-12 h-12 shrink-0 rounded-xl object-cover bg-gray-100" />}
       <button type="button" disabled={!manager} onClick={onOpen} className="min-w-0 flex-1 text-left disabled:cursor-default">
         <span className={`block text-[15px] font-medium truncate ${item.soldOut ? 'text-gray-400 line-through' : 'text-gray-900'}`}>{textOf(item.name, language)}</span>
         <span className="block text-[13px] text-gray-500 truncate">
@@ -33,6 +35,19 @@ function ItemRow({ item, language, manager, onOpen, onSoldOut }) {
       <RowAction tone={item.soldOut ? 'warn' : 'neutral'} onClick={onSoldOut}>{item.soldOut ? 'Agotado' : 'Hay'}</RowAction>
     </li>
   );
+}
+
+const DAY_NAMES = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+const shortDate = (iso) => new Date(`${iso}T12:00:00`).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }).replace('.', '');
+
+/** When the menú del día is on, in words: "Lun–Vie · del 5 oct al 9 oct". */
+function dailyWhen(d) {
+  const days = [...(d.days || [])];
+  const text = !days.length || days.length === 7 ? 'Todos los días'
+    : days.length > 2 && days.every((x, i) => i === 0 || x === days[i - 1] + 1) ? `${DAY_NAMES[days[0]]}–${DAY_NAMES[days[days.length - 1]]}`
+      : days.map((x) => DAY_NAMES[x]).join(', ');
+  const range = d.from && d.to ? ` · del ${shortDate(d.from)} al ${shortDate(d.to)}` : d.from ? ` · desde el ${shortDate(d.from)}` : d.to ? ` · hasta el ${shortDate(d.to)}` : '';
+  return text + range;
 }
 
 export default function Carta() {
@@ -102,6 +117,28 @@ export default function Carta() {
         </div>
       )}
 
+      {menu && (menu.daily || manager) && (
+        <Section title="Menú del día" aside={manager ? <SectionLink onClick={() => setModal({ type: 'daily' })}>{menu.daily ? 'Editar' : 'Configurar'}</SectionLink> : null}>
+          {menu.daily ? (
+            <div className={`py-2 ${menu.daily.active ? '' : 'opacity-60'}`}>
+              <p className="flex items-baseline gap-3">
+                <span className="text-[15px] font-medium text-gray-900">{textOf(menu.daily.title, language) || 'Menú del día'}</span>
+                <span className="text-[15px] font-semibold tabular-nums text-gray-900">{eur(menu.daily.price)}</span>
+                {!menu.daily.active && <span className="text-xs font-semibold text-gray-400">Desactivado</span>}
+              </p>
+              <p className="text-[13px] text-gray-500">{dailyWhen(menu.daily)}</p>
+              <ul className="mt-1.5 space-y-0.5 text-[13px] text-gray-600">
+                {menu.daily.courses.map((c, i) => (
+                  <li key={i}><b className="font-medium text-gray-800">{textOf(c.name, language)}:</b> {c.options.map((o) => textOf(o.name, language)).join(' · ') || '—'}</li>
+                ))}
+              </ul>
+            </div>
+          ) : (
+            <p className="py-2 text-sm text-gray-500">Si ofreces menú del día, ponlo aquí con su precio y sus platos para que salga en la web.</p>
+          )}
+        </Section>
+      )}
+
       {items.length > 8 && (
         <input className="w-full lg:max-w-sm h-11 rounded-xl border border-gray-200 px-3.5 text-[15px] outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100"
           placeholder="Buscar un plato…" value={search} onChange={(e) => setSearch(e.target.value)} />
@@ -159,6 +196,7 @@ export default function Carta() {
           onMove={(dir) => { moveItem(modal.item, dir); }} onClose={() => setModal(null)} onSaved={done} />
       )}
       {modal?.type === 'category' && <CategoryModal category={modal.category} languages={languages} onClose={() => setModal(null)} onSaved={done} />}
+      {modal?.type === 'daily' && <DailyMenuModal daily={menu.daily} languages={languages} onClose={() => setModal(null)} onSaved={done} />}
       {modal?.type === 'languages' && <LanguagesModal languages={languages} onClose={() => setModal(null)} onSaved={done} />}
       {modal?.type === 'import' && <ImportMenuModal onClose={() => setModal(null)} onDone={done} />}
     </div>

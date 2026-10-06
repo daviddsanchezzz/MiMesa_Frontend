@@ -1,7 +1,8 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import Modal from '../../components/Modal';
 import api from '../../services/api';
 import { Segmented } from '../../ui/kit';
+import { shrinkImage } from '../../lib/image';
 import { ALLERGENS, TAGS, chipCls, inputCls, languageName } from './labels';
 
 const toggle = (list, key) => (list.includes(key) ? list.filter((x) => x !== key) : [...list, key]);
@@ -20,6 +21,26 @@ export default function ItemModal({ item, categoryId, categories, languages, can
   const [hidden, setHidden] = useState(!!item?.hidden);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  // Photo: the one already saved, a new one picked (shrunk in the browser) or "removed"
+  const fileRef = useRef(null);
+  const [photoBlob, setPhotoBlob] = useState(null);
+  const [photoPreview, setPhotoPreview] = useState('');
+  const [removePhoto, setRemovePhoto] = useState(false);
+  const shownPhoto = photoPreview || (removePhoto ? '' : item?.photo?.url || '');
+
+  async function pickPhoto(file) {
+    if (!file) return;
+    setError('');
+    try {
+      const blob = await shrinkImage(file);
+      if (photoPreview) URL.revokeObjectURL(photoPreview);
+      setPhotoBlob(blob);
+      setPhotoPreview(URL.createObjectURL(blob));
+      setRemovePhoto(false);
+    } catch (err) {
+      setError(err.message || 'No se ha podido leer la foto');
+    }
+  }
 
   // A dot on the languages that still lack the name
   const options = useMemo(() => languages.map((l) => [l, `${languageName(l)}${name[l] ? '' : ' •'}`]), [languages, name]);
@@ -32,8 +53,14 @@ export default function ItemModal({ item, categoryId, categories, languages, can
         categoryId: category, name, description, allergens, tags, hidden,
         ...(locked ? {} : { price: price.trim() === '' ? null : Number(price.replace(',', '.')) }),
       };
-      if (editing) await api.put(`/menu/items/${item._id}`, body);
-      else await api.post('/menu/items', body);
+      const saved = editing ? (await api.put(`/menu/items/${item._id}`, body)).data : (await api.post('/menu/items', body)).data;
+      if (photoBlob) {
+        const form = new FormData();
+        form.append('photo', photoBlob, `plato.${photoBlob.type === 'image/webp' ? 'webp' : 'jpg'}`);
+        await api.post(`/menu/items/${saved._id}/photo`, form);
+      } else if (removePhoto && item?.photo?.url) {
+        await api.delete(`/menu/items/${saved._id}/photo`);
+      }
       onSaved();
     } catch (err) {
       setError(err?.response?.data?.message || 'No se ha podido guardar');
@@ -71,6 +98,24 @@ export default function ItemModal({ item, categoryId, categories, languages, can
             <button type="button" className="block mt-1 font-semibold underline" onClick={async () => { await api.put(`/menu/items/${item._id}`, { retired: false }); onSaved(); }}>Mantenerlo en la carta</button>
           </div>
         )}
+
+        <div className="flex items-center gap-3">
+          <div className="w-20 h-20 shrink-0 rounded-2xl bg-gray-100 overflow-hidden flex items-center justify-center text-2xl text-gray-300">
+            {shownPhoto ? <img src={shownPhoto} alt="" className="w-full h-full object-cover" /> : <span aria-hidden="true">📷</span>}
+          </div>
+          <div className="min-w-0">
+            <div className="flex flex-wrap gap-2">
+              <button type="button" onClick={() => fileRef.current?.click()} className="h-9 px-3.5 rounded-full border border-gray-200 text-[13px] font-semibold text-gray-700 hover:bg-gray-50">
+                {shownPhoto ? 'Cambiar foto' : 'Añadir foto'}
+              </button>
+              {shownPhoto && (
+                <button type="button" onClick={() => { setPhotoBlob(null); setPhotoPreview(''); setRemovePhoto(true); }} className="h-9 px-3.5 rounded-full text-[13px] font-semibold text-gray-500 hover:text-rose-600">Quitar</button>
+              )}
+            </div>
+            <p className="mt-1 text-xs text-gray-400">Se reduce sola antes de subirla.</p>
+          </div>
+          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => { pickPhoto(e.target.files?.[0]); e.target.value = ''; }} />
+        </div>
 
         {languages.length > 1 && <Segmented value={lang} onChange={setLang} options={options} size="sm" />}
         <div className="space-y-3">

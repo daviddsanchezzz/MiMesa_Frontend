@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useSetMobileHeader } from '../context/MobileHeaderContext';
 import Modal from '../components/Modal';
 import Icon from '../ui/Icon';
-import { Empty, GhostButton, MenuButton, PageHeader, PrimaryButton, Segmented, Tabs, Toggle } from '../ui/kit';
+import { Empty, GhostButton, Hero, MenuButton, PageHeader, PrimaryButton, Segmented, Tabs, Toggle } from '../ui/kit';
 import Invoices from './invoices/Invoices';
 import InvoiceStatus from './invoices/InvoiceStatus';
 import PeriodNavigator, { PAGE_BODY, StickyBar, usePeriod } from '../ui/PeriodNavigator';
@@ -146,22 +146,18 @@ function ComprasResumen({ invoices, orders, period, dateRange, onGo, onNewOrder,
   return (
     <div className="space-y-7">
       <div className="space-y-7 lg:space-y-5">
-      <section className="rounded-3xl border border-gray-200 bg-white p-5 lg:p-7 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
-        <p className="text-[13px] font-semibold uppercase tracking-wide text-gray-400">Has comprado</p>
-        <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-          <p className="text-4xl font-semibold tracking-tight tabular-nums text-gray-900">{money(total)}</p>
-          {change !== null && change !== 0 && (
-            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full tabular-nums ${change > 0 ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700'}`}>
-              {change > 0 ? '▲' : '▼'} {Math.abs(change)} % vs {previousLabel(period, dateRange)}
-            </span>
-          )}
-        </div>
+      <Hero label="Has comprado" value={money(total)}
+        pill={change !== null && change !== 0 && (
+          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full tabular-nums ${change > 0 ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700'}`}>
+            {change > 0 ? '▲' : '▼'} {Math.abs(change)} % vs {previousLabel(period, dateRange)}
+          </span>
+        )}>
         <p className="mt-2 text-[15px] text-gray-600">
           {monthInvoices.length === 0
             ? 'Sin facturas confirmadas en este periodo.'
             : `${monthInvoices.length} ${monthInvoices.length === 1 ? 'factura' : 'facturas'} de ${bySupplier.length} ${bySupplier.length === 1 ? 'proveedor' : 'proveedores'}.`}
         </p>
-      </section>
+      </Hero>
 
       <div className="flex gap-2.5">
         {(() => {

@@ -7,7 +7,7 @@ import Modal from '../../components/Modal';
 import StaffAvatar from '../agenda/StaffAvatar';
 import { DEFAULT_TZ, inputCls, labelCls, staffColors, todayIn } from '../agenda/utils';
 import PeriodNavigator from '../../ui/PeriodNavigator';
-import { Empty, FigureLine, GhostButton, PrimaryButton, Section, SectionLink } from '../../ui/kit';
+import { Empty, FigureLine, GhostButton, Hero, PrimaryButton, Section, SectionLink } from '../../ui/kit';
 
 const MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 const eur = (n) => `${(n || 0).toLocaleString('es-ES', { minimumFractionDigits: Number.isInteger(n || 0) ? 0 : 2, maximumFractionDigits: 2, useGrouping: 'always' })} €`;
@@ -250,48 +250,19 @@ export default function AppointmentTeam() {
 
       {data && (
         <>
-          <section className="rounded-3xl border border-gray-200 bg-white p-5 lg:p-7 shadow-[0_1px_2px_rgba(16,24,40,0.04)] xl:flex xl:items-center xl:gap-12" aria-labelledby="team-margin-title">
-            <div className="xl:w-[38%] xl:shrink-0">
-            <p id="team-margin-title" className="text-[13px] font-semibold uppercase tracking-wide text-gray-400">Margen del equipo</p>
-            <p className={`mt-1 text-4xl font-semibold tracking-tight tabular-nums ${(t.leaves || 0) >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{eur(t.leaves)}</p>
-
-            {canShowSplit && (
-              <div className="mt-4 space-y-1.5" aria-label={`${num(marginShare)} % de margen y ${num(costShare)} % de coste del equipo`}>
-                <div className="flex h-3 overflow-hidden rounded-full bg-gray-100" aria-hidden="true">
-                  <span className="bg-emerald-500" style={{ width: `${marginShare}%` }} />
-                  <span className="bg-violet-300" style={{ width: `${costShare}%` }} />
-                </div>
-                <div className="flex justify-between gap-3 text-[11px] font-medium tabular-nums">
-                  <span className="text-emerald-700">{num(marginShare)} % margen</span>
-                  <span className="text-violet-700">{num(costShare)} % equipo</span>
-                </div>
-              </div>
-            )}
-
-            </div>
-            <div className="xl:flex-1 xl:min-w-0 xl:border-l xl:border-gray-100 xl:pl-12">
-            <div className="mt-5 flex divide-x divide-gray-100 border-t border-gray-100 pt-4 xl:mt-0 xl:border-t-0 xl:pt-0">
-              <div className="min-w-0 flex-1 px-3.5 first:pl-0 last:pr-0">
-                <p className="text-xs text-gray-500">Facturado</p>
-                <p className="mt-0.5 text-xl font-semibold tracking-tight tabular-nums text-gray-900">{eurRound(billed)}</p>
-                <p className="mt-0.5 text-[11px] text-gray-400">{citas(t.appointments)}</p>
-              </div>
-              <div className="min-w-0 flex-1 px-3.5 first:pl-0 last:pr-0">
-                <p className="text-xs text-gray-500">Coste</p>
-                <p className="mt-0.5 text-xl font-semibold tracking-tight tabular-nums text-gray-900">{eurRound(t.cost)}</p>
-                <p className="mt-0.5 text-[11px] text-gray-400">sueldos y comisiones</p>
-              </div>
-              <div className="min-w-0 flex-1 px-3.5 first:pl-0 last:pr-0">
-                <p className="text-xs text-gray-500">Por pagar</p>
-                <p className={`mt-0.5 text-xl font-semibold tracking-tight tabular-nums ${t.toPay > 0 ? 'text-amber-600' : 'text-gray-900'}`}>{eurRound(t.toPay)}</p>
-                <p className="mt-0.5 text-[11px] text-gray-400">{t.toPay > 0 ? 'pendiente' : 'al día'}</p>
-              </div>
-            </div>
-            <p className="mt-3 text-xs text-gray-500 tabular-nums">
-              {eur(t.salary)} en sueldos · {eur(t.commission)} en comisiones{t.tips > 0 ? ` · ${eur(t.tips)} en propinas` : ''}
-            </p>
-            </div>
-          </section>
+          <Hero label="Margen del equipo" value={eur(t.leaves)} tone={(t.leaves || 0) >= 0 ? 'good' : 'bad'}
+            bar={canShowSplit ? {
+              segments: [
+                { label: 'Margen', text: `${num(marginShare)} %`, value: marginShare, color: '#10b981' },
+                { label: 'Equipo', text: `${num(costShare)} %`, value: costShare, color: '#c4b5fd' },
+              ],
+              note: `${eur(t.salary)} en sueldos · ${eur(t.commission)} en comisiones${t.tips > 0 ? ` · ${eur(t.tips)} en propinas` : ''}`,
+            } : null}
+            stats={[
+              { label: 'Facturado', value: eurRound(billed), sub: citas(t.appointments) },
+              { label: 'Coste', value: eurRound(t.cost), sub: 'sueldos y comisiones' },
+              { label: 'Por pagar', value: eurRound(t.toPay), tone: t.toPay > 0 ? 'warn' : undefined, sub: t.toPay > 0 ? 'pendiente' : 'al día' },
+            ]} />
 
           <Section title="Profesionales">
             {data.staff.length === 0 ? (

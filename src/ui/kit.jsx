@@ -246,6 +246,65 @@ export function BigFigure({ label, value, sub, tone }) {
   );
 }
 
+const HERO_TONE = { good: 'text-emerald-600', bad: 'text-rose-600', warn: 'text-amber-600' };
+
+/** A bar that splits a total (what comes in vs goes out, cash vs card…) with its legend underneath. */
+function HeroBar({ segments, note }) {
+  const parts = segments.filter((x) => x.value > 0);
+  const total = parts.reduce((n, x) => n + x.value, 0) || 1;
+  return (
+    <div className="mt-5">
+      <div className="mb-2 flex flex-wrap justify-between gap-x-4 gap-y-1 text-[12.5px] text-gray-600">
+        {segments.map((x) => (
+          <span key={x.label} className="inline-flex items-center gap-1.5">
+            <span className="h-2 w-2 rounded-full" style={{ backgroundColor: x.color }} />{x.label} <b className="font-semibold tabular-nums text-gray-900">{x.text}</b>
+          </span>
+        ))}
+      </div>
+      <div className="flex h-3 overflow-hidden rounded-full bg-gray-100">
+        {parts.map((x) => <span key={x.label} style={{ width: `${(x.value / total) * 100}%`, backgroundColor: x.color, minWidth: 4 }} />)}
+      </div>
+      {note && <p className="mt-2 text-[12px] text-gray-400">{note}</p>}
+    </div>
+  );
+}
+
+/**
+ * The figure that opens a screen: label, one big number (with a small pill for the change), an
+ * optional bar that splits it, and up to three smaller figures. No box on a phone — it sits on the
+ * page; from a laptop up it becomes a card, and on a wide screen it lies in a row.
+ * stats: [{ label, value, sub, tone }]; bar: { segments: [{ label, text, value, color }], note }.
+ */
+export function Hero({ label, value, unit, tone, pill, bar, stats = [], children, className = '' }) {
+  const cols = stats.length >= 3 ? 'grid-cols-3' : 'grid-cols-2';
+  return (
+    <section className={`lg:rounded-3xl lg:border lg:border-gray-200 lg:bg-white lg:p-7 lg:shadow-[0_1px_2px_rgba(16,24,40,0.04)] xl:flex xl:items-center xl:justify-between xl:gap-12 ${className}`}>
+      <div className="min-w-0 xl:w-[40%] xl:shrink-0">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-gray-400">{label}</p>
+        <div className="mt-1.5 flex flex-wrap items-baseline gap-x-3 gap-y-1.5">
+          <p className={`text-[44px] leading-[1.05] font-semibold tracking-tight tabular-nums ${HERO_TONE[tone] || 'text-gray-900'}`}>
+            {value}{unit && <span className="ml-2 text-lg font-medium text-gray-500">{unit}</span>}
+          </p>
+          {pill}
+        </div>
+        {children}
+        {bar && <HeroBar {...bar} />}
+      </div>
+      {stats.length > 0 && (
+        <div className={`mt-5 grid ${cols} gap-x-4 gap-y-5 border-t border-gray-100 pt-4 xl:mt-0 xl:flex xl:flex-1 xl:max-w-3xl xl:gap-10 xl:border-t-0 xl:border-l xl:pl-12 xl:pt-0`}>
+          {stats.map((st) => (
+            <div key={st.label} className="min-w-0 xl:flex-1">
+              <p className="truncate text-xs text-gray-500">{st.label}</p>
+              <p className={`mt-0.5 truncate text-[19px] font-semibold tracking-tight tabular-nums ${HERO_TONE[st.tone] || 'text-gray-900'}`}>{st.value}</p>
+              <div className="mt-0.5 min-h-4 text-[11.5px] text-gray-400">{st.sub}</div>
+            </div>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
 /** On/off switch. */
 export function Toggle({ on, onChange, label, disabled }) {
   return (

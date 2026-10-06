@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useSetMobileHeader } from '../context/MobileHeaderContext';
 import { useData } from '../lib/query';
 import { publicBookingUrl } from '../lib/publicUrl';
-import { Empty, PageHeader } from '../ui/kit';
+import { Empty, Hero, PageHeader } from '../ui/kit';
 import PeriodNavigator, { PAGE_BODY, StickyBar, usePeriod } from '../ui/PeriodNavigator';
 import { previousLabel, shiftRange } from '../lib/periods';
 import { euros, waLink } from './agenda/utils';
@@ -107,24 +107,17 @@ export default function Estadisticas() {
 
       {d && !empty && (
         <div className={`space-y-8 lg:space-y-6 ${q.isFetching ? 'opacity-60' : ''}`}>
-          <section className="rounded-3xl border border-gray-200 bg-white p-5 lg:p-7 shadow-[0_1px_2px_rgba(16,24,40,0.04)] xl:flex xl:items-center xl:justify-between xl:gap-12">
-            <div className="xl:shrink-0">
-            <p className="text-[13px] font-semibold uppercase tracking-wide text-gray-400">Has atendido</p>
-            <div className="mt-1 flex flex-wrap items-baseline gap-x-3">
-              <p className="text-4xl font-semibold tracking-tight tabular-nums text-gray-900">{s.appointments} <span className="text-lg font-medium text-gray-500">{s.appointments === 1 ? 'cita' : 'citas'}</span></p>
-              {p.appointments > 0 && s.appointments !== p.appointments && Math.abs(Math.round(((s.appointments - p.appointments) / p.appointments) * 100)) <= 300 && (
-                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full tabular-nums ${s.appointments > p.appointments ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-600'}`}>
-                  {s.appointments > p.appointments ? '▲' : '▼'} {Math.abs(Math.round(((s.appointments - p.appointments) / p.appointments) * 100))} % {vsLabel}
-                </span>
-              )}
-            </div>
-            </div>
-            <div className="mt-5 flex divide-x divide-gray-100 border-t border-gray-100 pt-4 xl:mt-0 xl:border-t-0 xl:border-l xl:pt-0 xl:pl-12 xl:flex-1 xl:max-w-3xl">
-              <Stat label="Facturado" value={euros(s.billed)} delta={<Delta now={s.billed} before={p.billed} />} />
-              <Stat label="Ticket medio" value={euros(s.averageTicket)} delta={<Delta now={s.averageTicket} before={p.averageTicket} />} />
-              <Stat label="Clientes" value={s.customers} delta={<Delta now={s.customers} before={p.customers} />} />
-            </div>
-          </section>
+          <Hero label="Has atendido" value={s.appointments} unit={s.appointments === 1 ? 'cita' : 'citas'}
+            pill={p.appointments > 0 && s.appointments !== p.appointments && Math.abs(Math.round(((s.appointments - p.appointments) / p.appointments) * 100)) <= 300 && (
+              <span className={`text-xs font-semibold px-2 py-0.5 rounded-full tabular-nums ${s.appointments > p.appointments ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-600'}`}>
+                {s.appointments > p.appointments ? '▲' : '▼'} {Math.abs(Math.round(((s.appointments - p.appointments) / p.appointments) * 100))} % {vsLabel}
+              </span>
+            )}
+            stats={[
+              { label: 'Facturado', value: euros(s.billed), sub: <Delta now={s.billed} before={p.billed} /> },
+              { label: 'Ticket medio', value: euros(s.averageTicket), sub: <Delta now={s.averageTicket} before={p.averageTicket} /> },
+              { label: 'Clientes', value: s.customers, sub: <Delta now={s.customers} before={p.customers} /> },
+            ]} />
 
           <div className="space-y-8 xl:space-y-0 xl:grid xl:grid-cols-2 2xl:grid-cols-4 xl:gap-x-12 xl:gap-y-10 xl:items-start">
           <Card title="Servicios que más facturan">

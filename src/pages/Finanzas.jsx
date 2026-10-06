@@ -6,7 +6,7 @@ import { useSetMobileHeader } from '../context/MobileHeaderContext';
 import Modal from '../components/Modal';
 import Icon from '../ui/Icon';
 import {
-  PageHeader, PrimaryButton, Tabs, Section, SectionLink, FigureLine, Empty, Toggle,
+  PageHeader, PrimaryButton, Tabs, Section, SectionLink, FigureLine, Empty, Toggle, Hero,
 } from '../ui/kit';
 import { euros } from './agenda/utils';
 import PeriodNavigator, { PAGE_BODY, StickyBar, usePeriod } from '../ui/PeriodNavigator';
@@ -311,33 +311,34 @@ function ResumenTab({ period, dateRange, categories, refreshTrigger, onTodayReve
 
   return (
     <div className={`space-y-7 ${loading ? 'opacity-60' : ''}`}>
-      {/* Hero: how much is left (desktop: next to the quick actions) */}
-      <div className="space-y-7 lg:space-y-5">
-      <section className="rounded-3xl border border-gray-200 bg-white p-5 lg:p-7 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">
-        <p className="text-[13px] font-semibold uppercase tracking-wide text-gray-400">Te queda</p>
-        <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-          <p className={`text-4xl font-semibold tracking-tight tabular-nums ${profit < 0 ? 'text-rose-600' : profit > 0 ? 'text-emerald-600' : 'text-gray-900'}`}>
-            {fmtEur(profit)}
-          </p>
-          {diff !== null && diff !== 0 && (
-            <span className={`text-xs font-semibold px-2 py-0.5 rounded-full tabular-nums ${diff > 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-600'}`}>
-              {diff > 0 ? '▲ +' : '▼ −'}{fmtEur(Math.abs(diff)).replace('−', '')} vs {vs}
-            </span>
-          )}
-        </div>
-        <div className="mt-5 flex divide-x divide-gray-100 border-t border-gray-100 pt-4">
-          <Stat label={appt ? 'Facturado' : 'Ingresos'} value={fmtEur(income)} delta={<Delta now={income} before={prevIncome} />} hint={appt ? `${data.appointments} ${data.appointments === 1 ? 'cita' : 'citas'}` : (data.profitBasis === 'estimated' ? 'estimados' : null)} />
-          <Stat label="Gastos" value={fmtEur(expenses)} delta={<Delta now={expenses} before={prevExpenses} goodWhen="down" />} />
-          {appt
-            ? <Stat label="Cobrado" value={fmtEur(data.collectedRevenue || 0)} hint="en caja" />
-            : <Stat label="Comensales" value={data.totalCovers} hint={<span>ticket <TicketAverageEdit value={data.ticketAverage} onSave={saveTicketAverage} /></span>} />}
-        </div>
-      </section>
+      {/* Hero: how much is left, and what comes in against what goes out */}
+      <Hero label="Te queda" value={fmtEur(profit)} tone={profit < 0 ? 'bad' : profit > 0 ? 'good' : undefined}
+        pill={diff !== null && diff !== 0 && (
+          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full tabular-nums ${diff > 0 ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-600'}`}>
+            {diff > 0 ? '▲ +' : '▼ −'}{fmtEur(Math.abs(diff)).replace('−', '')} vs {vs}
+          </span>
+        )}
+        bar={income > 0 && expenses > 0 ? {
+          segments: [
+            { label: 'Entra', text: fmtEur(income), value: income, color: '#10b981' },
+            { label: 'Sale', text: fmtEur(expenses), value: expenses, color: '#fb7185' },
+          ],
+          note: `Por cada 1 € que entra, salen ${(expenses / income).toFixed(2).replace('.', ',')} €`,
+        } : null}
+        stats={[
+          ...(income > 0 && expenses > 0 ? [] : [
+            { label: appt ? 'Facturado' : 'Ingresos', value: fmtEur(income), sub: <Delta now={income} before={prevIncome} /> },
+            { label: 'Gastos', value: fmtEur(expenses), sub: <Delta now={expenses} before={prevExpenses} goodWhen="down" /> },
+          ]),
+          ...(appt
+            ? [{ label: 'Citas', value: data.appointments, sub: 'atendidas' }, { label: 'Cobrado', value: fmtEur(data.collectedRevenue || 0), sub: 'en caja' }]
+            : [{ label: 'Comensales', value: data.totalCovers, sub: <span>ticket <TicketAverageEdit value={data.ticketAverage} onSave={saveTicketAverage} /></span> }]),
+          ...(income > 0 && expenses > 0 ? [{ label: appt ? 'Facturado' : 'Ingresos', value: <span className="text-[17px]">{prevIncome ? `${income >= prevIncome ? '▲' : '▼'} ${Math.abs(Math.round(((income - prevIncome) / prevIncome) * 100))} %` : '—'}</span>, sub: `vs ${vs}`, tone: prevIncome && income < prevIncome ? 'bad' : undefined }] : []),
+        ].slice(0, 3)} />
 
       <div className="flex gap-2.5">
         {hasPurchases && <ActionPill icon="camera" to="/compras/facturas/nueva">Subir factura</ActionPill>}
         <ActionPill icon="plus" onClick={onAddExpense}>Añadir gasto</ActionPill>
-      </div>
       </div>
 
       {hasPurchases && toReview > 0 && (

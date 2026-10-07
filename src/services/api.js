@@ -4,6 +4,8 @@ import { clearCache, invalidateAfterWrite } from '../lib/query';
 const DEFAULT_API_ORIGIN = import.meta.env.DEV ? 'http://localhost:5000' : 'https://api.vetrareserve.com';
 const API_ORIGIN = (import.meta.env.VITE_API_URL || DEFAULT_API_ORIGIN).replace(/\/api\/?$/, '');
 const BASE_URL = `${API_ORIGIN}/api`;
+/** Public address of the API (what a restaurant website calls). */
+export const API_PUBLIC_BASE = BASE_URL;
 
 const api = axios.create({
   baseURL: BASE_URL,

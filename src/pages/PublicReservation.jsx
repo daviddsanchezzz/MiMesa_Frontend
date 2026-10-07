@@ -192,7 +192,10 @@ export default function PublicReservation({ businessId: businessIdProp } = {}) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const isEmbed = searchParams.get('embed') === '1';
-  const [lang, setLang] = useState(() => localStorage.getItem('pr_lang') || 'es');
+  // ?lang=es|ca|en fixes the language (the website that embeds this page has its own selector): no picker, nothing remembered
+  const forcedLang = ['es', 'ca', 'en'].includes(searchParams.get('lang')) ? searchParams.get('lang') : null;
+  const [lang, setLang] = useState(() => forcedLang || localStorage.getItem('pr_lang') || 'es');
+  useEffect(() => { if (forcedLang) setLang(forcedLang); }, [forcedLang]);
   const [business, setBusiness] = useState(null);
   const [rooms, setRooms] = useState([]);
   const [professionals, setProfessionals] = useState([]);
@@ -473,7 +476,7 @@ export default function PublicReservation({ businessId: businessIdProp } = {}) {
   return (
     <div className={isEmbed ? 'w-full' : 'min-h-screen bg-gray-50'}>
       <div className={`mx-auto w-full max-w-lg ${isEmbed ? 'p-3' : 'px-4 py-6 sm:py-10'} space-y-4`}>
-        <div className="flex justify-end -mb-2">
+        {!forcedLang && <div className="flex justify-end -mb-2">
           {['es', 'ca', 'en'].map(l => (
             <button key={l} type="button" onClick={() => changeLang(l)}
               className={`px-2 py-0.5 rounded-md text-xs font-semibold transition-colors ${lang === l ? 'text-white' : 'text-gray-400 hover:text-gray-600'}`}
@@ -481,7 +484,7 @@ export default function PublicReservation({ businessId: businessIdProp } = {}) {
               {l.toUpperCase()}
             </button>
           ))}
-        </div>
+        </div>}
 
         {!isEmbed && (
           <header className="text-center space-y-1">

@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { toast } from 'sonner';
-import api from '../services/api';
+import api, { API_PUBLIC_BASE } from '../services/api';
+import { useAuth } from '../context/AuthContext';
+import { publicBookingUrl } from '../lib/publicUrl';
 import { useSetMobileHeader } from '../context/MobileHeaderContext';
 import { useData } from '../lib/query';
 import { PageHeader, Section, SectionLink } from '../ui/kit';
@@ -17,6 +19,7 @@ const SOCIAL = [['instagram', 'Instagram', '@turestaurante'], ['tiktok', 'TikTok
 const DAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
 const DAY_SHORT = { 1: 'Lun', 2: 'Mar', 3: 'Mié', 4: 'Jue', 5: 'Vie', 6: 'Sáb', 0: 'Dom' };
 const label = 'block text-xs font-medium text-gray-500 mb-1';
+const LANGS = ['es', 'ca', 'en'];
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
 const rangesText = (ranges) => (ranges.length ? ranges.map((r) => `${r.open}–${r.close === '24:00' ? '00:00' : r.close}`).join(' · ') : 'Cerrado');
@@ -35,6 +38,61 @@ function groupDays(openingHours) {
 
 const niceDate = (iso) => new Date(`${iso}T12:00:00`).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }).replace('.', '');
 
+/** A line the restaurant's web developer can copy as it is. */
+function CopyRow({ name, hint, value, multiline = false }) {
+  const [done, setDone] = useState(false);
+  async function copy() {
+    try { await navigator.clipboard.writeText(value); setDone(true); setTimeout(() => setDone(false), 1800); }
+    catch { toast.error('No se ha podido copiar'); }
+  }
+  return (
+    <li className="py-3">
+      <div className="flex items-baseline justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-gray-900">{name}</p>
+          {hint && <p className="text-xs text-gray-500 mt-0.5">{hint}</p>}
+        </div>
+        <button type="button" onClick={copy} className={`shrink-0 text-[13px] font-semibold ${done ? 'text-emerald-700' : 'text-violet-700'}`}>{done ? 'Copiado ✓' : 'Copiar'}</button>
+      </div>
+      {multiline
+        ? <pre className="mt-1.5 rounded-lg bg-gray-50 px-3 py-2 text-[11.5px] leading-relaxed text-gray-700 whitespace-pre-wrap break-all">{value}</pre>
+        : <p className="mt-1.5 rounded-lg bg-gray-50 px-3 py-2 text-xs text-gray-700 font-mono break-all select-all">{value}</p>}
+    </li>
+  );
+}
+
+/** The addresses the website calls: carta, horario and the reservations page (to embed). */
+function WebAddresses({ businessId, bookingUrl, mode }) {
+  const [lang, setLang] = useState('es');
+  const menu = `${API_PUBLIC_BASE}/menu/public/${businessId}`;
+  const ficha = `${API_PUBLIC_BASE}/site/public/${businessId}`;
+  const frame = `${bookingUrl}?embed=1&lang=${lang}`;
+  const embed = `<iframe id="vetra-reservas" src="${frame}" style="width:100%;border:none;min-height:560px"></iframe>\n<script>\n  window.addEventListener("message", function (e) {\n    if (e.data && e.data.type === "VETRA_HEIGHT")\n      document.getElementById("vetra-reservas").style.height = e.data.height + "px";\n  });\n</script>`;
+  return (
+    <Section title="Direcciones para tu web">
+      <p className="mb-1 text-[13px] text-gray-500">Para quien hace tu web: todo se actualiza solo cuando cambias algo aquí. No hace falta ninguna clave.</p>
+      <div className="mb-2 flex items-center gap-2 text-xs text-gray-500">
+        <span>Idioma de los ejemplos</span>
+        <div className="inline-flex rounded-full bg-gray-100 p-0.5">
+          {LANGS.map((l) => (
+            <button key={l} type="button" onClick={() => setLang(l)} className={`h-7 px-3 rounded-full text-xs font-semibold ${lang === l ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'}`}>{l.toUpperCase()}</button>
+          ))}
+        </div>
+      </div>
+      <ul className="divide-y divide-gray-100 border-t border-gray-100">
+        <CopyRow name="Carta y menú del día" hint="Añade ?lang=es, ?lang=ca o ?lang=en para el idioma." value={`${menu}?lang=${lang}`} />
+        <CopyRow name="Horario, cierres, contacto y redes" hint="Incluye si está abierto ahora, el enlace de Google Maps y cómo reservar." value={ficha} />
+        {mode === 'vetra' && (
+          <>
+            <CopyRow name="Reservas (para insertar en un iframe)" hint="Con ?lang= la página va en ese idioma y no muestra su propio selector." value={frame} />
+            <CopyRow name="Código completo del iframe" hint="Pega esto en la página de reservas de tu web; la altura se ajusta sola." value={embed} multiline />
+          </>
+        )}
+      </ul>
+    </Section>
+  );
+}
+
 /**
  * Mi web: what the restaurant's website shows. The schedule, the closures and the contact data are not asked
  * again: they come from Horarios y cierres and Datos del negocio. Only how to book and the social links are set here.
@@ -42,6 +100,7 @@ const niceDate = (iso) => new Date(`${iso}T12:00:00`).toLocaleDateString('es-ES'
 export default function MiWeb() {
   useSetMobileHeader({ title: 'Mi web', action: false });
   const q = useData(['site'], () => api.get('/site').then((r) => r.data), { retry: false });
+  const { business: me } = useAuth();
   const [form, setForm] = useState(null);
   const [saved, setSaved] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -137,6 +196,8 @@ export default function MiWeb() {
           ))}
         </div>
       </Section>
+
+      <WebAddresses businessId={me?.id} bookingUrl={publicBookingUrl(me)} mode={form.reservations.mode} />
 
       {dirty && (
         <div className="fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] lg:bottom-0 lg:left-60 z-30 px-4 lg:px-8 py-3 bg-white/95 backdrop-blur border-t border-gray-200 flex items-center justify-between gap-3">

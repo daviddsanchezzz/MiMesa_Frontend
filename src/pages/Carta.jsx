@@ -15,10 +15,11 @@ import { ALLERGENS, TAGS, eur, languageName, textOf } from './carta/labels';
 
 const ICONS = Object.fromEntries([...ALLERGENS, ...TAGS].map((x) => [x.key, x.icon]));
 
-function ItemRow({ item, language, manager, onOpen, onSoldOut }) {
+function ItemRow({ item, language, manager, onOpen, onSoldOut, drag }) {
   const flags = [...item.tags, ...item.allergens].map((k) => ICONS[k]).filter(Boolean).join(' ');
   return (
-    <li className={`flex items-center gap-3 py-2.5 ${item.hidden || item.retired ? 'opacity-60' : ''}`}>
+    <li className={`flex items-center gap-3 py-2.5 ${item.hidden || item.retired ? 'opacity-60' : ''} ${drag?.dragging ? 'opacity-40' : ''} ${drag?.over ? 'border-t-2 border-violet-400 -mt-px' : ''} ${manager ? 'lg:cursor-grab' : ''}`}
+      draggable={manager && !!drag} onDragStart={drag?.onDragStart} onDragEnd={drag?.onDragEnd} onDragOver={drag?.onDragOver} onDragLeave={drag?.onDragLeave} onDrop={drag?.onDrop}>
       {item.photo?.url && <img src={item.photo.url} alt="" loading="lazy" className="w-12 h-12 shrink-0 rounded-xl object-cover bg-gray-100" />}
       <button type="button" disabled={!manager} onClick={onOpen} className="min-w-0 flex-1 text-left disabled:cursor-default">
         <span className={`block text-[15px] font-medium truncate ${item.soldOut ? 'text-gray-400 line-through' : 'text-gray-900'}`}>{textOf(item.name, language)}</span>
@@ -58,7 +59,9 @@ export default function Carta() {
   const owner = hasRole('owner');
   const q = useData(['menu'], () => api.get('/menu').then((r) => r.data), { retry: false });
   const [search, setSearch] = useState('');
-  const [modal, setModal] = useState(null); // { type: 'item'|'category'|'languages'|'import', ... }
+  const [modal, setModal] = useState(null);
+  const [drag, setDrag] = useState(null);   // { type: 'item'|'cat', id } while something is being dragged
+  const [over, setOver] = useState(null);   // what it is over: 'cat:<id>' or 'item:<id>' // { type: 'item'|'category'|'languages'|'import', ... }
 
   const menu = q.data;
   const languages = menu?.languages || ['es'];
@@ -128,6 +131,30 @@ export default function Carta() {
     [ids[i], ids[j]] = [ids[j], ids[i]];
     try { await api.put('/menu/items/order', { categoryId: item.categoryId, ids }); refresh(); } catch (err) { fail(err); }
   }
+  /** Drop a dish in a category (at the end) or before another dish of it. Also reorders inside the same category. */
+  async function dropItem(itemId, categoryId, beforeId = null) {
+    const item = items.find((i) => i._id === itemId);
+    if (!item || itemId === beforeId) return;
+    try {
+      if (item.categoryId !== categoryId) await api.put(`/menu/items/${itemId}`, { categoryId });
+      const ids = items.filter((i) => i.categoryId === categoryId && i._id !== itemId).map((i) => i._id);
+      const at = beforeId ? ids.indexOf(beforeId) : -1;
+      ids.splice(at === -1 ? ids.length : at, 0, itemId);
+      if (item.categoryId !== categoryId || beforeId) await api.put('/menu/items/order', { categoryId, ids });
+      refresh();
+    } catch (err) { fail(err); }
+  }
+  /** Drop a category before another one of the same level (top-level among top-level, subcategory among its siblings). */
+  async function dropCategory(dragId, beforeId) {
+    const a = categories.find((c) => c._id === dragId);
+    const b = categories.find((c) => c._id === beforeId);
+    if (!a || !b || a._id === b._id || (a.parentId || null) !== (b.parentId || null)) return;
+    const ids = categories.filter((c) => (c.parentId || null) === (a.parentId || null) && c._id !== a._id).map((c) => c._id);
+    ids.splice(ids.indexOf(b._id), 0, a._id);
+    try { await api.put('/menu/categories/order', { ids }); refresh(); } catch (err) { fail(err); }
+  }
+  const endDrag = () => { setDrag(null); setOver(null); };
+
   async function toggleCategory(c) {
     try { await api.put(`/menu/categories/${c._id}`, { hidden: !c.hidden }); refresh(); } catch (err) { fail(err); }
   }
@@ -201,8 +228,14 @@ export default function Carta() {
           const parentName = textOf(c.name, language);
           // The same block for a category and for a subcategory (a smaller heading and no further subcategories)
           const block = (cat, dishes, sub) => (
-            <div key={cat._id} className={`${cat.hidden ? 'opacity-70' : ''} ${sub ? 'mt-5 pl-3.5 border-l-2 border-gray-100' : ''}`}>
-              <div className={`flex items-center justify-between gap-3 border-b pb-1.5 ${sub ? 'border-gray-100' : 'border-gray-200'}`}>
+            <div key={cat._id} className={`${cat.hidden ? 'opacity-70' : ''} ${sub ? 'mt-5 pl-3.5 border-l-2 border-gray-100' : ''} ${drag?.type === 'item' && over === `cat:${cat._id}` ? 'rounded-xl bg-violet-50/60 ring-2 ring-violet-300 ring-offset-4 ring-offset-white' : ''}`}
+              onDragOver={(e) => { if (manager && drag?.type === 'item') { e.preventDefault(); setOver(`cat:${cat._id}`); } }}
+              onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget)) setOver((o) => (o === `cat:${cat._id}` ? null : o)); }}
+              onDrop={(e) => { if (!manager || drag?.type !== 'item') return; e.preventDefault(); const id = drag.id; endDrag(); dropItem(id, cat._id); }}>
+              <div className={`flex items-center justify-between gap-3 border-b pb-1.5 ${sub ? 'border-gray-100' : 'border-gray-200'} ${drag?.type === 'cat' && drag.id === cat._id ? 'opacity-40' : ''} ${drag?.type === 'cat' && over === `hdr:${cat._id}` && drag.id !== cat._id ? 'border-b-2 !border-violet-400' : ''} ${manager ? 'lg:cursor-grab' : ''}`}
+                draggable={manager} onDragStart={(e) => { e.dataTransfer.setData('text/plain', cat._id); e.dataTransfer.effectAllowed = 'move'; setDrag({ type: 'cat', id: cat._id }); }} onDragEnd={endDrag}
+                onDragOver={(e) => { if (manager && drag?.type === 'cat' && (categories.find((c) => c._id === drag.id)?.parentId || null) === (cat.parentId || null)) { e.preventDefault(); setOver(`hdr:${cat._id}`); } }}
+                onDrop={(e) => { if (drag?.type !== 'cat') return; e.preventDefault(); const id = drag.id; endDrag(); dropCategory(id, cat._id); }}>
                 <h2 className={`min-w-0 truncate font-semibold ${sub ? 'text-[13px] text-gray-700' : 'text-[13px] uppercase tracking-wide text-gray-500'}`}>
                   {textOf(cat.name, language)}{cat.hidden && <span className="ml-2 normal-case font-medium text-gray-400">· Oculta de la web</span>}
                 </h2>
@@ -220,6 +253,7 @@ export default function Carta() {
                   </MenuButton>
                 )}
               </div>
+              {textOf(cat.description, language) && <p className="pt-1.5 text-[13px] text-gray-500">{textOf(cat.description, language)}</p>}
               {cat.extras?.length > 0 && (
                 <p className="pt-1.5 text-[13px] text-gray-500">
                   Extras en todos los platos: {cat.extras.map((x) => `${textOf(x.name, language)}${x.price !== null && x.price !== undefined ? ` +${eur(x.price)}` : ''}`).join(' · ')}
@@ -231,7 +265,16 @@ export default function Carta() {
                 <ul className="divide-y divide-gray-100">
                   {dishes.map((item) => (
                     <ItemRow key={item._id} item={item} language={language} manager={manager}
-                      onOpen={() => setModal({ type: 'item', item })} onSoldOut={() => toggleSoldOut(item)} />
+                      onOpen={() => setModal({ type: 'item', item })} onSoldOut={() => toggleSoldOut(item)}
+                      drag={manager ? {
+                        dragging: drag?.type === 'item' && drag.id === item._id,
+                        over: drag?.type === 'item' && over === `item:${item._id}` && drag.id !== item._id,
+                        onDragStart: (e) => { e.dataTransfer.setData('text/plain', item._id); e.dataTransfer.effectAllowed = 'move'; setDrag({ type: 'item', id: item._id }); },
+                        onDragEnd: endDrag,
+                        onDragOver: (e) => { if (drag?.type === 'item') { e.preventDefault(); e.stopPropagation(); setOver(`item:${item._id}`); } },
+                        onDragLeave: () => setOver((o) => (o === `item:${item._id}` ? null : o)),
+                        onDrop: (e) => { if (drag?.type !== 'item') return; e.preventDefault(); e.stopPropagation(); const id = drag.id; endDrag(); dropItem(id, cat._id, item._id); },
+                      } : undefined} />
                   ))}
                 </ul>
               )}

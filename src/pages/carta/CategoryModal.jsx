@@ -7,6 +7,7 @@ import ExtrasEditor, { fromEditor, toEditor } from './ExtrasEditor';
 export default function CategoryModal({ category, parentId = null, parentName = '', languages, onClose, onSaved }) {
   const isSub = !!(parentId || category?.parentId);
   const [name, setName] = useState(category?.name || {});
+  const [description, setDescription] = useState(category?.description || {});
   const [hidden, setHidden] = useState(!!category?.hidden);
   const [extras, setExtras] = useState(() => toEditor(category?.extras));
   const [saving, setSaving] = useState(false);
@@ -17,12 +18,19 @@ export default function CategoryModal({ category, parentId = null, parentName = 
     const main = languages[0];
     const to = languages.slice(1).filter((l) => !name[l]?.trim());
     if (!name[main]?.trim()) return setError('Escribe primero el nombre en el idioma principal');
-    if (!to.length) return setError('Ya está todo traducido');
+    const toDesc = languages.slice(1).filter((l) => !description[l]?.trim());
+    if (!to.length && !(description[main]?.trim() && toDesc.length)) return setError('Ya está todo traducido');
     setError('');
     setTranslating(true);
     try {
-      const { data } = await api.post('/menu/translate', { from: main, to, items: [{ id: 'name', kind: 'category', text: name[main] }] });
-      setName((n) => ({ ...(data.translations?.name || {}), ...Object.fromEntries(Object.entries(n).filter(([, t]) => t?.trim())) }));
+      const reqs = [
+        ...(to.length ? [{ id: 'name', kind: 'category', text: name[main], targets: to }] : []),
+        ...(description[main]?.trim() && toDesc.length ? [{ id: 'description', kind: 'description', text: description[main], targets: toDesc }] : []),
+      ];
+      const { data } = await api.post('/menu/translate', { from: main, to: languages.slice(1), items: reqs });
+      const keepWritten = (n) => Object.fromEntries(Object.entries(n).filter(([, t]) => t?.trim()));
+      if (data.translations?.name) setName((n) => ({ ...data.translations.name, ...keepWritten(n) }));
+      if (data.translations?.description) setDescription((d) => ({ ...data.translations.description, ...keepWritten(d) }));
     } catch (err) {
       setError(err?.response?.data?.message || 'No se ha podido traducir');
     } finally {
@@ -34,7 +42,7 @@ export default function CategoryModal({ category, parentId = null, parentName = 
     setSaving(true);
     setError('');
     try {
-      const body = { name, hidden, extras: fromEditor(extras), ...(parentId && !category?._id ? { parentId } : {}) };
+      const body = { name, description, hidden, extras: fromEditor(extras), ...(parentId && !category?._id ? { parentId } : {}) };
       if (category?._id) await api.put(`/menu/categories/${category._id}`, body);
       else await api.post('/menu/categories', body);
       onSaved();
@@ -68,6 +76,14 @@ export default function CategoryModal({ category, parentId = null, parentName = 
               onChange={(e) => setName((n) => ({ ...n, [lang]: e.target.value }))} />
           </label>
         ))}
+        <div className="space-y-2">
+          <span className="block text-xs font-medium text-gray-500">Descripción (opcional, sale bajo el título)</span>
+          {languages.map((lang, i) => (
+            <input key={lang} className={inputCls} value={description[lang] || ''} maxLength={300}
+              placeholder={`${languageName(lang)}${i === 0 ? ' · ej.: Masa fina, horno de leña' : ''}`}
+              onChange={(e) => setDescription((d) => ({ ...d, [lang]: e.target.value }))} />
+          ))}
+        </div>
         <ExtrasEditor rows={extras} onChange={setExtras} languages={languages} scope="category" />
         <label className="flex items-center gap-2.5 text-sm text-gray-700">
           <input type="checkbox" checked={hidden} onChange={(e) => setHidden(e.target.checked)} />

@@ -32,6 +32,7 @@ const MySchedule = lazy(() => import('./pages/MySchedule'));
 const Personal = lazy(() => import('./pages/Personal'));
 const Finanzas = lazy(() => import('./pages/Finanzas'));
 const Compras = lazy(() => import('./pages/Compras'));
+const Costes = lazy(() => import('./pages/Costes'));
 const Carta = lazy(() => import('./pages/Carta'));
 const Horarios = lazy(() => import('./pages/Horarios'));
 const MiWeb = lazy(() => import('./pages/MiWeb'));
@@ -444,6 +445,7 @@ export default function App() {
           <Route path="/personal"     element={<ModuleRoute moduleKey="staff"><RoleRoute minRole="manager"><PrivateLayout><PersonalPage /></PrivateLayout></RoleRoute></ModuleRoute>} />
           <Route path="/finanzas"     element={<ModuleRoute moduleKey="expenses"><RoleRoute minRole="owner"><PrivateLayout><Finanzas /></PrivateLayout></RoleRoute></ModuleRoute>} />
           <Route path="/carta"        element={<ModuleRoute moduleKey="menu"><PrivateLayout><Carta /></PrivateLayout></ModuleRoute>} />
+          <Route path="/costes"      element={<ModuleRoute moduleKey="purchases"><RoleRoute minRole="manager"><PrivateLayout><Costes /></PrivateLayout></RoleRoute></ModuleRoute>} />
           <Route path="/compras"      element={<ModuleRoute moduleKey="purchases"><RoleRoute minRole="manager"><PrivateLayout><Compras /></PrivateLayout></RoleRoute></ModuleRoute>} />
           <Route path="/compras/:section" element={<ModuleRoute moduleKey="purchases"><RoleRoute minRole="manager"><PrivateLayout><Compras /></PrivateLayout></RoleRoute></ModuleRoute>} />
           <Route path="/compras/facturas/nueva" element={<ModuleRoute moduleKey="purchases"><RoleRoute minRole="manager"><PrivateLayout><InvoiceUpload /></PrivateLayout></RoleRoute></ModuleRoute>} />

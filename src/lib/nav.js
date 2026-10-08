@@ -39,6 +39,7 @@ export function useNav() {
     bookingsOn && { to: '/caja', label: 'Caja', hint: 'Cobros del día', icon: 'cash', section: 'Números' },
     isModuleEnabled('expenses') && hasRole('owner') && { to: '/finanzas', label: 'Finanzas', hint: 'Cuánto ganas, gastos y beneficio', icon: 'euro', section: 'Números' },
     isModuleEnabled('purchases') && manager && { to: '/compras', label: 'Compras', hint: 'Facturas, pedidos y proveedores', icon: 'cart', section: 'Números' },
+    !isAppointments && isModuleEnabled('purchases') && manager && { to: '/costes', label: 'Costes', hint: 'Cuánto te cuesta cada ingrediente', icon: 'trend', section: 'Números' },
     !isAppointments && !isStaff && !locked && manager && { to: '/analytics', label: 'Estadísticas', hint: 'Reservas, horas punta y clientes', icon: 'chart', section: 'Números' },
     bookingsOn && manager && { to: '/analytics', label: 'Estadísticas', hint: 'Servicios, horas punta y clientes', icon: 'chart', section: 'Números' },
     // Equipo

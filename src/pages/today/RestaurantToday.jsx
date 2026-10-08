@@ -43,7 +43,7 @@ function WeekBars({ today, days, onPick }) {
 
 /** Hoy for restaurants: how each shift fills up, what to do, who comes next. */
 export default function RestaurantToday() {
-  const { business, session } = useAuth();
+  const { business, session, isModuleEnabled } = useAuth();
   const tz = business?.timezone || DEFAULT_TZ;
   const today = todayIn(tz);
   const navigate = useNavigate();
@@ -76,6 +76,13 @@ export default function RestaurantToday() {
     });
   }, [weekQ.data, today]);
 
+  // Prices: what rose in the last month and what is waiting to be linked (managers with Compras)
+  const costsOn = isManager && isModuleEnabled('purchases');
+  const costs = useData(['ingredients', 'list'], () => api.get('/ingredients').then((r) => r.data), { enabled: costsOn, retry: false });
+  const risers = (costs.data?.ingredients || []).filter((i) => i.changePct !== null && i.changePct >= (costs.data?.alertPct || 5)
+    && i.lastDate && (Date.now() - new Date(`${i.lastDate}T12:00:00`).getTime()) / 86400000 <= 30).sort((a, b) => b.changePct - a.changePct);
+  const toLink = costs.data?.pending || 0;
+
   const groups = useMemo(() => groupByShift(reservations, shifts, shiftOf), [reservations, shifts, shiftOf]);
   const liveToday = reservations.filter(live);
   const upcoming = liveToday
@@ -88,6 +95,18 @@ export default function RestaurantToday() {
   const opened = openId ? reservations.find((r) => r._id === openId) : null;
 
   const todos = [
+    risers.length > 0 && (
+      <TodoRow key="risers" icon="trend" tint="rose" action={<TodoLink to="/costes">Ver</TodoLink>}>
+        {risers.length === 1
+          ? <><b className="text-gray-900">{risers[0].name}</b> ha subido un {Math.round(risers[0].changePct)} %</>
+          : <><b className="text-gray-900">{risers.length} ingredientes</b> han subido de precio: {risers[0].name} +{Math.round(risers[0].changePct)} %</>}
+      </TodoRow>
+    ),
+    toLink > 0 && (
+      <TodoRow key="tolink" icon="receipt" tint="violet" action={<TodoLink to="/costes?tab=vincular">Vincular</TodoLink>}>
+        <b className="text-gray-900">{plural(toLink, 'producto', 'productos')}</b> de tus facturas sin ingrediente
+      </TodoRow>
+    ),
     pending.length > 0 && (
       <TodoRow key="pending" icon="inbox" tint="amber" action={<TodoLink onClick={() => setShowPending(true)}>Revisar</TodoLink>}>
         <b className="text-gray-900">{plural(pending.length, 'solicitud', 'solicitudes')}</b> por confirmar

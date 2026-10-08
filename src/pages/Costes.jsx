@@ -97,10 +97,12 @@ function ViewTabs({ value, onChange, options }) {
         const on = value === key;
         return (
           <button key={key} type="button" role="tab" aria-selected={on} onClick={() => onChange(key)}
-            className={`relative flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap py-3 text-[14px] sm:gap-2 sm:text-[15px] font-semibold transition-colors sm:flex-none sm:justify-start sm:px-1 sm:mr-8 ${on ? 'text-gray-900' : 'text-gray-400 hover:text-gray-700'}`}>
-            {label}
-            {count > 0 && <span className={`min-w-[22px] rounded-full px-1.5 py-0.5 text-center text-[12px] font-bold leading-4 ${on ? 'bg-violet-600 text-white' : 'bg-gray-200 text-gray-600'}`}>{count}</span>}
-            {on && <span aria-hidden="true" className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-violet-600" />}
+            className={`relative flex-1 basis-0 whitespace-nowrap px-1 py-3 text-center text-[15px] font-semibold transition-colors sm:flex-none sm:basis-auto sm:mr-8 sm:px-1 ${on ? 'text-gray-900' : 'text-gray-400 hover:text-gray-700'}`}>
+            <span className="relative inline-block">
+              {label}
+              {count > 0 && <span className={`absolute -right-3.5 -top-2 min-w-[18px] rounded-full px-1 text-center text-[11px] font-bold leading-[18px] sm:static sm:ml-2 sm:inline-block sm:min-w-[22px] sm:px-1.5 sm:text-[12px] sm:leading-4 sm:py-0.5 ${on ? 'bg-violet-600 text-white' : 'bg-gray-200 text-gray-600'}`}>{count}</span>}
+            </span>
+            {on && <span aria-hidden="true" className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-violet-600 sm:inset-x-0" />}
           </button>
         );
       })}
@@ -189,7 +191,7 @@ export default function Costes() {
         </section>
       ) : (
         <>
-          <ViewTabs value={tab} onChange={setTab} options={[['ingredientes', 'Ingredientes'], ['escandallos', 'Escandallos', lowMargin], ['vincular', 'Por vincular', pending]]} />
+          <ViewTabs value={tab} onChange={setTab} options={[['ingredientes', 'Ingredientes'], ['escandallos', 'Escandallos', lowMargin], ['vincular', 'Vincular', pending]]} />
 
           {tab === 'ingredientes' ? (
             <div className="grid grid-cols-1 gap-x-12 gap-y-8 lg:grid-cols-[minmax(0,1fr)_320px]">

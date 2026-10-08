@@ -93,10 +93,15 @@ export default function Carta() {
   useSetMobileHeader({ title: 'Carta', action: manager && categories.length ? { label: 'Plato', onClick: () => setModal({ type: 'item' }) } : undefined });
 
   const needle = search.trim().toLocaleLowerCase('es');
-  const byCategory = useMemo(() => categories.map((c) => ({
-    category: c,
-    items: items.filter((i) => i.categoryId === c._id && (!needle || Object.values(i.name || {}).some((n) => n.toLocaleLowerCase('es').includes(needle)))),
-  })).filter((g) => !needle || g.items.length), [categories, items, needle]);
+  // Each category with its own dishes and, one level down, its subcategories with theirs
+  const byCategory = useMemo(() => {
+    const dishes = (c) => items.filter((i) => i.categoryId === c._id && (!needle || Object.values(i.name || {}).some((n) => n.toLocaleLowerCase('es').includes(needle))));
+    return categories.filter((c) => !c.parentId).map((c) => ({
+      category: c,
+      items: dishes(c),
+      subs: categories.filter((s) => s.parentId === c._id).map((s) => ({ category: s, items: dishes(s) })).filter((g) => !needle || g.items.length),
+    })).filter((g) => !needle || g.items.length || g.subs.length);
+  }, [categories, items, needle]);
 
   const refresh = () => q.refetch();
   const done = () => { setModal(null); refresh(); };
@@ -106,7 +111,9 @@ export default function Carta() {
     try { await api.patch(`/menu/items/${item._id}/sold-out`, { soldOut: !item.soldOut }); refresh(); } catch (err) { fail(err); }
   }
   async function moveCategory(id, dir) {
-    const ids = categories.map((c) => c._id);
+    // Only among its siblings: top-level categories, or the subcategories of the same category
+    const parent = categories.find((c) => c._id === id)?.parentId || null;
+    const ids = categories.filter((c) => (c.parentId || null) === parent).map((c) => c._id);
     const i = ids.indexOf(id);
     const j = i + dir;
     if (j < 0 || j >= ids.length) return;
@@ -190,42 +197,53 @@ export default function Carta() {
       )}
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-x-14 gap-y-9 items-start">
-        {byCategory.map(({ category: c, items: list }) => (
-          <section key={c._id} className={c.hidden ? 'opacity-70' : ''}>
-            <div className="flex items-center justify-between gap-3 border-b border-gray-200 pb-1.5">
-              <h2 className="min-w-0 truncate text-[13px] font-semibold uppercase tracking-wide text-gray-500">
-                {textOf(c.name, language)}{c.hidden && <span className="ml-2 normal-case font-medium text-gray-400">· Oculta de la web</span>}
-              </h2>
-              {manager && (
-                <MenuButton ariaLabel="Opciones de la categoría" className="w-8 h-8 justify-center text-gray-400" items={[
-                  { label: 'Añadir plato', onClick: () => setModal({ type: 'item', categoryId: c._id }) },
-                  { label: 'Editar nombre', onClick: () => setModal({ type: 'category', category: c }) },
-                  { label: c.hidden ? 'Mostrar en la web' : 'Ocultar de la web', onClick: () => toggleCategory(c) },
-                  { label: 'Subir', onClick: () => moveCategory(c._id, -1) },
-                  { label: 'Bajar', onClick: () => moveCategory(c._id, 1) },
-                  { label: 'Borrar categoría', onClick: () => removeCategory(c) },
-                ]}>
-                  <span aria-hidden="true" className="text-xl leading-none pb-1">⋯</span>
-                </MenuButton>
+        {byCategory.map(({ category: c, items: list, subs }) => {
+          const parentName = textOf(c.name, language);
+          // The same block for a category and for a subcategory (a smaller heading and no further subcategories)
+          const block = (cat, dishes, sub) => (
+            <div key={cat._id} className={`${cat.hidden ? 'opacity-70' : ''} ${sub ? 'mt-5 pl-3.5 border-l-2 border-gray-100' : ''}`}>
+              <div className={`flex items-center justify-between gap-3 border-b pb-1.5 ${sub ? 'border-gray-100' : 'border-gray-200'}`}>
+                <h2 className={`min-w-0 truncate font-semibold ${sub ? 'text-[13px] text-gray-700' : 'text-[13px] uppercase tracking-wide text-gray-500'}`}>
+                  {textOf(cat.name, language)}{cat.hidden && <span className="ml-2 normal-case font-medium text-gray-400">· Oculta de la web</span>}
+                </h2>
+                {manager && (
+                  <MenuButton ariaLabel={sub ? 'Opciones de la subcategoría' : 'Opciones de la categoría'} className="w-8 h-8 justify-center text-gray-400" items={[
+                    { label: 'Añadir plato', onClick: () => setModal({ type: 'item', categoryId: cat._id }) },
+                    ...(sub ? [] : [{ label: 'Añadir subcategoría', onClick: () => setModal({ type: 'category', parentId: cat._id, parentName }) }]),
+                    { label: 'Editar nombre', onClick: () => setModal({ type: 'category', category: cat, parentName: sub ? parentName : '' }) },
+                    { label: cat.hidden ? 'Mostrar en la web' : 'Ocultar de la web', onClick: () => toggleCategory(cat) },
+                    { label: 'Subir', onClick: () => moveCategory(cat._id, -1) },
+                    { label: 'Bajar', onClick: () => moveCategory(cat._id, 1) },
+                    { label: sub ? 'Borrar subcategoría' : 'Borrar categoría', onClick: () => removeCategory(cat) },
+                  ]}>
+                    <span aria-hidden="true" className="text-xl leading-none pb-1">⋯</span>
+                  </MenuButton>
+                )}
+              </div>
+              {cat.extras?.length > 0 && (
+                <p className="pt-1.5 text-[13px] text-gray-500">
+                  Extras en todos los platos: {cat.extras.map((x) => `${textOf(x.name, language)}${x.price !== null && x.price !== undefined ? ` +${eur(x.price)}` : ''}`).join(' · ')}
+                </p>
+              )}
+              {dishes.length === 0 ? (
+                !(!sub && subs.length) && <p className="py-3 text-sm text-gray-400">Sin platos.{manager && <button type="button" className="ml-2 font-semibold text-violet-700" onClick={() => setModal({ type: 'item', categoryId: cat._id })}>+ Añadir</button>}</p>
+              ) : (
+                <ul className="divide-y divide-gray-100">
+                  {dishes.map((item) => (
+                    <ItemRow key={item._id} item={item} language={language} manager={manager}
+                      onOpen={() => setModal({ type: 'item', item })} onSoldOut={() => toggleSoldOut(item)} />
+                  ))}
+                </ul>
               )}
             </div>
-            {c.extras?.length > 0 && (
-              <p className="pt-1.5 text-[13px] text-gray-500">
-                Extras en todos los platos: {c.extras.map((x) => `${textOf(x.name, language)}${x.price !== null && x.price !== undefined ? ` +${eur(x.price)}` : ''}`).join(' · ')}
-              </p>
-            )}
-            {list.length === 0 ? (
-              <p className="py-3 text-sm text-gray-400">Sin platos.{manager && <button type="button" className="ml-2 font-semibold text-violet-700" onClick={() => setModal({ type: 'item', categoryId: c._id })}>+ Añadir</button>}</p>
-            ) : (
-              <ul className="divide-y divide-gray-100">
-                {list.map((item) => (
-                  <ItemRow key={item._id} item={item} language={language} manager={manager}
-                    onOpen={() => setModal({ type: 'item', item })} onSoldOut={() => toggleSoldOut(item)} />
-                ))}
-              </ul>
-            )}
-          </section>
-        ))}
+          );
+          return (
+            <section key={c._id}>
+              {block(c, list, false)}
+              {subs.map((g) => block(g.category, g.items, true))}
+            </section>
+          );
+        })}
       </div>
 
       {owner && categories.length > 0 && (
@@ -239,7 +257,7 @@ export default function Carta() {
         <ItemModal item={modal.item} categoryId={modal.categoryId} categories={categories} languages={languages} canMove={!!modal.item}
           onMove={(dir) => { moveItem(modal.item, dir); }} onClose={() => setModal(null)} onSaved={done} />
       )}
-      {modal?.type === 'category' && <CategoryModal category={modal.category} languages={languages} onClose={() => setModal(null)} onSaved={done} />}
+      {modal?.type === 'category' && <CategoryModal category={modal.category} parentId={modal.parentId} parentName={modal.parentName} languages={languages} onClose={() => setModal(null)} onSaved={done} />}
       {modal?.type === 'clear' && <ClearMenuModal items={items.length} categories={categories.length} onClose={() => setModal(null)} onDone={done} />}
       {modal?.type === 'daily' && <DailyMenuModal daily={menu.daily} languages={languages} onClose={() => setModal(null)} onSaved={done} />}
       {modal?.type === 'languages' && <LanguagesModal languages={languages} onClose={() => setModal(null)} onSaved={done} />}

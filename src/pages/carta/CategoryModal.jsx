@@ -4,7 +4,8 @@ import api from '../../services/api';
 import { inputCls, languageName } from './labels';
 import ExtrasEditor, { fromEditor, toEditor } from './ExtrasEditor';
 
-export default function CategoryModal({ category, languages, onClose, onSaved }) {
+export default function CategoryModal({ category, parentId = null, parentName = '', languages, onClose, onSaved }) {
+  const isSub = !!(parentId || category?.parentId);
   const [name, setName] = useState(category?.name || {});
   const [hidden, setHidden] = useState(!!category?.hidden);
   const [extras, setExtras] = useState(() => toEditor(category?.extras));
@@ -33,7 +34,7 @@ export default function CategoryModal({ category, languages, onClose, onSaved })
     setSaving(true);
     setError('');
     try {
-      const body = { name, hidden, extras: fromEditor(extras) };
+      const body = { name, hidden, extras: fromEditor(extras), ...(parentId && !category?._id ? { parentId } : {}) };
       if (category?._id) await api.put(`/menu/categories/${category._id}`, body);
       else await api.post('/menu/categories', body);
       onSaved();
@@ -57,12 +58,13 @@ export default function CategoryModal({ category, languages, onClose, onSaved })
   );
 
   return (
-    <Modal title={category?._id ? 'Editar categoría' : 'Nueva categoría'} onClose={onClose} size="md" footer={footer}>
+    <Modal title={`${category?._id ? 'Editar' : 'Nueva'} ${isSub ? 'subcategoría' : 'categoría'}`} onClose={onClose} size="md" footer={footer}>
       <div className="space-y-3">
+        {parentName && <p className="text-xs text-gray-500">Dentro de <b className="text-gray-800">{parentName}</b>. Hereda sus extras.</p>}
         {languages.map((lang, i) => (
           <label key={lang} className="block">
             <span className="block text-xs font-medium text-gray-500 mb-1">{languageName(lang)}{i === 0 && ' · principal'}</span>
-            <input className={inputCls} value={name[lang] || ''} autoFocus={i === 0} maxLength={80} placeholder={i === 0 ? 'Entrantes, Postres…' : ''}
+            <input className={inputCls} value={name[lang] || ''} autoFocus={i === 0} maxLength={80} placeholder={i === 0 ? (isSub ? 'Clásicas, Sin gluten…' : 'Entrantes, Postres…') : ''}
               onChange={(e) => setName((n) => ({ ...n, [lang]: e.target.value }))} />
           </label>
         ))}

@@ -115,11 +115,12 @@ export const MENU_FIELDS = [
   { key: 'description', label: 'Descripción', words: ['descripcion', 'detalle', 'ingredientes', 'composicion', 'texto'] },
   { key: 'allergens', label: 'Alérgenos', words: ['alergenos', 'alergeno', 'alergias'] },
   { key: 'tags', label: 'Etiquetas', words: ['etiquetas', 'etiqueta', 'tags'] },
-  { key: 'category', label: 'Categoría', words: ['familia', 'categoria', 'grupo', 'seccion', 'subfamilia', 'tipo'] },
+  { key: 'category', label: 'Categoría', words: ['familia', 'categoria', 'grupo', 'seccion', 'tipo'] },
+  { key: 'subcategory', label: 'Subcategoría (opcional)', words: ['subcategoria', 'subfamilia', 'subgrupo', 'subseccion'] },
   { key: 'externalId', label: 'Código', words: ['codigo', 'cod', 'referencia', 'ref', 'id', 'cod. articulo', 'sku'] },
 ];
 
-/** Lines → { externalId, category, name, price } for the menu import; lines without a name are skipped. */
+/** Lines → { externalId, category, subcategory, name, price } for the menu import; lines without a name are skipped. */
 export function buildMenuRows(table, headerRow, mapping) {
   const rows = [];
   let skipped = 0;
@@ -128,6 +129,7 @@ export function buildMenuRows(table, headerRow, mapping) {
     if (!name) { skipped++; continue; }
     const row = { name };
     if (mapping.category !== undefined) row.category = String(cells[mapping.category] ?? '').trim();
+    if (mapping.subcategory !== undefined) row.subcategory = String(cells[mapping.subcategory] ?? '').trim();
     if (mapping.externalId !== undefined) row.externalId = String(cells[mapping.externalId] ?? '').trim();
     if (mapping.description !== undefined) row.description = String(cells[mapping.description] ?? '').trim();
     // Kept as text here; the screen turns the words into the known allergen/label keys

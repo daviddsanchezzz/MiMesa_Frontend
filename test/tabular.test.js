@@ -85,3 +85,11 @@ test('allergens and labels in a file: by key or by name, accents and case ignore
   const mapping = guessMapping(table[header], MENU_FIELDS);
   assert.deepEqual(buildMenuRows(table, header, mapping).rows[0], { name: 'Croquetas', allergens: 'gluten, lacteos', tags: 'vegetariano' });
 });
+
+test('a menu with a subcategory column: each one in its own field', () => {
+  const table = [['Categoría', 'Subcategoría', 'Plato', 'Precio'], ['Pizzas', 'Sin gluten', 'Marinara', '11,50']];
+  const mapping = guessMapping(table[0], MENU_FIELDS);
+  assert.equal(mapping.category, 0);
+  assert.equal(mapping.subcategory, 1);
+  assert.deepEqual(buildMenuRows(table, 0, mapping).rows[0], { name: 'Marinara', category: 'Pizzas', subcategory: 'Sin gluten', price: 11.5 });
+});

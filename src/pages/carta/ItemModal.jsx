@@ -9,6 +9,15 @@ import { ALLERGENS, TAGS, chipCls, inputCls, languageName } from './labels';
 const toggle = (list, key) => (list.includes(key) ? list.filter((x) => x !== key) : [...list, key]);
 
 /** One dish: texts per language, price (locked when it comes from the TPV), allergens and labels. */
+const nameOf = (c, lang) => c.name[lang] || Object.values(c.name)[0] || '';
+/** [[id, "Pizzas"], [id, "Pizzas › Sin gluten"], …]: each category followed by its subcategories. */
+function categoryOptions(categories, lang) {
+  return categories.filter((c) => !c.parentId).flatMap((c) => [
+    [c._id, nameOf(c, lang)],
+    ...categories.filter((s) => s.parentId === c._id).map((s) => [s._id, `${nameOf(c, lang)} › ${nameOf(s, lang)}`]),
+  ]);
+}
+
 export default function ItemModal({ item, categoryId, categories, languages, canMove, onMove, onClose, onSaved }) {
   const editing = !!item?._id;
   const locked = item?.priceSource === 'tpv';
@@ -16,7 +25,7 @@ export default function ItemModal({ item, categoryId, categories, languages, can
   const [name, setName] = useState(item?.name || {});
   const [description, setDescription] = useState(item?.description || {});
   const [price, setPrice] = useState(item?.price === null || item?.price === undefined ? '' : String(item.price).replace('.', ','));
-  const [category, setCategory] = useState(item?.categoryId || categoryId || categories[0]?._id || '');
+  const [category, setCategory] = useState(item?.categoryId || categoryId || categoryOptions(categories, languages[0])[0]?.[0] || '');
   const [allergens, setAllergens] = useState(item?.allergens || []);
   const [tags, setTags] = useState(item?.tags || []);
   const [hidden, setHidden] = useState(!!item?.hidden);
@@ -173,7 +182,7 @@ export default function ItemModal({ item, categoryId, categories, languages, can
           <label className="block">
             <span className="block text-xs font-medium text-gray-500 mb-1">Categoría</span>
             <select className={inputCls} value={category} onChange={(e) => setCategory(e.target.value)}>
-              {categories.map((c) => <option key={c._id} value={c._id}>{c.name[languages[0]] || Object.values(c.name)[0]}</option>)}
+              {categoryOptions(categories, languages[0]).map(([id, label]) => <option key={id} value={id}>{label}</option>)}
             </select>
           </label>
         </div>

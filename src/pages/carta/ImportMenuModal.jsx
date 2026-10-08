@@ -155,7 +155,7 @@ export default function ImportMenuModal({ onClose, onDone }) {
             <ul className="divide-y divide-gray-100 rounded-xl border border-gray-200 text-sm">
               {built.rows.slice(0, 3).map((r, i) => (
                 <li key={i} className="px-3 py-2 flex justify-between gap-3">
-                  <span className="min-w-0 truncate text-gray-800">{r.name}{r.category && <span className="text-gray-400"> · {r.category}</span>}</span>
+                  <span className="min-w-0 truncate text-gray-800">{r.name}{r.category && <span className="text-gray-400"> · {r.category}{r.subcategory ? ` › ${r.subcategory}` : ''}</span>}</span>
                   <span className="font-semibold tabular-nums text-gray-900">{r.price !== undefined ? eur(r.price) : '—'}</span>
                 </li>
               ))}
@@ -173,6 +173,7 @@ export default function ImportMenuModal({ onClose, onDone }) {
             {s.fill > 0 && <span><b className="text-gray-900">{s.fill}</b> se completan · </span>}
             {s.same > 0 && <span>{s.same} iguales</span>}
             {s.newCategories > 0 && <span> · {s.newCategories} categorías nuevas</span>}
+            {s.newSubcategories > 0 && <span> · {s.newSubcategories} subcategorías nuevas</span>}
           </p>
           {s.fill > 0 && <p className="text-xs text-gray-500">«Se completan»: platos que ya tienes y a los que les faltaban alérgenos, etiquetas o descripción. Lo que ya habías escrito no se toca.</p>}
           {s.link > 0 && <p className="text-xs text-gray-500">«Se une al TPV»: ya estaba en tu carta; desde ahora su precio lo marca el TPV (su texto, alérgenos y traducciones no cambian).</p>}
@@ -181,7 +182,7 @@ export default function ImportMenuModal({ onClose, onDone }) {
               <li key={i} className="px-3 py-2 flex items-center gap-3">
                 <span className="min-w-0 flex-1">
                   <span className="block text-sm text-gray-900 truncate">{p.name}</span>
-                  <span className="block text-xs text-gray-400 truncate">{p.category}{p.categoryNew && ' (categoría nueva)'}</span>
+                  <span className="block text-xs text-gray-400 truncate">{p.category}{p.subcategory ? ` › ${p.subcategory}` : ''}{p.categoryNew && ' (categoría nueva)'}{!p.categoryNew && p.subcategoryNew && ' (subcategoría nueva)'}</span>
                 </span>
                 {p.previous !== null && p.previous !== p.price && <span className="text-xs text-gray-400 line-through tabular-nums">{eur(p.previous)}</span>}
                 <span className="text-sm font-semibold tabular-nums text-gray-900">{eur(p.price)}</span>

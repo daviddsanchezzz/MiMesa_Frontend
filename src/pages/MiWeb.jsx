@@ -20,6 +20,8 @@ const DAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
 const DAY_SHORT = { 1: 'Lun', 2: 'Mar', 3: 'Mié', 4: 'Jue', 5: 'Vie', 6: 'Sáb', 0: 'Dom' };
 const label = 'block text-xs font-medium text-gray-500 mb-1';
 const LANGS = ['es', 'ca', 'en'];
+/** Saved reviews → what the inputs edit (text). */
+const reviewsForm = (r) => ({ rating: r?.rating == null ? '' : String(r.rating).replace('.', ','), count: r?.count == null ? '' : String(r.count), url: r?.url || '' });
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b);
 
 const rangesText = (ranges) => (ranges.length ? ranges.map((r) => `${r.open}–${r.close === '24:00' ? '00:00' : r.close}`).join(' · ') : 'Cerrado');
@@ -106,7 +108,7 @@ export default function MiWeb() {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (q.data && !form) { const own = { reservations: q.data.reservations, social: q.data.social }; setForm(own); setSaved(own); }
+    if (q.data && !form) { const own = { reservations: q.data.reservations, social: q.data.social, reviews: reviewsForm(q.data.reviews) }; setForm(own); setSaved(own); }
   }, [q.data, form]);
   const dirty = useMemo(() => form && saved && !same(form, saved), [form, saved]);
 
@@ -114,7 +116,7 @@ export default function MiWeb() {
     setSaving(true);
     try {
       const { data } = await api.put('/site', form);
-      const own = { reservations: data.reservations, social: data.social };
+      const own = { reservations: data.reservations, social: data.social, reviews: reviewsForm(data.reviews) };
       setForm(own);
       setSaved(own);
       toast.success('Guardado');
@@ -186,6 +188,24 @@ export default function MiWeb() {
             <input className={inputCls} inputMode="url" placeholder="https://…" value={form.reservations.url} onChange={(e) => setRes({ url: e.target.value })} /></label>
         )}
         {form.reservations.mode === 'vetra' && <p className="mt-2 text-[13px] text-gray-500">Gestiona tu página de reservas en <Link to="/pagina-reservas" className="font-semibold text-violet-700">Tu página de reservas</Link>.</p>}
+      </Section>
+
+      <Section title="Reseñas de Google">
+        <p className="mb-3 text-[13px] text-gray-500">Mira tu ficha en Google y copia aquí la nota y cuántas reseñas tienes: tu web las enseñará. No se actualizan solas; cámbialas cuando cambien mucho. Si las dejas vacías, la web no muestra nada.</p>
+        <div className="grid grid-cols-2 gap-3 max-w-md">
+          <label className="block"><span className={label}>Valoración (de 0 a 5)</span>
+            <input className={`${inputCls} tabular-nums`} inputMode="decimal" placeholder="4,6" value={form.reviews.rating}
+              onChange={(e) => setForm((f) => ({ ...f, reviews: { ...f.reviews, rating: e.target.value } }))} /></label>
+          <label className="block"><span className={label}>Número de reseñas</span>
+            <input className={`${inputCls} tabular-nums`} inputMode="numeric" placeholder="312" value={form.reviews.count}
+              onChange={(e) => setForm((f) => ({ ...f, reviews: { ...f.reviews, count: e.target.value } }))} /></label>
+        </div>
+        <label className="block mt-3 max-w-xl"><span className={label}>Enlace para leerlas (opcional)</span>
+          <input className={inputCls} inputMode="url" placeholder="https://g.page/r/…" value={form.reviews.url}
+            onChange={(e) => setForm((f) => ({ ...f, reviews: { ...f.reviews, url: e.target.value } }))} /></label>
+        {form.reviews.rating && form.reviews.count && Number(String(form.reviews.rating).replace(',', '.')) <= 5 && (
+          <p className="mt-2 text-sm text-gray-700"><span className="text-amber-500" aria-hidden="true">★</span> <b>{String(form.reviews.rating).replace('.', ',')}</b> · {form.reviews.count} reseñas en Google</p>
+        )}
       </Section>
 
       <Section title="Redes sociales">

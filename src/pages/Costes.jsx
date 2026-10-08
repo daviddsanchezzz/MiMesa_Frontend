@@ -12,6 +12,7 @@ import Change from './costes/Change';
 import { Sparkline } from './costes/Charts';
 import IngredientModal from './costes/IngredientModal';
 import LinkModal from './costes/LinkModal';
+import RecipeModal, { marginTone } from './costes/RecipeModal';
 import { ago, money, perUnit, shortDate } from './costes/format';
 
 /** One ingredient: name and where it was bought on the left, its shape and today's price on the right. */
@@ -68,6 +69,26 @@ function PendingRow({ group, onOpen }) {
   );
 }
 
+/** A dish: name and category on the left, what it costs and the margin it leaves on the right. */
+function DishRow({ dish, target, onOpen }) {
+  return (
+    <li>
+      <button type="button" onClick={onOpen} className="flex w-full items-center gap-3 py-3 text-left active:bg-gray-50 lg:gap-5">
+        <span className="min-w-0 flex-1">
+          <span className="block truncate text-[15px] font-medium text-gray-900">{dish.name}</span>
+          <span className="block truncate text-[13px] text-gray-500">{[dish.category, dish.subcategory].filter(Boolean).join(' › ')}{dish.price ? ` · ${money(dish.price)}` : ''}</span>
+        </span>
+        {dish.hasRecipe ? (
+          <>
+            <span className="hidden w-24 shrink-0 text-right text-[15px] tabular-nums text-gray-600 sm:block">{money(dish.cost)}</span>
+            <span className={`w-16 shrink-0 rounded-full px-2 py-0.5 text-center text-[13px] font-semibold tabular-nums ${marginTone(dish.marginPct, target)}`}>{dish.marginPct === null ? '—' : `${String(Math.round(dish.marginPct)).replace('.', ',')} %`}</span>
+          </>
+        ) : <span className="shrink-0 text-[13px] font-semibold text-violet-700">Añadir</span>}
+      </button>
+    </li>
+  );
+}
+
 /** Two or three views as a line of text with an underline; a number shows what is waiting. */
 function ViewTabs({ value, onChange, options }) {
   return (
@@ -76,7 +97,7 @@ function ViewTabs({ value, onChange, options }) {
         const on = value === key;
         return (
           <button key={key} type="button" role="tab" aria-selected={on} onClick={() => onChange(key)}
-            className={`relative flex flex-1 items-center justify-center gap-2 py-3 text-[15px] font-semibold transition-colors sm:flex-none sm:justify-start sm:px-1 sm:mr-8 ${on ? 'text-gray-900' : 'text-gray-400 hover:text-gray-700'}`}>
+            className={`relative flex flex-1 items-center justify-center gap-1.5 whitespace-nowrap py-3 text-[14px] sm:gap-2 sm:text-[15px] font-semibold transition-colors sm:flex-none sm:justify-start sm:px-1 sm:mr-8 ${on ? 'text-gray-900' : 'text-gray-400 hover:text-gray-700'}`}>
             {label}
             {count > 0 && <span className={`min-w-[22px] rounded-full px-1.5 py-0.5 text-center text-[12px] font-bold leading-4 ${on ? 'bg-violet-600 text-white' : 'bg-gray-200 text-gray-600'}`}>{count}</span>}
             {on && <span aria-hidden="true" className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-violet-600" />}
@@ -94,9 +115,12 @@ function ViewTabs({ value, onChange, options }) {
 export default function Costes() {
   useSetMobileHeader({ title: 'Costes' });
   const [params, setParams] = useSearchParams();
-  const tab = params.get('tab') === 'vincular' ? 'vincular' : 'ingredientes';
+  const tab = ['vincular', 'escandallos'].includes(params.get('tab')) ? params.get('tab') : 'ingredientes';
   const list = useData(['ingredients', 'list'], () => api.get('/ingredients').then((r) => r.data), { retry: false });
   const inbox = useData(['ingredients', 'inbox'], () => api.get('/ingredients/inbox').then((r) => r.data), { retry: false });
+  const recipes = useData(['recipes', 'list'], () => api.get('/recipes').then((r) => r.data), { retry: false });
+  const [dishFilter, setDishFilter] = useState('todos');
+  const [dishOpen, setDishOpen] = useState(null);
   const [search, setSearch] = useState('');
   const [view, setView] = useState('todos');
   const [open, setOpen] = useState(null);       // ingredient id
@@ -117,7 +141,15 @@ export default function Costes() {
     .filter((i) => (view === 'suben' ? i.changePct > 0 : view === 'bajan' ? i.changePct < 0 : true))
     .filter((i) => !needle || i.name.toLocaleLowerCase('es').includes(needle)), [ingredients, view, needle]);
 
-  const setTab = (t) => setParams(t === 'vincular' ? { tab: 'vincular' } : {}, { replace: true });
+  const dishes = recipes.data?.dishes || [];
+  const target = recipes.data?.settings?.targetMarginPct || 70;
+  const shownDishes = useMemo(() => dishes
+    .filter((d) => (dishFilter === 'sin' ? !d.hasRecipe : dishFilter === 'bajo' ? d.hasRecipe && d.onTarget === false : true))
+    .filter((d) => !needle || d.name.toLocaleLowerCase('es').includes(needle)), [dishes, dishFilter, needle]);
+  const withRecipe = dishes.filter((d) => d.hasRecipe).length;
+  const lowMargin = dishes.filter((d) => d.hasRecipe && d.onTarget === false).length;
+
+  const setTab = (t) => setParams(t === 'ingredientes' ? {} : { tab: t }, { replace: true });
   const refresh = () => { list.refetch(); inbox.refetch(); };
   const linked = ({ ingredient, linked: n }) => {
     setLinking(null);
@@ -157,7 +189,7 @@ export default function Costes() {
         </section>
       ) : (
         <>
-          <ViewTabs value={tab} onChange={setTab} options={[['ingredientes', 'Ingredientes'], ['vincular', 'Por vincular', pending]]} />
+          <ViewTabs value={tab} onChange={setTab} options={[['ingredientes', 'Ingredientes'], ['escandallos', 'Escandallos', lowMargin], ['vincular', 'Por vincular', pending]]} />
 
           {tab === 'ingredientes' ? (
             <div className="grid grid-cols-1 gap-x-12 gap-y-8 lg:grid-cols-[minmax(0,1fr)_320px]">
@@ -185,6 +217,18 @@ export default function Costes() {
                 )}
               </aside>
             </div>
+          ) : tab === 'escandallos' ? (
+            <section>
+              <p className="mb-3 max-w-2xl text-sm text-gray-500">Qué lleva cada plato y cuánto te cuesta. Cuando un ingrediente sube, el coste y el margen se recalculan solos.</p>
+              <div className="mb-2 flex flex-wrap items-center gap-3">
+                <input className={`${inputCls} !h-10 w-full sm:max-w-xs`} placeholder="Buscar un plato…" value={search} onChange={(e) => setSearch(e.target.value)} />
+                <Segmented size="sm" value={dishFilter} onChange={setDishFilter} options={[['todos', 'Todos'], ['sin', 'Sin escandallo'], ['bajo', 'Margen bajo']]} />
+                {withRecipe > 0 && <span className="text-[13px] text-gray-500 sm:ml-auto">{withRecipe} de {dishes.length} con escandallo · objetivo {target} %</span>}
+              </div>
+              {shownDishes.length === 0 ? <Empty>{dishes.length === 0 ? 'Aún no hay platos en tu carta.' : 'Ningún plato coincide.'}</Empty> : (
+                <ul className="divide-y divide-gray-100">{shownDishes.map((d) => <DishRow key={d.id} dish={d} target={target} onOpen={() => setDishOpen(d.id)} />)}</ul>
+              )}
+            </section>
           ) : (
             <section>
               <p className="mb-2 max-w-2xl text-sm text-gray-500">Productos de tus facturas que aún no son un ingrediente. Dime qué son una vez y las próximas facturas se reconocen solas.</p>
@@ -197,6 +241,7 @@ export default function Costes() {
       )}
 
       {open && <IngredientModal id={open} onClose={() => setOpen(null)} onChanged={refresh} />}
+      {dishOpen && <RecipeModal itemId={dishOpen} ingredients={ingredients} onClose={() => setDishOpen(null)} onChanged={() => { recipes.refetch(); }} />}
       {linking && <LinkModal group={linking} ingredients={ingredients} onClose={() => setLinking(null)} onDone={linked} />}
       {settings && <AlertSettingsModal value={alertPct} onClose={() => setSettings(false)} onSaved={() => { setSettings(false); refresh(); }} />}
     </div>

@@ -2,10 +2,31 @@ import { useState, useEffect } from 'react';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import Modal from '../../components/Modal';
+import { Segmented } from '../../ui/kit';
 import { DAYS, EmptyState, ErrorBanner, INTERVAL_OPTIONS, IconClock, IconEdit, IconPlus, IconTrash, IconX, colorOf, emptyShiftForm, fmtDate, inputCls, labelCls } from './shared';
 
+const hhmm = (min) => `${String(Math.floor(min / 60) % 24).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`;
+const toMin = (t) => { const [h, m] = String(t || '').split(':').map(Number); return h * 60 + m; };
+
+/** What the website will say about closing: the last time a table can be booked plus how long it stays. */
+function closingPreview(form, stay) {
+  let last;
+  if (form.slotMode === 'manual') {
+    const times = form.manualSlots.map((t) => toMin(t)).filter(Number.isFinite);
+    if (!times.length) return null;
+    last = Math.max(...times);
+  } else {
+    const a = toMin(form.startTime); const b = toMin(form.endTime);
+    if (!Number.isFinite(a) || !Number.isFinite(b) || b <= a) return null;
+    last = a + Math.floor((b - a - 1) / (form.interval || 30)) * (form.interval || 30);
+  }
+  return { last: hhmm(last), close: stay ? hhmm(last + stay) : null };
+}
+
 export function TurnosSection() {
-  const { planLimit } = useAuth();
+  const { planLimit, business } = useAuth();
+  const [tab, setTab] = useState('horario');
+  const stay = Number(business?.reservationDuration) || 0;
   const [shifts, setShifts] = useState([]);
   const [modal,  setModal]  = useState(null);
   const [form,   setForm]   = useState(emptyShiftForm());
@@ -14,7 +35,7 @@ export function TurnosSection() {
   const load = async () => { const r = await api.get('/shifts'); setShifts(r.data); };
   useEffect(() => { load(); }, []);
 
-  const openCreate = () => { setForm(emptyShiftForm()); setError(''); setModal('create'); };
+  const openCreate = () => { setForm(emptyShiftForm()); setError(''); setTab('horario'); setModal('create'); };
   const openEdit   = (s)  => {
     setForm({
       name: s.name,
@@ -26,14 +47,16 @@ export function TurnosSection() {
       startDate: s.startDate || '', endDate: s.endDate || '',
       staffStartTime: s.staffStartTime || '', staffEndTime: s.staffEndTime || '',
     });
-    setError(''); setModal(s);
+    setError(''); setTab('horario'); setModal(s);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault(); setError('');
-    if (!form.days.length) { setError('Selecciona al menos un día'); return; }
+    if (!form.name.trim()) { setTab('horario'); setError('Pon un nombre al turno'); return; }
+    if (form.slotMode === 'auto' && (!form.startTime || !form.endTime)) { setTab('horario'); setError('Pon la hora de inicio y de fin'); return; }
+    if (!form.days.length) { setTab('dias'); setError('Selecciona al menos un día'); return; }
     if ((form.startDate && !form.endDate) || (!form.startDate && form.endDate)) {
-      setError('Si indicas rango de fechas, debes rellenar tanto inicio como fin'); return;
+      setTab('dias'); setError('Si indicas rango de fechas, debes rellenar tanto inicio como fin'); return;
     }
     try {
       const validSlots = form.manualSlots.map(t => t.trim()).filter(Boolean);
@@ -49,7 +72,7 @@ export function TurnosSection() {
         : form.endTime;
 
       if (form.slotMode === 'manual' && validSlots.length === 0) {
-        setError('Añade al menos una hora en modo manual'); return;
+        setTab('horario'); setError('Añade al menos una hora en modo manual'); return;
       }
 
       const payload = {
@@ -203,159 +226,168 @@ export function TurnosSection() {
         </div>
       )}
 
-      {modal && (
-        <Modal
-          title={modal === 'create' ? 'Nuevo turno' : 'Editar turno'}
-          subtitle={modal !== 'create' ? modal.name : 'Configura el horario y los días del turno'}
-          onClose={() => setModal(null)}
-        >
-          <ErrorBanner msg={error} />
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Name */}
-            <div>
-              <label className={labelCls}>Nombre *</label>
-              <input required value={form.name}
-                onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
-                placeholder="Mediodía, Noche, Brunch..."
-                className={inputCls} />
-            </div>
-
-            {/* Slot mode toggle */}
-            <div>
-              <label className={labelCls}>Franjas horarias *</label>
-              <div className="flex items-center gap-1 bg-gray-100 rounded-2xl p-1 mb-4">
-                {[{ key: 'auto', label: 'Rango automático' }, { key: 'manual', label: 'Horas manuales' }].map(m => (
-                  <button key={m.key} type="button"
-                    onClick={() => setForm(f => ({ ...f, slotMode: m.key }))}
-                    className={`flex-1 py-2 rounded-xl text-sm font-semibold transition-all ${
-                      form.slotMode === m.key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
-                    }`}>
-                    {m.label}
-                  </button>
-                ))}
+      {modal && (() => {
+        const preview = closingPreview(form, stay);
+        const footer = (
+          <div className="flex gap-3">
+            <button type="button" onClick={() => setModal(null)} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-2.5 rounded-xl text-sm font-medium transition-colors">Cancelar</button>
+            <button type="submit" form="turno-form" className="flex-[2] bg-violet-600 hover:bg-violet-700 text-white py-2.5 rounded-xl text-sm font-semibold transition-colors">
+              {modal === 'create' ? 'Crear turno' : 'Guardar cambios'}
+            </button>
+          </div>
+        );
+        return (
+          <Modal
+            size="wide"
+            title={modal === 'create' ? 'Nuevo turno' : 'Editar turno'}
+            subtitle={modal !== 'create' ? modal.name : 'Configura el horario y los días del turno'}
+            footer={footer}
+            onClose={() => setModal(null)}
+          >
+            <ErrorBanner msg={error} />
+            <form id="turno-form" noValidate onSubmit={handleSubmit} className="space-y-5">
+              <div>
+                <label className={labelCls}>Nombre *</label>
+                <input value={form.name} autoFocus={modal === 'create'}
+                  onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                  placeholder="Mediodía, Noche, Brunch..."
+                  className={inputCls} />
               </div>
 
-              {form.slotMode === 'auto' ? (
-                <div className="space-y-3">
-                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                    <input type="time" required value={form.startTime}
-                      onChange={e => setForm(f => ({ ...f, startTime: e.target.value }))}
-                      className={`${inputCls} flex-1 min-w-0`} />
-                    <span className="text-gray-400 text-sm font-medium text-center shrink-0">hasta</span>
-                    <input type="time" required value={form.endTime}
-                      onChange={e => setForm(f => ({ ...f, endTime: e.target.value }))}
-                      className={`${inputCls} flex-1 min-w-0`} />
-                  </div>
-                  <div className="flex gap-2">
-                    {INTERVAL_OPTIONS.map(opt => (
-                      <button key={opt.value} type="button"
-                        onClick={() => setForm(f => ({ ...f, interval: opt.value }))}
-                        className={`flex-1 py-2 rounded-xl text-sm font-semibold border transition-all ${
-                          form.interval === opt.value
-                            ? 'bg-violet-600 text-white border-violet-600 shadow-sm'
-                            : 'bg-gray-50 text-gray-500 border-gray-200 hover:border-violet-300 hover:bg-violet-50 hover:text-violet-600'
-                        }`}>
-                        {opt.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {form.manualSlots.map((slot, i) => (
-                    <div key={i} className="flex items-center gap-2">
-                      <input type="time" value={slot} required
-                        onChange={e => updManualSlot(i, e.target.value)}
-                        className={`${inputCls} flex-1`} />
-                      <button type="button" onClick={() => rmManualSlot(i)}
-                        className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-rose-50 hover:text-rose-500 text-gray-400 transition-colors shrink-0">
-                        <IconX />
-                      </button>
+              <Segmented full value={tab} onChange={setTab} options={[['horario', 'Horario'], ['dias', 'Días y fechas'], ['personal', 'Personal']]} />
+
+              {tab === 'horario' && (
+                <div className="space-y-4">
+                  <div>
+                    <label className={labelCls}>Franjas de reserva *</label>
+                    <div className="flex items-center gap-1 bg-gray-100 rounded-2xl p-1 mb-4 sm:max-w-sm">
+                      {[{ key: 'auto', label: 'Rango automático' }, { key: 'manual', label: 'Horas manuales' }].map(m => (
+                        <button key={m.key} type="button"
+                          onClick={() => setForm(f => ({ ...f, slotMode: m.key }))}
+                          className={`flex-1 py-2 rounded-xl text-sm font-semibold transition-all ${
+                            form.slotMode === m.key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500 hover:text-gray-700'
+                          }`}>
+                          {m.label}
+                        </button>
+                      ))}
                     </div>
-                  ))}
-                  <button type="button" onClick={addManualSlot}
-                    className="w-full flex items-center justify-center gap-1.5 py-2 rounded-xl border border-dashed border-gray-300 text-sm text-gray-400 hover:border-violet-400 hover:text-violet-600 transition-colors">
-                    <IconPlus /> Añadir hora
-                  </button>
+
+                    {form.slotMode === 'auto' ? (
+                      <div className="space-y-3">
+                        <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 sm:max-w-md">
+                          <label className="block">
+                            <span className="block text-xs text-gray-500 mb-1">Primera reserva</span>
+                            <input type="time" value={form.startTime} onChange={e => setForm(f => ({ ...f, startTime: e.target.value }))} className={`${inputCls} w-full`} />
+                          </label>
+                          <span className="text-gray-400 text-sm font-medium pt-5">hasta</span>
+                          <label className="block">
+                            <span className="block text-xs text-gray-500 mb-1">Fin de las reservas</span>
+                            <input type="time" value={form.endTime} onChange={e => setForm(f => ({ ...f, endTime: e.target.value }))} className={`${inputCls} w-full`} />
+                          </label>
+                        </div>
+                        <div>
+                          <span className="block text-xs text-gray-500 mb-1">Una franja cada</span>
+                          <div className="flex gap-2 sm:max-w-md">
+                            {INTERVAL_OPTIONS.map(opt => (
+                              <button key={opt.value} type="button"
+                                onClick={() => setForm(f => ({ ...f, interval: opt.value }))}
+                                className={`flex-1 py-2 rounded-xl text-sm font-semibold border transition-all ${
+                                  form.interval === opt.value
+                                    ? 'bg-violet-600 text-white border-violet-600 shadow-sm'
+                                    : 'bg-gray-50 text-gray-500 border-gray-200 hover:border-violet-300 hover:bg-violet-50 hover:text-violet-600'
+                                }`}>
+                                {opt.label}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                          {form.manualSlots.map((slot, i) => (
+                            <div key={i} className="flex items-center gap-1.5">
+                              <input type="time" value={slot} onChange={e => updManualSlot(i, e.target.value)} className={`${inputCls} flex-1 min-w-0`} />
+                              <button type="button" onClick={() => rmManualSlot(i)} aria-label="Quitar hora"
+                                className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-rose-50 hover:text-rose-500 text-gray-400 transition-colors shrink-0">
+                                <IconX />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                        <button type="button" onClick={addManualSlot}
+                          className="w-full sm:w-auto sm:px-6 flex items-center justify-center gap-1.5 py-2 rounded-xl border border-dashed border-gray-300 text-sm text-gray-400 hover:border-violet-400 hover:text-violet-600 transition-colors">
+                          <IconPlus /> Añadir hora
+                        </button>
+                      </div>
+                    )}
+                  </div>
+
+                  {preview && (
+                    <div className="rounded-xl bg-violet-50 border border-violet-100 px-4 py-3 text-sm text-violet-900">
+                      Última reserva a las <b>{preview.last}</b>
+                      {preview.close
+                        ? <> · con mesas de {stay} min, <b>tu web dirá que cerráis a las {preview.close}</b>.</>
+                        : <> · pon cuánto tiempo puede estar una mesa en Reservas y tu web dirá a qué hora cerráis.</>}
+                    </div>
+                  )}
                 </div>
               )}
-            </div>
 
-            {/* Staff hours (restaurants plan people around the service) */}
-            <div>
-              <label className={labelCls}>
-                Horario del personal
-                <span className="text-gray-400 font-normal ml-1 text-xs">(opcional)</span>
-              </label>
-              <div className="flex items-end gap-2">
-                <div className="flex-1 min-w-0">
-                  <span className="block text-xs text-gray-500 mb-1">Llegan</span>
-                  <input type="time" value={form.staffStartTime}
-                    onChange={e => setForm(f => ({ ...f, staffStartTime: e.target.value }))}
-                    className={`${inputCls} w-full`} />
+              {tab === 'dias' && (
+                <div className="space-y-5">
+                  <div>
+                    <label className={labelCls}>Días activos *</label>
+                    <div className="flex flex-wrap gap-2">
+                      {DAYS.map(d => (
+                        <button key={d.value} type="button" onClick={() => toggleDay(d.value)} title={d.full}
+                          className={`w-11 h-11 rounded-xl text-sm font-bold transition-all ${
+                            form.days.includes(d.value)
+                              ? 'bg-violet-600 text-white shadow-sm'
+                              : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
+                          }`}>
+                          {d.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <label className={labelCls}>
+                      Solo entre estas fechas
+                      <span className="text-gray-400 font-normal ml-1 text-xs">(opcional — vacío = turno de todo el año)</span>
+                    </label>
+                    <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 sm:max-w-md">
+                      <input type="date" value={form.startDate} onChange={e => setForm(f => ({ ...f, startDate: e.target.value }))} className={`${inputCls} w-full min-w-0`} />
+                      <span className="text-gray-400 text-sm font-medium">hasta</span>
+                      <input type="date" value={form.endDate} onChange={e => setForm(f => ({ ...f, endDate: e.target.value }))} className={`${inputCls} w-full min-w-0`} />
+                    </div>
+                    <p className="text-xs text-gray-400 mt-1.5">Un turno con fechas tiene prioridad sobre el turno general con el mismo nombre en ese período (horario de verano, menú de Navidad…).</p>
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <span className="block text-xs text-gray-500 mb-1">Se van</span>
-                  <input type="time" value={form.staffEndTime}
-                    onChange={e => setForm(f => ({ ...f, staffEndTime: e.target.value }))}
-                    className={`${inputCls} w-full`} />
+              )}
+
+              {tab === 'personal' && (
+                <div className="space-y-3">
+                  <p className="text-sm text-gray-500">Opcional. Si el personal llega antes de abrir o se va después de cerrar, indícalo: verán su horario real y sus horas se cuentan bien. Vacío = el mismo horario que el de los clientes.</p>
+                  <div className="grid grid-cols-2 gap-3 sm:max-w-md">
+                    <label className="block">
+                      <span className="block text-xs text-gray-500 mb-1">Llegan</span>
+                      <input type="time" value={form.staffStartTime} onChange={e => setForm(f => ({ ...f, staffStartTime: e.target.value }))} className={`${inputCls} w-full`} />
+                    </label>
+                    <label className="block">
+                      <span className="block text-xs text-gray-500 mb-1">Se van</span>
+                      <input type="time" value={form.staffEndTime} onChange={e => setForm(f => ({ ...f, staffEndTime: e.target.value }))} className={`${inputCls} w-full`} />
+                    </label>
+                  </div>
+                  {(form.staffStartTime || form.staffEndTime) && (
+                    <button type="button" onClick={() => setForm(f => ({ ...f, staffStartTime: '', staffEndTime: '' }))} className="text-xs font-semibold text-gray-500 hover:text-gray-800">Quitar horario del personal</button>
+                  )}
                 </div>
-                {(form.staffStartTime || form.staffEndTime) && (
-                  <button type="button" onClick={() => setForm(f => ({ ...f, staffStartTime: '', staffEndTime: '' }))}
-                    className="h-[42px] px-2 text-xs font-semibold text-gray-500 hover:text-gray-800">Quitar</button>
-                )}
-              </div>
-              <p className="mt-1.5 text-xs text-gray-400">Si el personal llega antes de abrir o se va después de cerrar, indícalo. Así verán su horario real y se cuentan bien sus horas. Vacío = el mismo que el de los clientes.</p>
-            </div>
-
-            {/* Days */}
-            <div>
-              <label className={labelCls}>Días activos *</label>
-              <div className="flex flex-wrap gap-1.5">
-                {DAYS.map(d => (
-                  <button key={d.value} type="button" onClick={() => toggleDay(d.value)} title={d.full}
-                    className={`w-9 h-9 rounded-xl text-xs font-bold transition-all ${
-                      form.days.includes(d.value)
-                        ? 'bg-violet-600 text-white shadow-sm'
-                        : 'bg-gray-100 text-gray-400 hover:bg-gray-200'
-                    }`}>
-                    {d.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Optional date range (specific shift) */}
-            <div>
-              <label className={labelCls}>
-                Rango de fechas
-                <span className="text-gray-400 font-normal ml-1 text-xs">(opcional — deja vacío para turno general)</span>
-              </label>
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                <input type="date" value={form.startDate}
-                  onChange={e => setForm(f => ({ ...f, startDate: e.target.value }))}
-                  className={`${inputCls} flex-1 min-w-0`} />
-                <span className="text-gray-400 text-sm font-medium text-center shrink-0">hasta</span>
-                <input type="date" value={form.endDate}
-                  onChange={e => setForm(f => ({ ...f, endDate: e.target.value }))}
-                  className={`${inputCls} flex-1 min-w-0`} />
-              </div>
-              <p className="text-xs text-gray-400 mt-1.5">
-                Un turno específico tiene prioridad sobre el turno general con el mismo nombre en ese período.
-              </p>
-            </div>
-
-            <div className="flex gap-3 pt-1">
-              <button type="submit" className="flex-1 bg-violet-600 hover:bg-violet-700 text-white py-2.5 rounded-xl text-sm font-semibold transition-colors">
-                {modal === 'create' ? 'Crear turno' : 'Guardar cambios'}
-              </button>
-              <button type="button" onClick={() => setModal(null)} className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-2.5 rounded-xl text-sm font-medium transition-colors">
-                Cancelar
-              </button>
-            </div>
-          </form>
-        </Modal>
-      )}
+              )}
+            </form>
+          </Modal>
+        );
+      })()}
     </div>
   );
 }

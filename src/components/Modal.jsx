@@ -30,9 +30,10 @@ export default function Modal({ title, subtitle, header = null, footer = null, c
     sm: 'w-full sm:max-w-sm',
     md: 'w-full sm:max-w-md',
     lg: 'w-full sm:max-w-lg',
+    wide: 'w-full sm:max-w-2xl',
     xl: 'w-full sm:w-auto sm:max-w-[98vw]',
   };
-  const heights = { sm: 'max-h-[92dvh]', md: 'max-h-[92dvh]', lg: 'max-h-[92dvh]', xl: 'max-h-[98dvh]' };
+  const heights = { sm: 'max-h-[92dvh]', md: 'max-h-[92dvh]', lg: 'max-h-[92dvh]', wide: 'max-h-[92dvh]', xl: 'max-h-[98dvh]' };
   return (
     <div
       className="fixed inset-0 z-50 flex items-end sm:items-center justify-center overscroll-contain"

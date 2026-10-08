@@ -136,7 +136,7 @@ export default function MiWeb() {
       <PageHeader title="Mi web" subtitle="Lo que tu web muestra además de la carta" />
 
       <Section title="Horario" aside={<SectionLink to="/horarios">Editar en Horarios y cierres</SectionLink>}>
-        <p className="mb-2 text-[13px] text-gray-500">Se toma de tus turnos de reservas, tus vacaciones y tus cierres. No hay que ponerlo otra vez.</p>
+        <p className="mb-2 text-[13px] text-gray-500">Se toma de tus turnos de reservas, tus vacaciones y tus cierres: abre en la primera reserva y cierra a la última reserva más lo que puede estar una mesa. No hay que ponerlo otra vez.</p>
         <p className={`mb-2 text-sm font-semibold ${schedule.today.openNow ? 'text-emerald-700' : 'text-gray-600'}`}>
           {schedule.today.openNow ? 'Abierto ahora' : schedule.today.closed ? `Hoy cerrado${schedule.today.closureReason ? ` · ${schedule.today.closureReason}` : ''}` : 'Cerrado ahora'}
         </p>

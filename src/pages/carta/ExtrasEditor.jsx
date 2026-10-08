@@ -16,8 +16,10 @@ export const fromEditor = (rows) => rows
  * Extras the customer can add: "Masa sin gluten +5 €", "Extra de queso +1,50 €". On a dish they are for
  * that dish; on a category, for every dish in it. Names per language, price and allergens optional.
  */
-export default function ExtrasEditor({ rows, onChange, languages, scope }) {
-  const [lang, setLang] = useState(languages[0]);
+export default function ExtrasEditor({ rows, onChange, languages, scope, lang: sharedLang }) {
+  // Inside a modal that already has its language tabs, those decide the language and this one shows none
+  const [ownLang, setLang] = useState(languages[0]);
+  const lang = sharedLang || ownLang;
   const set = (i, patch) => onChange(rows.map((x, idx) => (idx === i ? { ...x, ...patch } : x)));
   const options = languages.map((l) => [l, languageName(l)]);
 
@@ -25,7 +27,7 @@ export default function ExtrasEditor({ rows, onChange, languages, scope }) {
     <div>
       <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 mb-2">
         <p className="text-xs font-semibold text-gray-500">Extras <span className="font-normal text-gray-400">{scope === 'category' ? '(valen para todos los platos de la categoría)' : '(opcionales)'}</span></p>
-        {languages.length > 1 && rows.length > 0 && <Segmented value={lang} onChange={setLang} options={options} size="sm" />}
+        {!sharedLang && languages.length > 1 && rows.length > 0 && <Segmented value={lang} onChange={setLang} options={options} size="sm" />}
       </div>
       {rows.length === 0 && <p className="text-[13px] text-gray-400 mb-2">{scope === 'category' ? 'Por ejemplo: «Masa sin gluten +5 €» en las pizzas.' : 'Por ejemplo: «Extra de queso +1,50 €».'}</p>}
       <ul className="space-y-3">

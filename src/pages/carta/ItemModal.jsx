@@ -201,7 +201,7 @@ export default function ItemModal({ item, categoryId, categories, languages, can
           </div>
         </div>
 
-        <ExtrasEditor rows={extras} onChange={setExtras} languages={languages} scope="dish" />
+        <ExtrasEditor rows={extras} onChange={setExtras} languages={languages} lang={lang} scope="dish" />
 
         <label className="flex items-center gap-2.5 text-sm text-gray-700">
           <input type="checkbox" checked={hidden} onChange={(e) => setHidden(e.target.checked)} />

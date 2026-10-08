@@ -5,7 +5,7 @@ import api from '../services/api';
 import { useSetMobileHeader } from '../context/MobileHeaderContext';
 import { useData } from '../lib/query';
 import Icon from '../ui/Icon';
-import { Empty, FigureLine, GhostButton, PageHeader, Section, SectionLink, Segmented, Tabs } from '../ui/kit';
+import { Empty, FigureLine, GhostButton, PageHeader, Section, SectionLink, Segmented } from '../ui/kit';
 import { inputCls } from './carta/labels';
 import AlertSettingsModal from './costes/AlertSettingsModal';
 import Change from './costes/Change';
@@ -68,6 +68,25 @@ function PendingRow({ group, onOpen }) {
   );
 }
 
+/** Two or three views as a line of text with an underline; a number shows what is waiting. */
+function ViewTabs({ value, onChange, options }) {
+  return (
+    <div role="tablist" className="flex border-b border-gray-200">
+      {options.map(([key, label, count]) => {
+        const on = value === key;
+        return (
+          <button key={key} type="button" role="tab" aria-selected={on} onClick={() => onChange(key)}
+            className={`relative flex flex-1 items-center justify-center gap-2 py-3 text-[15px] font-semibold transition-colors sm:flex-none sm:justify-start sm:px-1 sm:mr-8 ${on ? 'text-gray-900' : 'text-gray-400 hover:text-gray-700'}`}>
+            {label}
+            {count > 0 && <span className={`min-w-[22px] rounded-full px-1.5 py-0.5 text-center text-[12px] font-bold leading-4 ${on ? 'bg-violet-600 text-white' : 'bg-gray-200 text-gray-600'}`}>{count}</span>}
+            {on && <span aria-hidden="true" className="absolute inset-x-0 -bottom-px h-0.5 rounded-full bg-violet-600" />}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
 /**
  * Costes: what each ingredient costs you, read from your invoices. A line of an invoice is linked to an
  * ingredient once; from then on every invoice updates its price, its history and the warnings.
@@ -114,11 +133,11 @@ export default function Costes() {
         actions={<Link to="/compras/facturas/nueva" className="inline-flex h-10 items-center gap-1.5 rounded-xl bg-violet-600 px-4 text-sm font-semibold text-white hover:bg-violet-700"><Icon name="plus" className="h-4 w-4" strokeWidth={2} />Subir una factura</Link>} />
 
       {!empty && (
-        <FigureLine items={[
+        <FigureLine stacked items={[
           { label: ingredients.length === 1 ? 'ingrediente' : 'ingredientes', value: ingredients.length },
-          risers.length > 0 && { label: risers.length === 1 ? 'ha subido' : 'han subido', value: risers.length, tone: 'warn' },
-          fallers.length > 0 && { label: fallers.length === 1 ? 'ha bajado' : 'han bajado', value: fallers.length, tone: 'good' },
-          pending > 0 && { label: 'por vincular', value: pending },
+          { label: risers.length === 1 ? 'sube' : 'suben', value: risers.length, tone: risers.length ? 'warn' : undefined },
+          { label: fallers.length === 1 ? 'baja' : 'bajan', value: fallers.length, tone: fallers.length ? 'good' : undefined },
+          { label: 'sin vincular', value: pending },
         ]} />
       )}
 
@@ -138,7 +157,7 @@ export default function Costes() {
         </section>
       ) : (
         <>
-          <Tabs value={tab} onChange={setTab} options={[['ingredientes', 'Ingredientes'], ['vincular', `Por vincular${pending ? ` · ${pending}` : ''}`]]} />
+          <ViewTabs value={tab} onChange={setTab} options={[['ingredientes', 'Ingredientes'], ['vincular', 'Por vincular', pending]]} />
 
           {tab === 'ingredientes' ? (
             <div className="grid grid-cols-1 gap-x-12 gap-y-8 lg:grid-cols-[minmax(0,1fr)_320px]">

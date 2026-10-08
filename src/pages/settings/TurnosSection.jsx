@@ -18,7 +18,7 @@ function closingPreview(form, stay) {
   } else {
     const a = toMin(form.startTime); const b = toMin(form.endTime);
     if (!Number.isFinite(a) || !Number.isFinite(b) || b <= a) return null;
-    last = a + Math.floor((b - a - 1) / (form.interval || 30)) * (form.interval || 30);
+    last = a + Math.floor((b - a) / (form.interval || 30)) * (form.interval || 30);
   }
   return { last: hhmm(last), close: stay ? hhmm(last + stay) : null };
 }
@@ -281,7 +281,7 @@ export function TurnosSection() {
                           </label>
                           <span className="text-gray-400 text-sm font-medium pt-5">hasta</span>
                           <label className="block">
-                            <span className="block text-xs text-gray-500 mb-1">Fin de las reservas</span>
+                            <span className="block text-xs text-gray-500 mb-1">Última reserva</span>
                             <input type="time" value={form.endTime} onChange={e => setForm(f => ({ ...f, endTime: e.target.value }))} className={`${inputCls} w-full`} />
                           </label>
                         </div>

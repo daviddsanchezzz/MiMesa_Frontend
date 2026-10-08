@@ -84,7 +84,8 @@ export function ShiftMeter({ shift, rows, seats, nowMin }) {
           <b className="text-gray-900 text-base">{people}</b>{seats ? ` / ${seats}` : ''} personas
         </p>
       </div>
-      <div className="relative mt-2 h-24 flex items-end gap-1">
+      {/* With nothing booked the bars have nothing to show: a thin strip, not an empty block */}
+      <div className={`relative mt-2 flex items-end gap-1 ${Math.max(...totals) > 0 ? 'h-24' : 'h-8'}`}>
         {times.map((t, i) => {
           const v = byTime[t];
           const total = totals[i];

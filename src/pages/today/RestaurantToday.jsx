@@ -126,8 +126,8 @@ export default function RestaurantToday() {
             <span className={`block text-[11px] font-semibold uppercase tracking-wide ${myShiftsToday.length ? 'text-violet-700' : 'text-gray-400'}`}>Tu turno de hoy</span>
             {myShiftsToday.length ? (
               <>
-                <span className="block mt-0.5 text-[22px] leading-7 font-semibold tabular-nums text-gray-900 whitespace-nowrap">
-                  {myShiftsToday.map((s) => `${s.start}–${s.end}`).join(' · ')}
+                <span className="mt-0.5 flex flex-wrap gap-x-4 text-[22px] leading-7 font-semibold tabular-nums text-gray-900">
+                  {myShiftsToday.map((s, i) => <span key={i} className="whitespace-nowrap">{s.start}–{s.end}</span>)}
                 </span>
                 {myShiftsToday[0]?.coworkers?.length > 0 && <span className="block text-[13px] text-gray-600 truncate">Con {myShiftsToday[0].coworkers.join(', ')}</span>}
               </>

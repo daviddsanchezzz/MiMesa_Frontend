@@ -268,7 +268,7 @@ export function Tabs({ value, options, onChange, className = '' }) {
     if (on && bar.current.scrollWidth > bar.current.clientWidth) bar.current.scrollTo({ left: on.offsetLeft - bar.current.clientWidth / 2 + on.offsetWidth / 2, behavior: 'smooth' });
   }, [value]);
   return (
-    <div ref={bar} role="tablist" className={`-mx-4 flex touch-pan-x overflow-x-auto overflow-y-hidden overscroll-x-contain border-b border-gray-200 px-4 pt-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:mx-0 lg:px-0 ${className}`}>
+    <div ref={bar} role="tablist" className={`-mx-4 flex touch-pan-x overflow-x-auto overflow-y-hidden overscroll-x-contain border-b border-gray-200 pt-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:mx-0 ${className}`}>
       {options.map(([key, label, count]) => {
         const on = value === key;
         return (

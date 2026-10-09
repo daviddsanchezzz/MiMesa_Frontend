@@ -14,7 +14,7 @@ import { fmtDay, fmtShort, parseIso, previousLabel, shiftRange, toIso } from '..
 import { confirmDialog } from '../ui/confirm';
 import { inputCls, selectCls, btnDanger, btnPrimary, btnQuiet } from '../ui/form';
 import { ErrorBanner, Loading } from '../ui/feedback';
-import { TableHead } from '../ui/list';
+import { Chip, DataTable, List, ListRow, TableHead } from '../ui/list';
 
 // ── Color palette (static — color key stored in DB → Tailwind bg class) ───────
 
@@ -352,18 +352,15 @@ function ResumenTab({ period, dateRange, categories, refreshTrigger, onViewIncom
             <div className="mt-2 flex h-3 w-full overflow-hidden rounded-full bg-gray-100" role="img" aria-label="Reparto de gastos por categoría">
               {catRows.map((r) => <span key={r.key} className={`${r.cls} first:rounded-l-full last:rounded-r-full`} style={{ width: `${(r.amount / catTotal) * 100}%` }} />)}
             </div>
-            <ul className="mt-1 divide-y divide-gray-100">
+            <List className="mt-1">
               {catRows.map((r) => (
-                <li key={r.key}>
-                  <button type="button" onClick={onViewExpenses} className="w-full py-3 flex items-center gap-2.5 text-left">
-                    <Dot cls={r.cls} />
-                    <span className="min-w-0 flex-1 truncate text-[15px] text-gray-800">{r.label}</span>
-                    <span className="text-xs tabular-nums text-gray-400">{Math.round((r.amount / catTotal) * 100)} %</span>
-                    <span className="w-24 text-right text-[15px] font-semibold tabular-nums text-gray-900">{fmtEur(r.amount)}</span>
-                  </button>
-                </li>
+                <ListRow key={r.key} onClick={onViewExpenses}
+                  leading={<Dot cls={r.cls} />}
+                  title={r.label}
+                  value={fmtEur(r.amount)}
+                  valueSub={`${Math.round((r.amount / catTotal) * 100)} %`} />
               ))}
-            </ul>
+            </List>
           </>
         )}
         {appt && <Link to="/personal" className="mt-2 inline-flex text-[13px] font-semibold text-violet-700 hover:text-violet-900">Ver rendimiento del equipo →</Link>}
@@ -374,23 +371,18 @@ function ResumenTab({ period, dateRange, categories, refreshTrigger, onViewIncom
         {recent.length === 0 ? (
           <p className="py-4 text-sm text-gray-500">Sin ingresos en este periodo.</p>
         ) : (
-          <ul className="divide-y divide-gray-100">
+          <List>
             {recent.map((day) => {
               const count = appt ? day.appointments : day.covers;
               const amount = day.actualRevenue !== null && day.actualRevenue !== undefined ? day.actualRevenue : day.estimatedRevenue;
               return (
-                <li key={day.date}>
-                  <button type="button" onClick={onViewIncome} className="w-full py-3 flex items-center gap-3 text-left">
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-[15px] text-gray-900 first-letter:uppercase">{fmtDay(day.date)}</span>
-                      <span className="block text-[13px] text-gray-500">{count} {appt ? (count === 1 ? 'cita' : 'citas') : 'comensales'}</span>
-                    </span>
-                    <span className="text-[15px] font-semibold tabular-nums text-gray-900">{fmtEur(amount)}</span>
-                  </button>
-                </li>
+                <ListRow key={day.date} onClick={onViewIncome}
+                  title={<span className="block first-letter:uppercase">{fmtDay(day.date)}</span>}
+                  subtitle={`${count} ${appt ? (count === 1 ? 'cita' : 'citas') : 'comensales'}`}
+                  value={fmtEur(amount)} />
               );
             })}
-          </ul>
+          </List>
         )}
       </Section>
       </div>
@@ -758,6 +750,20 @@ function GastosTab({ dateRange, suppliers, categories, refreshTrigger, onCreate,
     finally { setDeleting(null); }
   };
 
+  const rowDim = (exp) => (deleting === exp._id ? 'opacity-50' : '');
+  const expenseChips = (exp) => (
+    <>
+      {exp.isRecurring && <Chip tone="violet" className="ml-2">Mensual</Chip>}
+      {exp.sourceType === 'INVOICE' && <Chip tone="green" className="ml-2">Factura</Chip>}
+      {exp.sourceType === 'AUTOMATIC' && <Chip tone="violet" className="ml-2">Automático</Chip>}
+    </>
+  );
+  const expenseMenu = (exp) => (exp.sourceType === 'AUTOMATIC'
+    ? <span className="w-8 h-8 shrink-0" aria-hidden="true" />
+    : <RowMenu items={exp.sourceType === 'INVOICE'
+      ? [{ label: 'Ver factura', onClick: () => handleEditClick(exp) }]
+      : [{ label: 'Editar', onClick: () => handleEditClick(exp) }, { label: 'Eliminar', danger: true, disabled: deleting === exp._id, onClick: () => handleDeleteClick(exp) }]} />);
+
   const handleEditClick = (exp) => {
     if (exp.sourceType === 'AUTOMATIC') return;
     if (exp.sourceType === 'INVOICE') {
@@ -859,58 +865,42 @@ function GastosTab({ dateRange, suppliers, categories, refreshTrigger, onCreate,
         <Empty>No hay gastos de este tipo en el periodo.</Empty>
       ) : (
         <div className={loading ? 'opacity-60' : ''}>
-          <TableHeadCols cols={[
-            ['Fecha', 'col-span-2'],
-            ['Categoría', 'col-span-3'],
-            ['Proveedor', 'col-span-2'],
-            ['Notas', 'col-span-3'],
-            ['Importe', 'col-span-2 text-right pr-10'],
-          ]} />
-          <ul className="divide-y divide-gray-100">
-            {displayedExpenses.map((exp) => {
+          <DataTable
+            rows={displayedExpenses}
+            rowKey={(exp) => exp._id}
+            onRowClick={handleEditClick}
+            columns={[
+              { label: 'Fecha', span: 2, render: (exp) => <span className={`block tabular-nums text-gray-600 first-letter:uppercase ${rowDim(exp)}`}>{fmtDay(exp.expenseDate)}</span> },
+              { label: 'Categoría', span: 3, render: (exp) => (
+                <div className={`flex items-center gap-2 min-w-0 ${rowDim(exp)}`}>
+                  <Dot cls={catDot(categories, exp.category)} size="w-2 h-2" />
+                  <span className="font-medium text-gray-900 truncate">{catLabel(categories, exp.category)}</span>
+                  {expenseChips(exp)}
+                </div>
+              ) },
+              { label: 'Proveedor', span: 2, render: (exp) => <span className={`block truncate text-gray-600 ${rowDim(exp)}`}>{exp.supplierId?.name || <span className="text-gray-300">—</span>}</span> },
+              { label: 'Notas', span: 3, render: (exp) => <span className={`block truncate text-gray-500 ${rowDim(exp)}`}>{exp.notes || <span className="text-gray-300">—</span>}</span> },
+              { label: 'Importe', span: 2, align: 'right', render: (exp) => (
+                <div className={`flex items-center justify-end gap-2 ${rowDim(exp)}`} onClick={(e) => e.stopPropagation()}>
+                  <span className="font-semibold tabular-nums text-gray-900">{fmtEur(exp.amount)}</span>
+                  {expenseMenu(exp)}
+                </div>
+              ) },
+            ]}
+            mobile={(exp) => {
               const supplier = exp.supplierId?.name;
               const label = catLabel(categories, exp.category);
               const automatic = exp.sourceType === 'AUTOMATIC';
-              return (
-                <li key={exp._id}>
-                  <div role={automatic ? undefined : 'button'} tabIndex={automatic ? undefined : 0} onClick={() => handleEditClick(exp)}
-                    onKeyDown={automatic ? undefined : (e) => { if (e.key === 'Enter') handleEditClick(exp); }}
-                    className={`px-2 py-3 flex items-center gap-3 md:grid md:grid-cols-12 md:gap-4 rounded-xl ${automatic ? '' : 'cursor-pointer hover:bg-gray-50'} ${deleting === exp._id ? 'opacity-50' : ''}`}>
-                    <span className="hidden md:block md:col-span-2 text-sm text-gray-600 tabular-nums first-letter:uppercase">{fmtDay(exp.expenseDate)}</span>
-                    {/* Mobile: one title + subtitle */}
-                    <div className="min-w-0 flex-1 md:hidden">
-                      <p className="text-[15px] font-medium text-gray-900 truncate flex items-center gap-2">
-                        <Dot cls={catDot(categories, exp.category)} size="w-2 h-2" />
-                        <span className="truncate">{supplier || label}</span>
-                        {exp.isRecurring && <span className="text-[11px] font-semibold px-1.5 py-px rounded bg-violet-50 text-violet-800 shrink-0">Mensual</span>}
-                        {exp.sourceType === 'INVOICE' && <span className="text-[11px] font-semibold px-1.5 py-px rounded bg-emerald-50 text-emerald-800 shrink-0">Factura</span>}
-                        {automatic && <span className="text-[11px] font-semibold px-1.5 py-px rounded bg-violet-50 text-violet-800 shrink-0">Automático</span>}
-                      </p>
-                      <p className="text-[13px] text-gray-500 truncate">
-                        {[fmtShort(exp.expenseDate), supplier ? label : null, exp.sourceType === 'INVOICE' ? `Factura ${exp.invoiceId?.invoiceNumber || ''}`.trim() : automatic ? label : exp.isRecurring ? 'Recurrente' : 'Manual', exp.notes].filter(Boolean).join(' · ')}
-                      </p>
-                    </div>
-                    <div className="hidden md:flex md:col-span-3 items-center gap-2 min-w-0">
-                      <Dot cls={catDot(categories, exp.category)} size="w-2 h-2" />
-                      <span className="text-sm font-medium text-gray-900 truncate">{label}</span>
-                      {exp.isRecurring && <span className="text-[11px] font-semibold px-1.5 py-px rounded bg-violet-50 text-violet-800 shrink-0">Mensual</span>}
-                      {exp.sourceType === 'INVOICE' && <span className="text-[11px] font-semibold px-1.5 py-px rounded bg-emerald-50 text-emerald-800 shrink-0">Factura</span>}
-                      {automatic && <span className="text-[11px] font-semibold px-1.5 py-px rounded bg-violet-50 text-violet-800 shrink-0">Automático</span>}
-                    </div>
-                    <span className="hidden md:block md:col-span-2 text-sm text-gray-600 truncate">{supplier || <span className="text-gray-300">—</span>}</span>
-                    <span className="hidden md:block md:col-span-3 text-sm text-gray-500 truncate">{exp.notes || <span className="text-gray-300">—</span>}</span>
-                    <div className="shrink-0 md:col-span-2 flex items-center justify-end gap-2">
-                      <span className="text-sm font-semibold tabular-nums text-gray-900">{fmtEur(exp.amount)}</span>
-                      {!automatic && <RowMenu items={exp.sourceType === 'INVOICE'
-                        ? [{ label: 'Ver factura', onClick: () => handleEditClick(exp) }]
-                        : [{ label: 'Editar', onClick: () => handleEditClick(exp) }, { label: 'Eliminar', danger: true, disabled: deleting === exp._id, onClick: () => handleDeleteClick(exp) }]} />}
-                      {automatic && <span className="w-8 h-8 shrink-0" aria-hidden="true" />}
-                    </div>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
+              return {
+                leading: <Dot cls={catDot(categories, exp.category)} size="w-2 h-2" />,
+                title: <>{supplier || label}{expenseChips(exp)}</>,
+                subtitle: [fmtShort(exp.expenseDate), supplier ? label : null, exp.sourceType === 'INVOICE' ? `Factura ${exp.invoiceId?.invoiceNumber || ''}`.trim() : automatic ? label : exp.isRecurring ? 'Recurrente' : 'Manual', exp.notes].filter(Boolean).join(' · '),
+                value: fmtEur(exp.amount),
+                muted: deleting === exp._id,
+                trailing: expenseMenu(exp),
+              };
+            }}
+          />
         </div>
       )}
 
@@ -971,31 +961,21 @@ function RecurrentesTab({ categories }) {
         {gastos.length === 0 ? (
           <Empty>No hay gastos recurrentes. Marca «Se repite cada mes» al apuntar un gasto.</Empty>
         ) : (
-          <ul className="divide-y divide-gray-100">
-            {gastos.map((g) => {
-              const supplierName = g.supplierId?.name;
-              return (
-                <li key={g._id} className="flex items-center gap-3 py-3">
+          <List>
+            {gastos.map((g) => (
+              <ListRow key={g._id}
+                leading={(
                   <div className="w-10 h-10 shrink-0 rounded-xl bg-gray-100 flex flex-col items-center justify-center">
                     <span className="text-[15px] font-semibold text-gray-900 leading-none tabular-nums">{g.dayOfMonth}</span>
                     <span className="text-[9px] font-semibold text-gray-500 leading-none mt-0.5 uppercase tracking-wide">día</span>
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[15px] font-medium text-gray-900 truncate flex items-center gap-2">
-                      <Dot cls={catDot(categories, g.category)} size="w-2 h-2" />
-                      <span className="truncate">{catLabel(categories, g.category)}</span>
-                    </p>
-                    <p className="text-[13px] text-gray-500 truncate">
-                      {[supplierName, g.notes].filter(Boolean).join(' · ') || 'Sin proveedor'}
-                    </p>
-                  </div>
-                  <p className="shrink-0 text-sm font-semibold tabular-nums text-gray-900">
-                    {fmtEur(g.amount)}<span className="text-[13px] font-normal text-gray-500"> /mes</span>
-                  </p>
-                </li>
-              );
-            })}
-          </ul>
+                )}
+                title={<span className="flex items-center gap-2"><Dot cls={catDot(categories, g.category)} size="w-2 h-2" /><span className="truncate">{catLabel(categories, g.category)}</span></span>}
+                subtitle={[g.supplierId?.name, g.notes].filter(Boolean).join(' · ') || 'Sin proveedor'}
+                value={fmtEur(g.amount)}
+                valueSub="/mes" />
+            ))}
+          </List>
         )}
       </Section>
     </div>

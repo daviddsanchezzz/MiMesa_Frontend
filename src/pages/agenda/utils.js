@@ -256,4 +256,4 @@ export function absenceText(a) {
   const months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sept', 'oct', 'nov', 'dic'];
   return `Hasta el ${d} ${months[m - 1]}`;
 }
-export { inputCls, labelCls, btnPrimary, btnSecondary } from '../../ui/form';
+export { inputCls, labelCls, btnPrimary, btnSecondary } from '../../ui/formStyles.js';

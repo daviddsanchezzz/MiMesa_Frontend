@@ -51,4 +51,4 @@ export function toKeys(text, list) {
   }
   return out;
 }
-export { inputCls } from '../../ui/form';
+export { inputCls } from '../../ui/formStyles.js';

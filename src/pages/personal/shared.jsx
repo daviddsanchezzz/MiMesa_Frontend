@@ -152,4 +152,4 @@ export const colorFromSlot = (slot) => {
   const hue = Math.round((slot * 137.508) % 360); // golden-angle distribution
   return hslToHex(hue, 72, 48);
 };
-export { inputCls, labelCls } from '../../ui/form';
+export { inputCls, labelCls } from '../../ui/formStyles.js';

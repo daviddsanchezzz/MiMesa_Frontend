@@ -188,4 +188,4 @@ export function CheckIcon() {
     </svg>
   );
 }
-export { inputCls, labelCls } from '../../ui/form';
+export { inputCls, labelCls } from '../../ui/formStyles.js';

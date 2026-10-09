@@ -356,20 +356,20 @@ export default function PublicBooking({ businessId: businessIdProp, slug = null 
         <form onSubmit={submit} className="bg-white border border-gray-200 rounded-2xl p-4 space-y-3">
           <h2 className="text-base font-semibold text-gray-900">Tus datos</h2>
           {[
-            ['guestName', 'Nombre y apellidos', 'text', 'name', 100],
-            ['guestPhone', 'Teléfono', 'tel', 'tel', 30],
-            ['guestEmail', 'Email', 'email', 'email', 200],
-          ].map(([key, label, type, auto, max]) => (
+            ['guestName', 'Nombre', 'text', 'name', 100, 'Tu nombre completo'],
+            ['guestPhone', 'Teléfono', 'tel', 'tel', 30, '+34 600 000 000'],
+            ['guestEmail', 'Email', 'email', 'email', 200, 'tu@email.com'],
+          ].map(([key, label, type, auto, max, placeholder]) => (
             <label key={key} className="block">
-              <span className="block text-xs font-medium text-gray-600 mb-1">{label}</span>
-              <input required type={type} autoComplete={auto} maxLength={max} value={form[key]}
+              <span className="block text-sm font-medium text-gray-700 mb-1.5">{label} <span className="text-gray-400">*</span></span>
+              <input required type={type} autoComplete={auto} maxLength={max} value={form[key]} placeholder={placeholder}
                 onChange={(e) => setForm({ ...form, [key]: e.target.value })}
                 className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:border-transparent"
                 style={{ '--tw-ring-color': color }} />
             </label>
           ))}
           <label className="block">
-            <span className="block text-xs font-medium text-gray-600 mb-1">Comentarios <span className="text-gray-400">(opcional)</span></span>
+            <span className="block text-sm font-medium text-gray-700 mb-1.5">Comentarios <span className="text-gray-400">(opcional)</span></span>
             <textarea rows={2} maxLength={1000} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })}
               className="w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:border-transparent"
               style={{ '--tw-ring-color': color }} />
@@ -382,13 +382,19 @@ export default function PublicBooking({ businessId: businessIdProp, slug = null 
               {catalog.policy.note && <p className="whitespace-pre-line">{catalog.policy.note}</p>}
             </div>
           )}
-          <div className="space-y-3.5 pt-1">
-            <Checkbox color={color} checked={form.consent} onChange={(v) => setForm({ ...form, consent: v })}
-              title={`Acepto que ${biz.name} use mis datos para gestionar mi cita y contactarme sobre ella.`}
-              hint="Incluye avisos de cuándo me toca volver y pedirme mi opinión. Puedo darme de baja desde cualquier email." />
+          <div className="space-y-3 pt-1">
             <Checkbox color={color} checked={form.marketing} onChange={(v) => setForm({ ...form, marketing: v })}
-              title={`Quiero recibir ofertas y novedades de ${biz.name} por email.`}
-              hint="Opcional. Puedo darme de baja cuando quiera desde cualquier email." />
+              title={<span className="text-gray-500">Quiero recibir comunicaciones y ofertas de {biz.name}</span>} />
+            <Checkbox color={color} checked={form.consent} onChange={(v) => setForm({ ...form, consent: v })}
+              title={(
+                <span className="text-gray-600">
+                  He leído y acepto la{' '}
+                  <a href={`${import.meta.env.VITE_LANDING_URL || 'https://www.vetrareserve.com'}/privacy`} target="_blank" rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()} className="font-medium underline underline-offset-2" style={{ color }}>política de privacidad</a>{' '}
+                  <span className="text-gray-400">*</span>
+                </span>
+              )}
+              hint={`${biz.name} podrá avisarme de mi cita, de cuándo me toca volver y pedirme mi opinión.`} />
           </div>
           <button type="submit" disabled={sending}
             className="w-full rounded-xl py-3 text-sm font-semibold text-white disabled:opacity-60" style={{ backgroundColor: color }}>

@@ -173,7 +173,7 @@ export default function Caja() {
             </div>
 
             <Section title="Cierre de caja">
-              <div className="rounded-2xl border border-gray-200 bg-white p-4">
+              <div>
               {closed ? (
                 <div className="space-y-3">
                   <dl className="text-sm divide-y divide-gray-100 border-y border-gray-100">

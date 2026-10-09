@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import Modal from '../components/Modal';
 import Icon from '../ui/Icon';
 import { ModalFooter } from '../ui/form';
-import { Empty, GhostButton, Hero, MenuButton, Segmented, Tabs, Toggle } from '../ui/kit';
+import { Empty, GhostButton, Hero, MenuButton, Section, SectionLink, Segmented, Tabs, Toggle } from '../ui/kit';
 import Page from '../ui/Page';
 import Invoices from './invoices/Invoices';
 import InvoiceStatus from './invoices/InvoiceStatus';
@@ -16,7 +16,8 @@ import { notify } from '../lib/notify';
 import { confirmDialog } from '../ui/confirm';
 import { inputCls, labelCls, btnPrimary, btnQuiet, btnDangerQuiet } from '../ui/form';
 import { ErrorBanner, Loading } from '../ui/feedback';
-import { Avatar, DataTable, List, ListRow } from '../ui/list';
+import { Avatar, Chip, DataTable, List, ListRow } from '../ui/list';
+import { ActionList, Attention, Columns } from '../ui/layout';
 
 
 const todayIso = () => new Date().toISOString().slice(0, 10);
@@ -131,20 +132,21 @@ function ComprasResumen({ invoices, orders, period, dateRange, onGo, onNewOrder,
   const awaiting = orders.filter((o) => o.status === 'sent' || o.status === 'confirmed');
 
   const todo = [
-    toReview.length > 0 && { key: 'review', icon: 'receipt', tint: 'bg-amber-50 text-amber-600', title: `${toReview.length} ${toReview.length === 1 ? 'factura por revisar' : 'facturas por revisar'}`, hint: 'Confírmalas para que cuenten como gasto.', onClick: () => onGo('invoices') },
-    processing.length > 0 && { key: 'processing', icon: 'clock', tint: 'bg-violet-50 text-violet-600', title: `${processing.length} ${processing.length === 1 ? 'factura procesándose' : 'facturas procesándose'}`, hint: 'En un momento estará lista para revisar.', onClick: () => onGo('invoices') },
-    drafts.length > 0 && { key: 'drafts', icon: 'edit', tint: 'bg-gray-100 text-gray-600', title: `${drafts.length} ${drafts.length === 1 ? 'pedido en borrador' : 'pedidos en borrador'}`, hint: 'Aún no los has enviado al proveedor.', onClick: () => onGo('orders') },
-    awaiting.length > 0 && { key: 'awaiting', icon: 'cart', tint: 'bg-violet-50 text-violet-600', title: `${awaiting.length} ${awaiting.length === 1 ? 'pedido por recibir' : 'pedidos por recibir'}`, hint: 'Enviados, pendientes de llegar.', onClick: () => onGo('orders') },
+    toReview.length > 0 && { key: 'review', icon: 'receipt', tone: 'amber', title: `${toReview.length} ${toReview.length === 1 ? 'factura por revisar' : 'facturas por revisar'}`, hint: 'Confírmalas para que cuenten como gasto.', onClick: () => onGo('invoices') },
+    processing.length > 0 && { key: 'processing', icon: 'clock', tone: 'violet', title: `${processing.length} ${processing.length === 1 ? 'factura procesándose' : 'facturas procesándose'}`, hint: 'En un momento estará lista para revisar.', onClick: () => onGo('invoices') },
+    drafts.length > 0 && { key: 'drafts', icon: 'edit', tone: 'gray', title: `${drafts.length} ${drafts.length === 1 ? 'pedido en borrador' : 'pedidos en borrador'}`, hint: 'Aún no los has enviado al proveedor.', onClick: () => onGo('orders') },
+    awaiting.length > 0 && { key: 'awaiting', icon: 'cart', tone: 'violet', title: `${awaiting.length} ${awaiting.length === 1 ? 'pedido por recibir' : 'pedidos por recibir'}`, hint: 'Enviados, pendientes de llegar.', onClick: () => onGo('orders') },
   ].filter(Boolean);
 
+  const actions = orderFirst
+    ? [{ icon: 'plus', label: 'Nuevo pedido', onClick: onNewOrder }, { icon: 'camera', label: 'Subir factura', to: '/compras/facturas/nueva' }]
+    : [{ icon: 'camera', label: 'Subir factura', to: '/compras/facturas/nueva' }, { icon: 'plus', label: 'Pedido', onClick: onNewOrder }];
+
   return (
-    <div className="space-y-7">
-      <div className="space-y-7 lg:space-y-5">
+    <div className="space-y-8">
       <Hero label="Has comprado" value={money(total)}
         pill={change !== null && change !== 0 && (
-          <span className={`text-xs font-semibold px-2 py-0.5 rounded-full tabular-nums ${change > 0 ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700'}`}>
-            {change > 0 ? '▲' : '▼'} {Math.abs(change)} % vs {previousLabel(period, dateRange)}
-          </span>
+          <Chip tone={change > 0 ? 'amber' : 'green'}>{change > 0 ? '▲' : '▼'} {Math.abs(change)} % vs {previousLabel(period, dateRange)}</Chip>
         )}>
         <p className="mt-2 text-[15px] text-gray-600">
           {monthInvoices.length === 0
@@ -153,98 +155,50 @@ function ComprasResumen({ invoices, orders, period, dateRange, onGo, onNewOrder,
         </p>
       </Hero>
 
-      <div className="flex gap-2.5">
-        {(() => {
-          const primary = 'flex-[1.4] lg:flex-none lg:px-7 inline-flex items-center justify-center gap-2 h-12 rounded-2xl bg-violet-600 text-white text-[15px] font-semibold active:bg-violet-700 hover:bg-violet-700';
-          const quiet = 'flex-1 lg:flex-none lg:px-7 inline-flex items-center justify-center gap-2 h-12 rounded-2xl border border-gray-200 bg-white text-[15px] font-semibold text-gray-800 active:bg-gray-50 hover:bg-gray-50';
-          const invoiceBtn = (
-            <button key="invoice" type="button" onClick={() => navigate('/compras/facturas/nueva')} className={orderFirst ? quiet : primary}>
-              <Icon name="camera" className={`w-5 h-5 ${orderFirst ? 'text-violet-600' : ''}`} />Subir factura
-            </button>
-          );
-          const orderBtn = (
-            <button key="order" type="button" onClick={onNewOrder} className={orderFirst ? primary : quiet}>
-              <Icon name="plus" className={`w-[18px] h-[18px] ${orderFirst ? '' : 'text-violet-600'}`} />{orderFirst ? 'Nuevo pedido' : 'Pedido'}
-            </button>
-          );
-          return orderFirst ? [orderBtn, invoiceBtn] : [invoiceBtn, orderBtn];
-        })()}
-      </div>
-      </div>
+      <div className="lg:hidden"><ActionList items={actions} /></div>
 
-      <div className="space-y-7 xl:space-y-0 xl:grid xl:grid-cols-2 xl:gap-x-14 xl:gap-y-8 xl:items-start">
-
-      {todo.length > 0 && (
-        <section>
-          <h3 className="mb-1.5 text-[13px] font-semibold uppercase tracking-wide text-gray-400">Pendiente</h3>
-          <ul className="rounded-2xl border border-gray-200 divide-y divide-gray-100 overflow-hidden lg:rounded-none lg:border-0 lg:border-y">
-            {todo.map((t) => (
-              <li key={t.key}>
-                <button type="button" onClick={t.onClick} className="w-full flex items-center gap-3 px-4 py-3 text-left active:bg-gray-50 hover:bg-gray-50">
-                  <span className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${t.tint}`}><Icon name={t.icon} className="w-[18px] h-[18px]" /></span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-[15px] font-medium text-gray-900">{t.title}</span>
-                    <span className="block text-[13px] text-gray-500 truncate">{t.hint}</span>
-                  </span>
-                  <Icon name="right" className="w-4 h-4 text-gray-300 shrink-0" strokeWidth={2} />
-                </button>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      {topSuppliers.length > 0 && (
-        <section className={PANEL}>
-          <div className="mb-1.5 flex items-baseline justify-between gap-3">
-            <h3 className="text-[13px] font-semibold uppercase tracking-wide text-gray-400">Dónde compras más</h3>
-            <button type="button" onClick={() => onGo('suppliers')} className="text-[13px] font-semibold text-violet-700">Proveedores</button>
-          </div>
-          <ul className="space-y-3 pt-1">
-            {topSuppliers.map((s) => (
-              <li key={s.name}>
-                <div className="flex items-baseline justify-between gap-3">
-                  <span className="min-w-0 truncate text-[15px] font-medium text-gray-900">{s.name}</span>
-                  <span className="shrink-0 text-[15px] font-semibold tabular-nums text-gray-900">{money(s.total)}</span>
-                </div>
-                <div className="mt-1.5 h-2 rounded-full bg-gray-100"><div className="h-2 rounded-full bg-violet-500" style={{ width: `${Math.max(4, (s.total / maxSupplier) * 100)}%` }} /></div>
-              </li>
-            ))}
-          </ul>
-        </section>
-      )}
-
-      <section className={`${PANEL} xl:col-start-2 xl:row-start-1 xl:row-span-2`}>
-        <div className="mb-1 flex items-baseline justify-between gap-3">
-          <h3 className="text-[13px] font-semibold uppercase tracking-wide text-gray-400">Últimas facturas</h3>
-          {invoices.length > 0 && <button type="button" onClick={() => onGo('invoices')} className="text-[13px] font-semibold text-violet-700">Ver todas</button>}
-        </div>
-        {invoices.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-gray-200 px-5 py-8 text-center">
-            <div className="mx-auto w-11 h-11 rounded-2xl bg-violet-50 text-violet-600 flex items-center justify-center mb-3"><Icon name="receipt" className="w-6 h-6" /></div>
-            <p className="text-[15px] font-medium text-gray-900">Todavía no hay facturas</p>
-            <p className="mt-1 text-sm text-gray-500">Haz una foto a una factura y se rellenará sola.</p>
-          </div>
-        ) : (
-          <ul className="divide-y divide-gray-100">
-            {invoices.slice(0, 4).map((invoice) => (
-              <li key={invoice._id}>
-                <button type="button" onClick={() => onOpenInvoice(invoice)} className="w-full flex items-center gap-3 rounded-xl px-2 py-3 text-left hover:bg-gray-50 active:bg-gray-100">
-                  <div className="min-w-0 flex-1">
-                    <p className="truncate text-[15px] font-medium text-gray-900">{invoice.supplier?.name || 'Sin proveedor'}</p>
-                    <p className="truncate text-[13px] text-gray-500">{invoice.invoiceNumber || 'Sin número'} · {niceDate(invoice.invoiceDate)}</p>
-                  </div>
-                  <div className="shrink-0 text-right">
-                    <p className="text-sm font-semibold tabular-nums text-gray-900">{money(invoice.total)}</p>
-                    <InvoiceStatus status={invoice.status} />
-                  </div>
-                </button>
-              </li>
-            ))}
-          </ul>
+      <Columns aside={(
+        <>
+          <div className="hidden lg:block"><ActionList title="Acciones" items={actions} /></div>
+          {topSuppliers.length > 0 && (
+            <Section title="Dónde compras más" aside={<SectionLink onClick={() => onGo('suppliers')}>Proveedores</SectionLink>}>
+              <ul className="space-y-3 pt-1">
+                {topSuppliers.map((s) => (
+                  <li key={s.name}>
+                    <div className="flex items-baseline justify-between gap-3">
+                      <span className="min-w-0 truncate text-[15px] font-medium text-gray-900">{s.name}</span>
+                      <span className="shrink-0 text-[15px] font-semibold tabular-nums text-gray-900">{money(s.total)}</span>
+                    </div>
+                    <div className="mt-1.5 h-2 rounded-full bg-gray-100"><div className="h-2 rounded-full bg-violet-500" style={{ width: `${Math.max(4, (s.total / maxSupplier) * 100)}%` }} /></div>
+                  </li>
+                ))}
+              </ul>
+            </Section>
+          )}
+        </>
+      )}>
+        {todo.length > 0 && (
+          <Section title="Pendiente">
+            <div className="divide-y divide-gray-100">
+              {todo.map((t) => <Attention key={t.key} icon={t.icon} tone={t.tone} title={t.title} hint={t.hint} onClick={t.onClick} />)}
+            </div>
+          </Section>
         )}
-      </section>
-      </div>
+
+        <Section title="Últimas facturas" aside={invoices.length > 0 && <SectionLink onClick={() => onGo('invoices')}>Ver todas</SectionLink>}>
+          {invoices.length === 0 ? (
+            <Empty>Todavía no hay facturas. Haz una foto a una factura y se rellenará sola.</Empty>
+          ) : (
+            <List>
+              {invoices.slice(0, 5).map((invoice) => (
+                <ListRow key={invoice._id} onClick={() => onOpenInvoice(invoice)} title={invoice.supplier?.name || 'Sin proveedor'}
+                  subtitle={`${invoice.invoiceNumber || 'Sin número'} · ${niceDate(invoice.invoiceDate)}`}
+                  value={money(invoice.total)} valueSub={<InvoiceStatus status={invoice.status} />} />
+              ))}
+            </List>
+          )}
+        </Section>
+      </Columns>
     </div>
   );
 }

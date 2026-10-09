@@ -175,10 +175,10 @@ export default function Estadisticas() {
               </>
             )}
             {d.customers.lapsed.count > 0 && (
-              <div className="mt-5 rounded-2xl bg-amber-50 p-4">
+              <div className="mt-5 border-t border-gray-100 pt-4">
                 <p className="text-[15px] font-semibold text-gray-900">{d.customers.lapsed.count} {d.customers.lapsed.count === 1 ? 'cliente lleva' : 'clientes llevan'} tiempo sin volver</p>
                 <p className="text-[13px] text-gray-600">Un mensaje a tiempo suele traerlos de vuelta.</p>
-                <ul className="mt-2 divide-y divide-amber-100">
+                <ul className="mt-2 divide-y divide-gray-100">
                   {d.customers.lapsed.top.map((c) => {
                     const wa = waLink(c.phone, `¡Hola ${c.name.split(' ')[0]}! Hace tiempo que no te vemos por ${business?.name}. ¿Te reservo cita? Puedes elegir hora aquí: ${publicBookingUrl(business)}`);
                     return (
@@ -198,13 +198,13 @@ export default function Estadisticas() {
           </Card>
 
           <Card title="Cancelaciones y origen">
-            <div className="grid grid-cols-2 gap-3">
-              <div className="rounded-2xl border border-gray-200 p-4">
+            <div className="grid grid-cols-2 divide-x divide-gray-100">
+              <div className="pr-4">
                 <p className="text-xs text-gray-500">Canceladas</p>
                 <p className="mt-0.5 text-2xl font-semibold tabular-nums text-gray-900">{d.cancellations.cancelled}</p>
                 <p className="text-xs text-gray-500">{d.cancellations.cancelledRate} % de las citas</p>
               </div>
-              <div className="rounded-2xl border border-gray-200 p-4">
+              <div className="pl-4">
                 <p className="text-xs text-gray-500">No vinieron</p>
                 <p className={`mt-0.5 text-2xl font-semibold tabular-nums ${d.cancellations.noShow ? 'text-amber-600' : 'text-gray-900'}`}>{d.cancellations.noShow}</p>
                 <p className="text-xs text-gray-500">{d.cancellations.noShowRate} % de las citas</p>

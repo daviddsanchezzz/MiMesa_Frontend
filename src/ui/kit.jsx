@@ -238,7 +238,7 @@ export function Tabs({ value, options, onChange, className = '' }) {
     if (on && bar.current.scrollWidth > bar.current.clientWidth) bar.current.scrollTo({ left: on.offsetLeft - bar.current.clientWidth / 2 + on.offsetWidth / 2, behavior: 'smooth' });
   }, [value]);
   return (
-    <div ref={bar} role="tablist" className={`-mx-4 flex overflow-x-auto border-b border-gray-200 px-4 pt-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:mx-0 lg:px-0 ${className}`}>
+    <div ref={bar} role="tablist" className={`-mx-4 flex overflow-x-auto border-b border-gray-200 px-4 pt-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:mx-0 lg:px-0 ${className}`}>
       {options.map(([key, label, count]) => {
         const on = value === key;
         return (
@@ -250,7 +250,7 @@ export function Tabs({ value, options, onChange, className = '' }) {
                 <span className={`absolute -right-3.5 -top-2 min-w-[18px] rounded-full px-1 text-center text-[11px] font-bold leading-[18px] lg:static lg:ml-2 lg:inline-block lg:min-w-[22px] lg:px-1.5 lg:py-0.5 lg:text-[12px] lg:leading-4 ${on ? 'bg-violet-600 text-white' : 'bg-gray-200 text-gray-600'}`}>{count}</span>
               )}
             </span>
-            {on && <span aria-hidden="true" className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-violet-600 lg:inset-x-0" />}
+            {on && <span aria-hidden="true" className="absolute inset-x-0 -bottom-px h-0.5 bg-violet-600" />}
           </button>
         );
       })}

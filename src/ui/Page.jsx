@@ -21,7 +21,7 @@ export default function Page({ title, mobileTitle, subtitle, primary, mobileActi
   const bar = (toolbar || showTabs || mobileBar) && (
     <>
       {toolbar && <div className="lg:hidden">{toolbar}</div>}
-      {showTabs && <Tabs value={tabs.value} options={tabs.options} onChange={tabs.onChange} className={sticky ? 'border-b-0' : ''} />}
+      {showTabs && <Tabs value={tabs.value} options={tabs.options} onChange={tabs.onChange} className={sticky ? '!border-b-0' : ''} />}
       {mobileBar && <div className="lg:hidden">{mobileBar}</div>}
     </>
   );
@@ -30,7 +30,7 @@ export default function Page({ title, mobileTitle, subtitle, primary, mobileActi
       <PageHeader title={title} subtitle={subtitle} className={subtitle && !sticky ? '' : 'hidden lg:flex'}
         actions={(actions || primary || toolbar) && <>{toolbar}{actions}{primary && <PrimaryButton icon={primary.icon ?? 'plus'} onClick={primary.onClick}>{primary.label}</PrimaryButton>}</>} />
       {summary}
-      {bar && (sticky ? <StickyBar className={showTabs ? '' : 'lg:hidden'}>{bar}</StickyBar> : <div className={`space-y-3 ${showTabs ? '' : 'lg:hidden'}`}>{bar}</div>)}
+      {bar && (sticky ? <StickyBar className={showTabs ? '!pb-0' : 'lg:hidden'}>{bar}</StickyBar> : <div className={`space-y-3 ${showTabs ? '' : 'lg:hidden'}`}>{bar}</div>)}
       {children}
     </div>
   );

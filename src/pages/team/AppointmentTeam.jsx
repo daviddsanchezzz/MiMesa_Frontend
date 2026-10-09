@@ -8,6 +8,7 @@ import StaffAvatar from '../agenda/StaffAvatar';
 import { DEFAULT_TZ, inputCls, labelCls, staffColors, todayIn } from '../agenda/utils';
 import PeriodNavigator from '../../ui/PeriodNavigator';
 import { Empty, FigureLine, GhostButton, Hero, PrimaryButton, Section, SectionLink } from '../../ui/kit';
+import { ModalFooter } from '../../ui/form';
 import { eur } from '../../lib/format';
 import { ErrorBanner, Loading } from '../../ui/feedback';
 import { TableHead } from '../../ui/list';
@@ -47,15 +48,6 @@ const shiftMonth = (ym, n) => {
 };
 
 /** Cancel + main button for the bottom of a sheet. */
-function SheetFooter({ onCancel, onSave, saving, label }) {
-  return (
-    <div className="flex items-center justify-end gap-2">
-      <button type="button" onClick={onCancel} className="h-10 px-4 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-100">Cancelar</button>
-      <PrimaryButton icon={null} onClick={onSave} disabled={saving}>{saving ? 'Guardando…' : label}</PrimaryButton>
-    </div>
-  );
-}
-
 export function PayModal({ person, onClose, onSaved }) {
   const pay = person.pay;
   const [type, setType] = useState(TYPE_FROM_API[pay?.type] || 'commission');
@@ -86,7 +78,7 @@ export function PayModal({ person, onClose, onSaved }) {
 
   return (
     <Modal title={`Cómo cobra ${person.name}`} subtitle="Se usa para calcular su coste y el margen del equipo." onClose={onClose}
-      footer={<SheetFooter onCancel={onClose} onSave={save} saving={saving} label="Guardar" />}>
+      footer={<ModalFooter onCancel={onClose} onSave={save} saving={saving} label="Guardar" />}>
       <div className="space-y-6">
         <Section title="Tipo de pago">
           <ul className="divide-y divide-gray-100" role="radiogroup">
@@ -151,7 +143,7 @@ export function PaymentModal({ person, onClose, onSaved }) {
   }
   return (
     <Modal title={`Pago a ${person.name}`} subtitle={`Pendiente este mes: ${eur(person.toPay)}`} onClose={onClose}
-      footer={<SheetFooter onCancel={onClose} onSave={save} saving={saving} label="Registrar pago" />}>
+      footer={<ModalFooter onCancel={onClose} onSave={save} saving={saving} label="Registrar pago" />}>
       <div className="space-y-4">
         <div>
           <label className={labelCls}>Importe (€)</label>

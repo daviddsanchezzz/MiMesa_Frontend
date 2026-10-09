@@ -11,21 +11,7 @@ export function Notice({ children, tone = 'error' }) {
 }
 
 /** Cancel + main button for the bottom of a sheet. Pass `form` to submit a form that lives in the body. */
-export function SheetFooter({ onCancel, onSave, saving, label = 'Guardar', form, disabled, cancelLabel = 'Cancelar', aside }) {
-  return (
-    <div className="flex items-center justify-between gap-3">
-      <div className="min-w-0 text-xs text-gray-500">{aside}</div>
-      <div className="flex items-center gap-2 shrink-0">
-        <button type="button" onClick={onCancel} disabled={saving}
-          className="h-10 px-4 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-100 disabled:opacity-50">{cancelLabel}</button>
-        <button type={form ? 'submit' : 'button'} form={form} onClick={form ? undefined : onSave} disabled={saving || disabled}
-          className="inline-flex items-center justify-center h-10 px-4 rounded-xl bg-violet-600 text-white text-sm font-semibold hover:bg-violet-700 disabled:opacity-50">
-          {saving ? 'Guardando…' : label}
-        </button>
-      </div>
-    </div>
-  );
-}
+export { ModalFooter as SheetFooter } from '../../ui/form';
 
 /** Initials of a person's name (max two letters). */
 export const initialsOf = (name) => String(name || '').split(' ').filter(Boolean).map((n) => n[0]).slice(0, 2).join('').toUpperCase();

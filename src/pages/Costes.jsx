@@ -13,6 +13,7 @@ import { Sparkline } from './costes/Charts';
 import IngredientModal from './costes/IngredientModal';
 import LinkModal from './costes/LinkModal';
 import RecipeModal, { marginTone } from './costes/RecipeModal';
+import { Chip, List, ListRow } from '../ui/list';
 import { ago, money, perUnit, shortDate } from './costes/format';
 
 /** One ingredient: name and where it was bought on the left, its shape and today's price on the right. */
@@ -53,39 +54,29 @@ function RiserRow({ ing, onOpen, hideOnPhone }) {
 
 function PendingRow({ group, onOpen }) {
   return (
-    <li>
-      <button type="button" onClick={onOpen} className="flex w-full items-center gap-3 py-3.5 text-left active:bg-gray-50">
-        <span className="min-w-0 flex-1">
-          <span className="block truncate text-[15px] font-medium text-gray-900">{group.description}</span>
-          <span className="block truncate text-[13px] text-gray-500">
-            {group.lines} {group.lines === 1 ? 'línea' : 'líneas'}{group.suppliers.length ? ` · ${group.suppliers[0]}` : ''}{group.lastDate ? ` · ${shortDate(group.lastDate)}` : ''}
-            {group.lastUnitPrice !== null ? ` · ${money(group.lastUnitPrice)}` : ''}
-          </span>
-        </span>
-        <span className="hidden shrink-0 text-[13px] text-gray-400 sm:block">Parece <b className="font-medium text-gray-600">{group.suggestion.name}</b> · {group.suggestion.unit}</span>
-        <span className="shrink-0 text-[13px] font-semibold text-violet-700">Vincular</span>
-      </button>
-    </li>
+    <ListRow onClick={onOpen} className="py-3.5" title={group.description}
+      subtitle={`${group.lines} ${group.lines === 1 ? 'línea' : 'líneas'}${group.suppliers.length ? ` · ${group.suppliers[0]}` : ''}${group.lastDate ? ` · ${shortDate(group.lastDate)}` : ''}${group.lastUnitPrice !== null ? ` · ${money(group.lastUnitPrice)}` : ''}`}
+      trailing={(
+        <>
+          <span className="hidden shrink-0 text-[13px] text-gray-400 sm:block">Parece <b className="font-medium text-gray-600">{group.suggestion.name}</b> · {group.suggestion.unit}</span>
+          <span className="shrink-0 text-[13px] font-semibold text-violet-700">Vincular</span>
+        </>
+      )} />
   );
 }
 
 /** A dish: name and category on the left, what it costs and the margin it leaves on the right. */
 function DishRow({ dish, target, onOpen }) {
+  const margin = dish.marginPct === null ? '—' : `${String(Math.round(dish.marginPct)).replace('.', ',')} %`;
   return (
-    <li>
-      <button type="button" onClick={onOpen} className="flex w-full items-center gap-3 py-3 text-left active:bg-gray-50 lg:gap-5">
-        <span className="min-w-0 flex-1">
-          <span className="block truncate text-[15px] font-medium text-gray-900">{dish.name}</span>
-          <span className="block truncate text-[13px] text-gray-500">{[dish.category, dish.subcategory].filter(Boolean).join(' › ')}{dish.price ? ` · ${money(dish.price)}` : ''}</span>
-        </span>
-        {dish.hasRecipe ? (
-          <>
-            <span className="hidden w-24 shrink-0 text-right text-[15px] tabular-nums text-gray-600 sm:block">{money(dish.cost)}</span>
-            <span className={`w-16 shrink-0 rounded-full px-2 py-0.5 text-center text-[13px] font-semibold tabular-nums ${marginTone(dish.marginPct, target)}`}>{dish.marginPct === null ? '—' : `${String(Math.round(dish.marginPct)).replace('.', ',')} %`}</span>
-          </>
-        ) : <span className="shrink-0 text-[13px] font-semibold text-violet-700">Añadir</span>}
-      </button>
-    </li>
+    <ListRow onClick={onOpen} className="lg:gap-5" title={dish.name}
+      subtitle={`${[dish.category, dish.subcategory].filter(Boolean).join(' › ')}${dish.price ? ` · ${money(dish.price)}` : ''}`}
+      trailing={dish.hasRecipe ? (
+        <>
+          <span className="hidden w-24 shrink-0 text-right text-[15px] tabular-nums text-gray-600 sm:block">{money(dish.cost)}</span>
+          <Chip tone={marginTone(dish.marginPct, target)} className="w-16 justify-center">{margin}</Chip>
+        </>
+      ) : <span className="shrink-0 text-[13px] font-semibold text-violet-700">Añadir</span>} />
   );
 }
 
@@ -204,14 +195,14 @@ export default function Costes() {
                 {withRecipe > 0 && <span className="text-[13px] text-gray-500 sm:ml-auto">{withRecipe} de {dishes.length} con escandallo · objetivo {target} %</span>}
               </div>
               {shownDishes.length === 0 ? <Empty>{dishes.length === 0 ? 'Aún no hay platos en tu carta.' : 'Ningún plato coincide.'}</Empty> : (
-                <ul className="divide-y divide-gray-100">{shownDishes.map((d) => <DishRow key={d.id} dish={d} target={target} onOpen={() => setDishOpen(d.id)} />)}</ul>
+                <List>{shownDishes.map((d) => <DishRow key={d.id} dish={d} target={target} onOpen={() => setDishOpen(d.id)} />)}</List>
               )}
             </section>
           ) : (
             <section>
               <p className="mb-2 max-w-2xl text-sm text-gray-500">Productos de tus facturas que aún no son un ingrediente. Dime qué son una vez y las próximas facturas se reconocen solas.</p>
               {groups.length === 0 ? <Empty action={<GhostButton onClick={() => setTab('ingredientes')}>Ver ingredientes</GhostButton>}>Todo está vinculado.</Empty> : (
-                <ul className="divide-y divide-gray-100">{groups.map((g) => <PendingRow key={g.key} group={g} onOpen={() => setLinking(g)} />)}</ul>
+                <List>{groups.map((g) => <PendingRow key={g.key} group={g} onOpen={() => setLinking(g)} />)}</List>
               )}
             </section>
           )}

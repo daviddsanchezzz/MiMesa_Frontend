@@ -4,6 +4,7 @@ import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import Modal from '../components/Modal';
 import Icon from '../ui/Icon';
+import { ModalFooter } from '../ui/form';
 import { Empty, GhostButton, Hero, MenuButton, Segmented, Tabs, Toggle } from '../ui/kit';
 import Page from '../ui/Page';
 import Invoices from './invoices/Invoices';
@@ -846,12 +847,7 @@ function SupplierModal({ supplier, onClose, onSaved }) {
 
   return (
     <Modal onClose={onClose} size="lg" title={supplier?._id ? 'Editar proveedor' : 'Nuevo proveedor'}
-      footer={(
-        <div className="flex justify-end gap-2">
-          <button type="button" onClick={onClose} className={btnQuiet}>Cancelar</button>
-          <button type="submit" form="supplier-form" disabled={saving} className={btnPrimary}>{saving ? 'Guardando…' : 'Guardar'}</button>
-        </div>
-      )}>
+      footer={<ModalFooter onCancel={onClose} form="supplier-form" saving={saving} />}>
       <form id="supplier-form" onSubmit={submit} className="space-y-4">
         {error && <ErrorBanner>{error}</ErrorBanner>}
         <div><label className={labelCls}>Nombre *</label><input className={inputCls} value={form.name} onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))} required /></div>
@@ -918,14 +914,7 @@ function ProductModal({ product, suppliers, onClose, onSaved }) {
 
   return (
     <Modal onClose={onClose} size="lg" title={product?._id ? 'Editar producto' : 'Nuevo producto'}
-      footer={(
-        <div className="flex items-center gap-2">
-          {product?._id && <button type="button" onClick={remove} disabled={saving} className={btnDangerQuiet}>Eliminar</button>}
-          <div className="flex-1" />
-          <button type="button" onClick={onClose} className={btnQuiet}>Cancelar</button>
-          <button type="submit" form="product-form" disabled={saving} className={btnPrimary}>{saving ? 'Guardando…' : 'Guardar'}</button>
-        </div>
-      )}>
+      footer={<ModalFooter onCancel={onClose} onDelete={product?._id ? remove : undefined} form="product-form" saving={saving} />}>
       <form id="product-form" onSubmit={submit} className="space-y-4">
         {error && <ErrorBanner>{error}</ErrorBanner>}
         <div>

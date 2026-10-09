@@ -4,6 +4,7 @@ import { bookingsApi, apiError } from '../../services/bookingsApi';
 import { btnPrimary, btnSecondary, centsToInput, euros, inputCls, labelCls, parseEuros } from './utils';
 import { confirmDialog } from '../../ui/confirm';
 import { ErrorBanner } from '../../ui/feedback';
+import { ModalFooter } from '../../ui/form';
 
 const VALIDITY = [[null, 'No caduca'], [90, '3 meses'], [180, '6 meses'], [365, '1 año'], [730, '2 años']];
 
@@ -41,12 +42,7 @@ function PackModal({ pack, services, onClose, onSaved }) {
 
   return (
     <Modal title={pack ? 'Editar bono' : 'Nuevo bono'} subtitle="Se paga por adelantado y se gasta una sesión en cada cita." onClose={onClose} size="md"
-      footer={(
-        <div className="flex justify-end gap-2">
-          <button type="button" className={btnSecondary} onClick={onClose}>Cancelar</button>
-          <button type="button" className={btnPrimary} onClick={save} disabled={saving}>{saving ? 'Guardando…' : 'Guardar'}</button>
-        </div>
-      )}>
+      footer={<ModalFooter onCancel={onClose} onSave={save} saving={saving} />}>
       <div className="space-y-4">
         <div>
           <label className={labelCls}>Nombre</label>

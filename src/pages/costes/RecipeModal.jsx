@@ -5,6 +5,7 @@ import api from '../../services/api';
 import { useData } from '../../lib/query';
 import Icon from '../../ui/Icon';
 import { inputCls } from '../carta/labels';
+import { Chip } from '../../ui/list';
 import { money, perUnit } from './format';
 import { confirmDialog } from '../../ui/confirm';
 
@@ -15,7 +16,7 @@ const toStored = (v, unit) => (Number(String(v).replace(',', '.')) || 0) / SCALE
 const toShown = (q, unit) => (q ? String(Math.round(q * SCALE[unit] * 100) / 100).replace('.', ',') : '');
 const dec = (v) => v.replace(/[^\d,.]/g, '');
 
-export const marginTone = (m, target) => (m === null ? 'text-gray-400 bg-gray-100' : m >= target ? 'text-emerald-700 bg-emerald-50' : m >= target - 15 ? 'text-amber-700 bg-amber-50' : 'text-rose-700 bg-rose-50');
+export const marginTone = (m, target) => (m === null ? 'gray' : m >= target ? 'green' : m >= target - 15 ? 'amber' : 'rose');
 
 /** The escandallo of a dish: what goes in a serving. Cost and margin recalculate as you type. */
 export default function RecipeModal({ itemId, ingredients, onClose, onChanged }) {
@@ -130,7 +131,7 @@ export default function RecipeModal({ itemId, ingredients, onClose, onChanged })
             <p className="mt-0.5 text-[34px] font-semibold leading-none tracking-tight tabular-nums text-gray-900">{money(calc.cost)}</p>
             {dish.before > 0 && Math.abs(calc.cost - dish.cost) < 0.005 && Math.abs(dish.cost - dish.before) >= 0.005 && <p className="mt-1.5 text-sm text-gray-500">antes {money(dish.before)}</p>}
             <dl className="mt-5 space-y-3 text-sm">
-              <div className="flex items-baseline justify-between"><dt className="text-gray-500">Margen</dt><dd><span className={`rounded-full px-2 py-0.5 text-[13px] font-semibold tabular-nums ${marginTone(m, settings.targetMarginPct)}`}>{m === null ? '—' : `${Math.round(m * 10) / 10} %`.replace('.', ',')}</span></dd></div>
+              <div className="flex items-baseline justify-between"><dt className="text-gray-500">Margen</dt><dd><Chip tone={marginTone(m, settings.targetMarginPct)}>{m === null ? '—' : `${Math.round(m * 10) / 10} %`.replace('.', ',')}</Chip></dd></div>
               <div className="flex items-baseline justify-between"><dt className="text-gray-500">Te queda</dt><dd className="font-semibold tabular-nums text-gray-900">{calc.profit === null ? '—' : money(calc.profit)}</dd></div>
               <div className="flex items-baseline justify-between"><dt className="text-gray-500">Precio ideal</dt><dd className="font-semibold tabular-nums text-gray-900">{calc.ideal === null ? '—' : money(calc.ideal)}</dd></div>
             </dl>

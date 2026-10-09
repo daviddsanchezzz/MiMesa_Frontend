@@ -16,7 +16,7 @@ import { notify } from '../lib/notify';
 import { confirmDialog } from '../ui/confirm';
 import { inputCls, labelCls, btnPrimary, btnQuiet, btnDangerQuiet } from '../ui/form';
 import { ErrorBanner, Loading } from '../ui/feedback';
-import { TableHead } from '../ui/list';
+import { Avatar, DataTable, List, ListRow } from '../ui/list';
 
 
 const todayIso = () => new Date().toISOString().slice(0, 10);
@@ -338,6 +338,7 @@ export default function Compras() {
     navigate(next === 'products' ? '/compras/productos' : '/compras/proveedores');
   };
 
+  const countOf = (supplier) => products.filter((pr) => String(pr.supplier?._id || pr.supplierId) === String(supplier._id)).length;
   const activeSuppliers = useMemo(() => suppliers.filter((supplier) => supplier.isActive), [suppliers]);
   const productsBySupplier = useMemo(() => {
     const groups = {};
@@ -550,48 +551,34 @@ export default function Compras() {
             Todavía no hay pedidos.
           </Empty>
         ) : (
-          <div>
-            <TableHead>
-              <span className="col-span-2">Fecha</span>
-              <span className="col-span-3">Proveedor</span>
-              <span className="col-span-2">Estado</span>
-              <span className="col-span-1 text-right">Productos</span>
-              <span className="col-span-2 text-right">Total</span>
-              <span className="col-span-2" />
-            </TableHead>
-            <ul className="divide-y divide-gray-100">
-              {orders.map((order) => {
-                const orderId = String(order._id);
-                const itemsCount = order.items?.length || 0;
-                const disabledSend = itemsCount === 0 || actionLoading[orderId];
+          <DataTable rows={orders} rowKey={(o) => o._id} onRowClick={setOrderDetail}
+            mobile={(order) => {
+              const itemsCount = order.items?.length || 0;
+              return {
+                title: order.supplierName,
+                subtitle: `${niceDate(order.orderDate)} · ${itemsCount} ${itemsCount === 1 ? 'producto' : 'productos'}`,
+                status: <OrderStatus status={order.status} />,
+                value: order.totalAmount ? money(order.totalAmount) : null,
+                chevron: true,
+              };
+            }}
+            columns={[
+              { label: 'Fecha', span: 2, render: (o) => niceDate(o.orderDate) },
+              { label: 'Proveedor', span: 3, render: (o) => <span className="block truncate text-[15px] font-medium text-gray-900">{o.supplierName}</span> },
+              { label: 'Estado', span: 2, render: (o) => <OrderStatus status={o.status} /> },
+              { label: 'Productos', span: 1, align: 'right', render: (o) => <span className="tabular-nums">{o.items?.length || 0}</span> },
+              { label: 'Total', span: 2, align: 'right', render: (o) => (o.totalAmount ? <b className="font-semibold tabular-nums text-gray-900">{money(o.totalAmount)}</b> : <span className="text-gray-300">—</span>) },
+              { label: '', span: 2, render: (o) => {
+                const id = String(o._id);
                 return (
-                  <li key={order._id}>
-                    <div role="button" tabIndex={0} onClick={() => setOrderDetail(order)}
-                      onKeyDown={(e) => { if (e.key === 'Enter') setOrderDetail(order); }}
-                      className="w-full text-left px-2 py-3 flex items-center gap-3 md:grid md:grid-cols-12 md:gap-4 rounded-xl hover:bg-gray-50 active:bg-gray-100 cursor-pointer">
-                      <span className="hidden md:block md:col-span-2 text-sm text-gray-700">{niceDate(order.orderDate)}</span>
-                      <div className="md:col-span-3 min-w-0 flex-1">
-                        <p className="text-[15px] font-medium text-gray-900 truncate">{order.supplierName}</p>
-                        <p className="text-[13px] text-gray-500 truncate md:hidden">{niceDate(order.orderDate)} · {itemsCount} {itemsCount === 1 ? 'producto' : 'productos'}</p>
-                        <p className="md:hidden mt-0.5"><OrderStatus status={order.status} /></p>
-                      </div>
-                      <span className="hidden md:block md:col-span-2"><OrderStatus status={order.status} /></span>
-                      <span className="hidden md:block md:col-span-1 text-right text-sm tabular-nums text-gray-700">{itemsCount}</span>
-                      <span className={`${order.totalAmount ? '' : 'hidden md:block'} md:col-span-2 text-right text-sm font-semibold tabular-nums text-gray-900 shrink-0`}>{order.totalAmount ? money(order.totalAmount) : <span className="text-gray-300 font-normal">—</span>}</span>
-                      <div className="hidden md:flex md:col-span-2 justify-end gap-1" onClick={(e) => e.stopPropagation()}>
-                        <button type="button" onClick={() => handleSendWhatsapp(order)} disabled={disabledSend}
-                          className="h-8 px-3 rounded-full bg-emerald-50 text-emerald-800 hover:bg-emerald-100 disabled:opacity-40 text-xs font-semibold">
-                          {actionLoading[orderId] ? 'Enviando…' : 'WhatsApp'}
-                        </button>
-                        <button type="button" onClick={() => setOrderModal(order)} className="h-8 px-3 rounded-full text-xs font-semibold text-gray-700 hover:bg-gray-100">Editar</button>
-                      </div>
-                      <Icon name="right" className="md:hidden w-4 h-4 text-gray-300 shrink-0" strokeWidth={2} />
-                    </div>
-                  </li>
+                  <div className="flex justify-end gap-1" onClick={(e) => e.stopPropagation()}>
+                    <button type="button" onClick={() => handleSendWhatsapp(o)} disabled={!o.items?.length || actionLoading[id]}
+                      className="h-8 px-3 rounded-full bg-emerald-50 text-emerald-800 hover:bg-emerald-100 disabled:opacity-40 text-xs font-semibold">{actionLoading[id] ? 'Enviando…' : 'WhatsApp'}</button>
+                    <button type="button" onClick={() => setOrderModal(o)} className="h-8 px-3 rounded-full text-xs font-semibold text-gray-700 hover:bg-gray-100">Editar</button>
+                  </div>
                 );
-              })}
-            </ul>
-          </div>
+              } },
+            ]} />
         )
       )}
 
@@ -617,21 +604,19 @@ export default function Compras() {
                     <span className="text-[13px] font-semibold text-violet-700">{isOpen ? 'Ocultar' : 'Ver'}</span>
                   </button>
                   {isOpen && (
-                    <ul className="divide-y divide-gray-100">
+                    <List>
                       {group.products.map((product, idx) => (
-                        <li key={product._id} className="flex items-center gap-3 py-2.5">
-                          <div className="min-w-0 flex-1">
-                            <p className={`text-[15px] font-medium truncate ${product.isActive ? 'text-gray-900' : 'text-gray-400'}`}>{product.name}</p>
-                            <p className="text-[13px] text-gray-500">{product.unit || 'unidad'}{product.defaultUnitCost > 0 ? ` · ${money(product.defaultUnitCost)}` : ''}{!product.isActive ? ' · inactivo' : ''}</p>
-                          </div>
-                          <button type="button" onClick={() => handleMoveProduct(product, 'up')} disabled={idx === 0} aria-label="Subir"
-                            className="w-8 h-8 rounded-full text-gray-500 hover:bg-gray-100 disabled:opacity-30">↑</button>
-                          <button type="button" onClick={() => handleMoveProduct(product, 'down')} disabled={idx === group.products.length - 1} aria-label="Bajar"
-                            className="w-8 h-8 rounded-full text-gray-500 hover:bg-gray-100 disabled:opacity-30">↓</button>
-                          <button type="button" onClick={() => setProductModal(product)} className="h-8 px-3 rounded-full text-[13px] font-semibold text-gray-700 hover:bg-gray-100">Editar</button>
-                        </li>
+                        <ListRow key={product._id} muted={!product.isActive} className="!py-2.5" title={product.name}
+                          subtitle={`${product.unit || 'unidad'}${product.defaultUnitCost > 0 ? ` · ${money(product.defaultUnitCost)}` : ''}${!product.isActive ? ' · inactivo' : ''}`}
+                          trailing={(
+                            <>
+                              <button type="button" onClick={() => handleMoveProduct(product, 'up')} disabled={idx === 0} aria-label="Subir" className="w-8 h-8 rounded-full text-gray-500 hover:bg-gray-100 disabled:opacity-30">↑</button>
+                              <button type="button" onClick={() => handleMoveProduct(product, 'down')} disabled={idx === group.products.length - 1} aria-label="Bajar" className="w-8 h-8 rounded-full text-gray-500 hover:bg-gray-100 disabled:opacity-30">↓</button>
+                              <button type="button" onClick={() => setProductModal(product)} className="h-8 px-3 rounded-full text-[13px] font-semibold text-gray-700 hover:bg-gray-100">Editar</button>
+                            </>
+                          )} />
                       ))}
-                    </ul>
+                    </List>
                   )}
                 </section>
               );
@@ -647,42 +632,24 @@ export default function Compras() {
               Todavía no hay proveedores.
             </Empty>
           ) : (
-            <div>
-              <TableHead>
-                <span className="col-span-4">Proveedor</span>
-                <span className="col-span-3">Contacto</span>
-                <span className="col-span-3">WhatsApp</span>
-                <span className="col-span-2 text-right">Productos</span>
-              </TableHead>
-              <ul className="divide-y divide-gray-100">
-                {suppliers.map((supplier) => {
-                  const count = products.filter((pr) => String(pr.supplier?._id || pr.supplierId) === String(supplier._id)).length;
-                  return (
-                    <li key={supplier._id}>
-                      <button type="button" onClick={() => openSupplier(supplier)}
-                        className="w-full text-left px-2 py-3 flex items-center gap-3 md:grid md:grid-cols-12 md:gap-4 rounded-xl hover:bg-gray-50 active:bg-gray-100">
-                        <div className="md:col-span-4 flex items-center gap-3 min-w-0 flex-1">
-                          <span className="w-10 h-10 rounded-xl bg-gray-100 text-gray-600 flex items-center justify-center text-sm font-semibold shrink-0">
-                            {(supplier.name || '?').charAt(0).toUpperCase()}
-                          </span>
-                          <div className="min-w-0">
-                            <p className={`text-[15px] font-medium truncate ${supplier.isActive ? 'text-gray-900' : 'text-gray-400'}`}>{supplier.name}</p>
-                            <p className="text-[13px] text-gray-500 truncate md:hidden">
-                              {[supplier.contactName, supplier.whatsappPhone || supplier.phone].filter(Boolean).join(' · ') || 'Sin contacto'}{!supplier.isActive ? ' · inactivo' : ''}
-                            </p>
-                            {!supplier.isActive && <p className="hidden md:block text-[13px] text-gray-400">Inactivo</p>}
-                          </div>
-                        </div>
-                        <span className="hidden md:block md:col-span-3 text-sm text-gray-700 truncate">{supplier.contactName || <span className="text-gray-300">—</span>}</span>
-                        <span className="hidden md:block md:col-span-3 text-sm text-gray-700 tabular-nums">{supplier.whatsappPhone || supplier.phone || <span className="text-gray-300">—</span>}</span>
-                        <span className="md:col-span-2 text-right text-sm tabular-nums text-gray-700 shrink-0">{count}</span>
-                        <Icon name="right" className="md:hidden w-4 h-4 text-gray-300 shrink-0" strokeWidth={2} />
-                      </button>
-                    </li>
-                  );
-                })}
-              </ul>
-            </div>
+            <DataTable rows={suppliers} rowKey={(x) => x._id} onRowClick={openSupplier}
+              mobile={(supplier) => ({
+                leading: <Avatar>{(supplier.name || '?').charAt(0).toUpperCase()}</Avatar>,
+                title: supplier.name, muted: !supplier.isActive,
+                subtitle: `${[supplier.contactName, supplier.whatsappPhone || supplier.phone].filter(Boolean).join(' · ') || 'Sin contacto'}${!supplier.isActive ? ' · inactivo' : ''}`,
+                value: countOf(supplier), chevron: true,
+              })}
+              columns={[
+                { label: 'Proveedor', span: 4, render: (supplier) => (
+                  <span className="flex items-center gap-3">
+                    <Avatar>{(supplier.name || '?').charAt(0).toUpperCase()}</Avatar>
+                    <span className="min-w-0"><span className={`block truncate text-[15px] font-medium ${supplier.isActive ? 'text-gray-900' : 'text-gray-400'}`}>{supplier.name}</span>{!supplier.isActive && <span className="block text-[13px] text-gray-400">Inactivo</span>}</span>
+                  </span>
+                ) },
+                { label: 'Contacto', span: 3, render: (x) => x.contactName || <span className="text-gray-300">—</span> },
+                { label: 'WhatsApp', span: 3, render: (x) => <span className="tabular-nums">{x.whatsappPhone || x.phone || <span className="text-gray-300">—</span>}</span> },
+                { label: 'Productos', span: 2, align: 'right', render: (x) => <span className="tabular-nums">{countOf(x)}</span> },
+              ]} />
           )}
         </>
       )}

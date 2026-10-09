@@ -30,6 +30,8 @@ export function ConfirmHost() {
   });
   if (!ask) return null;
   const answer = (value) => { ask.resolve(value); setAsk(null); };
+  const verb = /^¿/.test(ask.title || '') ? verbOf(ask.title)?.replace(/^./, (c) => c.toUpperCase()) : null;
+  const clash = verb === 'Cancelar';   // «¿Cancelar esta cita?» → Volver / Sí, cancelar
   const danger = ask.danger ?? DESTRUCTIVE.test(`${ask.title || ''} ${ask.confirmLabel || ''}`);
   return (
     <div className="fixed inset-0 z-[90] flex items-end justify-center bg-gray-900/40 p-4 sm:items-center" onClick={() => answer(false)} role="presentation">
@@ -38,8 +40,8 @@ export function ConfirmHost() {
         <h2 id="confirm-title" className="text-[17px] font-semibold leading-snug text-gray-900">{ask.title}</h2>
         {ask.message && <p className="mt-1.5 text-sm text-gray-500">{ask.message}</p>}
         <div className="mt-5 grid grid-cols-2 gap-2">
-          <button type="button" autoFocus onClick={() => answer(false)} className="h-11 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50">{ask.cancelLabel || 'Cancelar'}</button>
-          <button type="button" onClick={() => answer(true)} className={`h-11 rounded-xl text-sm font-semibold text-white ${danger ? 'bg-rose-600 hover:bg-rose-700' : 'bg-violet-600 hover:bg-violet-700'}`}>{ask.confirmLabel || (verbOf(ask.title) && /^¿/.test(ask.title) ? verbOf(ask.title).replace(/^./, (c) => c.toUpperCase()) : 'Confirmar')}</button>
+          <button type="button" autoFocus onClick={() => answer(false)} className="h-11 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50">{ask.cancelLabel || (clash ? 'Volver' : 'Cancelar')}</button>
+          <button type="button" onClick={() => answer(true)} className={`h-11 rounded-xl text-sm font-semibold text-white ${danger ? 'bg-rose-600 hover:bg-rose-700' : 'bg-violet-600 hover:bg-violet-700'}`}>{ask.confirmLabel || (clash ? 'Sí, cancelar' : verb || 'Confirmar')}</button>
         </div>
       </div>
     </div>

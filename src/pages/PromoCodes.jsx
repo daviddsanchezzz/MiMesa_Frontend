@@ -2,12 +2,12 @@ import { useState, useEffect } from 'react';
 import api from '../services/api';
 import Modal from '../components/Modal';
 import { useSetMobileHeader } from '../context/MobileHeaderContext';
-import { PrimaryButton, Toggle, MenuButton, Empty } from '../ui/kit';
+import { PrimaryButton, Toggle, MoreMenu, MenuButton, Empty } from '../ui/kit';
 import { dateNumeric } from '../lib/format';
 import { confirmDialog } from '../ui/confirm';
 import { inputCls, labelCls } from '../ui/form';
 import { ErrorBanner, Loading } from '../ui/feedback';
-import { TableHead } from '../ui/list';
+import { DataTable, StatusDot } from '../ui/list';
 
 
 export default function PromoCodes() {
@@ -73,6 +73,36 @@ export default function PromoCodes() {
 
   const closeCreate = () => { setCreating(false); setError(''); };
 
+  const promoRow = (p) => {
+    const expired = isExpired(p);
+    const maxed = isMaxed(p);
+    const label = !p.active ? 'Inactivo' : expired ? 'Expirado' : maxed ? 'Agotado' : 'Activo';
+    const live = p.active && !expired && !maxed;
+    const uses = `${p.usedCount}${p.maxUses ? `/${p.maxUses}` : ''} usos`;
+    const status = <StatusDot tone={live ? 'green' : p.active ? 'amber' : 'gray'}>{label}</StatusDot>;
+    const controls = (
+      <div className="flex items-center justify-end gap-1">
+        <Toggle on={p.active} onChange={() => handleToggle(p)} label={p.active ? 'Desactivar' : 'Activar'} />
+        <MoreMenu items={[{ label: 'Eliminar código', danger: true, onClick: () => handleDelete(p._id) }]} />
+      </div>
+    );
+    const code = (
+      <span className="block min-w-0">
+        <span className={`block truncate font-mono text-[15px] font-semibold tracking-wide ${live ? 'text-gray-900' : 'text-gray-500'}`}>{p.code}</span>
+        {p.description && <span className="block truncate text-[13px] text-gray-500">{p.description}</span>}
+      </span>
+    );
+    return {
+      code, status, uses, controls,
+      mobile: {
+        title: <span className={`font-mono tracking-wide ${live ? '' : 'text-gray-500'}`}>{p.code}</span>,
+        subtitle: p.description || undefined,
+        status: <span className="flex flex-wrap items-center gap-x-2 text-[13px] text-gray-500">{status}<span className="text-gray-300">·</span><span className="tabular-nums">{uses}</span>{p.expiresAt && <><span className="text-gray-300">·</span><span>hasta {fmtDate(p.expiresAt)}</span></>}</span>,
+        trailing: controls,
+      },
+    };
+  };
+
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -133,51 +163,15 @@ export default function PromoCodes() {
       ) : promos.length === 0 ? (
         <Empty>No hay códigos promocionales.</Empty>
       ) : (
-        <div>
-          <TableHead>
-            <span className="col-span-5">Código</span>
-            <span className="col-span-2">Estado</span>
-            <span className="col-span-2">Usos</span>
-            <span className="col-span-2">Caduca</span>
-          </TableHead>
-          <ul className="divide-y divide-gray-100">
-            {promos.map(p => {
-              const expired = isExpired(p);
-              const maxed   = isMaxed(p);
-              const statusLabel = !p.active ? 'Inactivo' : expired ? 'Expirado' : maxed ? 'Agotado' : 'Activo';
-              const live = p.active && !expired && !maxed;
-              const uses = `${p.usedCount}${p.maxUses ? `/${p.maxUses}` : ''} usos`;
-              const status = (
-                <span className={`inline-flex items-center gap-1.5 text-xs font-medium ${live ? 'text-emerald-700' : 'text-gray-500'}`}>
-                  <span className={`w-2 h-2 rounded-full ${live ? 'bg-emerald-500' : p.active ? 'bg-amber-400' : 'bg-gray-300'}`} />
-                  {statusLabel}
-                </span>
-              );
-              return (
-                <li key={p._id} className="flex items-center gap-3 px-2 py-3 rounded-xl hover:bg-gray-50 md:grid md:grid-cols-12 md:gap-4">
-                  <div className="min-w-0 flex-1 md:col-span-5">
-                    <p className={`font-mono text-[15px] font-semibold tracking-wide truncate ${live ? 'text-gray-900' : 'text-gray-500'}`}>{p.code}</p>
-                    {p.description && <p className="text-[13px] text-gray-500 truncate">{p.description}</p>}
-                    <p className="md:hidden text-[13px] text-gray-500 flex flex-wrap items-center gap-x-2">
-                      {status}<span className="text-gray-300">·</span><span className="tabular-nums">{uses}</span>
-                      {p.expiresAt && <><span className="text-gray-300">·</span><span>hasta {fmtDate(p.expiresAt)}</span></>}
-                    </p>
-                  </div>
-                  <div className="hidden md:block md:col-span-2">{status}</div>
-                  <p className="hidden md:block md:col-span-2 text-sm text-gray-900 tabular-nums">{uses}</p>
-                  <p className="hidden md:block md:col-span-2 text-sm text-gray-700 tabular-nums">{p.expiresAt ? fmtDate(p.expiresAt) : 'Sin fecha'}</p>
-                  <div className="md:col-span-1 flex items-center justify-end gap-1 shrink-0">
-                    <Toggle on={p.active} onChange={() => handleToggle(p)} label={p.active ? 'Desactivar' : 'Activar'} />
-                    <MenuButton ariaLabel="Más opciones" className="w-8 h-8 justify-center text-lg leading-none text-gray-500"
-                      items={[{ label: 'Eliminar código', onClick: () => handleDelete(p._id) }]}>
-                      ⋯
-                    </MenuButton>
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
+        <DataTable rows={promos} rowKey={(p) => p._id}
+          mobile={(p) => ({ ...promoRow(p).mobile })}
+          columns={[
+            { label: 'Código', span: 5, render: (p) => promoRow(p).code },
+            { label: 'Estado', span: 2, render: (p) => promoRow(p).status },
+            { label: 'Usos', span: 2, render: (p) => <span className="tabular-nums text-gray-900">{promoRow(p).uses}</span> },
+            { label: 'Caduca', span: 2, render: (p) => <span className="tabular-nums">{p.expiresAt ? fmtDate(p.expiresAt) : 'Sin fecha'}</span> },
+            { label: '', span: 1, align: 'right', render: (p) => promoRow(p).controls },
+          ]} />
       )}
     </div>
   );

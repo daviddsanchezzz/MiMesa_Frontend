@@ -90,13 +90,15 @@ export function ListRow({ onClick, className = '', ...parts }) {
  *   mobile:  (row) => props of a row ({ leading, title, subtitle, status, value, chevron… })
  *   onRowClick opens the row; cells that hold their own buttons should stop propagation.
  */
-export function DataTable({ columns, rows, rowKey, mobile, onRowClick, at = 'md' }) {
+export function DataTable({ columns, rows, rowKey, mobile, onRowClick, at = 'md', head = true }) {
   const desk = at === 'lg' ? { hide: 'lg:hidden', show: 'hidden lg:grid' } : { hide: 'md:hidden', show: 'hidden md:grid' };
   return (
     <div>
-      <TableHead at={at}>
-        {columns.map((c) => <span key={c.label || c.span} className={`${SPAN[c.span]} ${c.align === 'right' ? 'text-right' : ''}`}>{c.label}</span>)}
-      </TableHead>
+      {head && (
+        <TableHead at={at}>
+          {columns.map((c) => <span key={c.label || c.span} className={`${SPAN[c.span]} ${c.align === 'right' ? 'text-right' : ''}`}>{c.label}</span>)}
+        </TableHead>
+      )}
       <ul className="divide-y divide-gray-100">
         {rows.map((row) => {
           const open = onRowClick ? () => onRowClick(row) : undefined;

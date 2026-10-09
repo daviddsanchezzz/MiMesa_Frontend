@@ -4,13 +4,13 @@ import { bookingsApi } from '../services/bookingsApi';
 import { useAuth } from '../context/AuthContext';
 import Modal from '../components/Modal';
 import Icon from '../ui/Icon';
-import { PrimaryButton, Section, MenuButton, Empty, Segmented } from '../ui/kit';
+import { PrimaryButton, Section, MenuButton, MoreMenu, Empty, Segmented } from '../ui/kit';
 import Page from '../ui/Page';
 import { ErrorBanner } from '../ui/feedback';
 import ProfessionalAvatar from '../components/ProfessionalAvatar';
 import { confirmDialog } from '../ui/confirm';
 import { inputCls } from '../ui/form';
-import { TableHead } from '../ui/list';
+import { Chip, DataTable } from '../ui/list';
 
 /* Constants */
 const ROLE_LABELS = { owner: 'Propietario', manager: 'Encargado', staff: 'Personal' };
@@ -182,6 +182,41 @@ export default function Team() {
     { role: 'staff',   desc: isAppointments ? 'Ve su agenda (si está vinculado a un profesional) y cobra sus citas' : 'Solo lectura y operaciones básicas' },
   ];
 
+  const memberRow = (member) => {
+    const isMe = member.userId === myUserId;
+    const canEdit = isOwner && !isMe && member.role !== 'owner';
+    const pro = showAgenda ? proOfUser(member.userId) : null;
+    const person = (
+      <span className="flex min-w-0 items-center gap-3">
+        <Avatar name={member.userName} email={member.userEmail} professional={pro} />
+        <span className="min-w-0">
+          <span className="flex min-w-0 items-center gap-2"><span className="truncate text-[15px] font-medium text-gray-900">{member.userName || '-'}</span>{isMe && <Chip>tú</Chip>}</span>
+          <span className="block truncate text-[13px] text-gray-500">{member.userEmail || '-'}</span>
+        </span>
+      </span>
+    );
+    const role = canEdit ? (
+      <>
+        <MenuButton ariaLabel="Cambiar rol" className="h-8 pl-2.5 pr-2"
+          items={['staff', 'manager', 'owner'].map((r) => ({ label: ROLE_LABELS[r], active: member.role === r, onClick: () => { if (r !== member.role) handleRoleChange(member._id, r); } }))}>
+          <RoleText role={member.role} />
+          <Icon name="down" className="w-3.5 h-3.5 text-gray-400" strokeWidth={2} />
+        </MenuButton>
+        <MoreMenu items={[{ label: 'Quitar del equipo', danger: true, onClick: () => handleRemove(member._id, member.userName) }]} />
+      </>
+    ) : <span className="pr-10"><RoleText role={member.role} /></span>;
+    return {
+      person, role,
+      mobile: {
+        leading: <Avatar name={member.userName} email={member.userEmail} professional={pro} />,
+        title: <span className="flex items-center gap-2">{member.userName || '-'}{isMe && <Chip>tú</Chip>}</span>,
+        subtitle: member.userEmail || '-',
+        status: showAgenda ? <span className="text-[13px] text-gray-400">{pro ? `Agenda de ${pro.name}` : 'Sin agenda propia'}</span> : undefined,
+        trailing: <span className="flex shrink-0 items-center gap-1">{role}</span>,
+      },
+    };
+  };
+
   return (
     <>
       <Page title="Accesos" subtitle={`${members.length} ${members.length === 1 ? 'persona' : 'personas'} en tu negocio`}
@@ -195,64 +230,12 @@ export default function Team() {
             <Empty>Aún no hay miembros en este negocio</Empty>
           ) : (
             <>
-              <TableHead>
-                <span className={showAgenda ? 'col-span-6' : 'col-span-9'}>Persona</span>
-                {showAgenda && <span className="col-span-3">Agenda</span>}
-                <span className="col-span-3 text-right pr-10">Rol</span>
-              </TableHead>
-              <ul className="divide-y divide-gray-100">
-                {members.map((member) => {
-                  const isMe      = member.userId === myUserId;
-                  const isOwnerRow = member.role === 'owner';
-                  const canEdit   = isOwner && !isMe && !isOwnerRow;
-                  const pro       = showAgenda ? proOfUser(member.userId) : null;
-
-                  return (
-                    <li key={member._id} className="flex items-center gap-3 px-2 py-3 rounded-xl hover:bg-gray-50 md:grid md:grid-cols-12 md:gap-4">
-                      <div className={`flex items-center gap-3 min-w-0 flex-1 ${showAgenda ? 'md:col-span-6' : 'md:col-span-9'}`}>
-                        <Avatar name={member.userName} email={member.userEmail} professional={pro} />
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <p className="text-[15px] font-medium text-gray-900 truncate">{member.userName || '-'}</p>
-                            {isMe && <span className="text-[11px] font-semibold px-1.5 py-px rounded bg-gray-100 text-gray-600">tú</span>}
-                          </div>
-                          <p className="text-[13px] text-gray-500 truncate">
-                            {member.userEmail || '-'}
-                          </p>
-                          {showAgenda && <p className="md:hidden text-[13px] text-gray-400 truncate">{pro ? `Agenda de ${pro.name}` : 'Sin agenda propia'}</p>}
-                        </div>
-                      </div>
-
-                      {showAgenda && (
-                        <p className={`hidden md:block md:col-span-3 text-[13px] truncate ${pro ? 'text-gray-700' : 'text-gray-400'}`}>
-                          {pro ? `Agenda de ${pro.name}` : 'Sin agenda propia'}
-                        </p>
-                      )}
-
-                      <div className="flex items-center justify-end gap-1 shrink-0 md:col-span-3">
-                        {canEdit ? (
-                          <>
-                            <MenuButton ariaLabel="Cambiar rol" className="h-8 pl-2.5 pr-2"
-                              items={['staff', 'manager', 'owner'].map((r) => ({
-                                label: ROLE_LABELS[r], active: member.role === r,
-                                onClick: () => { if (r !== member.role) handleRoleChange(member._id, r); },
-                              }))}>
-                              <RoleText role={member.role} />
-                              <Icon name="down" className="w-3.5 h-3.5 text-gray-400" strokeWidth={2} />
-                            </MenuButton>
-                            <MenuButton ariaLabel="Más opciones" className="w-8 h-8 justify-center text-lg leading-none text-gray-500"
-                              items={[{ label: 'Quitar del equipo', onClick: () => handleRemove(member._id, member.userName) }]}>
-                              ⋯
-                            </MenuButton>
-                          </>
-                        ) : (
-                          <span className="pr-10"><RoleText role={member.role} /></span>
-                        )}
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
+              <DataTable rows={members} rowKey={(m) => m._id} mobile={(member) => memberRow(member).mobile}
+                columns={[
+                  { label: 'Persona', span: showAgenda ? 6 : 9, render: (member) => memberRow(member).person },
+                  ...(showAgenda ? [{ label: 'Agenda', span: 3, render: (member) => { const pro = proOfUser(member.userId); return <span className={`truncate text-[13px] ${pro ? 'text-gray-700' : 'text-gray-400'}`}>{pro ? `Agenda de ${pro.name}` : 'Sin agenda propia'}</span>; } }] : []),
+                  { label: 'Rol', span: 3, align: 'right', render: (member) => <div className="flex items-center justify-end gap-1">{memberRow(member).role}</div> },
+                ]} />
             </>
           )}
         </Section>

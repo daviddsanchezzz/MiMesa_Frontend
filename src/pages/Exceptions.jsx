@@ -2,11 +2,11 @@ import { useEffect, useMemo, useState } from 'react';
 import api from '../services/api';
 import { useSetMobileHeader } from '../context/MobileHeaderContext';
 import Modal from '../components/Modal';
-import { PageHeader, PrimaryButton, Section, MenuButton, Empty } from '../ui/kit';
+import { PageHeader, PrimaryButton, Section, MenuButton, MoreMenu, Empty } from '../ui/kit';
 import { confirmDialog } from '../ui/confirm';
 import { inputCls, labelCls } from '../ui/form';
 import { ErrorBanner, Loading } from '../ui/feedback';
-import { TableHead } from '../ui/list';
+import { DataTable, TableHead } from '../ui/list';
 
 const ALL_SHIFTS_KEY = '__all__';
 
@@ -206,6 +206,10 @@ export default function Exceptions({ embedded = false }) {
   const canSubmit = !!form.date && !!form.shiftName && (form.type !== 'close_room' || !!form.roomId);
   const closeForm = () => setFormOpen(false);
 
+  const rowMenu = (row) => (
+    <MoreMenu items={[{ label: 'Editar', onClick: () => openEdit(row) }, { label: 'Eliminar', danger: true, onClick: () => removeRow(row._id) }]} />
+  );
+
   return (
     <div className="w-full space-y-8">
       {embedded ? (
@@ -239,43 +243,24 @@ export default function Exceptions({ embedded = false }) {
           </TableHead>
           {months.map((month) => (
             <Section key={month.key} title={month.title}>
-              <ul className="divide-y divide-gray-100">
-                {month.rows.map((row) => {
+              <DataTable head={false} rows={month.rows} rowKey={(r) => r._id}
+                mobile={(row) => {
                   const room = row.type === 'close_room' ? row.roomId?.name : '';
-                  return (
-                    <li key={row._id}
-                      className="flex items-center gap-3 px-2 py-3 rounded-xl hover:bg-gray-50 md:grid md:grid-cols-12 md:gap-4">
-                      <div className="w-14 shrink-0 md:hidden leading-tight">
-                        <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400">{humanDay(row.date).split(' ')[0]}</p>
-                        <p className="text-[15px] font-semibold text-gray-900 tabular-nums whitespace-nowrap">{humanDay(row.date).split(' ').slice(1).join(' ')}</p>
-                      </div>
-                      <p className="hidden md:block md:col-span-2 text-[15px] font-semibold text-gray-900 tabular-nums whitespace-nowrap">
-                        {humanDay(row.date)}
-                      </p>
-                      {/* phone: two lines */}
-                      <div className="min-w-0 flex-1 md:hidden">
-                        <p className="text-[15px] font-medium text-gray-900 truncate"><TypeText type={row.type} room={room} /></p>
-                        <p className="text-[13px] text-gray-500 truncate">
-                          {shiftLabel(row.shiftName)}{row.message ? ` · ${row.message}` : ''}
-                        </p>
-                      </div>
-                      {/* desktop: columns */}
-                      <p className="hidden md:block md:col-span-2 text-sm text-gray-900 truncate">{shiftLabel(row.shiftName)}</p>
-                      <p className="hidden md:flex md:col-span-3 text-sm text-gray-900 min-w-0"><TypeText type={row.type} room={room} /></p>
-                      <p className="hidden md:block md:col-span-4 text-[13px] text-gray-500 truncate">{row.message || '—'}</p>
-                      <div className="md:col-span-1 flex justify-end shrink-0">
-                        <MenuButton ariaLabel="Más opciones" className="w-8 h-8 justify-center text-lg leading-none text-gray-500"
-                          items={[
-                            { label: 'Editar', onClick: () => openEdit(row) },
-                            { label: 'Eliminar', onClick: () => removeRow(row._id) },
-                          ]}>
-                          ⋯
-                        </MenuButton>
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
+                  const [wd, ...rest] = humanDay(row.date).split(' ');
+                  return {
+                    leading: <span className="w-14 shrink-0 leading-tight"><span className="block text-[11px] font-semibold uppercase tracking-wide text-gray-400">{wd}</span><span className="block whitespace-nowrap text-[15px] font-semibold tabular-nums text-gray-900">{rest.join(' ')}</span></span>,
+                    title: <TypeText type={row.type} room={room} />,
+                    subtitle: `${shiftLabel(row.shiftName)}${row.message ? ` · ${row.message}` : ''}`,
+                    trailing: rowMenu(row),
+                  };
+                }}
+                columns={[
+                  { label: 'Fecha', span: 2, render: (row) => <span className="text-[15px] font-semibold tabular-nums whitespace-nowrap text-gray-900">{humanDay(row.date)}</span> },
+                  { label: 'Turno', span: 2, render: (row) => <span className="block truncate text-gray-900">{shiftLabel(row.shiftName)}</span> },
+                  { label: 'Tipo', span: 3, render: (row) => <TypeText type={row.type} room={row.type === 'close_room' ? row.roomId?.name : ''} /> },
+                  { label: 'Mensaje', span: 3, render: (row) => <span className="block truncate text-[13px] text-gray-500">{row.message || '—'}</span> },
+                  { label: '', span: 2, align: 'right', render: rowMenu },
+                ]} />
             </Section>
           ))}
         </div>

@@ -7,7 +7,7 @@ import { Empty, FilterChips } from '../../ui/kit';
 import Page from '../../ui/Page';
 import InvoiceStatus from './InvoiceStatus';
 import { apiErrorMessage, formatInvoiceDate, formatInvoiceMoney } from './invoiceUtils';
-import { TableHead } from '../../ui/list';
+import { Avatar, DataTable } from '../../ui/list';
 
 
 function ListSkeleton() {
@@ -73,40 +73,23 @@ export default function Invoices({ embedded = false, kind = 'INVOICE' }) {
       )}
 
       {!invoicesQuery.isLoading && !invoicesQuery.isError && invoices.length > 0 && (
-        <div>
-          <TableHead>
-            <span className="col-span-3">Proveedor</span>
-            <span className="col-span-2">{isNote ? 'Albarán' : 'Factura'}</span>
-            <span className="col-span-2">Fecha</span>
-            <span className="col-span-2">Estado</span>
-            <span className="col-span-2 text-right">Total</span>
-            <span className="col-span-1" />
-          </TableHead>
-          <ul className="divide-y divide-gray-100">
-            {invoices.map((invoice) => (
-              <li key={invoice._id}>
-                <button type="button" onClick={() => navigate(`/compras/facturas/${invoice._id}`)}
-                  className="w-full text-left px-2 py-3.5 flex items-center gap-3 md:grid md:grid-cols-12 md:gap-4 rounded-xl hover:bg-gray-50 active:bg-gray-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-violet-500">
-                  <span className="w-9 h-9 md:hidden rounded-xl bg-gray-100 text-gray-500 flex items-center justify-center shrink-0">
-                    <Icon name="receipt" className="w-[18px] h-[18px]" />
-                  </span>
-                  <span className="md:col-span-3 min-w-0 flex-1">
-                    <span className="block text-[15px] font-medium text-gray-900 truncate">{invoice.supplier?.name || 'Sin proveedor'}</span>
-                    <span className="md:hidden block text-[13px] text-gray-500 truncate">
-                      {invoice.invoiceNumber || 'Sin número'} · {formatInvoiceDate(invoice.invoiceDate)}
-                    </span>
-                    <InvoiceStatus status={invoice.status} className="md:hidden mt-1" />
-                  </span>
-                  <span className="hidden md:block md:col-span-2 text-sm text-gray-600 truncate">{invoice.invoiceNumber || '—'}</span>
-                  <span className="hidden md:block md:col-span-2 text-sm text-gray-600">{formatInvoiceDate(invoice.invoiceDate)}</span>
-                  <span className="hidden md:block md:col-span-2"><InvoiceStatus status={invoice.status} /></span>
-                  <span className="md:col-span-2 text-right text-sm font-semibold tabular-nums text-gray-900 shrink-0">{formatInvoiceMoney(invoice.total, invoice.currency)}</span>
-                  <span className="md:col-span-1 flex justify-end"><Icon name="right" className="w-4 h-4 text-gray-300" strokeWidth={2} /></span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        </div>
+        <DataTable rows={invoices} rowKey={(i) => i._id} onRowClick={(i) => navigate(`/compras/facturas/${i._id}`)}
+          mobile={(invoice) => ({
+            leading: <Avatar icon="receipt" size={36} />,
+            title: invoice.supplier?.name || 'Sin proveedor',
+            subtitle: `${invoice.invoiceNumber || 'Sin número'} · ${formatInvoiceDate(invoice.invoiceDate)}`,
+            status: <InvoiceStatus status={invoice.status} />,
+            value: formatInvoiceMoney(invoice.total, invoice.currency),
+            chevron: true,
+          })}
+          columns={[
+            { label: 'Proveedor', span: 3, render: (i) => <span className="block truncate text-[15px] font-medium text-gray-900">{i.supplier?.name || 'Sin proveedor'}</span> },
+            { label: isNote ? 'Albarán' : 'Factura', span: 2, render: (i) => <span className="block truncate text-gray-600">{i.invoiceNumber || '—'}</span> },
+            { label: 'Fecha', span: 2, render: (i) => <span className="text-gray-600">{formatInvoiceDate(i.invoiceDate)}</span> },
+            { label: 'Estado', span: 2, render: (i) => <InvoiceStatus status={i.status} /> },
+            { label: 'Total', span: 2, align: 'right', render: (i) => <b className="font-semibold tabular-nums text-gray-900">{formatInvoiceMoney(i.total, i.currency)}</b> },
+            { label: '', span: 1, align: 'right', render: () => <Icon name="right" className="ml-auto h-4 w-4 text-gray-300" strokeWidth={2} /> },
+          ]} />
       )}
     </>
   );

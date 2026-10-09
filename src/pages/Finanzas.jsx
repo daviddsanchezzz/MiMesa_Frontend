@@ -2,14 +2,14 @@ import { useState, useEffect, useCallback, Fragment, lazy, Suspense } from 'reac
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { useSetMobileHeader } from '../context/MobileHeaderContext';
 import Modal from '../components/Modal';
 import Icon from '../ui/Icon';
 import {
-  PageHeader, PrimaryButton, Tabs, Section, SectionLink, FigureLine, Empty, Toggle, Hero,
+  PrimaryButton, Section, SectionLink, FigureLine, Empty, Toggle, Hero,
 } from '../ui/kit';
 import { euros } from './agenda/utils';
-import PeriodNavigator, { PAGE_BODY, StickyBar, usePeriod } from '../ui/PeriodNavigator';
+import PeriodNavigator, { usePeriod } from '../ui/PeriodNavigator';
+import Page from '../ui/Page';
 import { fmtDay, fmtShort, parseIso, previousLabel, shiftRange, toIso } from '../lib/periods';
 
 // ── Color palette (static — color key stored in DB → Tailwind bg class) ───────
@@ -1424,8 +1424,6 @@ export default function Finanzas() {
     setParams({}, { replace: true });
   }, [params, setParams]);
 
-  useSetMobileHeader({ title: 'Finanzas', action: { label: 'Gasto', onClick: () => setQuickAction('expense') } });
-
   const loadSuppliers = useCallback(async () => {
     try {
       const { data } = await api.get('/suppliers');
@@ -1443,16 +1441,10 @@ export default function Finanzas() {
   useEffect(() => { loadSuppliers(); loadCategories(); }, [loadSuppliers, loadCategories]);
 
   return (
-    <div className={`w-full space-y-5 ${PAGE_BODY}`} style={{ overflowX: 'clip' }}>
-      <div className="hidden lg:block">
-        <PageHeader title="Finanzas" actions={<PrimaryButton onClick={() => setQuickAction('expense')}>Nuevo gasto</PrimaryButton>} />
-      </div>
-
-      {/* Period + tabs stay put; the page scrolls underneath */}
-      <StickyBar>
-        <PeriodNavigator period={period} dateRange={dateRange} onPeriodChange={onPeriodChange} onShift={onShift} onRangeChange={onRangeChange} />
-        <Tabs full value={tab} options={TABS} onChange={setTab} />
-      </StickyBar>
+    <Page title="Finanzas" sticky className="[overflow-x:clip]"
+      primary={{ label: 'Nuevo gasto', short: 'Gasto', onClick: () => setQuickAction('expense') }}
+      toolbar={<PeriodNavigator period={period} dateRange={dateRange} onPeriodChange={onPeriodChange} onShift={onShift} onRangeChange={onRangeChange} />}
+      tabs={{ value: tab, onChange: setTab, options: TABS }}>
 
       {tab === 'dashboard' && <ResumenTab period={period} dateRange={dateRange} categories={categories} refreshTrigger={refresh} onViewIncome={() => setTab('income')} onViewExpenses={() => setTab('expenses')} onAddExpense={() => setQuickAction('expense')} />}
       {tab === 'income'    && <IngresosTab period={period} dateRange={dateRange} refreshTrigger={refresh} onTodayRevenue={() => setQuickAction('revenue')} onImport={() => setQuickAction('import')} />}
@@ -1477,6 +1469,6 @@ export default function Finanzas() {
           onClose={() => setQuickAction(null)}
         />
       )}
-    </div>
+    </Page>
   );
 }

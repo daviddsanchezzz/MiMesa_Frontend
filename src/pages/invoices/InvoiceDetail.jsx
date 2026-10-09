@@ -275,7 +275,7 @@ export default function InvoiceDetail() {
   const invoice = invoiceQuery.data;
   const isNote = invoice?.kind === 'DELIVERY_NOTE';
   const noun = isNote ? 'albarán' : 'factura';
-  const listPath = isNote ? '/compras/facturas?tipo=albaranes' : '/compras/facturas';
+  const listPath = isNote ? '/compras/albaranes' : '/compras/facturas';
   const naturallyEditable = invoice && ['REVIEW', 'FAILED'].includes(invoice.status);
   const [forceEditing, setForceEditing] = useState(false);
   const editable = Boolean(naturallyEditable || (invoice?.status === 'CONFIRMED' && forceEditing));

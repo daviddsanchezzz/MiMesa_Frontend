@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import Icon from './Icon';
 import { TONES, toneBar, toneLabel } from '../lib/status';
@@ -225,11 +225,49 @@ export function GhostButton({ children, onClick, disabled, className = '' }) {
   );
 }
 
-/** Sections of a screen (Pedidos · Productos · Proveedores): Segmented that scrolls on the phone. */
-export function Tabs({ value, options, onChange, full = false }) {
+/**
+ * The sections of a screen (Resumen · Facturas · Pedidos): text with an underline, the same on every screen.
+ * Options are [key, label, count?]; a count shows as a small number next to the label (above it on the phone).
+ * With few sections they share the width; with many they scroll sideways instead of squeezing.
+ */
+export function Tabs({ value, options, onChange, className = '' }) {
+  const bar = useRef(null);
+  // On the phone the chosen section stays in view when the bar scrolls
+  useEffect(() => {
+    const on = bar.current?.querySelector('[aria-selected="true"]');
+    if (on && bar.current.scrollWidth > bar.current.clientWidth) bar.current.scrollTo({ left: on.offsetLeft - bar.current.clientWidth / 2 + on.offsetWidth / 2, behavior: 'smooth' });
+  }, [value]);
   return (
-    <div className="-mx-4 px-4 lg:mx-0 lg:px-0 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-      <Segmented value={value} options={options} onChange={onChange} full={full} />
+    <div ref={bar} role="tablist" className={`-mx-4 flex overflow-x-auto border-b border-gray-200 px-4 pt-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:mx-0 lg:px-0 ${className}`}>
+      {options.map(([key, label, count]) => {
+        const on = value === key;
+        return (
+          <button key={key} type="button" role="tab" aria-selected={on} onClick={() => onChange(key)}
+            className={`relative shrink-0 grow basis-0 whitespace-nowrap px-2.5 py-3 text-center text-[14px] font-semibold transition-colors lg:text-[15px] lg:grow-0 lg:basis-auto lg:px-1 lg:mr-8 ${on ? 'text-gray-900' : 'text-gray-400 hover:text-gray-700'}`}>
+            <span className="relative inline-block">
+              {label}
+              {count > 0 && (
+                <span className={`absolute -right-3.5 -top-2 min-w-[18px] rounded-full px-1 text-center text-[11px] font-bold leading-[18px] lg:static lg:ml-2 lg:inline-block lg:min-w-[22px] lg:px-1.5 lg:py-0.5 lg:text-[12px] lg:leading-4 ${on ? 'bg-violet-600 text-white' : 'bg-gray-200 text-gray-600'}`}>{count}</span>
+              )}
+            </span>
+            {on && <span aria-hidden="true" className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-violet-600 lg:inset-x-0" />}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Filters of a list (Todas · Por revisar · Confirmadas): small chips, one of them on. Options are [key, label, count?]. */
+export function FilterChips({ value, options, onChange }) {
+  return (
+    <div className="-mx-4 flex gap-1.5 overflow-x-auto px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:mx-0 lg:px-0">
+      {options.map(([key, label, count]) => (
+        <button key={key} type="button" aria-pressed={value === key} onClick={() => onChange(key)}
+          className={`shrink-0 rounded-full px-3.5 py-1.5 text-[13px] font-semibold ${value === key ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:text-gray-900'}`}>
+          {label}{count > 0 && <span className={`ml-1.5 tabular-nums ${value === key ? 'text-white/70' : 'text-gray-400'}`}>{count}</span>}
+        </button>
+      ))}
     </div>
   );
 }

@@ -2,13 +2,13 @@
 import { useLocation, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { useSetMobileHeader } from '../context/MobileHeaderContext';
 import Modal from '../components/Modal';
 import Icon from '../ui/Icon';
-import { Empty, GhostButton, Hero, MenuButton, PageHeader, PrimaryButton, Segmented, Tabs, Toggle } from '../ui/kit';
+import { Empty, GhostButton, Hero, MenuButton, Segmented, Tabs, Toggle } from '../ui/kit';
+import Page from '../ui/Page';
 import Invoices from './invoices/Invoices';
 import InvoiceStatus from './invoices/InvoiceStatus';
-import PeriodNavigator, { PAGE_BODY, StickyBar, usePeriod } from '../ui/PeriodNavigator';
+import PeriodNavigator, { usePeriod } from '../ui/PeriodNavigator';
 import { previousLabel, shiftRange } from '../lib/periods';
 
 const inputCls = 'w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white';
@@ -259,7 +259,7 @@ export default function Compras() {
   const location = useLocation();
   const navigate = useNavigate();
   const pathTab = location.pathname.split('/')[2];
-  const initialTab = ({ resumen: 'summary', facturas: 'invoices', pedidos: 'orders', productos: 'suppliers', proveedores: 'suppliers' })[pathTab] || 'summary';
+  const initialTab = ({ resumen: 'summary', facturas: 'invoices', albaranes: 'notes', pedidos: 'orders', productos: 'suppliers', proveedores: 'suppliers' })[pathTab] || 'summary';
   const [tab, setTab] = useState(initialTab);
   const { period, dateRange, onPeriodChange, onShift, onRangeChange } = usePeriod('month');
   const [supView, setSupView] = useState(pathTab === 'productos' ? 'products' : 'suppliers'); // inside the Proveedores tab
@@ -333,7 +333,7 @@ export default function Compras() {
   }, [location.search, suppliers, supplierDetail, supplierDetailLoading, openSupplier]);
 
   const selectTab = (next) => {
-    const slug = { summary: 'resumen', invoices: 'facturas', orders: 'pedidos', suppliers: 'proveedores' }[next];
+    const slug = { summary: 'resumen', invoices: 'facturas', notes: 'albaranes', orders: 'pedidos', suppliers: 'proveedores' }[next];
     setTab(next);
     if (next === 'suppliers') setSupView('suppliers');
     navigate(`/compras/${slug}`);
@@ -523,44 +523,26 @@ export default function Compras() {
   };
 
   const primary = {
-    invoices: new URLSearchParams(location.search).get('tipo') === 'albaranes'
-      ? { label: 'Añadir albarán', short: 'Albarán', onClick: () => navigate('/compras/facturas/nueva?tipo=albaran') }
-      : { label: 'Añadir factura', short: 'Factura', onClick: () => navigate('/compras/facturas/nueva') },
+    invoices: { label: 'Añadir factura', short: 'Factura', onClick: () => navigate('/compras/facturas/nueva') },
+    notes: { label: 'Añadir albarán', short: 'Albarán', onClick: () => navigate('/compras/facturas/nueva?tipo=albaran') },
     orders: { label: 'Nuevo pedido', short: 'Pedido', onClick: () => setOrderModal({}) },
     suppliers: supView === 'products'
       ? { label: 'Nuevo producto', short: 'Producto', onClick: () => setProductModal({}) }
       : { label: 'Nuevo proveedor', short: 'Proveedor', onClick: () => setSupplierModal({}) },
   }[tab];
-  useSetMobileHeader({ title: 'Compras', action: primary ? { label: primary.short, onClick: primary.onClick } : false });
 
   const reviewCount = invoices.filter((invoice) => invoice.status === 'REVIEW' || invoice.status === 'FAILED').length;
   const pendingOrders = orders.filter((order) => order.status === 'draft').length;
-  const dot = (show) => show && <span className="ml-1 inline-block w-1.5 h-1.5 rounded-full bg-amber-500 align-middle" aria-label="Pendiente" />;
-
   return (
-    <div className={`w-full space-y-6 ${PAGE_BODY}`}>
-      <PageHeader title="Compras" subtitle=""
-        actions={(
-          <>
-            {tab === 'suppliers' && supView === 'suppliers' && (
-              <MenuButton ariaLabel="Exportar" className="h-9 px-3.5 border border-gray-200"
-                items={[{ label: 'Exportar Excel', onClick: exportSuppliersProductsCsv }, { label: 'Exportar PDF', onClick: exportSuppliersProductsPdf }]}>
-                Exportar<Icon name="down" className="w-3.5 h-3.5" strokeWidth={2} />
-              </MenuButton>
-            )}
-            {primary && <PrimaryButton onClick={primary.onClick}>{primary.label}</PrimaryButton>}
-          </>
-        )} />
-
-      <StickyBar>
-        {tab === 'summary' && <PeriodNavigator period={period} dateRange={dateRange} onPeriodChange={onPeriodChange} onShift={onShift} onRangeChange={onRangeChange} />}
-        <Tabs full value={tab} onChange={selectTab} options={[
-        ['summary', 'Resumen'],
-        ['invoices', <span key="i">Facturas{dot(reviewCount > 0)}</span>],
-        ['orders', <span key="o">Pedidos{dot(pendingOrders > 0)}</span>],
-        ['suppliers', 'Proveedores'],
-      ]} />
-      </StickyBar>
+    <Page title="Compras" sticky primary={primary}
+      actions={tab === 'suppliers' && supView === 'suppliers' && (
+        <MenuButton ariaLabel="Exportar" className="h-9 px-3.5 border border-gray-200"
+          items={[{ label: 'Exportar Excel', onClick: exportSuppliersProductsCsv }, { label: 'Exportar PDF', onClick: exportSuppliersProductsPdf }]}>
+          Exportar<Icon name="down" className="w-3.5 h-3.5" strokeWidth={2} />
+        </MenuButton>
+      )}
+      toolbar={tab === 'summary' && <PeriodNavigator period={period} dateRange={dateRange} onPeriodChange={onPeriodChange} onShift={onShift} onRangeChange={onRangeChange} />}
+      tabs={{ value: tab, onChange: selectTab, options: [['summary', 'Resumen'], ['invoices', 'Facturas', reviewCount], ['notes', 'Albaranes'], ['orders', 'Pedidos', pendingOrders], ['suppliers', 'Proveedores']] }}>
 
       {loading && <p className="text-sm text-gray-400">Cargando…</p>}
       {error && <p className="rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>}
@@ -570,7 +552,8 @@ export default function Compras() {
           onOpenInvoice={(invoice) => navigate(`/compras/facturas/${invoice._id}`)} />
       )}
 
-      {!loading && tab === 'invoices' && <Invoices embedded />}
+      {!loading && tab === 'invoices' && <Invoices embedded kind="INVOICE" />}
+      {!loading && tab === 'notes' && <Invoices embedded kind="DELIVERY_NOTE" />}
 
       {!loading && tab === 'orders' && (
         orders.length === 0 ? (
@@ -780,7 +763,7 @@ export default function Compras() {
           sending={!!actionLoading[String(orderDetail._id)]}
         />
       )}
-    </div>
+    </Page>
   );
 }
 

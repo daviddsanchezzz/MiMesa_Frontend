@@ -35,7 +35,7 @@ export default function InvoiceUpload() {
   const isNote = params.get('tipo') === 'albaran';
   const kind = isNote ? 'DELIVERY_NOTE' : 'INVOICE';
   const noun = isNote ? 'albarán' : 'factura';
-  const backTo = isNote ? '/compras/facturas?tipo=albaranes' : '/compras/facturas';
+  const backTo = isNote ? '/compras/albaranes' : '/compras/facturas';
   const fileInput = useRef(null);
   const cameraInput = useRef(null);
   const [file, setFile] = useState(null);

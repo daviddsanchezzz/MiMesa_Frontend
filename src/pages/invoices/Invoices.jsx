@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { useSetMobileHeader } from '../../context/MobileHeaderContext';
+import { useNavigate } from 'react-router-dom';
 import { useData } from '../../lib/query';
 import invoicesApi from '../../services/invoicesApi';
 import Icon from '../../ui/Icon';
-import { Empty, PageHeader, PrimaryButton, Segmented } from '../../ui/kit';
+import { Empty, FilterChips } from '../../ui/kit';
+import Page from '../../ui/Page';
 import InvoiceStatus from './InvoiceStatus';
 import { apiErrorMessage, formatInvoiceDate, formatInvoiceMoney } from './invoiceUtils';
 
@@ -24,38 +24,26 @@ function ListSkeleton() {
   );
 }
 
-export default function Invoices({ embedded = false }) {
+/** The invoices (or delivery notes) of the business. Used as a section of Compras. */
+export default function Invoices({ embedded = false, kind = 'INVOICE' }) {
   const navigate = useNavigate();
-  const [params, setParams] = useSearchParams();
-  const isNote = params.get('tipo') === 'albaranes';
+  const isNote = kind === 'DELIVERY_NOTE';
   const noun = isNote ? 'albarán' : 'factura';
   const addInvoice = () => navigate(`/compras/facturas/nueva${isNote ? '?tipo=albaran' : ''}`);
-  useSetMobileHeader({ title: embedded ? 'Compras' : 'Facturas', action: { label: 'Añadir', onClick: addInvoice } });
 
   const invoicesQuery = useData(['invoices', 'list', isNote ? 'notes' : 'invoices'], () => invoicesApi.list(isNote ? 'DELIVERY_NOTE' : 'INVOICE'), { retry: false });
   const all = invoicesQuery.data || [];
   const [filter, setFilter] = useState('all'); // all | review | confirmed
   const needsAction = (i) => i.status === 'REVIEW' || i.status === 'FAILED' || i.status === 'PROCESSING';
   const reviewCount = all.filter(needsAction).length;
-  const confirmedCount = all.length - reviewCount;
   // What needs your attention first, then the rest as they came.
   const invoices = useMemo(() => {
     const shown = filter === 'review' ? all.filter(needsAction) : filter === 'confirmed' ? all.filter((i) => !needsAction(i)) : all;
     return [...shown].sort((a, b) => Number(needsAction(b)) - Number(needsAction(a)));
   }, [all, filter]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  return (
-    <div className="w-full space-y-6">
-      {!embedded && <PageHeader
-        title={isNote ? 'Albaranes' : 'Facturas'}
-        subtitle={isNote ? 'Lo que te entrega cada proveedor, para comprobarlo con su factura.' : 'Digitaliza tus facturas y mantén tus compras organizadas.'}
-        actions={<PrimaryButton onClick={addInvoice}>{`Añadir ${noun}`}</PrimaryButton>}
-      />}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <Segmented size="sm" value={isNote ? 'albaranes' : 'facturas'} onChange={(v) => { setFilter('all'); setParams(v === 'albaranes' ? { tipo: 'albaranes' } : {}, { replace: true }); }} options={[['facturas', 'Facturas'], ['albaranes', 'Albaranes']]} />
-        {embedded && <button type="button" onClick={addInvoice} className="text-[13px] font-semibold text-violet-700 hover:text-violet-900 hidden sm:block">{`+ Añadir ${noun}`}</button>}
-      </div>
-
+  const content = (
+    <>
       {invoicesQuery.isLoading && <ListSkeleton />}
       {invoicesQuery.isError && (
         <div className="rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700" role="alert">
@@ -77,14 +65,7 @@ export default function Invoices({ embedded = false }) {
       )}
 
       {!invoicesQuery.isLoading && !invoicesQuery.isError && all.length > 0 && (
-        <div className="flex gap-1.5 overflow-x-auto [scrollbar-width:none]">
-          {[['all', 'Todas'], ['review', reviewCount ? `Por revisar · ${reviewCount}` : 'Por revisar'], ['confirmed', isNote ? 'Confirmados' : 'Confirmadas']].map(([key, label]) => (
-            <button key={key} type="button" onClick={() => setFilter(key)}
-              className={`shrink-0 rounded-full px-3.5 py-1.5 text-[13px] font-semibold ${filter === key ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:text-gray-900'}`}>
-              {label}
-            </button>
-          ))}
-        </div>
+        <FilterChips value={filter} onChange={setFilter} options={[['all', 'Todas'], ['review', 'Por revisar', reviewCount], ['confirmed', isNote ? 'Confirmados' : 'Confirmadas']]} />
       )}
 
       {!invoicesQuery.isLoading && !invoicesQuery.isError && all.length > 0 && invoices.length === 0 && (
@@ -127,6 +108,10 @@ export default function Invoices({ embedded = false }) {
           </ul>
         </div>
       )}
-    </div>
+    </>
+  );
+  if (embedded) return <div className="w-full space-y-6">{content}</div>;
+  return (
+    <Page title={isNote ? 'Albaranes' : 'Facturas'} subtitle={isNote ? 'Lo que te entrega cada proveedor, para comprobarlo con su factura.' : 'Digitaliza tus facturas y mantén tus compras organizadas.'} primary={{ label: `Añadir ${noun}`, short: 'Añadir', onClick: addInvoice }}>{content}</Page>
   );
 }

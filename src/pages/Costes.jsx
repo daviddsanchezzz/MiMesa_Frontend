@@ -1,11 +1,11 @@
 import { useMemo, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
 import api from '../services/api';
-import { useSetMobileHeader } from '../context/MobileHeaderContext';
 import { useData } from '../lib/query';
 import Icon from '../ui/Icon';
-import { Empty, FigureLine, GhostButton, PageHeader, Section, SectionLink, Segmented } from '../ui/kit';
+import { Empty, FigureLine, FilterChips, GhostButton, Section, SectionLink } from '../ui/kit';
+import Page from '../ui/Page';
 import { inputCls } from './carta/labels';
 import AlertSettingsModal from './costes/AlertSettingsModal';
 import Change from './costes/Change';
@@ -89,33 +89,12 @@ function DishRow({ dish, target, onOpen }) {
   );
 }
 
-/** Two or three views as a line of text with an underline; a number shows what is waiting. */
-function ViewTabs({ value, onChange, options }) {
-  return (
-    <div role="tablist" className="flex border-b border-gray-200">
-      {options.map(([key, label, count]) => {
-        const on = value === key;
-        return (
-          <button key={key} type="button" role="tab" aria-selected={on} onClick={() => onChange(key)}
-            className={`relative flex-1 basis-0 whitespace-nowrap px-1 py-3 text-center text-[15px] font-semibold transition-colors sm:flex-none sm:basis-auto sm:mr-8 sm:px-1 ${on ? 'text-gray-900' : 'text-gray-400 hover:text-gray-700'}`}>
-            <span className="relative inline-block">
-              {label}
-              {count > 0 && <span className={`absolute -right-3.5 -top-2 min-w-[18px] rounded-full px-1 text-center text-[11px] font-bold leading-[18px] sm:static sm:ml-2 sm:inline-block sm:min-w-[22px] sm:px-1.5 sm:text-[12px] sm:leading-4 sm:py-0.5 ${on ? 'bg-violet-600 text-white' : 'bg-gray-200 text-gray-600'}`}>{count}</span>}
-            </span>
-            {on && <span aria-hidden="true" className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-violet-600 sm:inset-x-0" />}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
 /**
  * Costes: what each ingredient costs you, read from your invoices. A line of an invoice is linked to an
  * ingredient once; from then on every invoice updates its price, its history and the warnings.
  */
 export default function Costes() {
-  useSetMobileHeader({ title: 'Costes' });
+  const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const tab = ['vincular', 'escandallos'].includes(params.get('tab')) ? params.get('tab') : 'ingredientes';
   const list = useData(['ingredients', 'list'], () => api.get('/ingredients').then((r) => r.data), { retry: false });
@@ -162,11 +141,9 @@ export default function Costes() {
   const empty = list.isSuccess && ingredients.length === 0 && groups.length === 0;
 
   return (
-    <div className="w-full space-y-7 pb-16">
-      <PageHeader title="Costes" subtitle="Cuánto te cuesta cada ingrediente, según tus facturas"
-        actions={<Link to="/compras/facturas/nueva" className="inline-flex h-10 items-center gap-1.5 rounded-xl bg-violet-600 px-4 text-sm font-semibold text-white hover:bg-violet-700"><Icon name="plus" className="h-4 w-4" strokeWidth={2} />Subir una factura</Link>} />
-
-      {!empty && (
+    <Page title="Costes" subtitle="Cuánto te cuesta cada ingrediente, según tus facturas"
+      primary={{ label: 'Subir una factura', short: 'Factura', onClick: () => navigate('/compras/facturas/nueva') }}
+      summary={!empty && (
         <FigureLine stacked items={[
           { label: ingredients.length === 1 ? 'ingrediente' : 'ingredientes', value: ingredients.length },
           { label: risers.length === 1 ? 'sube' : 'suben', value: risers.length, tone: risers.length ? 'warn' : undefined },
@@ -174,6 +151,7 @@ export default function Costes() {
           { label: 'sin vincular', value: pending },
         ]} />
       )}
+      tabs={!empty ? { value: tab, onChange: setTab, options: [['ingredientes', 'Ingredientes'], ['escandallos', 'Escandallos', lowMargin], ['vincular', 'Vincular', pending]] } : undefined}>
 
       {empty ? (
         <section className="max-w-2xl">
@@ -191,14 +169,12 @@ export default function Costes() {
         </section>
       ) : (
         <>
-          <ViewTabs value={tab} onChange={setTab} options={[['ingredientes', 'Ingredientes'], ['escandallos', 'Escandallos', lowMargin], ['vincular', 'Vincular', pending]]} />
-
           {tab === 'ingredientes' ? (
             <div className="grid grid-cols-1 gap-x-12 gap-y-8 lg:grid-cols-[minmax(0,1fr)_320px]">
               <div className="min-w-0 lg:order-1">
                 <div className="mb-2 flex flex-wrap items-center gap-3">
                   <input className={`${inputCls} !h-10 w-full sm:max-w-xs`} placeholder="Buscar un ingrediente…" value={search} onChange={(e) => setSearch(e.target.value)} />
-                  <Segmented size="sm" value={view} onChange={setView} options={[['todos', 'Todos'], ['suben', 'Suben'], ['bajan', 'Bajan']]} />
+                  <FilterChips value={view} onChange={setView} options={[['todos', 'Todos'], ['suben', 'Suben'], ['bajan', 'Bajan']]} />
                 </div>
                 {shown.length === 0 ? <Empty>{ingredients.length === 0 ? 'Aún no hay ingredientes. Vincula las líneas de tus facturas para crearlos.' : 'Ningún ingrediente coincide.'}</Empty> : (
                   <ul className="divide-y divide-gray-100">{shown.map((i) => <IngredientRow key={i.id} ing={i} onOpen={() => setOpen(i.id)} />)}</ul>
@@ -224,7 +200,7 @@ export default function Costes() {
               <p className="mb-3 max-w-2xl text-sm text-gray-500">Qué lleva cada plato y cuánto te cuesta. Cuando un ingrediente sube, el coste y el margen se recalculan solos.</p>
               <div className="mb-2 flex flex-wrap items-center gap-3">
                 <input className={`${inputCls} !h-10 w-full sm:max-w-xs`} placeholder="Buscar un plato…" value={search} onChange={(e) => setSearch(e.target.value)} />
-                <Segmented size="sm" value={dishFilter} onChange={setDishFilter} options={[['todos', 'Todos'], ['sin', 'Sin escandallo'], ['bajo', 'Margen bajo']]} />
+                <FilterChips value={dishFilter} onChange={setDishFilter} options={[['todos', 'Todos'], ['sin', 'Sin escandallo'], ['bajo', 'Margen bajo']]} />
                 {withRecipe > 0 && <span className="text-[13px] text-gray-500 sm:ml-auto">{withRecipe} de {dishes.length} con escandallo · objetivo {target} %</span>}
               </div>
               {shownDishes.length === 0 ? <Empty>{dishes.length === 0 ? 'Aún no hay platos en tu carta.' : 'Ningún plato coincide.'}</Empty> : (
@@ -246,6 +222,6 @@ export default function Costes() {
       {dishOpen && <RecipeModal itemId={dishOpen} ingredients={ingredients} onClose={() => setDishOpen(null)} onChanged={() => { recipes.refetch(); }} />}
       {linking && <LinkModal group={linking} ingredients={ingredients} onClose={() => setLinking(null)} onDone={linked} />}
       {settings && <AlertSettingsModal value={alertPct} onClose={() => setSettings(false)} onSaved={() => { setSettings(false); refresh(); }} />}
-    </div>
+    </Page>
   );
 }

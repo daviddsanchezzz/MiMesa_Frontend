@@ -12,6 +12,7 @@ import Change from './costes/Change';
 import { Sparkline } from './costes/Charts';
 import IngredientModal from './costes/IngredientModal';
 import LinkModal from './costes/LinkModal';
+import Consumo from './costes/Consumo';
 import RecipeModal, { marginTone } from './costes/RecipeModal';
 import { Chip, List, ListRow } from '../ui/list';
 import { ago, money, perUnit, shortDate } from './costes/format';
@@ -77,7 +78,7 @@ function DishRow({ dish, target, onOpen }) {
 export default function Costes() {
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
-  const tab = ['vincular', 'escandallos'].includes(params.get('tab')) ? params.get('tab') : 'ingredientes';
+  const tab = ['vincular', 'escandallos', 'consumo'].includes(params.get('tab')) ? params.get('tab') : 'ingredientes';
   const list = useData(['ingredients', 'list'], () => api.get('/ingredients').then((r) => r.data), { retry: false });
   const inbox = useData(['ingredients', 'inbox'], () => api.get('/ingredients/inbox').then((r) => r.data), { retry: false });
   const recipes = useData(['recipes', 'list'], () => api.get('/recipes').then((r) => r.data), { retry: false });
@@ -132,7 +133,7 @@ export default function Costes() {
           { label: 'sin vincular', value: pending },
         ]} />
       )}
-      tabs={!empty ? { value: tab, onChange: setTab, options: [['ingredientes', 'Ingredientes'], ['escandallos', 'Escandallos', lowMargin], ['vincular', 'Vincular', pending]] } : undefined}>
+      tabs={!empty ? { value: tab, onChange: setTab, options: [['ingredientes', 'Ingredientes'], ['escandallos', 'Escandallos', lowMargin], ['consumo', 'Consumo'], ['vincular', 'Vincular', pending]] } : undefined}>
 
       {empty ? (
         <section className="max-w-2xl">
@@ -179,6 +180,8 @@ export default function Costes() {
                 )}
               </aside>
             </div>
+          ) : tab === 'consumo' ? (
+            <Consumo ingredients={ingredients} />
           ) : tab === 'escandallos' ? (
             <section>
               <p className="mb-3 max-w-2xl text-sm text-gray-500">Qué lleva cada plato y cuánto te cuesta. Cuando un ingrediente sube, el coste y el margen se recalculan solos.</p>

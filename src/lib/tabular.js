@@ -144,6 +144,32 @@ export function buildMenuRows(table, headerRow, mapping) {
   return { rows, skipped };
 }
 
+/** Sales by dish of a POS: one line per dish and day (or per dish for the whole file, with the date chosen on screen). */
+export const SALES_FIELDS = [
+  { key: 'name', label: 'Plato', required: true, words: ['articulo', 'descripcion', 'producto', 'plato', 'nombre', 'denominacion'] },
+  { key: 'quantity', label: 'Unidades', required: true, words: ['unidades', 'uds', 'cantidad', 'cant', 'vendidas', 'ud', 'unid'] },
+  { key: 'date', label: 'Fecha', words: ['fecha', 'dia', 'date', 'jornada'] },
+  { key: 'amount', label: 'Importe', words: ['importe', 'total', 'venta', 'ventas', 'ingresos', 'facturacion'] },
+  { key: 'externalId', label: 'Código', words: ['codigo', 'cod', 'referencia', 'ref', 'id', 'cod. articulo', 'sku'] },
+];
+
+/** Lines → { date, name, quantity, amount?, externalId? }. Without a date column every line gets `fallbackDate`. */
+export function buildSalesRows(table, headerRow, mapping, fallbackDate) {
+  const rows = [];
+  let skipped = 0;
+  for (const cells of table.slice(headerRow + 1)) {
+    const name = mapping.name === undefined ? '' : String(cells[mapping.name] ?? '').trim();
+    const quantity = mapping.quantity === undefined ? null : parseNumber(cells[mapping.quantity]);
+    const date = mapping.date === undefined ? fallbackDate : parseDate(cells[mapping.date]);
+    if (!name || quantity === null || !date) { skipped++; continue; }
+    const row = { date, name, quantity };
+    if (mapping.amount !== undefined) { const n = parseNumber(cells[mapping.amount]); if (n !== null) row.amount = n; }
+    if (mapping.externalId !== undefined) row.externalId = String(cells[mapping.externalId] ?? '').trim();
+    rows.push(row);
+  }
+  return { rows, skipped };
+}
+
 /**
  * Lines → rows of { date, total, cash, … } for the backend. Lines without a valid date (subtotals,
  * footers) are skipped and counted.

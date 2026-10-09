@@ -225,10 +225,10 @@ export function MoreMenu({ items, align = 'right', className = '' }) {
  */
 export function PageHeader({ title, subtitle, actions, mobileActions = false, className = '' }) {
   return (
-    <div className={`flex flex-wrap items-end justify-between gap-3 ${className}`}>
-      <div className="min-w-0">
-        <h1 className="hidden lg:block text-2xl font-semibold tracking-tight text-gray-900">{title}</h1>
-        {subtitle && <p className="text-sm text-gray-500 lg:mt-0.5">{subtitle}</p>}
+    <div className={`flex flex-wrap items-center justify-between gap-3 ${className}`}>
+      <div className="min-w-0 lg:flex lg:items-baseline lg:gap-3">
+        <h1 className="hidden lg:block text-[28px] font-semibold tracking-tight text-gray-900">{title}</h1>
+        {subtitle && <p className="truncate text-sm text-gray-500">{subtitle}</p>}
       </div>
       {actions && <div className={`${mobileActions ? 'flex' : 'hidden lg:flex'} items-center gap-2 shrink-0`}>{actions}</div>}
     </div>

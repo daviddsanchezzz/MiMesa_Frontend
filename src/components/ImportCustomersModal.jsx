@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import Modal from './Modal';
 import api from '../services/api';
 import { decodeFile, parseCsv, guessColumns, rowsToCustomers } from '../lib/csv';
+import { inputCls, btnPrimary, btnSecondary } from '../ui/form';
 
 const BATCH = 300;
 const FIELDS = [
@@ -12,9 +13,6 @@ const FIELDS = [
   ['notes', 'Notas', false],
 ];
 
-const inputCls = 'w-full border border-gray-300 rounded-xl px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-violet-500';
-const btnPrimary = 'inline-flex items-center justify-center px-4 py-2.5 rounded-xl bg-violet-600 text-white text-sm font-semibold hover:bg-violet-700 disabled:opacity-50';
-const btnSecondary = 'inline-flex items-center justify-center px-4 py-2.5 rounded-xl border border-gray-300 text-gray-700 text-sm font-medium hover:bg-gray-50 disabled:opacity-50';
 
 /**
  * Import customers from a CSV (Excel, Booksy, Google Contacts, another app):

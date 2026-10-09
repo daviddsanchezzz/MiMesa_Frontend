@@ -1,8 +1,6 @@
 
 
-export const inputCls = 'w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent';
 
-export const labelCls = 'block text-xs font-medium text-gray-600 mb-1.5';
 
 export const TABLE_SHAPE_OPTIONS = [
   { value: 'circle', label: 'Circular' },
@@ -190,3 +188,4 @@ export function CheckIcon() {
     </svg>
   );
 }
+export { inputCls, labelCls } from '../../ui/form';

@@ -78,10 +78,6 @@ export const STATUS = {
   no_show:    { label: 'No vino',    cls: 'bg-rose-50 border-rose-300 text-rose-900' },
 };
 
-export const inputCls = 'w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent';
-export const labelCls = 'block text-xs font-medium text-gray-600 mb-1.5';
-export const btnPrimary = 'inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-violet-600 text-white text-sm font-semibold hover:bg-violet-700 disabled:opacity-50 transition-colors';
-export const btnSecondary = 'inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-gray-300 text-gray-700 text-sm font-medium hover:bg-gray-50 disabled:opacity-50 transition-colors';
 
 // Colour per professional: their own, or one from this palette by position.
 export const STAFF_COLORS = ['#7c3aed', '#db2777', '#0891b2', '#ea580c', '#16a34a', '#2563eb', '#ca8a04', '#9333ea'];
@@ -260,3 +256,4 @@ export function absenceText(a) {
   const months = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sept', 'oct', 'nov', 'dic'];
   return `Hasta el ${d} ${months[m - 1]}`;
 }
+export { inputCls, labelCls, btnPrimary, btnSecondary } from '../../ui/form';

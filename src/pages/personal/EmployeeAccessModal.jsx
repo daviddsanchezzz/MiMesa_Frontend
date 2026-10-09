@@ -3,11 +3,9 @@ import Modal from '../../components/Modal';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { confirmDialog } from '../../ui/confirm';
+import { inputCls, btnPrimary, btnQuiet } from '../../ui/form';
 
 const ROLE_LABELS = { owner: 'Propietario', manager: 'Encargado', staff: 'Personal' };
-const inputCls = 'w-full rounded-xl border border-gray-300 bg-white px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500';
-const btnPrimary = 'inline-flex items-center justify-center h-10 px-4 rounded-xl bg-violet-600 text-white text-sm font-semibold hover:bg-violet-700 disabled:opacity-60';
-const btnQuiet = 'inline-flex items-center justify-center h-10 px-4 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 hover:bg-gray-50 disabled:opacity-60';
 
 const errorOf = (err) => err?.response?.data?.message || 'Algo ha fallado. Inténtalo de nuevo.';
 

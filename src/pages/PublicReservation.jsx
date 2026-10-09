@@ -4,6 +4,7 @@ import publicApi from '../services/publicApi';
 import TRANSLATIONS from '../i18n';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
+import { inputCls } from '../ui/form';
 
 const ALL_SHIFTS_KEY = '__all__';
 
@@ -467,7 +468,6 @@ export default function PublicReservation({ businessId: businessIdProp } = {}) {
     ? (form.date === todayStr ? tr.today : new Date(form.date + 'T00:00:00').toLocaleDateString(tr.dateLocale, { day: 'numeric', month: 'short' }))
     : null;
   const peopleOptions = Array.from({ length: Math.min(maxPeople, 20) }, (_, i) => i + 1);
-  const inputCls = 'w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white';
   const multiShift = Object.keys(slotsByShift).length > 1;
 
   const stepSummary = [dateLabel, step > 2 && form.time, step > 3 && tr.persShort(form.people)].filter(Boolean).join(' · ');

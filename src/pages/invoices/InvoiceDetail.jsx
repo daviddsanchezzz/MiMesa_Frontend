@@ -19,8 +19,8 @@ import {
   invoiceToForm,
 } from './invoiceUtils';
 import { confirmDialog } from '../../ui/confirm';
+import { inputCls } from '../../ui/form';
 
-const inputCls = 'w-full min-w-0 rounded-xl border border-gray-300 bg-white px-3.5 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent disabled:bg-gray-50 disabled:text-gray-500';
 const numberCls = `${inputCls} tabular-nums text-right`;
 const compactNumberCls = `${numberCls} h-10 px-2.5 py-2`;
 

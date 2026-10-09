@@ -13,9 +13,8 @@ import ProfessionalAvatar from '../components/ProfessionalAvatar';
 import { bookingsApi } from '../services/bookingsApi';
 import { resizeImage } from './agenda/utils';
 import { confirmDialog } from '../ui/confirm';
+import { inputCls, labelCls } from '../ui/form';
 
-const inputCls = 'w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-white';
-const labelCls = 'block text-xs font-medium text-gray-600 mb-1.5';
 const ROLE_LABELS = { owner: 'Propietario', manager: 'Encargado', staff: 'Personal' };
 const EMPTY_BUSINESS = { businessType: 'restaurant', name: '', email: '', phone: '', address: '', cif: '' };
 

@@ -13,12 +13,8 @@ import { dateDay as niceDate, money } from '../lib/format';
 import { previousLabel, shiftRange } from '../lib/periods';
 import { notify } from '../lib/notify';
 import { confirmDialog } from '../ui/confirm';
+import { inputCls, labelCls, btnPrimary, btnQuiet, btnDangerQuiet } from '../ui/form';
 
-const inputCls = 'w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white';
-const labelCls = 'block text-xs font-medium text-gray-500 mb-1';
-const btnPrimary = 'h-10 px-4 rounded-xl bg-violet-600 hover:bg-violet-700 text-white text-sm font-semibold disabled:opacity-50';
-const btnQuiet = 'h-10 px-4 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-100';
-const btnDanger = 'h-10 px-3 rounded-xl text-sm font-semibold text-rose-600 hover:bg-rose-50 disabled:opacity-50';
 
 const tableHead = 'hidden md:grid grid-cols-12 gap-4 px-2 pb-2 border-b border-gray-200 text-[11px] font-semibold uppercase tracking-wide text-gray-400';
 const todayIso = () => new Date().toISOString().slice(0, 10);
@@ -766,7 +762,7 @@ function OrderDetailModal({ order, onClose, onEdit, onDelete, onSend, sending })
       )}
       footer={(
         <div className="flex items-center gap-2">
-          <button type="button" onClick={onDelete} className={btnDanger}>Eliminar</button>
+          <button type="button" onClick={onDelete} className={btnDangerQuiet}>Eliminar</button>
           <div className="flex-1" />
           <button type="button" onClick={onEdit} className={btnQuiet}>Editar</button>
           {canSend && (
@@ -923,7 +919,7 @@ function ProductModal({ product, suppliers, onClose, onSaved }) {
     <Modal onClose={onClose} size="lg" title={product?._id ? 'Editar producto' : 'Nuevo producto'}
       footer={(
         <div className="flex items-center gap-2">
-          {product?._id && <button type="button" onClick={remove} disabled={saving} className={btnDanger}>Eliminar</button>}
+          {product?._id && <button type="button" onClick={remove} disabled={saving} className={btnDangerQuiet}>Eliminar</button>}
           <div className="flex-1" />
           <button type="button" onClick={onClose} className={btnQuiet}>Cancelar</button>
           <button type="submit" form="product-form" disabled={saving} className={btnPrimary}>{saving ? 'Guardando…' : 'Guardar'}</button>

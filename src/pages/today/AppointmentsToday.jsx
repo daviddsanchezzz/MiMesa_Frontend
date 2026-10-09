@@ -14,8 +14,8 @@ import BookingDetailModal from '../agenda/BookingDetailModal';
 import {
   DEFAULT_TZ, addDays, euros, longDate, minutesInTz, staffColors, timeInTz, toHHMM, todayIn, waLink, windowsForDate, pluralize, absenceSpan,
 } from '../agenda/utils';
+import { btnPrimary } from '../../ui/form';
 
-const btnPrimary = 'inline-flex items-center justify-center gap-2 h-10 px-4 rounded-xl bg-violet-600 text-white text-sm font-semibold hover:bg-violet-700';
 
 function staffIdsOf(b, staffById) {
   return [...new Set((b.segments || []).flatMap((s) => s.resourceIds || []))].filter((id) => staffById[id]?.kind === 'staff');

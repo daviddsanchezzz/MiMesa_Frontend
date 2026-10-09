@@ -5,9 +5,8 @@ import { useSetMobileHeader } from '../context/MobileHeaderContext';
 import Icon from '../ui/Icon';
 import { Section, SectionLink, FigureLine, Empty } from '../ui/kit';
 import { confirmDialog } from '../ui/confirm';
+import { inputCls, labelCls } from '../ui/form';
 
-const inputCls = 'w-full rounded-xl border border-gray-300 bg-white px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500';
-const labelCls = 'block text-[13px] font-medium text-gray-700 mb-1.5';
 const SUBS_PREVIEW = 8;
 const MONTHLY_LIMIT = 6; // campaigns per 30 days (the server enforces it)
 

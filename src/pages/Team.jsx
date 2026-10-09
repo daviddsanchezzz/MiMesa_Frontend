@@ -8,6 +8,7 @@ import { PrimaryButton, Section, MenuButton, Empty, Segmented } from '../ui/kit'
 import Page from '../ui/Page';
 import ProfessionalAvatar from '../components/ProfessionalAvatar';
 import { confirmDialog } from '../ui/confirm';
+import { inputCls } from '../ui/form';
 
 /* Constants */
 const ROLE_LABELS = { owner: 'Propietario', manager: 'Encargado', staff: 'Personal' };
@@ -27,7 +28,6 @@ function avatarTint(str = '') {
   for (const c of str) h = c.charCodeAt(0) + ((h << 5) - h);
   return AVATAR_TINTS[Math.abs(h) % AVATAR_TINTS.length];
 }
-const inputCls = 'w-full rounded-xl border border-gray-300 bg-white px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500';
 
 /* Sub-components */
 function Avatar({ name, email, professional }) {

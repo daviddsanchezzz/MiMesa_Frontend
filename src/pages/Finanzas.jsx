@@ -12,6 +12,7 @@ import PeriodNavigator, { usePeriod } from '../ui/PeriodNavigator';
 import Page from '../ui/Page';
 import { fmtDay, fmtShort, parseIso, previousLabel, shiftRange, toIso } from '../lib/periods';
 import { confirmDialog } from '../ui/confirm';
+import { inputCls, selectCls, btnDanger } from '../ui/form';
 
 // ── Color palette (static — color key stored in DB → Tailwind bg class) ───────
 
@@ -73,12 +74,9 @@ function FormField({ label, children, required }) {
   );
 }
 
-const inputCls = 'w-full rounded-xl border border-gray-300 px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent';
-const selectCls = inputCls + ' bg-white';
 const amountCls = 'w-full rounded-xl border border-gray-300 px-3.5 py-3 text-2xl font-semibold tabular-nums text-gray-900 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent';
 const btnSubmit = 'inline-flex items-center justify-center h-10 px-4 rounded-xl bg-violet-600 text-white text-sm font-semibold hover:bg-violet-700 disabled:opacity-60';
 const btnCancel = 'inline-flex items-center justify-center h-10 px-4 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-100';
-const btnDanger = 'inline-flex items-center justify-center h-10 px-4 rounded-xl bg-rose-600 text-white text-sm font-semibold hover:bg-rose-700 disabled:opacity-60';
 const errorCls = 'text-sm text-rose-700 bg-rose-50 rounded-xl px-3 py-2';
 
 // Hairline table header: [[label, 'col-span-x text-right'], …]

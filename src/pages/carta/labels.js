@@ -37,7 +37,6 @@ export const eur = (n) => (n === null || n === undefined ? 'Consultar' : formatE
 /** The text in the main language, or the first one written. */
 export const textOf = (texts, language) => (texts && (texts[language] || Object.values(texts)[0])) || '';
 
-export const inputCls = 'w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-[15px] text-gray-900 outline-none placeholder:text-gray-400 focus:border-violet-400 focus:ring-2 focus:ring-violet-100 disabled:bg-gray-50 disabled:text-gray-500';
 export const chipCls = (on) => `inline-flex items-center gap-1.5 h-9 px-3 rounded-full border text-[13px] font-medium transition-colors ${on ? 'border-violet-600 bg-violet-50 text-violet-800 ring-1 ring-violet-600' : 'border-gray-200 text-gray-700 hover:bg-gray-50'}`;
 
 const plain = (x) => String(x ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim().replace(/[\s-]+/g, '_');
@@ -52,3 +51,4 @@ export function toKeys(text, list) {
   }
   return out;
 }
+export { inputCls } from '../../ui/form';

@@ -4,11 +4,11 @@ import Modal from '../../components/Modal';
 import api from '../../services/api';
 import { MENU_FIELDS, buildMenuRows, findHeaderRow, guessMapping, parseDelimited, readTextFile } from '../../lib/tabular';
 import { ALLERGENS, TAGS, eur, toKeys } from './labels';
+import { selectCls } from '../../ui/form';
 
 const SAVED = 'menu-import:columns';
 const readSaved = () => { try { return JSON.parse(window.localStorage.getItem(SAVED) || '{}'); } catch { return {}; } };
 const writeSaved = (v) => { try { window.localStorage.setItem(SAVED, JSON.stringify(v)); } catch { /* ignore */ } };
-const selectCls = 'w-full h-10 rounded-xl border border-gray-200 bg-white px-2.5 text-sm text-gray-900 outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100';
 const BADGE = {
   new: ['Nuevo', 'bg-emerald-50 text-emerald-700'],
   price: ['Cambia el precio', 'bg-amber-50 text-amber-700'],

@@ -8,9 +8,8 @@ import FloorEditor from '../floor/FloorEditor';
 import Modal from '../components/Modal';
 import Icon from '../ui/Icon';
 import { PageHeader, PrimaryButton, GhostButton, Segmented, Section } from '../ui/kit';
+import { inputCls, labelCls } from '../ui/form';
 
-const inputCls = 'w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent';
-const labelCls = 'block text-xs font-semibold text-gray-500 mb-1.5';
 const TABLE_SHAPE_OPTIONS = [
   { value: 'circle', label: 'Circular' },
   { value: 'square', label: 'Cuadrada' },

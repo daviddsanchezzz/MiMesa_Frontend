@@ -1,9 +1,7 @@
 
 import { moneyCurrency } from '../../lib/format';
 
-export const inputCls = 'w-full rounded-xl border border-gray-300 px-3.5 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent';
 
-export const labelCls = 'block text-xs font-medium text-gray-600 mb-1.5';
 
 /** Error / notice line inside a screen or sheet (no border). */
 export function Notice({ children, tone = 'error' }) {
@@ -154,3 +152,4 @@ export const colorFromSlot = (slot) => {
   const hue = Math.round((slot * 137.508) % 360); // golden-angle distribution
   return hslToHex(hue, 72, 48);
 };
+export { inputCls, labelCls } from '../../ui/form';

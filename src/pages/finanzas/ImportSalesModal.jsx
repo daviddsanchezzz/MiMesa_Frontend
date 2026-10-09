@@ -4,6 +4,7 @@ import Modal from '../../components/Modal';
 import api from '../../services/api';
 import { FIELDS, buildRows, findHeaderRow, guessMapping, parseDelimited, readTextFile } from '../../lib/tabular';
 import { eur } from '../../lib/format';
+import { selectCls } from '../../ui/form';
 
 const SAVED = 'sales-import:columns';
 const readSaved = () => { try { return JSON.parse(window.localStorage.getItem(SAVED) || '{}'); } catch { return {}; } };
@@ -16,7 +17,6 @@ const BADGE = {
   same: ['Igual', 'bg-gray-100 text-gray-500'],
   skip: ['Se queda', 'bg-gray-100 text-gray-500'],
 };
-const selectCls = 'w-full h-10 rounded-xl border border-gray-200 bg-white px-2.5 text-sm text-gray-900 outline-none focus:border-violet-400 focus:ring-2 focus:ring-violet-100';
 
 /**
  * Daily sales of the restaurant from the POS closing report (CSV): pick the file, check which

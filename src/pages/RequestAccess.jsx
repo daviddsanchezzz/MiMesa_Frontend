@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { inputCls } from '../ui/form';
 
-const inputCls = 'w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-white';
 const TYPES = ['Restaurante', 'Peluquería o barbería', 'Centro de estética', 'Otro negocio con citas'];
 
 /** Invite-only mode: ask Vetra for an account (goes to the contact form). */

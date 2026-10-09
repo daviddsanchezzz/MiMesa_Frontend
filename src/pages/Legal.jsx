@@ -128,10 +128,40 @@ function Dpa() {
   );
 }
 
+/** For the people who book at a business that uses Vetra: what the business does with their data, and Vetra's part in it. */
+function Clients() {
+  return (
+    <>
+      <P>Este aviso es para ti si reservas o pides cita en un negocio que usa Vetra. Explica qué se hace con tus datos y quién responde de ello.</P>
+      <H>1. Quién es el responsable</H>
+      <P>El responsable de tus datos es el negocio donde reservas (su nombre y datos de contacto aparecen en su página de reservas). Vetra ({OWNER.name}, NIF {OWNER.nif}) presta el programa que el negocio usa y trata tus datos solo por su cuenta, como encargado del tratamiento.</P>
+      <H>2. Para qué se usan tus datos</H>
+      <UL items={[
+        'Gestionar tu reserva o tu cita y contactarte sobre ella: confirmación, recordatorios, cambios y cancelaciones. Base: la propia reserva.',
+        'Si pides cita en un negocio de servicios: avisarte de cuándo te toca volver y pedirte tu opinión después de la visita. Base: interés legítimo del negocio en cuidar a sus clientes; puedes oponerte cuando quieras desde el enlace de baja de cada email.',
+        'Enviarte ofertas y novedades del negocio por email, solo si marcas esa casilla al reservar. Base: tu consentimiento; puedes retirarlo en cualquier momento.',
+        'Cumplir las obligaciones legales del negocio (por ejemplo, fiscales si se te cobra algo).',
+      ]} />
+      <H>3. Qué datos</H>
+      <P>Nombre, teléfono, email, los datos de la reserva (día, hora, servicio o número de personas), los comentarios que escribas y, si hay cobro, el importe. No necesitamos datos de salud: no los escribas en los comentarios salvo que sea imprescindible, por ejemplo una alergia.</P>
+      <H>4. Cuánto tiempo</H>
+      <P>Mientras mantengas relación con el negocio y, después, el tiempo necesario para cumplir obligaciones legales o atender reclamaciones. Puedes pedir que se borren tus datos cuando quieras.</P>
+      <H>5. Con quién se comparten</H>
+      <P>Con Vetra y con los proveedores que esta necesita para prestar el servicio, que actúan como encargados del tratamiento. No se venden tus datos. Algunos proveedores están en Estados Unidos, con las garantías previstas por el RGPD.</P>
+      <UL items={SUBPROCESSORS} />
+      <H>6. Tus derechos</H>
+      <P>Puedes pedir al negocio acceso, rectificación, supresión, oposición, limitación y portabilidad de tus datos. También puedes escribir a {OWNER.email} y lo trasladaremos al negocio. Si crees que no se ha atendido bien tu solicitud, puedes reclamar ante la Agencia Española de Protección de Datos (www.aepd.es).</P>
+      <H>7. Darte de baja</H>
+      <P>Cada email que recibas de un negocio a través de Vetra lleva un enlace para dejar de recibir sus avisos de volver, sus peticiones de opinión y sus ofertas.</P>
+    </>
+  );
+}
+
 const DOCS = {
   condiciones: { title: 'Condiciones de uso', Body: Terms },
   privacidad: { title: 'Política de privacidad', Body: Privacy },
   encargo: { title: 'Contrato de encargo del tratamiento', Body: Dpa },
+  clientes: { title: 'Aviso de privacidad para clientes', Body: Clients },
 };
 
 export default function Legal() {

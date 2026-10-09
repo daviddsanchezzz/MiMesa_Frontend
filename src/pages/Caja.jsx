@@ -68,7 +68,7 @@ export default function Caja() {
   const methodSum = PAY_METHODS.reduce((sum, m) => sum + (t?.[m.key] || 0), 0) || 1;
 
   return (
-    <Page title="Caja" sticky className="[overflow-x:clip]"
+    <Page title="Caja" sticky
       toolbar={(
         <DayNavigator date={date} today={today} onChange={setDate} canNext={date < today}
           label={`${new Date(`${date}T12:00:00`).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}${closed ? ' · cerrada' : ''}`} />

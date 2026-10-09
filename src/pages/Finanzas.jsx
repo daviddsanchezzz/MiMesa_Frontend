@@ -1415,7 +1415,7 @@ export default function Finanzas() {
   useEffect(() => { loadSuppliers(); loadCategories(); }, [loadSuppliers, loadCategories]);
 
   return (
-    <Page title="Finanzas" sticky className="[overflow-x:clip]"
+    <Page title="Finanzas" sticky
       primary={{ label: 'Nuevo gasto', short: 'Gasto', onClick: () => setQuickAction('expense') }}
       toolbar={<PeriodNavigator period={period} dateRange={dateRange} onPeriodChange={onPeriodChange} onShift={onShift} onRangeChange={onRangeChange} />}
       tabs={{ value: tab, onChange: setTab, options: TABS }}>

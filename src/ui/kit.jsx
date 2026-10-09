@@ -343,7 +343,93 @@ function HeroBar({ segments, note }) {
  * under it, and on a wide screen it lies in a row.
  * stats: [{ label, value, sub, tone }]; bar: { segments: [{ label, text, value, color }], note }.
  */
-export function Hero({ label, value, unit, tone, pill, bar, stats = [], children, className = '' }) {
+export function Hero(props) {
+  const v = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('hero') : null;   // PREVIEW ONLY
+  if (!v) return <HeroBase {...props} />;
+  return (
+    <>
+      <div className="lg:hidden"><HeroBase {...props} /></div>
+      <div className="hidden lg:block"><HeroDesk {...props} layout={v} /></div>
+    </>
+  );
+}
+
+function HeroDesk({ label, value, unit, tone, pill, bar, stats = [], children, layout, className = '' }) {
+  const big = <>
+    <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-gray-400">{label}</p>
+    <div className="mt-1.5 flex flex-wrap items-baseline gap-x-3 gap-y-1.5">
+      <p className={`text-[48px] leading-[1.05] font-semibold tracking-tight tabular-nums ${HERO_TONE[tone] || 'text-gray-900'}`}>{value}{unit && <span className="ml-2 text-lg font-medium text-gray-500">{unit}</span>}</p>
+      {pill}
+    </div>
+    {children}
+  </>;
+  const stat = (st, size = 'text-[22px]') => (
+    <div key={st.label} className="min-w-0">
+      <p className="truncate text-xs text-gray-500">{st.label}</p>
+      <p className={`mt-0.5 truncate ${size} font-semibold tracking-tight tabular-nums ${HERO_TONE[st.tone] || 'text-gray-900'}`}>{st.value}</p>
+      <div className="mt-0.5 min-h-4 text-[11.5px] text-gray-400">{st.sub}</div>
+    </div>
+  );
+  const parts = bar ? bar.segments.filter((x) => x.value > 0) : [];
+  const total = parts.reduce((n, x) => n + x.value, 0) || 1;
+  if (layout === 'A') {
+    // Figure and key numbers on one line; the bar runs the whole width underneath
+    return (
+      <section className={`border-b border-gray-100 pb-8 ${className}`}>
+        <div className="flex items-end justify-between gap-12">
+          <div className="min-w-0">{big}</div>
+          <div className="flex shrink-0 gap-14">{stats.map((st) => stat(st))}</div>
+        </div>
+        {bar && <div className="mt-7"><HeroBar {...bar} /></div>}
+      </section>
+    );
+  }
+  if (layout === 'B') {
+    // A band of equal columns, like a row of KPIs; the bar is a thin line at the bottom
+    return (
+      <section className={`border-b border-gray-100 pb-8 ${className}`}>
+        <div className="grid items-end gap-10" style={{ gridTemplateColumns: `1.6fr repeat(${stats.length}, 1fr)` }}>
+          <div className="min-w-0">{big}</div>
+          {stats.map((st) => <div key={st.label} className="border-l border-gray-100 pl-10">{stat(st, 'text-[26px]')}</div>)}
+        </div>
+        {bar && (
+          <div className="mt-7">
+            <div className="flex h-2 overflow-hidden rounded-full bg-gray-100">{parts.map((x) => <span key={x.label} style={{ width: `${(x.value / total) * 100}%`, backgroundColor: x.color }} />)}</div>
+            <div className="mt-2 flex flex-wrap items-center gap-x-6 gap-y-1 text-[12.5px] text-gray-600">
+              {bar.segments.map((x) => <span key={x.label} className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-full" style={{ backgroundColor: x.color }} />{x.label} <b className="font-semibold tabular-nums text-gray-900">{x.text}</b></span>)}
+              {bar.note && <span className="ml-auto text-gray-400">{bar.note}</span>}
+            </div>
+          </div>
+        )}
+      </section>
+    );
+  }
+  // C: the bar is the visual; its two sides carry the big numbers, the rest sits under the main figure
+  return (
+    <section className={`grid grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)] items-center gap-20 border-b border-gray-100 pb-8 ${className}`}>
+      <div className="min-w-0">
+        {big}
+        <div className="mt-6 flex gap-12">{stats.map((st) => stat(st, 'text-xl'))}</div>
+      </div>
+      {bar ? (
+        <div className="min-w-0">
+          <div className="flex items-end justify-between gap-6">
+            {bar.segments.map((x, i) => (
+              <div key={x.label} className={i ? 'text-right' : ''}>
+                <p className="inline-flex items-center gap-1.5 text-xs text-gray-500"><span className="h-2 w-2 rounded-full" style={{ backgroundColor: x.color }} />{x.label}</p>
+                <p className="mt-0.5 text-[28px] font-semibold tracking-tight tabular-nums text-gray-900">{x.text}</p>
+              </div>
+            ))}
+          </div>
+          <div className="mt-3 flex h-4 overflow-hidden rounded-full bg-gray-100">{parts.map((x) => <span key={x.label} style={{ width: `${(x.value / total) * 100}%`, backgroundColor: x.color }} />)}</div>
+          {bar.note && <p className="mt-2.5 text-[12.5px] text-gray-500">{bar.note}</p>}
+        </div>
+      ) : <div />}
+    </section>
+  );
+}
+
+function HeroBase({ label, value, unit, tone, pill, bar, stats = [], children, className = '' }) {
   const cols = stats.length >= 3 ? 'grid-cols-3' : 'grid-cols-2';
   return (
     <section className={`lg:border-b lg:border-gray-100 lg:pb-8 xl:flex xl:items-center xl:justify-between xl:gap-12 ${className}`}>

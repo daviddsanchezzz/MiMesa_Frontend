@@ -1,12 +1,13 @@
 import { useSetMobileHeader } from '../context/MobileHeaderContext';
 import { PAGE_BODY, StickyBar } from './PeriodNavigator';
-import { PageHeader, PrimaryButton, Tabs } from './kit';
+import { MoreMenu, PageHeader, PrimaryButton, Tabs } from './kit';
 
 /**
  * The frame of every screen, phone and desktop from the same place:
  *  - title: the header bar on the phone, the big heading on desktop;
  *  - primary: the one main action — a button on desktop, the header-bar action on the phone;
  *  - mobileAction: only without primary — false hides the header-bar action, left out keeps what the screen inside sets;
+ *  - menu: the secondary actions [{ label, onClick }] behind a ⋯ button (header bar on the phone, next to the button on desktop);
  *  - actions: secondary desktop controls next to it (Exportar…);
  *  - summary: the few key figures under the heading (a FigureLine);
  *  - toolbar: the period navigator and the like: top right of the heading on desktop, above the sections on the phone;
@@ -15,8 +16,8 @@ import { PageHeader, PrimaryButton, Tabs } from './kit';
  *  - sticky: keep toolbar and tabs on screen while the page scrolls.
  * Change this component and every screen that uses it changes with it.
  */
-export default function Page({ title, mobileTitle, subtitle, primary, mobileAction, actions, summary, toolbar, mobileBar, tabs, sticky = false, className = '', children }) {
-  useSetMobileHeader({ title: mobileTitle || title, action: primary ? { label: primary.short || primary.label, onClick: primary.onClick } : mobileAction });
+export default function Page({ title, mobileTitle, subtitle, primary, mobileAction, menu, actions, summary, toolbar, mobileBar, tabs, sticky = false, className = '', children }) {
+  useSetMobileHeader({ title: mobileTitle || title, action: primary ? { label: primary.short || primary.label, onClick: primary.onClick } : mobileAction, menu });
   const showTabs = tabs && tabs.options.length > 1;
   const bar = (toolbar || showTabs || mobileBar) && (
     <>
@@ -28,7 +29,7 @@ export default function Page({ title, mobileTitle, subtitle, primary, mobileActi
   return (
     <div className={`w-full ${/space-y-/.test(className) ? '' : 'space-y-6'} pb-16 ${PAGE_BODY} ${className}`}>
       <PageHeader title={title} subtitle={subtitle} className={subtitle && !sticky ? '' : 'hidden lg:flex'}
-        actions={(actions || primary || toolbar) && <>{toolbar}{actions}{primary && <PrimaryButton icon={primary.icon ?? 'plus'} onClick={primary.onClick}>{primary.label}</PrimaryButton>}</>} />
+        actions={(actions || primary || toolbar || menu) && <>{toolbar}{actions}<MoreMenu items={menu} />{primary && <PrimaryButton icon={primary.icon ?? 'plus'} onClick={primary.onClick}>{primary.label}</PrimaryButton>}</>} />
       {summary}
       {bar && (sticky ? <StickyBar className={showTabs ? '!pb-0' : 'lg:hidden'}>{bar}</StickyBar> : <div className={`space-y-3 ${showTabs ? '' : 'lg:hidden'}`}>{bar}</div>)}
       {children}

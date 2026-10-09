@@ -188,6 +188,36 @@ export function MenuButton({ children, items, align = 'right', className = '', a
   );
 }
 
+/** The secondary actions of a screen (Exportar, Importar…) behind one ⋯ button. Items: [{ label, onClick, danger? }]; falsy ones are skipped. */
+export function MoreMenu({ items, align = 'right', className = '' }) {
+  const [open, setOpen] = useState(false);
+  const box = useRef(null);
+  const list = (items || []).filter(Boolean);
+  useEffect(() => {
+    if (!open) return undefined;
+    const away = (e) => { if (!box.current?.contains(e.target)) setOpen(false); };
+    document.addEventListener('pointerdown', away);
+    return () => document.removeEventListener('pointerdown', away);
+  }, [open]);
+  if (!list.length) return null;
+  return (
+    <div ref={box} className={`relative shrink-0 ${className}`}>
+      <button type="button" aria-label="Más acciones" aria-expanded={open} onClick={() => setOpen((o) => !o)}
+        className="flex h-9 w-9 items-center justify-center rounded-full text-gray-600 hover:bg-gray-100 active:bg-gray-100">
+        <svg viewBox="0 0 24 24" className="h-5 w-5" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8" /><circle cx="12" cy="12" r="1.8" /><circle cx="19" cy="12" r="1.8" /></svg>
+      </button>
+      {open && (
+        <div className={`absolute top-full z-50 mt-1 min-w-[12.5rem] rounded-xl border border-gray-200 bg-white py-1 shadow-lg ${align === 'right' ? 'right-0' : 'left-0'}`}>
+          {list.map((it) => (
+            <button key={it.label} type="button" onClick={() => { setOpen(false); it.onClick(); }}
+              className={`block w-full px-3.5 py-2.5 text-left text-sm hover:bg-gray-50 ${it.danger ? 'text-rose-600' : 'text-gray-800'}`}>{it.label}</button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 /**
  * Top of a screen: the title (desktop only — on the phone the header bar
  * already shows it), one line of context and, on desktop, the main actions.
@@ -238,7 +268,7 @@ export function Tabs({ value, options, onChange, className = '' }) {
     if (on && bar.current.scrollWidth > bar.current.clientWidth) bar.current.scrollTo({ left: on.offsetLeft - bar.current.clientWidth / 2 + on.offsetWidth / 2, behavior: 'smooth' });
   }, [value]);
   return (
-    <div ref={bar} role="tablist" className={`-mx-4 flex overflow-x-auto border-b border-gray-200 px-4 pt-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:mx-0 lg:px-0 ${className}`}>
+    <div ref={bar} role="tablist" className={`-mx-4 flex touch-pan-x overflow-x-auto overflow-y-hidden overscroll-x-contain border-b border-gray-200 px-4 pt-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:mx-0 lg:px-0 ${className}`}>
       {options.map(([key, label, count]) => {
         const on = value === key;
         return (
@@ -250,7 +280,7 @@ export function Tabs({ value, options, onChange, className = '' }) {
                 <span className={`absolute -right-3.5 -top-2 min-w-[18px] rounded-full px-1 text-center text-[11px] font-bold leading-[18px] lg:static lg:ml-2 lg:inline-block lg:min-w-[22px] lg:px-1.5 lg:py-0.5 lg:text-[12px] lg:leading-4 ${on ? 'bg-violet-600 text-white' : 'bg-gray-200 text-gray-600'}`}>{count}</span>
               )}
             </span>
-            {on && <span aria-hidden="true" className="absolute inset-x-0 -bottom-px h-0.5 bg-violet-600" />}
+            {on && <span aria-hidden="true" className="absolute inset-x-0 bottom-0 h-0.5 bg-violet-600" />}
           </button>
         );
       })}

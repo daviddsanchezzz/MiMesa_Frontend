@@ -60,6 +60,7 @@ import Sidebar from './components/Sidebar';
 import BottomNav from './components/BottomNav';
 import QuickActionMenu from './components/QuickActionMenu';
 import { useNav } from './lib/nav';
+import { MoreMenu } from './ui/kit';
 import Icon from './ui/Icon';
 import BusinessLogo from './ui/BusinessLogo';
 
@@ -98,7 +99,7 @@ function prefetchScreens(isAppointments) {
 }
 
 function MobileHeader({ devMode, onLogout }) {
-  const { title, actions, action } = useMobileHeader();
+  const { title, actions, action, menu } = useMobileHeader();
   const { business } = useAuth();
   return (
     <div className="lg:hidden flex items-center gap-3 px-4 h-14 bg-white/95 backdrop-blur border-b border-gray-100 shrink-0 z-30 pt-[env(safe-area-inset-top)]">
@@ -120,16 +121,19 @@ function MobileHeader({ devMode, onLogout }) {
             <Icon name="logout" className="w-5 h-5" />
           </button>
         </div>
-      ) : actions ?? (action ? (
-        <button
+      ) : actions ?? (action || menu ? (
+        <div className="flex shrink-0 items-center gap-0.5 -mr-2">
+          <MoreMenu items={menu} />
+          {action && <button
           type="button"
           onClick={action.onClick}
-          className="shrink-0 flex items-center gap-1 text-violet-700 px-2 py-1.5 -mr-2 rounded-lg text-[15px] font-semibold active:bg-violet-50"
+          className="shrink-0 flex items-center gap-1 text-violet-700 px-2 py-1.5 rounded-lg text-[15px] font-semibold active:bg-violet-50"
           aria-label={`Nuevo: ${action.label}`}
         >
           <Icon name="plus" className="w-5 h-5" strokeWidth={2} />
           {action.label}
-        </button>
+        </button>}
+        </div>
       ) : null)}
     </div>
   );

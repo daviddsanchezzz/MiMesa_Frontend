@@ -166,20 +166,13 @@ export default function Carta() {
 
   return (
     <Page title="Carta" subtitle={subtitle}
-      primary={manager && categories.length > 0 ? { label: 'Nuevo plato', short: 'Plato', onClick: () => setModal({ type: 'item' }) } : undefined}>
-
-      {manager && (
-        <div className="flex flex-wrap gap-2">
-          <GhostButton onClick={() => setModal({ type: 'import' })}>Importar platos</GhostButton>
-          <GhostButton onClick={() => setModal({ type: 'category' })}>+ Categoría</GhostButton>
-          <GhostButton onClick={() => setModal({ type: 'languages' })}>Idiomas</GhostButton>
-          {missing > 0 && (
-            <GhostButton onClick={translateAll} disabled={translating} className="!text-violet-700 !border-violet-200">
-              {translating ? 'Traduciendo…' : `✨ Traducir lo que falta (${missing})`}
-            </GhostButton>
-          )}
-        </div>
-      )}
+      primary={manager && categories.length > 0 ? { label: 'Nuevo plato', short: 'Plato', onClick: () => setModal({ type: 'item' }) } : undefined}
+      menu={manager ? [
+        { label: 'Nueva categoría', onClick: () => setModal({ type: 'category' }) },
+        { label: 'Importar platos', onClick: () => setModal({ type: 'import' }) },
+        { label: 'Idiomas', onClick: () => setModal({ type: 'languages' }) },
+        missing > 0 && { label: translating ? 'Traduciendo…' : `Traducir lo que falta (${missing})`, onClick: () => { if (!translating) translateAll(); } },
+      ] : undefined}>
 
       {menu && (menu.daily || manager) && (
         <Section title="Menú del día" aside={manager ? <SectionLink onClick={() => setModal({ type: 'daily' })}>{menu.daily ? 'Editar' : 'Configurar'}</SectionLink> : null}>

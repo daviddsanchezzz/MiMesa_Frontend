@@ -535,12 +535,7 @@ export default function Compras() {
   const pendingOrders = orders.filter((order) => order.status === 'draft').length;
   return (
     <Page title="Compras" sticky primary={primary}
-      actions={tab === 'suppliers' && supView === 'suppliers' && (
-        <MenuButton ariaLabel="Exportar" className="h-9 px-3.5 border border-gray-200"
-          items={[{ label: 'Exportar Excel', onClick: exportSuppliersProductsCsv }, { label: 'Exportar PDF', onClick: exportSuppliersProductsPdf }]}>
-          Exportar<Icon name="down" className="w-3.5 h-3.5" strokeWidth={2} />
-        </MenuButton>
-      )}
+      menu={tab === 'suppliers' && supView === 'suppliers' ? [{ label: 'Exportar a Excel', onClick: exportSuppliersProductsCsv }, { label: 'Exportar a PDF', onClick: exportSuppliersProductsPdf }] : undefined}
       toolbar={tab === 'summary' && <PeriodNavigator period={period} dateRange={dateRange} onPeriodChange={onPeriodChange} onShift={onShift} onRangeChange={onRangeChange} />}
       tabs={{ value: tab, onChange: selectTab, options: [['summary', 'Resumen'], ['invoices', 'Facturas', reviewCount], ['notes', 'Albaranes'], ['orders', 'Pedidos', pendingOrders], ['suppliers', 'Proveedores']] }}>
 
@@ -653,10 +648,6 @@ export default function Compras() {
 
       {!loading && tab === 'suppliers' && supView === 'suppliers' && (
         <>
-          <div className="lg:hidden flex gap-2">
-            <GhostButton onClick={exportSuppliersProductsCsv}>Exportar Excel</GhostButton>
-            <GhostButton onClick={exportSuppliersProductsPdf}>Exportar PDF</GhostButton>
-          </div>
           {suppliers.length === 0 ? (
             <Empty action={<button type="button" onClick={() => setSupplierModal({})} className="text-sm font-semibold text-violet-700">+ Añadir el primero</button>}>
               Todavía no hay proveedores.

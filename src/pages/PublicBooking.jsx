@@ -5,6 +5,7 @@ import { publicBookingsApi, apiError } from '../services/bookingsApi';
 import { addDays, euros, timeInTz, todayIn } from './agenda/utils';
 import ProfessionalAvatar from '../components/ProfessionalAvatar';
 import { ErrorBanner } from '../ui/feedback';
+import { Checkbox } from '../ui/form';
 
 /**
  * Public page where a customer books an appointment on their own:
@@ -381,21 +382,14 @@ export default function PublicBooking({ businessId: businessIdProp, slug = null 
               {catalog.policy.note && <p className="whitespace-pre-line">{catalog.policy.note}</p>}
             </div>
           )}
-          <label className="flex items-start gap-2 text-xs text-gray-600">
-            <input type="checkbox" className="mt-0.5" checked={form.consent} onChange={(e) => setForm({ ...form, consent: e.target.checked })} />
-            <span>
-              Acepto que {biz.name} use mis datos para gestionar esta cita y contactarme sobre ella. Como cliente, también podrá
-              avisarme de cuándo me toca volver o pedirme mi opinión; puedo darme de baja de esos avisos en cualquier momento
-              desde el enlace de cada email.
-            </span>
-          </label>
-          <label className="flex items-start gap-2 text-xs text-gray-600">
-            <input type="checkbox" className="mt-0.5" checked={form.marketing} onChange={(e) => setForm({ ...form, marketing: e.target.checked })} />
-            <span>
-              Quiero recibir por email ofertas y novedades de {biz.name} (opcional). Puedo darme de baja cuando quiera
-              desde el enlace de cada email.
-            </span>
-          </label>
+          <div className="space-y-3.5 pt-1">
+            <Checkbox color={color} checked={form.consent} onChange={(v) => setForm({ ...form, consent: v })}
+              title={`Acepto que ${biz.name} use mis datos para gestionar mi cita y contactarme sobre ella.`}
+              hint="Incluye avisos de cuándo me toca volver y pedirme mi opinión. Puedo darme de baja desde cualquier email." />
+            <Checkbox color={color} checked={form.marketing} onChange={(v) => setForm({ ...form, marketing: v })}
+              title={`Quiero recibir ofertas y novedades de ${biz.name} por email.`}
+              hint="Opcional. Puedo darme de baja cuando quiera desde cualquier email." />
+          </div>
           <button type="submit" disabled={sending}
             className="w-full rounded-xl py-3 text-sm font-semibold text-white disabled:opacity-60" style={{ backgroundColor: color }}>
             {sending ? 'Reservando…' : `Confirmar cita · ${time}`}

@@ -50,3 +50,19 @@ export function Select({ options, className = '', children, ...props }) {
     </select>
   );
 }
+
+/**
+ * A checkbox with its text and an optional line of detail. `color` paints the tick (the brand colour of a public page);
+ * without it the app violet is used. The whole row is the target.
+ */
+export function Checkbox({ checked, onChange, title, hint, color = '#7c3aed', className = '' }) {
+  return (
+    <label className={`flex cursor-pointer items-start gap-3 ${className}`}>
+      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} className="mt-0.5 h-5 w-5 shrink-0 cursor-pointer rounded" style={{ accentColor: color }} />
+      <span className="min-w-0">
+        <span className="block text-[14px] leading-snug text-gray-800">{title}</span>
+        {hint && <span className="mt-0.5 block text-xs leading-snug text-gray-500">{hint}</span>}
+      </span>
+    </label>
+  );
+}

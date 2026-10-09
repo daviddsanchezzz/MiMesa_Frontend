@@ -9,6 +9,7 @@ import TimeOffModal from './personal/TimeOffModal';
 import { timeOffLabel } from './personal/timeOff';
 import PeriodNavigator, { usePeriod } from '../ui/PeriodNavigator';
 import { toIso } from '../lib/periods';
+import { Loading } from '../ui/feedback';
 
 const hoursText = (minutes) => {
   const h = Math.floor(minutes / 60);
@@ -39,7 +40,7 @@ export default function MySchedule() {
       primary={d?.linked ? { label: 'Pedir libre', short: 'Pedir libre', icon: null, onClick: () => setTimeOffOpen(true) } : undefined} mobileAction={false}
       toolbar={<PeriodNavigator period={period} dateRange={dateRange} onPeriodChange={onPeriodChange} onShift={onShift} onRangeChange={onRangeChange} periods={['week']} />}>
 
-      {q.isLoading && <p className="text-sm text-gray-400">Cargando…</p>}
+      {q.isLoading && <Loading />}
       {q.isError && (
         <div className="py-10 text-center">
           <p className="text-sm text-gray-500">No se ha podido cargar tu horario.</p>

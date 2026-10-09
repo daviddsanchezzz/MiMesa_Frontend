@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import Modal from '../../components/Modal';
 import invoicesApi from '../../services/invoicesApi';
 import { apiErrorMessage } from './invoiceUtils';
+import { ErrorBanner } from '../../ui/feedback';
 
 export default function InvoiceDocumentModal({ invoice, onClose }) {
   const [url, setUrl] = useState('');
@@ -32,7 +33,7 @@ export default function InvoiceDocumentModal({ invoice, onClose }) {
 
   return (
     <Modal title="Documento original" subtitle={invoice.documentOriginalName} onClose={onClose} size="xl" bodyClassName="p-0 sm:p-3">
-      {error && <p className="m-5 rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>}
+      {error && <ErrorBanner className="m-5">{error}</ErrorBanner>}
       {!url && !error && (
         <div className="h-[55dvh] flex items-center justify-center" aria-busy="true">
           <span className="w-7 h-7 rounded-full border-2 border-violet-200 border-t-violet-600 animate-spin" aria-label="Cargando documento" />

@@ -3,6 +3,7 @@ import api from '../../services/api';
 import { useData } from '../../lib/query';
 import Modal from '../../components/Modal';
 import { Notice, SheetFooter, inputCls, labelCls } from './shared';
+import { Loading } from '../../ui/feedback';
 
 const dayText = (iso) => new Date(`${iso}T12:00:00`).toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' }).replace('.', '');
 
@@ -67,7 +68,7 @@ export default function SwapRequestModal({ shift, dateText, onClose, onSaved }) 
 
         <div className="space-y-2">
           {mode === 'give' && row(to === '', () => setTo(''), 'Cualquiera que pueda', 'Se avisa a quien esté libre ese día', null)}
-          {colleagues.isLoading && <p className="text-sm text-gray-400">Cargando compañeros…</p>}
+          {colleagues.isLoading && <Loading>Cargando compañeros…</Loading>}
           {(colleagues.data || []).map((p) => row(to === p.id, () => { setTo(p.id); setCounter(''); }, p.name, p.blockedReason || p.position, p.blockedReason ? null : p.warnings, Boolean(p.blockedReason)))}
         </div>
 
@@ -75,7 +76,7 @@ export default function SwapRequestModal({ shift, dateText, onClose, onSaved }) 
           <div>
             <label className={labelCls}>¿Qué turno de {(colleagues.data || []).find((p) => p.id === to)?.name?.split(' ')[0]} quieres a cambio?</label>
             <div className="space-y-2">
-              {theirs.isLoading && <p className="text-sm text-gray-400">Cargando turnos…</p>}
+              {theirs.isLoading && <Loading>Cargando turnos…</Loading>}
               {theirs.data?.length === 0 && <p className="text-sm text-gray-500">No tiene turnos publicados próximos.</p>}
               {(theirs.data || []).map((t) => row(counter === t.assignmentId, () => setCounter(t.assignmentId), `${dayText(t.date)} · ${t.start}–${t.end}`, [t.shiftName, t.roleLabel].filter(Boolean).join(' · ') || t.blockedReason, t.blockedReason ? [t.blockedReason] : t.warnings, Boolean(t.blockedReason)))}
             </div>

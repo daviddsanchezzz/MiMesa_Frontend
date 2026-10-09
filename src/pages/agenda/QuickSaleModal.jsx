@@ -7,6 +7,7 @@ import { bookingsApi, apiError } from '../../services/bookingsApi';
 import { useResources, useServices } from './queries';
 import { staffForServices } from './NewBookingModal';
 import { PAY_METHODS, centsToInput, euros, initials, inputCls, parseEuros } from './utils';
+import { ErrorBanner, Loading } from '../../ui/feedback';
 
 const NONE = [];
 const LAST_PRO = 'quicksale:professional';
@@ -100,7 +101,7 @@ export default function QuickSaleModal({ onClose, onDone }) {
   const noMethodNeeded = !!pack && !tipCents;
   const footer = (
     <div className="space-y-2.5">
-      {error && <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</p>}
+      {error && <ErrorBanner>{error}</ErrorBanner>}
       <div className="flex items-baseline justify-between">
         <span className="text-sm text-gray-500">{pack ? `Bono · ${pack.name}` : 'Total'}</span>
         <span className="text-2xl font-bold tabular-nums text-gray-900">{pack ? (tipCents ? euros(tipCents) : 'Sin cargo') : euros(charged)}</span>
@@ -131,7 +132,7 @@ export default function QuickSaleModal({ onClose, onDone }) {
           {services.length > 8 && (
             <input className={`${inputCls} mb-2`} placeholder="Buscar servicio…" value={search} onChange={(e) => setSearch(e.target.value)} />
           )}
-          {servicesQ.isLoading && <p className="text-sm text-gray-400">Cargando…</p>}
+          {servicesQ.isLoading && <Loading />}
           <div className="flex flex-wrap gap-2">
             {visible.map((s) => (
               <button key={s._id} type="button" onClick={() => toggle(s._id)} className={chip(picked.includes(s._id))}>

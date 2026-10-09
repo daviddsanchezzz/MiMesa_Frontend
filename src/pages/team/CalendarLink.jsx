@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { bookingsApi, apiError } from '../../services/bookingsApi';
 import { btnSecondary } from '../agenda/utils';
 import { confirmDialog } from '../../ui/confirm';
+import { Loading } from '../../ui/feedback';
 
 /**
  * The secret link that puts a professional's appointments in Google Calendar,
@@ -43,7 +44,7 @@ export default function CalendarLink({ resource }) {
         <p className="mt-0.5 text-sm text-gray-500">Ve las citas de {resource.name} en Google Calendar, Apple Calendar o Outlook, junto al resto de tu vida.</p>
       </div>
       {error && <p role="alert" className="text-sm text-rose-700">{error}</p>}
-      {!link && !error && <p className="text-sm text-gray-400">Cargando…</p>}
+      {!link && !error && <Loading />}
       {link && (
         <>
           <div className="flex flex-wrap gap-2">

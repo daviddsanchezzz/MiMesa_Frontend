@@ -9,6 +9,7 @@ import Modal from '../../components/Modal';
 import CustomerListTools from '../../components/CustomerListTools';
 import { queryClient, useData } from '../../lib/query';
 import { useResources } from '../agenda/queries';
+import { ErrorBanner } from '../../ui/feedback';
 
 const NO_SUMMARY = {};
 const NO_RESOURCES = [];
@@ -149,7 +150,7 @@ export default function Customers() {
         </div>
       </div>
 
-      {error && <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</p>}
+      {error && <ErrorBanner>{error}</ErrorBanner>}
 
       {customers && (
         <div className="flex divide-x divide-gray-100 rounded-2xl border border-gray-200 bg-white px-4 py-3 shadow-[0_1px_2px_rgba(16,24,40,0.04)]">

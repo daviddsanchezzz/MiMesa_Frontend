@@ -4,6 +4,7 @@ import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { confirmDialog } from '../../ui/confirm';
 import { inputCls, btnPrimary, btnQuiet } from '../../ui/form';
+import { ErrorBanner } from '../../ui/feedback';
 
 const ROLE_LABELS = { owner: 'Propietario', manager: 'Encargado', staff: 'Personal' };
 
@@ -64,7 +65,7 @@ export default function EmployeeAccessModal({ employee, onClose, onChanged }) {
     <Modal title="Acceso a Vetra" subtitle={fullName} onClose={onClose} size="md">
       <div className="space-y-4">
         {done && <p className="rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{done}</p>}
-        {error && <p className="rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>}
+        {error && <ErrorBanner>{error}</ErrorBanner>}
 
         {member && !done && (
           <>

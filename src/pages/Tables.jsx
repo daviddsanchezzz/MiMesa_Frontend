@@ -9,6 +9,7 @@ import Modal from '../components/Modal';
 import Icon from '../ui/Icon';
 import { PageHeader, PrimaryButton, GhostButton, Segmented, Section } from '../ui/kit';
 import { inputCls, labelCls } from '../ui/form';
+import { ErrorBanner } from '../ui/feedback';
 
 const TABLE_SHAPE_OPTIONS = [
   { value: 'circle', label: 'Circular' },
@@ -236,7 +237,7 @@ export default function Tables() {
             )}
 
             {quickError && (
-              <p className="rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700">{quickError}</p>
+              <ErrorBanner>{quickError}</ErrorBanner>
             )}
           </div>
         </Modal>

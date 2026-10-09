@@ -6,6 +6,7 @@ import Modal from '../components/Modal';
 import Icon from '../ui/Icon';
 import { PrimaryButton, Section, MenuButton, Empty, Segmented } from '../ui/kit';
 import Page from '../ui/Page';
+import { ErrorBanner } from '../ui/feedback';
 import ProfessionalAvatar from '../components/ProfessionalAvatar';
 import { confirmDialog } from '../ui/confirm';
 import { inputCls } from '../ui/form';
@@ -49,15 +50,6 @@ function RoleText({ role }) {
       {ROLE_LABELS[role] || role}
     </span>
   );
-}
-
-function ErrorBanner({ msg, className = '' }) {
-  return msg ? (
-    <p className={`flex items-center gap-2 rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700 ${className}`}>
-      <Icon name="alert" className="w-4 h-4 shrink-0" />
-      {msg}
-    </p>
-  ) : null;
 }
 
 /* Main page */
@@ -194,7 +186,7 @@ export default function Team() {
       <Page title="Accesos" subtitle={`${members.length} ${members.length === 1 ? 'persona' : 'personas'} en tu negocio`}
         primary={isManager ? { label: 'Invitar persona', short: 'Invitar', onClick: () => setShowModal(true) } : undefined} mobileAction={false}>
 
-        <ErrorBanner msg={pageError} />
+        <ErrorBanner>{pageError}</ErrorBanner>
 
         {/* Members */}
         <Section title="Miembros">

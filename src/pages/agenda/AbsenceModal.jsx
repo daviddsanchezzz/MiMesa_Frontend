@@ -4,6 +4,7 @@ import StaffAvatar from './StaffAvatar';
 import { bookingsApi, apiError } from '../../services/bookingsApi';
 import { btnPrimary, btnSecondary, inputCls, labelCls, timeInTz, dateInTz, longDate, absenceText } from './utils';
 import { confirmDialog } from '../../ui/confirm';
+import { ErrorBanner } from '../../ui/feedback';
 
 /**
  * Block time for a professional (holidays, doctor, leaving early…).
@@ -213,7 +214,7 @@ export default function AbsenceModal({ staff, me, isManager, date, tz, colors, o
         )}
 
         {error && (
-          <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</p>
+          <ErrorBanner>{error}</ErrorBanner>
         )}
       </form>
     </Modal>
@@ -250,7 +251,7 @@ export function AbsenceDetailModal({ absence, person, canRemove, onClose, onRemo
       <div className="space-y-2 text-sm text-gray-700">
         <p>{range}</p>
         {absence.reason && <p className="text-gray-500">Motivo: {absence.reason}</p>}
-        {error && <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</p>}
+        {error && <ErrorBanner>{error}</ErrorBanner>}
       </div>
     </Modal>
   );

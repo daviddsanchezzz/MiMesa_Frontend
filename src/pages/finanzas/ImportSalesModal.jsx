@@ -5,6 +5,7 @@ import api from '../../services/api';
 import { FIELDS, buildRows, findHeaderRow, guessMapping, parseDelimited, readTextFile } from '../../lib/tabular';
 import { eur } from '../../lib/format';
 import { selectCls } from '../../ui/form';
+import { ErrorBanner } from '../../ui/feedback';
 
 const SAVED = 'sales-import:columns';
 const readSaved = () => { try { return JSON.parse(window.localStorage.getItem(SAVED) || '{}'); } catch { return {}; } };
@@ -91,7 +92,7 @@ export default function ImportSalesModal({ onClose, onDone }) {
   const changes = plan ? plan.summary.new + plan.summary.update : 0;
   const footer = (
     <div className="space-y-2">
-      {error && <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</p>}
+      {error && <ErrorBanner>{error}</ErrorBanner>}
       <div className="flex gap-2">
         <button type="button" onClick={() => (plan ? setPlan(null) : onClose())} className="h-11 px-4 rounded-xl border border-gray-300 text-sm font-medium text-gray-700">
           {plan ? 'Atrás' : 'Cancelar'}

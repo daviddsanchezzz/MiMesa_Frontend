@@ -3,6 +3,7 @@ import api from '../../services/api';
 import { useData } from '../../lib/query';
 import { TablePreview } from '../../floor/Glyphs';
 import { roomIdOf, shapeOf } from '../../floor/geometry';
+import { Loading } from '../../ui/feedback';
 
 /**
  * Configuración → Mesas y salas: what you have, room by room, and the way into
@@ -29,7 +30,7 @@ export default function TablesSummary() {
           {tables.length ? 'Abrir el plano' : 'Dibujar el plano'}
         </Link>
       </div>
-      {tablesQ.isPending ? <p className="text-sm text-gray-400">Cargando…</p> : groups.length === 0 ? (
+      {tablesQ.isPending ? <Loading /> : groups.length === 0 ? (
         <p className="text-sm text-gray-500">Todavía no hay mesas. En el plano creas las salas, colocas las mesas y dibujas la barra, la entrada…</p>
       ) : (
         <ul className="divide-y divide-gray-100">

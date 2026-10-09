@@ -13,6 +13,7 @@ import Page from '../ui/Page';
 import { fmtDay, fmtShort, parseIso, previousLabel, shiftRange, toIso } from '../lib/periods';
 import { confirmDialog } from '../ui/confirm';
 import { inputCls, selectCls, btnDanger } from '../ui/form';
+import { Loading } from '../ui/feedback';
 
 // ── Color palette (static — color key stored in DB → Tailwind bg class) ───────
 
@@ -58,10 +59,6 @@ function fmtEur(n) {
 
 /** Sections stay plain on every screen; on desktop they sit side by side without boxes. */
 const PANEL = '';
-
-function Loading() {
-  return <p className="py-6 text-sm text-gray-400">Cargando…</p>;
-}
 
 function FormField({ label, children, required }) {
   return (
@@ -1165,7 +1162,7 @@ function ProveedoresTab({ suppliers, loadSuppliers, categories }) {
                   {open && (
                     <li className="pl-8 pr-2 pb-4 pt-1">
                       {detailLoading ? (
-                        <p className="text-sm text-gray-400 py-2">Cargando gastos…</p>
+                        <Loading>Cargando gastos…</Loading>
                       ) : supplierDetail ? (
                         <>
                           <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-400 mb-1">

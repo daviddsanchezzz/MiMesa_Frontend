@@ -20,6 +20,7 @@ import {
 } from './invoiceUtils';
 import { confirmDialog } from '../../ui/confirm';
 import { inputCls } from '../../ui/form';
+import { ErrorBanner } from '../../ui/feedback';
 
 const numberCls = `${inputCls} tabular-nums text-right`;
 const compactNumberCls = `${numberCls} h-10 px-2.5 py-2`;
@@ -412,7 +413,7 @@ export default function InvoiceDetail() {
         </div>
       )}
 
-      {requestError && <p className="rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700" role="alert">{requestError}</p>}
+      {requestError && <ErrorBanner>{requestError}</ErrorBanner>}
 
       {editable && form ? <InvoiceForm form={form} setForm={setForm} errors={errors} isNote={isNote} /> : <ReadOnlyInvoice invoice={invoice} onSupplier={() => navigate(`/compras/proveedores?supplier=${invoice.supplierId}`)} />}
 

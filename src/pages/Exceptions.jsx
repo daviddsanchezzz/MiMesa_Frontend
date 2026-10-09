@@ -5,6 +5,7 @@ import Modal from '../components/Modal';
 import { PageHeader, PrimaryButton, Section, MenuButton, Empty } from '../ui/kit';
 import { confirmDialog } from '../ui/confirm';
 import { inputCls, labelCls } from '../ui/form';
+import { ErrorBanner, Loading } from '../ui/feedback';
 
 const ALL_SHIFTS_KEY = '__all__';
 
@@ -218,11 +219,11 @@ export default function Exceptions({ embedded = false }) {
       {embedded && futureRows.length > 0 && <div className="hidden lg:flex justify-end -mt-4"><PrimaryButton onClick={openCreate}>Nueva excepción</PrimaryButton></div>}
 
       {error && !formOpen && (
-        <p className="rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>
+        <ErrorBanner>{error}</ErrorBanner>
       )}
 
       {loading ? (
-        <p className="py-8 text-sm text-gray-500">Cargando…</p>
+        <Loading />
       ) : futureRows.length === 0 ? (
         <Empty action={<PrimaryButton onClick={openCreate}>Nueva excepción</PrimaryButton>}>
           No hay cierres ni excepciones próximas.
@@ -299,7 +300,7 @@ export default function Exceptions({ embedded = false }) {
           )}
         >
           <form id="exception-form" onSubmit={submit} className="space-y-6">
-            {error && <p className="rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>}
+            {error && <ErrorBanner>{error}</ErrorBanner>}
 
             <div>
               <label className={labelCls} htmlFor="exc-date">Fecha</label>

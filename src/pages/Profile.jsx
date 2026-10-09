@@ -14,6 +14,7 @@ import { bookingsApi } from '../services/bookingsApi';
 import { resizeImage } from './agenda/utils';
 import { confirmDialog } from '../ui/confirm';
 import { inputCls, labelCls } from '../ui/form';
+import { ErrorBanner, Loading } from '../ui/feedback';
 
 const ROLE_LABELS = { owner: 'Propietario', manager: 'Encargado', staff: 'Personal' };
 const EMPTY_BUSINESS = { businessType: 'restaurant', name: '', email: '', phone: '', address: '', cif: '' };
@@ -218,7 +219,7 @@ export default function Profile() {
     }
   };
 
-  if (loading) return <p className="text-sm text-gray-400">Cargando…</p>;
+  if (loading) return <Loading />;
 
   const displayName = user.name || 'Sin nombre';
 
@@ -246,7 +247,7 @@ export default function Profile() {
         </div>
       </header>
 
-      {pageError && <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{pageError}</p>}
+      {pageError && <ErrorBanner>{pageError}</ErrorBanner>}
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-x-10 gap-y-7 items-start">
       <div className="space-y-7">

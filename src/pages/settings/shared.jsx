@@ -65,14 +65,7 @@ export const IconClock = () => (
   </svg>
 );
 
-export function ErrorBanner({ msg }) {
-  if (!msg) return null;
-  return (
-    <div className="bg-red-50 border border-red-200 text-red-700 text-sm rounded-xl px-3 py-2 mb-4">
-      {msg}
-    </div>
-  );
-}
+export { ErrorBanner } from '../../ui/feedback';
 
 export function EmptyState({ onAction, actionLabel, text }) {
   return (

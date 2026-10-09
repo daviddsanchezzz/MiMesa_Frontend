@@ -12,6 +12,7 @@ import {
   DEFAULT_TZ, btnPrimary, btnSecondary, euros, inputCls, timeInTz, dateInTz, addDays, payMethodLabel, waLink,
 } from './utils';
 import { confirmDialog } from '../../ui/confirm';
+import { ErrorBanner } from '../../ui/feedback';
 
 // What each status offers (mirrors the backend transitions):
 // main = big buttons, more = small text links under them.
@@ -243,7 +244,7 @@ export default function BookingDetailModal({ booking, staffById, services = [], 
           </div>
         )}
 
-        {error && <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</p>}
+        {error && <ErrorBanner>{error}</ErrorBanner>}
       </div>
       {moving && (
         <RescheduleModal booking={booking} services={services} staff={staff} tz={tz} onClose={() => setMoving(false)}

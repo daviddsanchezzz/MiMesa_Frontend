@@ -7,6 +7,7 @@ import Page from '../ui/Page';
 import PeriodNavigator, { usePeriod } from '../ui/PeriodNavigator';
 import { previousLabel, shiftRange } from '../lib/periods';
 import { euros, waLink } from './agenda/utils';
+import { Loading } from '../ui/feedback';
 
 // Estadísticas for appointment businesses (restaurants have Analytics).
 
@@ -90,7 +91,7 @@ export default function Estadisticas() {
     <Page title="Estadísticas" subtitle="Qué servicios funcionan, cuándo vienen y quién vuelve." sticky
       toolbar={<PeriodNavigator period={period} dateRange={dateRange} onPeriodChange={onPeriodChange} onShift={onShift} onRangeChange={onRangeChange} />}>
 
-      {q.isLoading && <p className="text-sm text-gray-400">Cargando…</p>}
+      {q.isLoading && <Loading />}
       {q.isError && (
         <div className="py-10 text-center">
           <p className="text-sm text-gray-500">No se han podido cargar las estadísticas.</p>

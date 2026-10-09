@@ -9,6 +9,7 @@ import Icon from '../ui/Icon';
 import { Empty, FigureLine, RowAction, Section, SectionLink, Segmented, Toggle } from '../ui/kit';
 import { dateShort, dateYear } from '../lib/format';
 import { confirmDialog } from '../ui/confirm';
+import { ErrorBanner, Loading } from '../ui/feedback';
 
 /*
  * Vetra panel: every client business in one list (owner, team, activity,
@@ -265,7 +266,7 @@ function BusinessSheet({ b, modules, onClose, onChanged }) {
       ) : null}>
       <div className="space-y-7">
         {notice && <p className="text-sm text-emerald-800 bg-emerald-50 rounded-xl px-3 py-2">{notice}</p>}
-        {error && <p className="text-sm text-rose-700 bg-rose-50 rounded-xl px-3 py-2">{error}</p>}
+        {error && <ErrorBanner>{error}</ErrorBanner>}
 
         <FigureLine items={[
           { value: b.activity.last30d, label: `${b.activity.unit} en 30 días` },
@@ -437,8 +438,8 @@ export default function DevDashboard() {
         </button>
       </div>
 
-      {error && <p className="text-sm text-rose-700 bg-rose-50 rounded-xl px-3 py-2">{error}</p>}
-      {!data && !error && <p className="text-sm text-gray-400">Cargando…</p>}
+      {error && <ErrorBanner>{error}</ErrorBanner>}
+      {!data && !error && <Loading />}
 
       {data && (
         <>

@@ -6,6 +6,7 @@ import Icon from '../ui/Icon';
 import { Section, SectionLink, FigureLine, Empty } from '../ui/kit';
 import { confirmDialog } from '../ui/confirm';
 import { inputCls, labelCls } from '../ui/form';
+import { ErrorBanner } from '../ui/feedback';
 
 const SUBS_PREVIEW = 8;
 const MONTHLY_LIMIT = 6; // campaigns per 30 days (the server enforces it)
@@ -124,7 +125,7 @@ export default function Marketing() {
                 Enviado a {result.sent} {result.sent === 1 ? 'persona' : 'personas'}{result.errors?.length > 0 ? ` (${result.errors.length} fallidos)` : ''}.
               </p>
             )}
-            {error && <p className="rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>}
+            {error && <ErrorBanner>{error}</ErrorBanner>}
 
             {subscribers.length === 0 ? (
               <Empty>Aún no tienes suscriptores. Aparecerán aquí cuando los clientes acepten recibir comunicaciones al reservar.</Empty>

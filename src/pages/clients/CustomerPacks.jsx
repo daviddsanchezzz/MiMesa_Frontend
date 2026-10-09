@@ -4,6 +4,7 @@ import { bookingsApi, apiError } from '../../services/bookingsApi';
 import { PAY_METHODS, btnPrimary, btnSecondary, centsToInput, euros, inputCls, labelCls, parseEuros } from '../agenda/utils';
 import { Section, SectionLink } from '../../ui/kit';
 import { dateYear } from '../../lib/format';
+import { ErrorBanner } from '../../ui/feedback';
 
 const niceDate = dateYear;
 
@@ -85,7 +86,7 @@ function SellModal({ customer, packs, onClose, onSold }) {
           </div>
         </div>
         <input className={inputCls} placeholder="Nota (opcional)" value={note} onChange={(e) => setNote(e.target.value)} maxLength={300} />
-        {error && <p className="text-sm text-rose-600 bg-rose-50 rounded-xl px-3 py-2">{error}</p>}
+        {error && <ErrorBanner>{error}</ErrorBanner>}
       </div>
     </Modal>
   );

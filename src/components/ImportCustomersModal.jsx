@@ -3,6 +3,7 @@ import Modal from './Modal';
 import api from '../services/api';
 import { decodeFile, parseCsv, guessColumns, rowsToCustomers } from '../lib/csv';
 import { inputCls, btnPrimary, btnSecondary } from '../ui/form';
+import { ErrorBanner } from '../ui/feedback';
 
 const BATCH = 300;
 const FIELDS = [
@@ -158,7 +159,7 @@ export default function ImportCustomersModal({ onClose, onDone }) {
           </div>
         )}
 
-        {error && <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</p>}
+        {error && <ErrorBanner>{error}</ErrorBanner>}
       </div>
     </Modal>
   );

@@ -21,6 +21,7 @@ import ProfessionalAccess, {
 import CreateProfessional from './CreateProfessional';
 import ProfessionalGeneral from './ProfessionalGeneral';
 import { confirmLeave } from '../../lib/unsavedChanges';
+import { Loading } from '../../ui/feedback';
 
 const servicesOf = (r, services) =>
   services.filter((s) =>
@@ -145,7 +146,7 @@ function TeamContent() {
             </button>
           </>
         ) : (
-          <p className="text-sm text-gray-500">Cargando equipo…</p>
+          <Loading>Cargando equipo…</Loading>
         )}
       </div>
     );

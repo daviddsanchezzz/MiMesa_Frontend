@@ -6,6 +6,7 @@ import { PrimaryButton, Toggle, MenuButton, Empty } from '../ui/kit';
 import { dateNumeric } from '../lib/format';
 import { confirmDialog } from '../ui/confirm';
 import { inputCls, labelCls } from '../ui/form';
+import { ErrorBanner, Loading } from '../ui/feedback';
 
 
 export default function PromoCodes() {
@@ -78,7 +79,7 @@ export default function PromoCodes() {
         <PrimaryButton onClick={() => setCreating(true)} className="hidden lg:inline-flex">Nuevo código</PrimaryButton>
       </div>
 
-      {error && !creating && <p className="rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>}
+      {error && !creating && <ErrorBanner>{error}</ErrorBanner>}
 
       {creating && (
         <Modal title="Nuevo código promocional" subtitle="Lo introducen al reservar en tu web" size="md" onClose={closeCreate}
@@ -95,7 +96,7 @@ export default function PromoCodes() {
             </div>
           )}>
           <form id="promo-form" onSubmit={handleCreate} className="space-y-4">
-            {error && <p className="rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>}
+            {error && <ErrorBanner>{error}</ErrorBanner>}
             <div>
               <label className={labelCls} htmlFor="promo-code">Código</label>
               <input id="promo-code" className={`${inputCls} uppercase font-mono tracking-wide`} value={form.code} required maxLength={32}
@@ -127,7 +128,7 @@ export default function PromoCodes() {
       )}
 
       {loading ? (
-        <p className="py-6 text-sm text-gray-500">Cargando…</p>
+        <Loading />
       ) : promos.length === 0 ? (
         <Empty>No hay códigos promocionales.</Empty>
       ) : (

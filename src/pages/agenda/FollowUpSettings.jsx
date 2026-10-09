@@ -3,6 +3,7 @@ import { bookingsApi, apiError } from '../../services/bookingsApi';
 import { btnPrimary, inputCls, labelCls } from './utils';
 import { useAuth } from '../../context/AuthContext';
 import UpgradeHint from '../../components/UpgradeHint';
+import { ErrorBanner, Loading } from '../../ui/feedback';
 
 function Toggle({ checked, onChange, label }) {
   return (
@@ -49,7 +50,7 @@ export default function FollowUpSettings() {
       .catch((err) => setError(apiError(err)));
   }, []);
 
-  if (!form) return error ? <p className="text-sm text-rose-600">{error}</p> : <p className="text-sm text-gray-400">Cargando…</p>;
+  if (!form) return error ? <p className="text-sm text-rose-600">{error}</p> : <Loading />;
 
   const dirty = form.rebook !== data.rebook.enabled || form.review !== data.review.enabled
     || form.url !== data.review.url || Number(form.delay) !== data.review.delayHours;
@@ -119,7 +120,7 @@ export default function FollowUpSettings() {
         <p>La opinión se pide a todos los clientes por igual y sin ofrecer nada a cambio, como exige Google.</p>
       </div>
 
-      {error && <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</p>}
+      {error && <ErrorBanner>{error}</ErrorBanner>}
       <div className="flex items-center gap-3">
         <button type="button" className={btnPrimary} disabled={!dirty || saving} onClick={save}>{saving ? 'Guardando…' : 'Guardar'}</button>
         {saved && !dirty && <span className="text-sm text-emerald-700">Guardado</span>}

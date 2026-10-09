@@ -14,6 +14,7 @@ import { previousLabel, shiftRange } from '../lib/periods';
 import { notify } from '../lib/notify';
 import { confirmDialog } from '../ui/confirm';
 import { inputCls, labelCls, btnPrimary, btnQuiet, btnDangerQuiet } from '../ui/form';
+import { ErrorBanner, Loading } from '../ui/feedback';
 
 
 const tableHead = 'hidden md:grid grid-cols-12 gap-4 px-2 pb-2 border-b border-gray-200 text-[11px] font-semibold uppercase tracking-wide text-gray-400';
@@ -531,8 +532,8 @@ export default function Compras() {
       toolbar={tab === 'summary' && <PeriodNavigator period={period} dateRange={dateRange} onPeriodChange={onPeriodChange} onShift={onShift} onRangeChange={onRangeChange} />}
       tabs={{ value: tab, onChange: selectTab, options: [['summary', 'Resumen'], ['invoices', 'Facturas', reviewCount], ['notes', 'Albaranes'], ['orders', 'Pedidos', pendingOrders], ['suppliers', 'Proveedores']] }}>
 
-      {loading && <p className="text-sm text-gray-400">Cargando…</p>}
-      {error && <p className="rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</p>}
+      {loading && <Loading />}
+      {error && <ErrorBanner>{error}</ErrorBanner>}
 
       {!loading && tab === 'summary' && (
         <ComprasResumen invoices={invoices} orders={orders} period={period} dateRange={dateRange} onGo={selectTab} onNewOrder={() => setOrderModal({})}
@@ -723,7 +724,7 @@ export default function Compras() {
         />
       )}
 
-      {supplierDetailLoading && !supplierDetail && <p className="text-sm text-gray-400">Cargando proveedor…</p>}
+      {supplierDetailLoading && !supplierDetail && <Loading>Cargando proveedor…</Loading>}
       {supplierDetail && (
         <SupplierDetailModal
           data={supplierDetail}
@@ -852,7 +853,7 @@ function SupplierModal({ supplier, onClose, onSaved }) {
         </div>
       )}>
       <form id="supplier-form" onSubmit={submit} className="space-y-4">
-        {error && <p className="text-sm text-rose-700 bg-rose-50 rounded-xl px-3 py-2">{error}</p>}
+        {error && <ErrorBanner>{error}</ErrorBanner>}
         <div><label className={labelCls}>Nombre *</label><input className={inputCls} value={form.name} onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))} required /></div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div><label className={labelCls}>Persona de contacto</label><input className={inputCls} value={form.contactName} onChange={(e) => setForm((prev) => ({ ...prev, contactName: e.target.value }))} /></div>
@@ -926,7 +927,7 @@ function ProductModal({ product, suppliers, onClose, onSaved }) {
         </div>
       )}>
       <form id="product-form" onSubmit={submit} className="space-y-4">
-        {error && <p className="text-sm text-rose-700 bg-rose-50 rounded-xl px-3 py-2">{error}</p>}
+        {error && <ErrorBanner>{error}</ErrorBanner>}
         <div>
           <label className={labelCls}>Proveedor *</label>
           <select className={inputCls} value={form.supplierId} onChange={(e) => setForm((prev) => ({ ...prev, supplierId: e.target.value }))} required>
@@ -1042,7 +1043,7 @@ function OrderModal({ order, suppliers, products, onClose, onSaved }) {
         </div>
       )}>
       <form id="order-form" onSubmit={submit} className="space-y-4">
-        {error && <p className="text-sm text-rose-700 bg-rose-50 rounded-xl px-3 py-2">{error}</p>}
+        {error && <ErrorBanner>{error}</ErrorBanner>}
         {step === 1 && (
           suppliers.filter((sp) => sp.isActive).length === 0 ? (
             <p className="text-sm text-gray-500 py-4 text-center">No hay proveedores activos. Añade uno en la pestaña Proveedores.</p>

@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import api from '../../services/api';
 import Modal from '../../components/Modal';
 import { Segmented } from '../../ui/kit';
+import { ErrorBanner } from '../../ui/feedback';
 
 const input = 'w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500';
 const label = 'block text-xs font-medium text-gray-500 mb-1';
@@ -97,7 +98,7 @@ export default function NewClientModal({ onClose, onCreated }) {
   return (
     <Modal title="Nuevo cliente" subtitle="Creamos su negocio ya preparado y le invitamos a activarlo" onClose={() => !saving && onClose()} size="md">
       <form onSubmit={submit} className="space-y-4">
-        {error && <div className="text-sm text-rose-700 bg-rose-50 rounded-xl px-4 py-3">{error}</div>}
+        {error && <ErrorBanner>{error}</ErrorBanner>}
         <p className="text-[13px] font-semibold uppercase tracking-wide text-gray-400">Negocio</p>
         <div>
           <label className={label}>Nombre *</label>

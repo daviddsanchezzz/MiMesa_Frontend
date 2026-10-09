@@ -6,6 +6,7 @@ import ScheduleEditor, { scheduleForApi } from './agenda/ScheduleEditor';
 import ShareLink from './agenda/ShareLink';
 import PublicAddressEditor from '../components/PublicAddressEditor';
 import { btnPrimary, btnSecondary, centsToInput, inputCls, parseEuros, summarizeRules } from './agenda/utils';
+import { ErrorBanner } from '../ui/feedback';
 
 const STEPS = [
   ['horario', 'Horario'],
@@ -119,7 +120,7 @@ export default function SetupWizard() {
             </>
           )}
 
-          {error && <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</p>}
+          {error && <ErrorBanner>{error}</ErrorBanner>}
         </div>
         <p className="text-center text-xs text-gray-400">Todo se puede cambiar después en Configuración.</p>
       </div>

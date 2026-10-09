@@ -3,6 +3,7 @@ import Modal from '../../components/Modal';
 import { bookingsApi, apiError } from '../../services/bookingsApi';
 import { btnPrimary, btnSecondary, centsToInput, euros, inputCls, labelCls, parseEuros } from './utils';
 import { confirmDialog } from '../../ui/confirm';
+import { ErrorBanner } from '../../ui/feedback';
 
 const VALIDITY = [[null, 'No caduca'], [90, '3 meses'], [180, '6 meses'], [365, '1 año'], [730, '2 años']];
 
@@ -87,7 +88,7 @@ function PackModal({ pack, services, onClose, onSaved }) {
           </ul>
           <p className="mt-1 text-xs text-gray-500">Si eliges servicios, el bono solo se puede usar en citas hechas solo de esos servicios.</p>
         </div>
-        {error && <p className="text-sm text-rose-600 bg-rose-50 rounded-xl px-3 py-2">{error}</p>}
+        {error && <ErrorBanner>{error}</ErrorBanner>}
       </div>
     </Modal>
   );

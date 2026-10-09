@@ -3,6 +3,7 @@ import Modal from '../../components/Modal';
 import api from '../../services/api';
 import { Segmented } from '../../ui/kit';
 import { ALLERGENS, chipCls, inputCls, languageName } from './labels';
+import { ErrorBanner } from '../../ui/feedback';
 
 const WEEK = [[1, 'L'], [2, 'M'], [3, 'X'], [4, 'J'], [5, 'V'], [6, 'S'], [0, 'D']];
 const STARTER = [{ name: { es: 'Primeros' }, options: [] }, { name: { es: 'Segundos' }, options: [] }, { name: { es: 'Postre' }, options: [] }];
@@ -81,7 +82,7 @@ export default function DailyMenuModal({ daily, languages, onClose, onSaved }) {
 
   const footer = (
     <div className="space-y-2">
-      {error && <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</p>}
+      {error && <ErrorBanner>{error}</ErrorBanner>}
       {languages.length > 1 && (
         <button type="button" disabled={translating} onClick={autoTranslate} className="w-full h-10 rounded-xl border border-gray-200 text-sm font-semibold text-violet-700 hover:bg-violet-50 disabled:opacity-50">
           {translating ? 'Traduciendo…' : '✨ Traducir lo que falta'}

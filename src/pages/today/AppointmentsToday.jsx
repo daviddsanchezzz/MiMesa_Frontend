@@ -15,6 +15,7 @@ import {
   DEFAULT_TZ, addDays, euros, longDate, minutesInTz, staffColors, timeInTz, toHHMM, todayIn, waLink, windowsForDate, pluralize, absenceSpan,
 } from '../agenda/utils';
 import { btnPrimary } from '../../ui/form';
+import { ErrorBanner, Loading } from '../../ui/feedback';
 
 
 function staffIdsOf(b, staffById) {
@@ -58,7 +59,7 @@ export default function AppointmentsToday() {
   const staffById = useMemo(() => Object.fromEntries((data?.resources || []).map((r) => [r._id, r])), [data]);
   const staff = useMemo(() => (data?.resources || []).filter((r) => r.kind === 'staff'), [data]);
 
-  if (error) return <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</p>;
+  if (error) return <ErrorBanner>{error}</ErrorBanner>;
 
   const s = data?.stats;
   const bookings = (data?.bookings || []).slice().sort((a, b) => new Date(a.start) - new Date(b.start));
@@ -182,7 +183,7 @@ export default function AppointmentsToday() {
         </div>
       </header>
 
-      {!data && <p className="text-sm text-gray-400">Cargando…</p>}
+      {!data && <Loading />}
 
       {setup && !setupDone && (
         <section className="mb-8 rounded-2xl bg-violet-50/70 p-5 space-y-3">

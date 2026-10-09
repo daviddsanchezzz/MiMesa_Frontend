@@ -8,6 +8,7 @@ import { DayNavigator } from '../ui/PeriodNavigator';
 import { queryClient, useData } from '../lib/query';
 import { useResources } from './agenda/queries';
 import { confirmDialog } from '../ui/confirm';
+import { ErrorBanner, Loading } from '../ui/feedback';
 
 const NONE = [];
 import { bookingTone } from '../lib/status';
@@ -73,8 +74,8 @@ export default function Caja() {
           label={`${new Date(`${date}T12:00:00`).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}${closed ? ' · cerrada' : ''}`} />
       )}>
 
-      {error && <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2 mb-4">{error}</p>}
-      {!data && !error && <p className="text-sm text-gray-400">Cargando…</p>}
+      {error && <ErrorBanner className="mb-4">{error}</ErrorBanner>}
+      {!data && !error && <Loading />}
 
       {data && (
         <>

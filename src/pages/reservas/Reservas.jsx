@@ -12,6 +12,7 @@ import useRestaurantDay from './useRestaurantDay';
 import ReservationSheet from './ReservationSheet';
 import PendingSheet from './PendingSheet';
 import { ReservationRow, groupByShift, live, peopleOf, plural } from './parts';
+import { Loading } from '../../ui/feedback';
 
 const ReservationsLegacy = lazy(() => import('../Reservations'));
 const ServiceFloor = lazy(() => import('../../floor/ServiceFloor'));
@@ -55,7 +56,7 @@ function DayList({ date, today, tz, showCancelled, day }) {
       )}
 
       {loading ? (
-        <p className="text-sm text-gray-400 py-8">Cargando…</p>
+        <Loading />
       ) : shifts.length === 0 && visible.length === 0 ? (
         <Empty>Este día el restaurante está cerrado.</Empty>
       ) : (
@@ -159,12 +160,12 @@ export default function Reservas() {
       ) : view === 'map' ? (
         <>
           <DayStrip date={date} today={today} counts={counts} onChange={setDate} />
-          <Suspense fallback={<p className="text-sm text-gray-400">Cargando…</p>}>
+          <Suspense fallback={<Loading />}>
             <ServiceFloor key={date} date={date} today={today} tz={tz} />
           </Suspense>
         </>
       ) : (
-        <Suspense fallback={<p className="text-sm text-gray-400">Cargando…</p>}>
+        <Suspense fallback={<Loading />}>
           <ReservationsLegacy hideTabs />
         </Suspense>
       )}

@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { statusConfig, Avatar, TableCell } from '../components/ReservationCard';
 import Calendar from './Calendar';
 import { useSetMobileHeader } from '../context/MobileHeaderContext';
+import { Loading } from '../ui/feedback';
 
 const MAP_WORLD_W = 2400;
 const MAP_CHAIR_W = 18;
@@ -1569,7 +1570,7 @@ export default function Reservations({ hideTabs = false }) {
             <div>
               <p className="text-xs font-semibold text-gray-600 mb-2">Selecciona un horario para el {pendingProposal.date}</p>
               {pendingProposalSlots.length === 0 ? (
-                <p className="text-xs text-gray-400 italic">Cargando horarios...</p>
+                <Loading>Cargando horarios...</Loading>
               ) : (() => {
                 const grouped = {};
                 pendingProposalSlots.forEach((s) => {

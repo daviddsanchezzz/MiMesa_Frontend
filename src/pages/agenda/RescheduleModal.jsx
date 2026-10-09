@@ -3,6 +3,7 @@ import Modal from '../../components/Modal';
 import { bookingsApi, apiError } from '../../services/bookingsApi';
 import { staffForService } from './NewBookingModal';
 import { btnPrimary, btnSecondary, dateInTz, euros, inputCls, labelCls, longDate, timeInTz, DEFAULT_TZ } from './utils';
+import { ErrorBanner } from '../../ui/feedback';
 
 /**
  * Move an appointment: another day or time and, if needed, other services or
@@ -146,7 +147,7 @@ export default function RescheduleModal({ booking, services, staff, tz = DEFAULT
           </label>
         )}
 
-        {error && <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</p>}
+        {error && <ErrorBanner>{error}</ErrorBanner>}
 
         <div className="flex justify-end gap-2 pt-1">
           <button type="button" className={btnSecondary} onClick={onClose}>Volver</button>

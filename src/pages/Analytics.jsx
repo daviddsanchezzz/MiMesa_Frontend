@@ -5,6 +5,7 @@ import { useData } from '../lib/query';
 import { dateShort } from '../lib/format';
 import { Hero, Section, Segmented } from '../ui/kit';
 import Page from '../ui/Page';
+import { Loading } from '../ui/feedback';
 
 const PERIODS = [[7, '7 días'], [30, '30 días'], [90, '90 días']];
 
@@ -93,7 +94,7 @@ export default function Estadisticas() {
       subtitle={data?.range ? `Del ${dateShort(data.range.from)} al ${dateShort(data.range.to)}` : 'Cómo van las reservas'}
       toolbar={<Segmented full value={period} onChange={setPeriod} options={PERIODS} />}>
 
-      {loading && <p className="text-sm text-gray-400">Cargando…</p>}
+      {loading && <Loading />}
 
       {!loading && error === 'upgrade' && (
         <div className="py-12 text-center max-w-sm mx-auto">

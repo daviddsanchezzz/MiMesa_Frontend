@@ -2,6 +2,7 @@ import { useState } from 'react';
 import Modal from '../../components/Modal';
 import { bookingsApi, apiError } from '../../services/bookingsApi';
 import { btnPrimary, btnSecondary, inputCls, labelCls } from './utils';
+import { ErrorBanner } from '../../ui/feedback';
 
 function toForm(service) {
   const staffReq = (service?.requirements || []).find((r) => r.kind === 'staff');
@@ -158,7 +159,7 @@ export default function ServiceFormModal({ service, staff, onClose, onSaved }) {
           )}
         </div>
 
-        {error && <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</p>}
+        {error && <ErrorBanner>{error}</ErrorBanner>}
 
         <div className="flex justify-end gap-2">
           <button type="button" className={btnSecondary} onClick={onClose}>Cancelar</button>

@@ -12,6 +12,7 @@ import useRestaurantDay, { tablesOf } from '../reservas/useRestaurantDay';
 import ReservationSheet from '../reservas/ReservationSheet';
 import PendingSheet from '../reservas/PendingSheet';
 import { ReservationRow, ShiftMeter, groupByShift, live, peopleOf, plural } from '../reservas/parts';
+import { Loading } from '../../ui/feedback';
 
 function nowMinutes(tz) {
   const parts = new Intl.DateTimeFormat('en-GB', { timeZone: tz, hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date());
@@ -166,7 +167,7 @@ export default function RestaurantToday() {
             </Section>
           )}
           <Section title="Tu día">
-            {loading ? <p className="text-sm text-gray-400 py-6">Cargando…</p>
+            {loading ? <Loading />
               : shifts.length === 0 ? (
                 <Empty action={isManager && <Link to="/configuracion" className="text-sm font-semibold text-violet-700">Revisar turnos</Link>}>Hoy no hay turnos abiertos.</Empty>
               ) : (

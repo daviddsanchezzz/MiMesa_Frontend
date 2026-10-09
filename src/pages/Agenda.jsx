@@ -12,6 +12,7 @@ import { Segmented } from '../ui/kit';
 import NewBookingModal from './agenda/NewBookingModal';
 import { useAbsences, useBookings, useResources, useSchedule, useServices, refreshBookings } from './agenda/queries';
 import { useData } from '../lib/query';
+import { ErrorBanner, Loading } from '../ui/feedback';
 
 const NONE = [];
 const NO_SCHEDULES = {};
@@ -231,10 +232,10 @@ export default function Agenda() {
         )}
       </div>
 
-      {error && <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</p>}
+      {error && <ErrorBanner>{error}</ErrorBanner>}
 
       {loading ? (
-        <p className="text-sm text-gray-400">Cargando…</p>
+        <Loading />
       ) : (!staff.length || !services.length) ? (
         <div data-page-scroll className="min-h-0 overflow-y-auto bg-white rounded-2xl border border-gray-200 p-8 text-center space-y-3">
           <p className="text-base font-semibold text-gray-900">Prepara tu agenda</p>

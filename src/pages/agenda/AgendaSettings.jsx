@@ -11,6 +11,7 @@ import { useAuth } from '../../context/AuthContext';
 import UpgradeHint from '../../components/UpgradeHint';
 import { PRICES } from '../../lib/billing';
 import { confirmDialog } from '../../ui/confirm';
+import { ErrorBanner, Loading } from '../../ui/feedback';
 
 const KIND_LABEL = { staff: 'Profesional', space: 'Sala o espacio', equipment: 'Equipo' };
 
@@ -73,7 +74,7 @@ function BusinessHours({ onSaved }) {
           <p className="text-sm font-medium text-gray-900 mt-0.5">{summarizeRules(scheduleForApi(value).rules)}</p>
         </div>
       )}
-      {value ? <ScheduleEditor value={value} onChange={setValue} /> : <p className="text-sm text-gray-400">Cargando…</p>}
+      {value ? <ScheduleEditor value={value} onChange={setValue} /> : <Loading />}
       <div className={`flex flex-wrap items-center gap-3 ${dirty ? 'sticky bottom-3 z-10 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5 shadow-sm' : ''}`}>
         <button type="button" className={btnPrimary} onClick={save} disabled={saving || !value || !dirty}>{saving ? 'Guardando…' : 'Guardar horario'}</button>
         {dirty && !saving && (
@@ -232,7 +233,7 @@ export function StaffServicesModal({ resource, services, staff, onClose, onSaved
             <span className="text-xs text-gray-500">{s.durationMin} min · {euros(s.price?.amount)}</span>
           </label>
         ))}
-        {error && <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</p>}
+        {error && <ErrorBanner>{error}</ErrorBanner>}
         <div className="flex justify-end gap-2 pt-2">
           {!inline && <button type="button" className={btnSecondary} onClick={onClose}>Cancelar</button>}
           <button type="button" className={btnPrimary} onClick={save} disabled={saving}>{saving ? 'Guardando…' : 'Guardar'}</button>
@@ -274,7 +275,7 @@ function LinkUserModal({ resource, members, onClose, onSaved }) {
         {active.length <= 1 && (
           <p className="text-xs text-gray-500">Para vincular a otra persona, invítala primero desde <b>Equipo</b>.</p>
         )}
-        {error && <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</p>}
+        {error && <ErrorBanner>{error}</ErrorBanner>}
         <div className="flex justify-end gap-2 pt-2">
           <button type="button" className={btnSecondary} onClick={onClose}>Cancelar</button>
           <button type="button" className={btnPrimary} onClick={save} disabled={saving}>{saving ? 'Guardando…' : 'Guardar'}</button>
@@ -437,7 +438,7 @@ function Resources({ resources, services, reload, spacesOnly = false }) {
           Tu plan incluye {maxPros} profesional.{resting.size > 0 && ` ${resting.size === 1 ? 'Quien está' : 'Quienes están'} «en pausa» no recibe${resting.size === 1 ? '' : 'n'} citas nuevas.`} Con Pro ({PRICES.pro}/mes, {PRICES.proIncluded} profesionales incluidos) trabajas con tu equipo.
         </UpgradeHint>
       )}
-      {error && <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</p>}
+      {error && <ErrorBanner>{error}</ErrorBanner>}
       {editingSchedule && <ResourceScheduleModal resource={editingSchedule} onClose={() => setEditingSchedule(null)} />}
       {linking && (
         <LinkUserModal resource={linking} members={members} onClose={() => setLinking(null)} onSaved={() => { setLinking(null); reload(); }} />
@@ -561,27 +562,27 @@ function useSetupData() {
   return { resources, services, reload, error };
 }
 
-function Loading({ error }) {
+function SetupState({ error }) {
   return error
-    ? <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</p>
-    : <p className="text-sm text-gray-400">Cargando…</p>;
+    ? <ErrorBanner>{error}</ErrorBanner>
+    : <Loading />;
 }
 
 export function ProfessionalsSettings() {
   const { resources, services, reload, error } = useSetupData();
-  if (!resources || !services) return <Loading error={error} />;
+  if (!resources || !services) return <SetupState error={error} />;
   return <Resources resources={resources} services={services} reload={reload} />;
 }
 
 export function SpacesSettings() {
   const { resources, services, reload, error } = useSetupData();
-  if (!resources || !services) return <Loading error={error} />;
+  if (!resources || !services) return <SetupState error={error} />;
   return <Resources spacesOnly resources={resources.filter((r) => r.kind !== 'staff')} services={services} reload={reload} />;
 }
 
 export function ServicesSettings() {
   const { resources, services, reload, error } = useSetupData();
-  if (!resources || !services) return <Loading error={error} />;
+  if (!resources || !services) return <SetupState error={error} />;
   return <Services services={services} staff={resources.filter((r) => r.kind === 'staff')} reload={reload} />;
 }
 

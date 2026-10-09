@@ -6,6 +6,7 @@ import invoicesApi from '../../services/invoicesApi';
 import Icon from '../../ui/Icon';
 import { GhostButton, PageHeader, PrimaryButton } from '../../ui/kit';
 import { apiErrorMessage } from './invoiceUtils';
+import { ErrorBanner } from '../../ui/feedback';
 
 const MAX_SIZE = 10 * 1024 * 1024;
 const ALLOWED_TYPES = new Set(['application/pdf', 'image/jpeg', 'image/png', 'image/webp']);
@@ -152,7 +153,7 @@ export default function InvoiceUpload() {
         <input ref={fileInput} type="file" accept="application/pdf,image/jpeg,image/png,image/webp,.pdf,.jpg,.jpeg,.png,.webp" className="sr-only" onClick={(e) => { e.currentTarget.value = ''; }} onChange={(e) => choose(e.target.files?.[0])} />
       </div>
 
-      {error && <p className="rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700" role="alert">{error}</p>}
+      {error && <ErrorBanner>{error}</ErrorBanner>}
 
       <div className="flex flex-col-reverse sm:flex-row sm:justify-between gap-2">
         <GhostButton onClick={() => navigate(backTo)} className="h-11 rounded-xl">Cancelar</GhostButton>

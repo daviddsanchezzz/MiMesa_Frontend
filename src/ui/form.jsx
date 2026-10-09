@@ -3,7 +3,7 @@
  * Textarea) or the class names (inputCls, labelCls, btn*) where a component does not fit.
  */
 
-import { inputCls, labelCls } from './formStyles.js';
+import { inputCls, labelCls, selectCls } from './formStyles.js';
 export * from './formStyles.js';
 
 /** A labelled field: label on top, the control, then a hint or the error below. */

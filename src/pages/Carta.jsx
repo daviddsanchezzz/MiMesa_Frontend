@@ -14,6 +14,7 @@ import ClearMenuModal from './carta/ClearMenuModal';
 import { ALLERGENS, TAGS, eur, languageName, textOf } from './carta/labels';
 import { dateShort as shortDate } from '../lib/format';
 import { confirmDialog } from '../ui/confirm';
+import { Loading } from '../ui/feedback';
 
 const ICONS = Object.fromEntries([...ALLERGENS, ...TAGS].map((x) => [x.key, x.icon]));
 
@@ -202,7 +203,7 @@ export default function Carta() {
           placeholder="Buscar un plato…" value={search} onChange={(e) => setSearch(e.target.value)} />
       )}
 
-      {q.isLoading && <p className="text-sm text-gray-400">Cargando…</p>}
+      {q.isLoading && <Loading />}
       {menu && categories.length === 0 && (
         <Empty>
           Aún no hay carta.{manager ? ' Importa tus platos o crea la primera categoría.' : ''}

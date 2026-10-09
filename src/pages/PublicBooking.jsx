@@ -4,6 +4,7 @@ import { useParams, useSearchParams } from 'react-router-dom';
 import { publicBookingsApi, apiError } from '../services/bookingsApi';
 import { addDays, euros, timeInTz, todayIn } from './agenda/utils';
 import ProfessionalAvatar from '../components/ProfessionalAvatar';
+import { ErrorBanner } from '../ui/feedback';
 
 /**
  * Public page where a customer books an appointment on their own:
@@ -246,7 +247,7 @@ export default function PublicBooking({ businessId: businessIdProp, slug = null 
         </div>
       )}
 
-      {error && <p className="text-sm text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</p>}
+      {error && <ErrorBanner>{error}</ErrorBanner>}
 
       {step === 'service' && (
         <section className="space-y-4">

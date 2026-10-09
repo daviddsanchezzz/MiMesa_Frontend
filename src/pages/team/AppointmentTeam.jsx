@@ -9,6 +9,7 @@ import { DEFAULT_TZ, inputCls, labelCls, staffColors, todayIn } from '../agenda/
 import PeriodNavigator from '../../ui/PeriodNavigator';
 import { Empty, FigureLine, GhostButton, Hero, PrimaryButton, Section, SectionLink } from '../../ui/kit';
 import { eur } from '../../lib/format';
+import { ErrorBanner, Loading } from '../../ui/feedback';
 
 const MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 const eurRound = (n) => eur(Math.round(n || 0));
@@ -124,7 +125,7 @@ export function PayModal({ person, onClose, onSaved }) {
           </div>
           <p className="text-xs text-gray-500 mt-2">Si un servicio tiene su propio % de comisión, se usa ese para ese servicio.</p>
         </Section>
-        {error && <p className="text-sm text-rose-700 rounded-xl bg-rose-50 px-3 py-2">{error}</p>}
+        {error && <ErrorBanner>{error}</ErrorBanner>}
       </div>
     </Modal>
   );
@@ -160,7 +161,7 @@ export function PaymentModal({ person, onClose, onSaved }) {
           <label className={labelCls}>Nota</label>
           <input className={inputCls} placeholder="Nómina, adelanto, propinas…" value={notes} onChange={(e) => setNotes(e.target.value)} maxLength={300} />
         </div>
-        {error && <p className="text-sm text-rose-700 rounded-xl bg-rose-50 px-3 py-2">{error}</p>}
+        {error && <ErrorBanner>{error}</ErrorBanner>}
       </div>
     </Modal>
   );
@@ -245,8 +246,8 @@ export default function AppointmentTeam() {
       </div>
 
       <div key={month} data-page-scroll className="flex-1 min-h-0 overflow-y-auto overscroll-contain pb-6 space-y-6 lg:space-y-8">
-      {error && <p className="text-sm text-rose-700 rounded-xl bg-rose-50 px-3 py-2">{error}</p>}
-      {!data && !error && <p className="text-sm text-gray-400">Cargando…</p>}
+      {error && <ErrorBanner>{error}</ErrorBanner>}
+      {!data && !error && <Loading />}
 
       {data && (
         <>
@@ -398,7 +399,7 @@ export function ProfessionalPay({ resource, month, onMonthChange }) {
   return <section className="space-y-5">
     <h2 className="font-semibold">Remuneración</h2>
     <label className="block text-sm">Período<input type="month" min="2000-01" max={today.slice(0, 7)} className={inputCls} value={month} onChange={(e) => onMonthChange(validMonth(e.target.value, today.slice(0, 7)))} /></label>
-    {error ? <p role="alert" className="text-sm text-rose-700">{error}</p> : !data ? <p className="text-sm text-gray-500">Cargando…</p> : <>
+    {error ? <p role="alert" className="text-sm text-rose-700">{error}</p> : !data ? <Loading /> : <>
       <p className="font-medium">{payText(data.pay)}</p><button className="min-h-11 text-sm font-semibold text-violet-700" onClick={() => setModal('pay')}>{data.pay ? 'Editar remuneración' : 'Configurar remuneración'}</button>
       <FigureLine items={[{ label: 'generado', value: eur(data.billed + data.products) }, { label: 'citas', value: data.appointments }, { label: 'coste estimado', value: eur(data.salary + data.commission) }]} />
       <Breakdown p={data} onEdit={() => setModal('pay')} onPay={() => setModal('payment')} />

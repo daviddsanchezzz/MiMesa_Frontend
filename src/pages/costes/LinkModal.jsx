@@ -4,6 +4,7 @@ import api from '../../services/api';
 import { Segmented } from '../../ui/kit';
 import { inputCls } from '../carta/labels';
 import { UNIT_NAME, money, perUnit, shortDate } from './format';
+import { ErrorBanner } from '../../ui/feedback';
 
 const parse = (v) => Number(String(v ?? '').replace(',', '.'));
 
@@ -48,7 +49,7 @@ export default function LinkModal({ group, ingredients, onClose, onDone }) {
 
   const footer = (
     <div className="space-y-2">
-      {error && <p className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-600">{error}</p>}
+      {error && <ErrorBanner>{error}</ErrorBanner>}
       <button type="button" onClick={save} disabled={saving} className="h-12 w-full rounded-xl bg-violet-600 font-semibold text-white hover:bg-violet-700 disabled:opacity-50">
         {saving ? 'Vinculando…' : group.lines > 1 ? `Vincular las ${group.lines} líneas` : 'Vincular'}
       </button>

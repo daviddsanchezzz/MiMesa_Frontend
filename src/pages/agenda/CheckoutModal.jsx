@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import Modal from '../../components/Modal';
 import { bookingsApi, apiError } from '../../services/bookingsApi';
 import { PAY_METHODS, btnSecondary, centsToInput, euros, inputCls, labelCls, parseEuros, timeInTz } from './utils';
+import { ErrorBanner } from '../../ui/feedback';
 
 const moneyInput = `${inputCls} tabular-nums text-right`;
 
@@ -198,7 +199,7 @@ export default function CheckoutModal({ booking, tz, onClose, onPaid }) {
           <div className="flex justify-between pt-1 border-t border-gray-200 text-base font-bold text-gray-900"><span>Total a cobrar</span><span className="tabular-nums">{euros(calc.charged)}</span></div>
         </div>
 
-        {error && <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</p>}
+        {error && <ErrorBanner>{error}</ErrorBanner>}
 
         <div className="flex gap-2">
           <button type="button" className={btnSecondary} onClick={onClose}>Cancelar</button>

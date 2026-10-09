@@ -6,6 +6,7 @@ import { shrinkImage } from '../../lib/image';
 import ExtrasEditor, { fromEditor, toEditor } from './ExtrasEditor';
 import { ALLERGENS, TAGS, chipCls, inputCls, languageName } from './labels';
 import { confirmDialog } from '../../ui/confirm';
+import { ErrorBanner } from '../../ui/feedback';
 
 const toggle = (list, key) => (list.includes(key) ? list.filter((x) => x !== key) : [...list, key]);
 
@@ -117,7 +118,7 @@ export default function ItemModal({ item, categoryId, categories, languages, can
 
   const footer = (
     <div className="space-y-2">
-      {error && <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</p>}
+      {error && <ErrorBanner>{error}</ErrorBanner>}
       <div className="flex gap-2">
         {editing && <button type="button" onClick={remove} className="h-12 px-4 rounded-xl border border-gray-300 text-sm font-medium text-rose-600">Borrar</button>}
         <button type="button" disabled={saving} onClick={save} className="flex-1 h-12 rounded-xl bg-violet-600 text-white font-semibold disabled:opacity-50">{saving ? 'Guardando…' : 'Guardar'}</button>

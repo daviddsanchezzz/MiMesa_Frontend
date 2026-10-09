@@ -20,6 +20,7 @@ import { DEFAULT_TZ, dateInTz, euros, initials, pluralize, staffColors, timeInTz
 import { placeText } from '../reservas/useRestaurantDay';
 import { avatarColor, everyText, phoneText, relDays, shortDateTime } from './format';
 import { notify } from '../../lib/notify';
+import { ErrorBanner, Loading } from '../../ui/feedback';
 
 const btn = 'inline-flex items-center justify-center gap-1.5 h-10 px-4 rounded-xl text-sm font-semibold transition-colors';
 
@@ -167,11 +168,11 @@ export default function CustomerFile() {
     return (
       <div className="w-full space-y-3">
         <Link to="/customers" className="text-sm text-violet-700 font-semibold">‹ Clientes</Link>
-        <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</p>
+        <ErrorBanner>{error}</ErrorBanner>
       </div>
     );
   }
-  if (!file) return <p className="text-sm text-gray-400">Cargando…</p>;
+  if (!file) return <Loading />;
 
   return (
     <div className="w-full">

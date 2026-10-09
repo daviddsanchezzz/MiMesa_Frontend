@@ -6,6 +6,7 @@ import { confirmLeave, useUnsavedChanges } from '../../lib/unsavedChanges';
 import invoicesApi from '../../services/invoicesApi';
 import Icon from '../../ui/Icon';
 import { GhostButton, PageHeader, PrimaryButton, Section } from '../../ui/kit';
+import { InvoiceNotes, NoteBilledBy } from './DeliveryNotes';
 import InvoiceDocumentModal from './InvoiceDocumentModal';
 import InvoiceStatus from './InvoiceStatus';
 import {
@@ -55,6 +56,7 @@ function ErrorState({ error, retry, back }) {
 }
 
 function ReadOnlyInvoice({ invoice, onSupplier }) {
+  const isNote = invoice.kind === 'DELIVERY_NOTE';
   return (
     <div className="space-y-7">
       <section>
@@ -63,7 +65,7 @@ function ReadOnlyInvoice({ invoice, onSupplier }) {
         ) : <p className="text-2xl font-semibold tracking-tight text-gray-900">Sin proveedor</p>}
         {invoice.supplier?.taxId && <p className="mt-0.5 text-sm text-gray-500">{invoice.supplier.taxId}</p>}
         <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
-          <p className="text-sm text-gray-700">Factura {invoice.invoiceNumber || 'sin número'}</p>
+          <p className="text-sm text-gray-700">{isNote ? 'Albarán' : 'Factura'} {invoice.invoiceNumber || 'sin número'}</p>
           <p className="text-sm text-gray-500">{formatInvoiceDate(invoice.invoiceDate, { long: true })}</p>
           <InvoiceStatus status={invoice.status} />
           {invoice.financialEntry && <span className="rounded-full bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-700">Gasto reconocido en Finanzas</span>}
@@ -90,7 +92,8 @@ function ReadOnlyInvoice({ invoice, onSupplier }) {
         ) : <p className="py-3 text-sm text-gray-500">No hay líneas registradas.</p>}
       </Section>
 
-      <TotalsReadOnly invoice={invoice} />
+      {isNote ? (invoice.total !== null && <TotalsReadOnly invoice={invoice} />) : <TotalsReadOnly invoice={invoice} />}
+      {isNote ? <NoteBilledBy invoiceId={invoice.billedInvoiceId} /> : invoice.status !== 'FAILED' && <InvoiceNotes invoiceId={invoice._id} />}
     </div>
   );
 }
@@ -157,7 +160,7 @@ function InvoiceLineEditor({ item, index, error, setItem, removeItem }) {
   );
 }
 
-function InvoiceForm({ form, setForm, errors }) {
+function InvoiceForm({ form, setForm, errors, isNote }) {
   const setRoot = (field, value) => setForm((current) => ({ ...current, [field]: value }));
   const setSupplier = (field, value) => setForm((current) => ({ ...current, supplier: { ...current.supplier, [field]: value } }));
   const setItem = (index, field, value) => setForm((current) => ({
@@ -192,7 +195,7 @@ function InvoiceForm({ form, setForm, errors }) {
         </div>
       </Section>
 
-      <Section title="Factura">
+      <Section title={isNote ? 'Albarán' : 'Factura'}>
         <div className="grid sm:grid-cols-3 gap-4 pt-1">
           <Field id="invoice-number" label="Número">
             <input id="invoice-number" value={form.invoiceNumber} onChange={(e) => setRoot('invoiceNumber', e.target.value)} className={inputCls} />
@@ -270,6 +273,9 @@ export default function InvoiceDetail() {
     refetchInterval: (query) => query.state.data?.status === 'PROCESSING' ? 2000 : false,
   });
   const invoice = invoiceQuery.data;
+  const isNote = invoice?.kind === 'DELIVERY_NOTE';
+  const noun = isNote ? 'albarán' : 'factura';
+  const listPath = isNote ? '/compras/facturas?tipo=albaranes' : '/compras/facturas';
   const naturallyEditable = invoice && ['REVIEW', 'FAILED'].includes(invoice.status);
   const [forceEditing, setForceEditing] = useState(false);
   const editable = Boolean(naturallyEditable || (invoice?.status === 'CONFIRMED' && forceEditing));
@@ -282,7 +288,7 @@ export default function InvoiceDetail() {
   const [deleting, setDeleting] = useState(false);
   const [showDocument, setShowDocument] = useState(false);
 
-  useSetMobileHeader({ title: editable ? 'Revisar factura' : 'Detalle de factura', action: false });
+  useSetMobileHeader({ title: editable ? `Revisar ${noun}` : `Detalle de ${noun}`, action: false });
 
   useEffect(() => {
     if (!invoice || !editable) return;
@@ -294,7 +300,7 @@ export default function InvoiceDetail() {
   const dirty = useMemo(() => Boolean(form && baseline && JSON.stringify(form) !== baseline), [form, baseline]);
   useUnsavedChanges('revisión de factura', dirty);
 
-  const goBack = () => { if (confirmLeave()) navigate('/compras/facturas'); };
+  const goBack = () => { if (confirmLeave()) navigate(listPath); };
 
   const cancelEdit = () => {
     if (dirty && !window.confirm('¿Descartar los cambios sin guardar?')) return;
@@ -321,7 +327,7 @@ export default function InvoiceDetail() {
       setForm(next);
       setBaseline(JSON.stringify(next));
       queryClient.setQueryData(['invoices', id], updated);
-      if (!quiet) notify(wasConfirmed ? 'Factura y gasto reconocido actualizados' : 'Cambios guardados');
+      if (!quiet) notify(wasConfirmed && !isNote ? 'Factura y gasto reconocido actualizados' : 'Cambios guardados');
       return updated;
     } catch (error) {
       setRequestError(apiErrorMessage(error, 'No se pudieron guardar los cambios.'));
@@ -342,26 +348,26 @@ export default function InvoiceDetail() {
       }
       const confirmed = await invoicesApi.confirm(id);
       queryClient.setQueryData(['invoices', id], confirmed);
-      notify('Factura confirmada');
+      notify(isNote ? 'Albarán confirmado' : 'Factura confirmada');
       setBaseline('');
       setForceEditing(false);
       setForm(null);
     } catch (error) {
-      setRequestError(apiErrorMessage(error, 'No se pudo confirmar la factura.'));
+      setRequestError(apiErrorMessage(error, `No se pudo confirmar el ${noun}.`));
     } finally {
       setConfirming(false);
     }
   };
 
   const remove = async () => {
-    if (!window.confirm('¿Eliminar esta factura y su documento original? Esta acción no se puede deshacer.')) return;
+    if (!window.confirm(`¿Eliminar ${isNote ? 'este albarán' : 'esta factura'} y su documento original? Esta acción no se puede deshacer.`)) return;
     setDeleting(true);
     try {
       await invoicesApi.remove(id);
-      notify('Factura eliminada');
-      navigate('/compras/facturas', { replace: true });
+      notify(isNote ? 'Albarán eliminado' : 'Factura eliminada');
+      navigate(listPath, { replace: true });
     } catch (error) {
-      setRequestError(apiErrorMessage(error, 'No se pudo eliminar la factura.'));
+      setRequestError(apiErrorMessage(error, `No se pudo eliminar el ${noun}.`));
       setDeleting(false);
     }
   };
@@ -373,7 +379,7 @@ export default function InvoiceDetail() {
   if (invoice.status === 'PROCESSING') {
     return (
       <div className="min-h-[55dvh] flex items-center justify-center text-center" aria-live="polite" aria-busy="true">
-        <div><span className="mx-auto block w-8 h-8 rounded-full border-2 border-violet-200 border-t-violet-600 animate-spin" /><h1 className="mt-5 text-xl font-semibold text-gray-900">Analizando factura...</h1><p className="mt-2 text-sm text-gray-500">Actualizaremos esta pantalla cuando termine.</p></div>
+        <div><span className="mx-auto block w-8 h-8 rounded-full border-2 border-violet-200 border-t-violet-600 animate-spin" /><h1 className="mt-5 text-xl font-semibold text-gray-900">Analizando {noun}...</h1><p className="mt-2 text-sm text-gray-500">Actualizaremos esta pantalla cuando termine.</p></div>
       </div>
     );
   }
@@ -383,11 +389,11 @@ export default function InvoiceDetail() {
       <div>
         <button type="button" onClick={goBack} className="inline-flex items-center gap-1 text-sm font-medium text-gray-500 hover:text-gray-900">
           <Icon name="left" className="h-4 w-4" strokeWidth={2} />
-          Facturas
+          {isNote ? 'Albaranes' : 'Facturas'}
         </button>
         <PageHeader
-          title={editable ? 'Revisar factura' : 'Detalle de factura'}
-          subtitle={editable ? 'Comprueba que los datos sean correctos antes de guardarla.' : 'Factura guardada y confirmada.'}
+          title={editable ? `Revisar ${noun}` : `Detalle de ${noun}`}
+          subtitle={editable ? `Comprueba que los datos sean correctos antes de guardarlo.` : (isNote ? 'Albarán guardado y confirmado.' : 'Factura guardada y confirmada.')}
           actions={<><GhostButton onClick={() => setShowDocument(true)}><Icon name="eye" className="w-4 h-4" />Ver original</GhostButton>{invoice.status === 'CONFIRMED' && !editable && <GhostButton onClick={() => setForceEditing(true)}><Icon name="edit" className="w-4 h-4" />Editar</GhostButton>}</>}
           className="mt-4"
         />
@@ -396,8 +402,8 @@ export default function InvoiceDetail() {
       {invoice.status === 'FAILED' && (
         <div className="rounded-2xl bg-rose-50 px-4 py-3.5 flex items-start gap-3">
           <Icon name="alert" className="w-5 h-5 text-rose-500 mt-0.5" />
-          <div className="min-w-0 flex-1"><p className="text-sm font-semibold text-rose-900">No pudimos leer esta factura</p><p className="mt-0.5 text-sm text-rose-700">Puedes completar los datos manualmente o volver a subir una imagen más nítida.</p></div>
-          <button type="button" onClick={() => navigate('/compras/facturas/nueva')} className="text-sm font-semibold text-rose-800 shrink-0">Reintentar</button>
+          <div className="min-w-0 flex-1"><p className="text-sm font-semibold text-rose-900">No pudimos leer este documento</p><p className="mt-0.5 text-sm text-rose-700">Puedes completar los datos manualmente o volver a subir una imagen más nítida.</p></div>
+          <button type="button" onClick={() => navigate(`/compras/facturas/nueva${isNote ? '?tipo=albaran' : ''}`)} className="text-sm font-semibold text-rose-800 shrink-0">Reintentar</button>
         </div>
       )}
 
@@ -410,7 +416,7 @@ export default function InvoiceDetail() {
 
       {requestError && <p className="rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700" role="alert">{requestError}</p>}
 
-      {editable && form ? <InvoiceForm form={form} setForm={setForm} errors={errors} /> : <ReadOnlyInvoice invoice={invoice} onSupplier={() => navigate(`/compras/proveedores?supplier=${invoice.supplierId}`)} />}
+      {editable && form ? <InvoiceForm form={form} setForm={setForm} errors={errors} isNote={isNote} /> : <ReadOnlyInvoice invoice={invoice} onSupplier={() => navigate(`/compras/proveedores?supplier=${invoice.supplierId}`)} />}
 
       {editable ? (
         <div className="fixed inset-x-0 bottom-[calc(4rem+env(safe-area-inset-bottom))] z-30 border-t border-gray-200 bg-white/95 px-4 py-3 shadow-[0_-8px_24px_rgba(17,24,39,0.06)] backdrop-blur lg:sticky lg:bottom-0 lg:rounded-2xl lg:border lg:px-4">
@@ -419,7 +425,7 @@ export default function InvoiceDetail() {
             {invoice.status === 'CONFIRMED'
               ? <PrimaryButton icon="check" onClick={() => save()} disabled={saving || confirming || !dirty} className="h-11 rounded-xl">{saving ? 'Guardando…' : 'Guardar cambios'}</PrimaryButton>
               : <GhostButton onClick={() => save()} disabled={saving || confirming || !dirty} className="h-11 rounded-xl">{saving ? 'Guardando…' : 'Guardar cambios'}</GhostButton>}
-            {invoice.status !== 'CONFIRMED' && <PrimaryButton icon="check" onClick={confirm} disabled={saving || confirming} className="h-11 rounded-xl">{confirming ? 'Confirmando…' : 'Confirmar factura'}</PrimaryButton>}
+            {invoice.status !== 'CONFIRMED' && <PrimaryButton icon="check" onClick={confirm} disabled={saving || confirming} className="h-11 rounded-xl">{confirming ? 'Confirmando…' : `Confirmar ${noun}`}</PrimaryButton>}
           </div>
         </div>
       ) : (
@@ -440,7 +446,7 @@ export default function InvoiceDetail() {
                 className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-violet-600 px-4 text-sm font-semibold text-white shadow-sm shadow-violet-200 transition-colors hover:bg-violet-700 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:ring-offset-2"
               >
                 <Icon name="edit" className="h-[18px] w-[18px]" strokeWidth={2} />
-                Editar factura
+                Editar {noun}
               </button>
             )}
             <button
@@ -450,7 +456,7 @@ export default function InvoiceDetail() {
               className={`${invoice.status !== 'CONFIRMED' ? 'col-span-2 sm:col-span-1' : ''} inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 text-sm font-semibold text-rose-700 transition-colors hover:border-rose-300 hover:bg-rose-100 focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50`}
             >
               <Icon name="trash" className="h-[18px] w-[18px]" />
-              {deleting ? 'Eliminando…' : 'Eliminar factura'}
+              {deleting ? 'Eliminando…' : `Eliminar ${noun}`}
             </button>
           </div>
         </div>
@@ -458,7 +464,7 @@ export default function InvoiceDetail() {
 
       {editable && (
         <div className="text-center lg:text-right">
-          <button type="button" onClick={remove} disabled={deleting} className="text-[13px] font-semibold text-rose-600 hover:text-rose-800 disabled:opacity-50">{deleting ? 'Eliminando…' : 'Eliminar factura'}</button>
+          <button type="button" onClick={remove} disabled={deleting} className="text-[13px] font-semibold text-rose-600 hover:text-rose-800 disabled:opacity-50">{deleting ? 'Eliminando…' : `Eliminar ${noun}`}</button>
         </div>
       )}
 

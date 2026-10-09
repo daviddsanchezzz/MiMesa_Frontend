@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useSetMobileHeader } from '../../context/MobileHeaderContext';
 import { useUnsavedChanges } from '../../lib/unsavedChanges';
 import invoicesApi from '../../services/invoicesApi';
@@ -12,7 +12,7 @@ const ALLOWED_TYPES = new Set(['application/pdf', 'image/jpeg', 'image/png', 'im
 const ALLOWED_EXTENSIONS = /\.(pdf|jpe?g|png|webp)$/i;
 
 function validateFile(file) {
-  if (!file) return 'Selecciona una factura.';
+  if (!file) return 'Selecciona un documento.';
   if ((file.type && !ALLOWED_TYPES.has(file.type)) || (!file.type && !ALLOWED_EXTENSIONS.test(file.name))) return 'Selecciona un PDF, JPG, PNG o WebP.';
   if (file.size > MAX_SIZE) return 'El archivo no puede superar 10 MB.';
   if (!file.size) return 'El archivo está vacío.';
@@ -31,6 +31,11 @@ function withKnownType(file) {
 
 export default function InvoiceUpload() {
   const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const isNote = params.get('tipo') === 'albaran';
+  const kind = isNote ? 'DELIVERY_NOTE' : 'INVOICE';
+  const noun = isNote ? 'albarán' : 'factura';
+  const backTo = isNote ? '/compras/facturas?tipo=albaranes' : '/compras/facturas';
   const fileInput = useRef(null);
   const cameraInput = useRef(null);
   const [file, setFile] = useState(null);
@@ -40,8 +45,8 @@ export default function InvoiceUpload() {
   const [error, setError] = useState('');
   const [failedId, setFailedId] = useState(null);
   const processing = phase === 'processing';
-  useUnsavedChanges('factura sin enviar', Boolean(file) || processing);
-  useSetMobileHeader({ title: processing ? 'Analizando factura' : 'Subir factura', action: false });
+  useUnsavedChanges(`${noun} sin enviar`, Boolean(file) || processing);
+  useSetMobileHeader({ title: processing ? `Analizando ${noun}` : `Subir ${noun}`, action: false });
 
   useEffect(() => {
     if (!file || !file.type.startsWith('image/')) { setPreview(''); return undefined; }
@@ -69,11 +74,11 @@ export default function InvoiceUpload() {
     setError('');
     setPhase('processing');
     try {
-      const invoice = await invoicesApi.extract(file);
+      const invoice = await invoicesApi.extract(file, kind);
       navigate(`/compras/facturas/${invoice._id}`, { replace: true });
     } catch (err) {
       setFailedId(err?.response?.data?.invoiceId || null);
-      setError(apiErrorMessage(err, 'No hemos podido leer esta factura.'));
+      setError(apiErrorMessage(err, `No hemos podido leer este ${noun}.`));
       setPhase('failed');
     }
   };
@@ -85,7 +90,7 @@ export default function InvoiceUpload() {
           <span className="mx-auto w-14 h-14 rounded-2xl bg-violet-50 flex items-center justify-center mb-5">
             <span className="w-7 h-7 rounded-full border-2 border-violet-200 border-t-violet-600 animate-spin" />
           </span>
-          <h1 className="text-xl font-semibold text-gray-900">Analizando factura...</h1>
+          <h1 className="text-xl font-semibold text-gray-900">Analizando {noun}...</h1>
           <p className="mt-2 text-sm text-gray-500 leading-relaxed">Estamos leyendo el proveedor, las líneas y los importes.<br />Esto puede tardar unos segundos.</p>
           <p className="mt-5 text-xs text-gray-400">Mantén esta pantalla abierta mientras terminamos.</p>
         </div>
@@ -98,13 +103,13 @@ export default function InvoiceUpload() {
       <div className="min-h-[60dvh] flex items-center justify-center px-4">
         <div className="text-center max-w-sm">
           <span className="mx-auto w-14 h-14 rounded-2xl bg-rose-50 text-rose-500 flex items-center justify-center mb-5"><Icon name="alert" className="w-7 h-7" /></span>
-          <h1 className="text-xl font-semibold text-gray-900">No hemos podido leer esta factura</h1>
+          <h1 className="text-xl font-semibold text-gray-900">No hemos podido leer este {noun}</h1>
           <p className="mt-2 text-sm text-gray-500 leading-relaxed">Prueba con una imagen más nítida o sube el PDF original.</p>
           {error && <p className="mt-3 text-sm text-rose-700" role="alert">{error}</p>}
           <div className="mt-6 flex flex-col sm:flex-row justify-center gap-2">
             <PrimaryButton icon="camera" onClick={() => { setPhase('select'); setError(''); cameraInput.current?.click(); }}>Intentar de nuevo</PrimaryButton>
             {failedId && <GhostButton onClick={() => navigate(`/compras/facturas/${failedId}`)}>Ver borrador con error</GhostButton>}
-            <GhostButton onClick={() => navigate('/compras/facturas')}>Volver a facturas</GhostButton>
+            <GhostButton onClick={() => navigate(backTo)}>{isNote ? 'Volver a albaranes' : 'Volver a facturas'}</GhostButton>
           </div>
           <input ref={cameraInput} type="file" accept="image/jpeg,image/png,image/webp" capture="environment" className="sr-only" onClick={(e) => { e.currentTarget.value = ''; }} onChange={(e) => choose(e.target.files?.[0])} />
         </div>
@@ -114,7 +119,7 @@ export default function InvoiceUpload() {
 
   return (
     <div className="w-full max-w-3xl mx-auto space-y-6">
-      <PageHeader title="Sube tu factura" subtitle="Haz una foto o selecciona un PDF. Vetra extraerá los datos automáticamente." />
+      <PageHeader title={`Sube tu ${noun}`} subtitle="Haz una foto o selecciona un PDF. Vetra extraerá los datos automáticamente." />
 
       <div
         onDragEnter={(e) => { e.preventDefault(); setDragging(true); }}
@@ -124,13 +129,13 @@ export default function InvoiceUpload() {
         className={`rounded-2xl border-2 border-dashed px-5 py-8 sm:py-12 text-center transition-colors ${dragging ? 'border-violet-400 bg-violet-50/60' : 'border-gray-200 bg-gray-50/40'}`}
       >
         {preview ? (
-          <img src={preview} alt="Vista previa de la factura" className="mx-auto max-h-60 max-w-full rounded-xl object-contain shadow-sm" />
+          <img src={preview} alt="Vista previa del documento" className="mx-auto max-h-60 max-w-full rounded-xl object-contain shadow-sm" />
         ) : (
           <span className="mx-auto w-12 h-12 rounded-2xl bg-white border border-gray-200 text-violet-600 flex items-center justify-center shadow-sm">
             <Icon name="receipt" className="w-6 h-6" />
           </span>
         )}
-        <p className="mt-4 text-[15px] font-medium text-gray-900">{file ? file.name : 'Arrastra tu factura aquí'}</p>
+        <p className="mt-4 text-[15px] font-medium text-gray-900">{file ? file.name : `Arrastra tu ${noun} aquí`}</p>
         <p className="mt-1 text-xs text-gray-500">{file ? `${(file.size / 1024 / 1024).toLocaleString('es-ES', { maximumFractionDigits: 1 })} MB` : 'PDF, JPG, PNG o WebP · máximo 10 MB'}</p>
 
         <div className="mt-5 flex flex-col sm:flex-row items-stretch sm:items-center justify-center gap-2">
@@ -150,8 +155,8 @@ export default function InvoiceUpload() {
       {error && <p className="rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700" role="alert">{error}</p>}
 
       <div className="flex flex-col-reverse sm:flex-row sm:justify-between gap-2">
-        <GhostButton onClick={() => navigate('/compras/facturas')} className="h-11 rounded-xl">Cancelar</GhostButton>
-        <PrimaryButton onClick={submit} disabled={!file} icon="sparkle" className="h-11">Analizar factura</PrimaryButton>
+        <GhostButton onClick={() => navigate(backTo)} className="h-11 rounded-xl">Cancelar</GhostButton>
+        <PrimaryButton onClick={submit} disabled={!file} icon="sparkle" className="h-11">Analizar {noun}</PrimaryButton>
       </div>
     </div>
   );

@@ -1,10 +1,10 @@
 import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useSetMobileHeader } from '../../context/MobileHeaderContext';
 import { useData } from '../../lib/query';
 import invoicesApi from '../../services/invoicesApi';
 import Icon from '../../ui/Icon';
-import { Empty, PageHeader, PrimaryButton } from '../../ui/kit';
+import { Empty, PageHeader, PrimaryButton, Segmented } from '../../ui/kit';
 import InvoiceStatus from './InvoiceStatus';
 import { apiErrorMessage, formatInvoiceDate, formatInvoiceMoney } from './invoiceUtils';
 
@@ -12,7 +12,7 @@ const tableHead = 'hidden md:grid grid-cols-12 gap-4 px-2 pb-2 border-b border-g
 
 function ListSkeleton() {
   return (
-    <div className="space-y-1" aria-busy="true" aria-label="Cargando facturas">
+    <div className="space-y-1" aria-busy="true" aria-label="Cargando">
       {[0, 1, 2].map((row) => (
         <div key={row} className="flex items-center gap-3 px-2 py-4">
           <div className="w-9 h-9 bg-gray-100 rounded-xl animate-pulse" />
@@ -26,10 +26,13 @@ function ListSkeleton() {
 
 export default function Invoices({ embedded = false }) {
   const navigate = useNavigate();
-  const addInvoice = () => navigate('/compras/facturas/nueva');
+  const [params, setParams] = useSearchParams();
+  const isNote = params.get('tipo') === 'albaranes';
+  const noun = isNote ? 'albarán' : 'factura';
+  const addInvoice = () => navigate(`/compras/facturas/nueva${isNote ? '?tipo=albaran' : ''}`);
   useSetMobileHeader({ title: embedded ? 'Compras' : 'Facturas', action: { label: 'Añadir', onClick: addInvoice } });
 
-  const invoicesQuery = useData(['invoices', 'list'], invoicesApi.list, { retry: false });
+  const invoicesQuery = useData(['invoices', 'list', isNote ? 'notes' : 'invoices'], () => invoicesApi.list(isNote ? 'DELIVERY_NOTE' : 'INVOICE'), { retry: false });
   const all = invoicesQuery.data || [];
   const [filter, setFilter] = useState('all'); // all | review | confirmed
   const needsAction = (i) => i.status === 'REVIEW' || i.status === 'FAILED' || i.status === 'PROCESSING';
@@ -44,10 +47,14 @@ export default function Invoices({ embedded = false }) {
   return (
     <div className="w-full space-y-6">
       {!embedded && <PageHeader
-        title="Facturas"
-        subtitle="Digitaliza tus facturas y mantén tus compras organizadas."
-        actions={<PrimaryButton onClick={addInvoice}>Añadir factura</PrimaryButton>}
+        title={isNote ? 'Albaranes' : 'Facturas'}
+        subtitle={isNote ? 'Lo que te entrega cada proveedor, para comprobarlo con su factura.' : 'Digitaliza tus facturas y mantén tus compras organizadas.'}
+        actions={<PrimaryButton onClick={addInvoice}>{`Añadir ${noun}`}</PrimaryButton>}
       />}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Segmented size="sm" value={isNote ? 'albaranes' : 'facturas'} onChange={(v) => { setFilter('all'); setParams(v === 'albaranes' ? { tipo: 'albaranes' } : {}, { replace: true }); }} options={[['facturas', 'Facturas'], ['albaranes', 'Albaranes']]} />
+        {embedded && <button type="button" onClick={addInvoice} className="text-[13px] font-semibold text-violet-700 hover:text-violet-900 hidden sm:block">{`+ Añadir ${noun}`}</button>}
+      </div>
 
       {invoicesQuery.isLoading && <ListSkeleton />}
       {invoicesQuery.isError && (
@@ -62,16 +69,16 @@ export default function Invoices({ embedded = false }) {
           <div className="mx-auto w-12 h-12 rounded-2xl bg-violet-50 text-violet-600 flex items-center justify-center mb-4">
             <Icon name="receipt" className="w-6 h-6" />
           </div>
-          <Empty action={<button type="button" onClick={addInvoice} className="text-sm font-semibold text-violet-700">Subir primera factura</button>}>
-            <span className="block font-medium text-gray-900 mb-1">Todavía no tienes facturas</span>
-            <span className="block max-w-md mx-auto">Sube una foto o PDF y Vetra extraerá automáticamente el proveedor, las líneas y los importes.</span>
+          <Empty action={<button type="button" onClick={addInvoice} className="text-sm font-semibold text-violet-700">{isNote ? 'Subir primer albarán' : 'Subir primera factura'}</button>}>
+            <span className="block font-medium text-gray-900 mb-1">{isNote ? 'Todavía no tienes albaranes' : 'Todavía no tienes facturas'}</span>
+            <span className="block max-w-md mx-auto">{isNote ? 'Sube el albarán cuando llegue el pedido: Vetra lo lee y, cuando llegue la factura, comprueba que cuadra con lo entregado.' : 'Sube una foto o PDF y Vetra extraerá automáticamente el proveedor, las líneas y los importes.'}</span>
           </Empty>
         </div>
       )}
 
       {!invoicesQuery.isLoading && !invoicesQuery.isError && all.length > 0 && (
         <div className="flex gap-1.5 overflow-x-auto [scrollbar-width:none]">
-          {[['all', 'Todas'], ['review', reviewCount ? `Por revisar · ${reviewCount}` : 'Por revisar'], ['confirmed', 'Confirmadas']].map(([key, label]) => (
+          {[['all', 'Todas'], ['review', reviewCount ? `Por revisar · ${reviewCount}` : 'Por revisar'], ['confirmed', isNote ? 'Confirmados' : 'Confirmadas']].map(([key, label]) => (
             <button key={key} type="button" onClick={() => setFilter(key)}
               className={`shrink-0 rounded-full px-3.5 py-1.5 text-[13px] font-semibold ${filter === key ? 'bg-gray-900 text-white' : 'bg-gray-100 text-gray-600 hover:text-gray-900'}`}>
               {label}
@@ -81,14 +88,14 @@ export default function Invoices({ embedded = false }) {
       )}
 
       {!invoicesQuery.isLoading && !invoicesQuery.isError && all.length > 0 && invoices.length === 0 && (
-        <Empty>{filter === 'review' ? 'No tienes facturas por revisar. 🎉' : 'No hay facturas de este tipo.'}</Empty>
+        <Empty>{filter === 'review' ? `No tienes ${noun}s por revisar. 🎉` : `No hay ${noun}s de este tipo.`}</Empty>
       )}
 
       {!invoicesQuery.isLoading && !invoicesQuery.isError && invoices.length > 0 && (
         <div>
           <div className={tableHead}>
             <span className="col-span-3">Proveedor</span>
-            <span className="col-span-2">Factura</span>
+            <span className="col-span-2">{isNote ? 'Albarán' : 'Factura'}</span>
             <span className="col-span-2">Fecha</span>
             <span className="col-span-2">Estado</span>
             <span className="col-span-2 text-right">Total</span>

@@ -523,7 +523,9 @@ export default function Compras() {
   };
 
   const primary = {
-    invoices: { label: 'Añadir factura', short: 'Factura', onClick: () => navigate('/compras/facturas/nueva') },
+    invoices: new URLSearchParams(location.search).get('tipo') === 'albaranes'
+      ? { label: 'Añadir albarán', short: 'Albarán', onClick: () => navigate('/compras/facturas/nueva?tipo=albaran') }
+      : { label: 'Añadir factura', short: 'Factura', onClick: () => navigate('/compras/facturas/nueva') },
     orders: { label: 'Nuevo pedido', short: 'Pedido', onClick: () => setOrderModal({}) },
     suppliers: supView === 'products'
       ? { label: 'Nuevo producto', short: 'Producto', onClick: () => setProductModal({}) }

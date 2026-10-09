@@ -21,6 +21,7 @@ import {
 import { confirmDialog } from '../../ui/confirm';
 import { inputCls } from '../../ui/form';
 import { ErrorBanner } from '../../ui/feedback';
+import { TableHead } from '../../ui/list';
 
 const numberCls = `${inputCls} tabular-nums text-right`;
 const compactNumberCls = `${numberCls} h-10 px-2.5 py-2`;
@@ -213,9 +214,9 @@ function InvoiceForm({ form, setForm, errors, isNote }) {
       </Section>
 
       <Section title="Productos / líneas" aside={<button type="button" onClick={addItem} className="text-[13px] font-semibold text-violet-700 hover:text-violet-900">+ Añadir línea</button>}>
-        <div className="hidden md:grid grid-cols-12 gap-2 px-2 pb-2 border-b border-gray-200 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+        <TableHead gap={2}>
           <span className="col-span-4">Descripción</span><span className="text-right">Cant.</span><span className="col-span-2 text-right">Precio</span><span className="text-right">Dto. %</span><span className="text-right">IVA</span><span className="col-span-2 text-right">Total</span><span />
-        </div>
+        </TableHead>
         <div className="space-y-3 md:space-y-0 md:divide-y md:divide-gray-100">
           {form.items.map((item, index) => (
             <InvoiceLineEditor key={item.key} item={item} index={index} error={errors.items?.[index]} setItem={setItem} removeItem={removeItem} />

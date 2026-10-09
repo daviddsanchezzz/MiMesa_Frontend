@@ -7,8 +7,8 @@ import { Empty, FilterChips } from '../../ui/kit';
 import Page from '../../ui/Page';
 import InvoiceStatus from './InvoiceStatus';
 import { apiErrorMessage, formatInvoiceDate, formatInvoiceMoney } from './invoiceUtils';
+import { TableHead } from '../../ui/list';
 
-const tableHead = 'hidden md:grid grid-cols-12 gap-4 px-2 pb-2 border-b border-gray-200 text-[11px] font-semibold uppercase tracking-wide text-gray-400';
 
 function ListSkeleton() {
   return (
@@ -74,14 +74,14 @@ export default function Invoices({ embedded = false, kind = 'INVOICE' }) {
 
       {!invoicesQuery.isLoading && !invoicesQuery.isError && invoices.length > 0 && (
         <div>
-          <div className={tableHead}>
+          <TableHead>
             <span className="col-span-3">Proveedor</span>
             <span className="col-span-2">{isNote ? 'Albarán' : 'Factura'}</span>
             <span className="col-span-2">Fecha</span>
             <span className="col-span-2">Estado</span>
             <span className="col-span-2 text-right">Total</span>
             <span className="col-span-1" />
-          </div>
+          </TableHead>
           <ul className="divide-y divide-gray-100">
             {invoices.map((invoice) => (
               <li key={invoice._id}>

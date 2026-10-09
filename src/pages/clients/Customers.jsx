@@ -10,6 +10,7 @@ import CustomerListTools from '../../components/CustomerListTools';
 import { queryClient, useData } from '../../lib/query';
 import { useResources } from '../agenda/queries';
 import { ErrorBanner } from '../../ui/feedback';
+import { TableHead } from '../../ui/list';
 
 const NO_SUMMARY = {};
 const NO_RESOURCES = [];
@@ -212,13 +213,13 @@ export default function Customers() {
 
       {rows.length > 0 && (
         <div>
-          <div className="hidden md:grid sticky top-0 z-10 bg-white grid-cols-12 gap-4 px-2 pb-2 border-b border-gray-200 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+          <TableHead>
             <span className="col-span-4">Cliente</span>
             <span className="col-span-2">Última visita</span>
             <span className="col-span-3">{cfg.nextLabel}</span>
             <span className="col-span-1 text-right">Visitas</span>
             <span className="col-span-2 text-right">{cfg.lastColumn}</span>
-          </div>
+          </TableHead>
           <ul className="divide-y divide-gray-100">
             {rows.map((r) => {
               const { c } = r;

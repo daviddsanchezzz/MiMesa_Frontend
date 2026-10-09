@@ -22,6 +22,7 @@ import CreateProfessional from './CreateProfessional';
 import ProfessionalGeneral from './ProfessionalGeneral';
 import { confirmLeave } from '../../lib/unsavedChanges';
 import { Loading } from '../../ui/feedback';
+import { TableHead } from '../../ui/list';
 
 const servicesOf = (r, services) =>
   services.filter((s) =>
@@ -296,12 +297,12 @@ function TeamContent() {
             </p>
           )}
           {resources.length > 0 && (
-            <div className="hidden lg:grid grid-cols-12 gap-4 px-2 pb-2 border-b border-gray-200 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+            <TableHead at="lg">
               <span className="col-span-4">Profesional</span>
               <span className="col-span-5">Servicios</span>
               <span className="col-span-2">Acceso a Vetra</span>
               <span className="col-span-1" />
-            </div>
+            </TableHead>
           )}
           <ul className="divide-y divide-gray-100">
             {resources

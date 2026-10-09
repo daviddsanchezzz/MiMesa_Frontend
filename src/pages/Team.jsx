@@ -10,6 +10,7 @@ import { ErrorBanner } from '../ui/feedback';
 import ProfessionalAvatar from '../components/ProfessionalAvatar';
 import { confirmDialog } from '../ui/confirm';
 import { inputCls } from '../ui/form';
+import { TableHead } from '../ui/list';
 
 /* Constants */
 const ROLE_LABELS = { owner: 'Propietario', manager: 'Encargado', staff: 'Personal' };
@@ -194,11 +195,11 @@ export default function Team() {
             <Empty>Aún no hay miembros en este negocio</Empty>
           ) : (
             <>
-              <div className="hidden md:grid grid-cols-12 gap-4 px-2 pb-2 border-b border-gray-200 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+              <TableHead>
                 <span className={showAgenda ? 'col-span-6' : 'col-span-9'}>Persona</span>
                 {showAgenda && <span className="col-span-3">Agenda</span>}
                 <span className="col-span-3 text-right pr-10">Rol</span>
-              </div>
+              </TableHead>
               <ul className="divide-y divide-gray-100">
                 {members.map((member) => {
                   const isMe      = member.userId === myUserId;

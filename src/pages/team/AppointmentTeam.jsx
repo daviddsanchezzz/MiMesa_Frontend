@@ -10,6 +10,7 @@ import PeriodNavigator from '../../ui/PeriodNavigator';
 import { Empty, FigureLine, GhostButton, Hero, PrimaryButton, Section, SectionLink } from '../../ui/kit';
 import { eur } from '../../lib/format';
 import { ErrorBanner, Loading } from '../../ui/feedback';
+import { TableHead } from '../../ui/list';
 
 const MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 const eurRound = (n) => eur(Math.round(n || 0));
@@ -270,7 +271,7 @@ export default function AppointmentTeam() {
               <Empty action={<SectionLink to="/equipo">Añadir profesional</SectionLink>}>Todavía no hay profesionales.</Empty>
             ) : (
               <>
-                <div className="hidden md:grid grid-cols-12 gap-4 px-2 pb-2 border-b border-gray-200 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+                <TableHead>
                   <span className="col-span-4">Profesional</span>
                   <span className="col-span-1 text-right">Citas</span>
                   <span className="col-span-1 text-right">Horas</span>
@@ -278,7 +279,7 @@ export default function AppointmentTeam() {
                   <span className="col-span-1 text-right">Coste</span>
                   <span className="col-span-1 text-right">Margen</span>
                   <span className="col-span-2 text-right">Pendiente</span>
-                </div>
+                </TableHead>
                 <ul className="mt-1 divide-y divide-gray-100 rounded-2xl border border-gray-200 overflow-hidden md:mt-0 md:rounded-none md:border-0 md:overflow-visible">
                   {data.staff.map((p) => {
                     const cost = (p.salary || 0) + (p.commission || 0);

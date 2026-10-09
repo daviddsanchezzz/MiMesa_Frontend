@@ -12,8 +12,9 @@ import PeriodNavigator, { usePeriod } from '../ui/PeriodNavigator';
 import Page from '../ui/Page';
 import { fmtDay, fmtShort, parseIso, previousLabel, shiftRange, toIso } from '../lib/periods';
 import { confirmDialog } from '../ui/confirm';
-import { inputCls, selectCls, btnDanger } from '../ui/form';
-import { Loading } from '../ui/feedback';
+import { inputCls, selectCls, btnDanger, btnPrimary, btnQuiet } from '../ui/form';
+import { ErrorBanner, Loading } from '../ui/feedback';
+import { TableHead } from '../ui/list';
 
 // ── Color palette (static — color key stored in DB → Tailwind bg class) ───────
 
@@ -72,16 +73,13 @@ function FormField({ label, children, required }) {
 }
 
 const amountCls = 'w-full rounded-xl border border-gray-300 px-3.5 py-3 text-2xl font-semibold tabular-nums text-gray-900 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent';
-const btnSubmit = 'inline-flex items-center justify-center h-10 px-4 rounded-xl bg-violet-600 text-white text-sm font-semibold hover:bg-violet-700 disabled:opacity-60';
-const btnCancel = 'inline-flex items-center justify-center h-10 px-4 rounded-xl text-sm font-semibold text-gray-600 hover:bg-gray-100';
-const errorCls = 'text-sm text-rose-700 bg-rose-50 rounded-xl px-3 py-2';
 
 // Hairline table header: [[label, 'col-span-x text-right'], …]
-function TableHead({ cols }) {
+function TableHeadCols({ cols }) {
   return (
-    <div className="hidden md:grid grid-cols-12 gap-4 px-2 pb-2 border-b border-gray-200 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+    <TableHead>
       {cols.map(([label, cls]) => <span key={label || cls} className={cls}>{label}</span>)}
-    </div>
+    </TableHead>
   );
 }
 
@@ -428,8 +426,8 @@ function RecurringScopeDialog({ mode, onConfirm, onClose }) {
       size="md"
       footer={(
         <div className="flex justify-end gap-2">
-          <button type="button" onClick={onClose} className={btnCancel}>Cancelar</button>
-          <button type="button" onClick={() => onConfirm(scope)} className={isDelete ? btnDanger : btnSubmit}>
+          <button type="button" onClick={onClose} className={btnQuiet}>Cancelar</button>
+          <button type="button" onClick={() => onConfirm(scope)} className={isDelete ? btnDanger : btnPrimary}>
             {isDelete ? 'Eliminar' : 'Continuar'}
           </button>
         </div>
@@ -486,8 +484,8 @@ function CategoryForm({ form, setForm, onSave, onCancel, saving, saveLabel = 'Gu
         className={inputCls + ' sm:max-w-sm'} placeholder="Nombre de la categoría" />
       <ColorPicker value={form.color} onChange={(c) => setForm((f) => ({ ...f, color: c }))} />
       <div className="flex gap-2">
-        <button type="button" onClick={onSave} disabled={saving || !form.label.trim()} className={btnSubmit}>{saveLabel}</button>
-        {onCancel && <button type="button" onClick={onCancel} className={btnCancel}>Cancelar</button>}
+        <button type="button" onClick={onSave} disabled={saving || !form.label.trim()} className={btnPrimary}>{saveLabel}</button>
+        {onCancel && <button type="button" onClick={onCancel} className={btnQuiet}>Cancelar</button>}
       </div>
     </div>
   );
@@ -668,8 +666,8 @@ function ExpenseModal({ expense, suppliers, categories, onSave, onClose, scope =
       size="md"
       footer={(
         <div className="flex justify-end gap-2">
-          <button type="button" onClick={onClose} className={btnCancel}>Cancelar</button>
-          <button type="submit" form="expense-form" disabled={saving} className={btnSubmit}>
+          <button type="button" onClick={onClose} className={btnQuiet}>Cancelar</button>
+          <button type="submit" form="expense-form" disabled={saving} className={btnPrimary}>
             {saving ? 'Guardando…' : editing ? 'Guardar cambios' : 'Guardar gasto'}
           </button>
         </div>
@@ -713,7 +711,7 @@ function ExpenseModal({ expense, suppliers, categories, onSave, onClose, scope =
           </div>
         )}
 
-        {error && <p className={errorCls}>{error}</p>}
+        {error && <ErrorBanner>{error}</ErrorBanner>}
       </form>
     </Modal>
   );
@@ -861,7 +859,7 @@ function GastosTab({ dateRange, suppliers, categories, refreshTrigger, onCreate,
         <Empty>No hay gastos de este tipo en el periodo.</Empty>
       ) : (
         <div className={loading ? 'opacity-60' : ''}>
-          <TableHead cols={[
+          <TableHeadCols cols={[
             ['Fecha', 'col-span-2'],
             ['Categoría', 'col-span-3'],
             ['Proveedor', 'col-span-2'],
@@ -1046,8 +1044,8 @@ function SupplierModal({ supplier, categories, onSave, onClose }) {
       size="md"
       footer={(
         <div className="flex justify-end gap-2">
-          <button type="button" onClick={onClose} className={btnCancel}>Cancelar</button>
-          <button type="submit" form="supplier-form" disabled={saving} className={btnSubmit}>
+          <button type="button" onClick={onClose} className={btnQuiet}>Cancelar</button>
+          <button type="submit" form="supplier-form" disabled={saving} className={btnPrimary}>
             {saving ? 'Guardando…' : editing ? 'Guardar cambios' : 'Añadir proveedor'}
           </button>
         </div>
@@ -1085,7 +1083,7 @@ function SupplierModal({ supplier, categories, onSave, onClose }) {
             </FormField>
           </div>
         </Section>
-        {error && <p className={errorCls}>{error}</p>}
+        {error && <ErrorBanner>{error}</ErrorBanner>}
       </form>
     </Modal>
   );
@@ -1123,7 +1121,7 @@ function ProveedoresTab({ suppliers, loadSuppliers, categories }) {
         <Empty action={<SectionLink onClick={() => setModal({})}>+ Añadir el primero</SectionLink>}>Aún no hay proveedores.</Empty>
       ) : (
         <>
-          <TableHead cols={[
+          <TableHeadCols cols={[
             ['Nombre', 'col-span-4'],
             ['Categoría', 'col-span-3'],
             ['Contacto', 'col-span-3'],
@@ -1250,8 +1248,8 @@ function RevenueModal({ date = toIso(), initialValue = null, onClose, onSave }) 
             </button>
           ) : <span />}
           <div className="flex gap-2">
-            <button type="button" onClick={onClose} className={btnCancel}>Cancelar</button>
-            <button type="submit" form="revenue-form" disabled={saving} className={btnSubmit}>
+            <button type="button" onClick={onClose} className={btnQuiet}>Cancelar</button>
+            <button type="submit" form="revenue-form" disabled={saving} className={btnPrimary}>
               {saving ? 'Guardando…' : 'Guardar'}
             </button>
           </div>
@@ -1264,7 +1262,7 @@ function RevenueModal({ date = toIso(), initialValue = null, onClose, onSave }) 
             value={amount} onChange={(e) => setAmount(e.target.value)}
             className={amountCls} placeholder="0,00" />
         </FormField>
-        {error && <p className={errorCls}>{error}</p>}
+        {error && <ErrorBanner>{error}</ErrorBanner>}
       </form>
     </Modal>
   );
@@ -1370,7 +1368,7 @@ function IngresosTab({ period, dateRange, refreshTrigger, onTodayRevenue, onImpo
           <Empty>Sin días en este periodo.</Empty>
         ) : (
           <>
-            <TableHead cols={[
+            <TableHeadCols cols={[
               ['Día', 'col-span-4'],
               [appt ? 'Citas' : 'Comensales', 'col-span-2 text-right'],
               [appt ? 'En citas' : 'Estimado', 'col-span-3 text-right'],

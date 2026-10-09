@@ -15,9 +15,9 @@ import { notify } from '../lib/notify';
 import { confirmDialog } from '../ui/confirm';
 import { inputCls, labelCls, btnPrimary, btnQuiet, btnDangerQuiet } from '../ui/form';
 import { ErrorBanner, Loading } from '../ui/feedback';
+import { TableHead } from '../ui/list';
 
 
-const tableHead = 'hidden md:grid grid-cols-12 gap-4 px-2 pb-2 border-b border-gray-200 text-[11px] font-semibold uppercase tracking-wide text-gray-400';
 const todayIso = () => new Date().toISOString().slice(0, 10);
 const formatDecimalInput = (value) => {
   const num = Number(value || 0);
@@ -550,14 +550,14 @@ export default function Compras() {
           </Empty>
         ) : (
           <div>
-            <div className={tableHead}>
+            <TableHead>
               <span className="col-span-2">Fecha</span>
               <span className="col-span-3">Proveedor</span>
               <span className="col-span-2">Estado</span>
               <span className="col-span-1 text-right">Productos</span>
               <span className="col-span-2 text-right">Total</span>
               <span className="col-span-2" />
-            </div>
+            </TableHead>
             <ul className="divide-y divide-gray-100">
               {orders.map((order) => {
                 const orderId = String(order._id);
@@ -647,12 +647,12 @@ export default function Compras() {
             </Empty>
           ) : (
             <div>
-              <div className={tableHead}>
+              <TableHead>
                 <span className="col-span-4">Proveedor</span>
                 <span className="col-span-3">Contacto</span>
                 <span className="col-span-3">WhatsApp</span>
                 <span className="col-span-2 text-right">Productos</span>
-              </div>
+              </TableHead>
               <ul className="divide-y divide-gray-100">
                 {suppliers.map((supplier) => {
                   const count = products.filter((pr) => String(pr.supplier?._id || pr.supplierId) === String(supplier._id)).length;

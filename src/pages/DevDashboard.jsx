@@ -10,6 +10,7 @@ import { Empty, FigureLine, RowAction, Section, SectionLink, Segmented, Toggle }
 import { dateShort, dateYear } from '../lib/format';
 import { confirmDialog } from '../ui/confirm';
 import { ErrorBanner, Loading } from '../ui/feedback';
+import { TableHead } from '../ui/list';
 
 /*
  * Vetra panel: every client business in one list (owner, team, activity,
@@ -471,14 +472,14 @@ export default function DevDashboard() {
 
           {list.length ? (
             <div>
-              <div className="hidden md:grid grid-cols-12 gap-4 px-2 pb-2 border-b border-gray-200 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+              <TableHead>
                 <span className="col-span-4">Negocio</span>
                 <span className="col-span-2">Plan</span>
                 <span className="col-span-3">Dueño</span>
                 <span className="col-span-1 text-right">Equipo</span>
                 <span className="col-span-1 text-right">30 días</span>
                 <span className="col-span-1 text-right">Entró</span>
-              </div>
+              </TableHead>
               <ul className="divide-y divide-gray-100">
                 {list.map((b) => <BusinessRow key={b.id} b={b} onOpen={(x) => setOpenId(x.id)} />)}
               </ul>

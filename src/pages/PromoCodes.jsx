@@ -7,6 +7,7 @@ import { dateNumeric } from '../lib/format';
 import { confirmDialog } from '../ui/confirm';
 import { inputCls, labelCls } from '../ui/form';
 import { ErrorBanner, Loading } from '../ui/feedback';
+import { TableHead } from '../ui/list';
 
 
 export default function PromoCodes() {
@@ -133,12 +134,12 @@ export default function PromoCodes() {
         <Empty>No hay códigos promocionales.</Empty>
       ) : (
         <div>
-          <div className="hidden md:grid grid-cols-12 gap-4 px-2 pb-2 border-b border-gray-200 text-[11px] font-semibold uppercase tracking-wide text-gray-400">
+          <TableHead>
             <span className="col-span-5">Código</span>
             <span className="col-span-2">Estado</span>
             <span className="col-span-2">Usos</span>
             <span className="col-span-2">Caduca</span>
-          </div>
+          </TableHead>
           <ul className="divide-y divide-gray-100">
             {promos.map(p => {
               const expired = isExpired(p);

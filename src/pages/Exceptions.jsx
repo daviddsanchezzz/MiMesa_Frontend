@@ -6,6 +6,7 @@ import { PageHeader, PrimaryButton, Section, MenuButton, Empty } from '../ui/kit
 import { confirmDialog } from '../ui/confirm';
 import { inputCls, labelCls } from '../ui/form';
 import { ErrorBanner, Loading } from '../ui/feedback';
+import { TableHead } from '../ui/list';
 
 const ALL_SHIFTS_KEY = '__all__';
 
@@ -230,12 +231,12 @@ export default function Exceptions({ embedded = false }) {
         </Empty>
       ) : (
         <div className="space-y-8">
-          <div className="hidden md:grid grid-cols-12 gap-4 px-2 pb-2 border-b border-gray-200 text-[11px] font-semibold uppercase tracking-wide text-gray-400 -mb-6">
+          <TableHead className="-mb-6">
             <span className="col-span-2">Fecha</span>
             <span className="col-span-2">Turno</span>
             <span className="col-span-3">Tipo</span>
             <span className="col-span-4">Mensaje</span>
-          </div>
+          </TableHead>
           {months.map((month) => (
             <Section key={month.key} title={month.title}>
               <ul className="divide-y divide-gray-100">

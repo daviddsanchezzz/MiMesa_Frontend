@@ -22,6 +22,7 @@ import { ShiftEditorModal } from './personal/ShiftEditorModal';
 import { EmployeeAssignmentsModal } from './personal/EmployeeAssignmentsModal';
 import { dateYear } from '../lib/format';
 import { confirmDialog } from '../ui/confirm';
+import { TableHead } from '../ui/list';
 
 const TAB_LABELS = { planner: 'Planificación', employees: 'Empleados', costs: 'Costes', requests: 'Solicitudes' };
 const TAB_ORDER = ['planner', 'employees', 'costs', 'requests'];
@@ -82,7 +83,6 @@ function HeroFigure({ label, value, sub, tone, stats }) {
   );
 }
 
-const tableHead = 'hidden md:grid grid-cols-12 gap-4 px-2 pb-2 border-b border-gray-200 text-[11px] font-semibold uppercase tracking-wide text-gray-400';
 
 export default function Personal() {
   const { role, business } = useAuth();
@@ -981,13 +981,13 @@ export default function Personal() {
                 </Empty>
               ) : (
                 <div className={listCard}>
-                  <div className={tableHead}>
+                  <TableHead>
                     <span className="col-span-4">Empleado</span>
                     <span className="col-span-3">Puestos</span>
                     <span className="col-span-2">Cómo cobra</span>
                     <span className="col-span-2">Estado</span>
                     <span className="col-span-1" />
-                  </div>
+                  </TableHead>
                   <ul className="divide-y divide-gray-100">
                     {filteredEmployees.map((employee) => (
                       <EmployeeRow
@@ -1016,12 +1016,12 @@ export default function Personal() {
                 <Empty action={<PrimaryButton onClick={() => setPositionModal({})}>Nuevo puesto</PrimaryButton>}>Sin puestos definidos.</Empty>
               ) : (
                 <div className={listCard}>
-                  <div className={tableHead}>
+                  <TableHead>
                     <span className="col-span-5">Puesto</span>
                     <span className="col-span-3">Empleados activos</span>
                     <span className="col-span-2">Estado</span>
                     <span className="col-span-2" />
-                  </div>
+                  </TableHead>
                   <ul className="divide-y divide-gray-100">
                     {positions.map((position, i) => {
                       const count = employeeCountByPosition.get(String(position._id)) || 0;
@@ -1127,13 +1127,13 @@ export default function Personal() {
                     sub={`${totalShifts} ${totalShifts === 1 ? 'turno' : 'turnos'} · ${Number(totalHours.toFixed(2)).toLocaleString('es-ES')} h · ${rows.length} ${rows.length === 1 ? 'empleado' : 'empleados'}`} /></div>
                   <Section title="Por empleado">
                     <div className={listCard}>
-                    <div className={tableHead}>
+                    <TableHead>
                       <span className="col-span-4">Empleado</span>
                       <span className="col-span-3">Cómo cobra</span>
                       <span className="col-span-1 text-right">Turnos</span>
                       <span className="col-span-2 text-right">Horas</span>
                       <span className="col-span-2 text-right">Coste</span>
-                    </div>
+                    </TableHead>
                     <ul className="divide-y divide-gray-100">
                       {rows.map((row) => (
                         <li key={String(row.employeeId)} className="flex items-center gap-3 md:grid md:grid-cols-12 md:gap-4 px-4 md:px-2 py-3.5 md:py-3">
@@ -1174,12 +1174,12 @@ export default function Personal() {
                   sub={pendingCount > 0 ? `${pendingCount} ${pendingCount === 1 ? 'empleado' : 'empleados'} con saldo` : 'Todo pagado'} /></div>
                 <Section title="Por empleado" aside={<span className="text-xs text-gray-500 hidden sm:inline">Lo generado menos los pagos registrados</span>}>
                   <div className={listCard}>
-                  <div className={tableHead}>
+                  <TableHead>
                     <span className="col-span-4">Empleado</span>
                     <span className="col-span-3">Último pago</span>
                     <span className="col-span-2 text-right">Pendiente</span>
                     <span className="col-span-3" />
-                  </div>
+                  </TableHead>
                   <ul className="divide-y divide-gray-100">
                     {visibleRows.map((row) => {
                       const isConfirming = confirmingPayment === String(row.employeeId);

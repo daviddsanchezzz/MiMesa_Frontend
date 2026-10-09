@@ -9,11 +9,11 @@ import PeriodNavigator from '../ui/PeriodNavigator';
 import PublishBar from './personal/PublishBar';
 import RequestsTab from './personal/RequestsTab';
 import { timeOffLabel } from './personal/timeOff';
-import { BigFigure, Empty, FigureLine, GhostButton, MenuButton, PrimaryButton, RowAction, Section, Segmented } from '../ui/kit';
+import { BigFigure, Empty, FigureLine, GhostButton, MenuButton, MoreMenu, PrimaryButton, RowAction, Section, Segmented } from '../ui/kit';
 import Page from '../ui/Page';
 import { Notice, addDays, compTypeLabel, compareShiftTime, formatMoney, staffTimes, mondayOf, normalizeDateOnly, shiftAppliesToDate, todayIso, weekDays } from './personal/shared';
 import { ShiftStaffChips, assignPersonColors } from './personal/ShiftStaffChips';
-import { EmployeeRow, MoreIcon, StateText } from './personal/MobileEmployeeRow';
+import { EmployeeTable, MoreIcon, StateText } from './personal/MobileEmployeeRow';
 import { EmployeeFormModal } from './personal/EmployeeFormModal';
 import EmployeeAccessModal from './personal/EmployeeAccessModal';
 import { PositionFormModal } from './personal/PositionFormModal';
@@ -22,7 +22,7 @@ import { ShiftEditorModal } from './personal/ShiftEditorModal';
 import { EmployeeAssignmentsModal } from './personal/EmployeeAssignmentsModal';
 import { dateYear } from '../lib/format';
 import { confirmDialog } from '../ui/confirm';
-import { TableHead } from '../ui/list';
+import { Avatar, DataTable } from '../ui/list';
 
 const TAB_LABELS = { planner: 'Planificación', employees: 'Empleados', costs: 'Costes', requests: 'Solicitudes' };
 const TAB_ORDER = ['planner', 'employees', 'costs', 'requests'];
@@ -45,8 +45,12 @@ function NavArrow({ dir, onClick, label }) {
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 const fmtHours = (h) => `${Number(Number(h || 0).toFixed(2)).toLocaleString('es-ES')} h`;
 const heroCard = 'rounded-3xl border border-gray-200 bg-white shadow-[0_1px_2px_rgba(16,24,40,0.04)]';
-// Phone: a grouped card; from md up the rows are a plain table again.
-const listCard = 'rounded-2xl border border-gray-200 bg-white overflow-hidden md:rounded-none md:border-0 md:bg-transparent md:overflow-visible';
+
+const positionDot = (position) => (
+  <Avatar round color={{ bg: `${position.color || '#64748B'}1f`, fg: position.color || '#64748B' }}>
+    <span className="w-3 h-3 rounded-full" style={{ backgroundColor: position.color || '#64748B' }} />
+  </Avatar>
+);
 
 /** The three numbers of a screen, side by side (phone only). */
 function StatRow({ items }) {
@@ -647,6 +651,26 @@ export default function Personal() {
     }
   };
 
+  const positionActions = (position) => {
+    const i = positions.indexOf(position);
+    return (
+      <>
+        <button type="button" onClick={() => movePosition(i, i - 1)} disabled={i === 0} title="Subir" aria-label="Subir"
+          className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-25 disabled:hover:bg-transparent">
+          <Icon name="down" className="w-4 h-4 rotate-180" strokeWidth={2} />
+        </button>
+        <button type="button" onClick={() => movePosition(i, i + 1)} disabled={i === positions.length - 1} title="Bajar" aria-label="Bajar"
+          className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-25 disabled:hover:bg-transparent">
+          <Icon name="down" className="w-4 h-4" strokeWidth={2} />
+        </button>
+        <MoreMenu items={[
+          { label: 'Editar', onClick: () => setPositionModal(position) },
+          { label: position.status === 'active' ? 'Desactivar' : 'Activar', onClick: () => togglePositionStatus(position) },
+        ]} />
+      </>
+    );
+  };
+
   const canEditWeek = role === 'owner' || role === 'manager';
   const plannerMenuItems = [
     canEditWeek && !isCopyingWeek && { label: 'Copiar semana anterior', onClick: copyPreviousWeekAssignments },
@@ -980,27 +1004,13 @@ export default function Personal() {
                   {search ? 'No hay resultados para tu búsqueda.' : employees.length === 0 ? 'Todavía no hay empleados.' : 'No hay empleados con este filtro.'}
                 </Empty>
               ) : (
-                <div className={listCard}>
-                  <TableHead>
-                    <span className="col-span-4">Empleado</span>
-                    <span className="col-span-3">Puestos</span>
-                    <span className="col-span-2">Cómo cobra</span>
-                    <span className="col-span-2">Estado</span>
-                    <span className="col-span-1" />
-                  </TableHead>
-                  <ul className="divide-y divide-gray-100">
-                    {filteredEmployees.map((employee) => (
-                      <EmployeeRow
-                        key={employee._id}
-                        employee={employee}
-                        onEdit={() => setEmployeeModal(employee)}
-                        onPago={() => setCompModalEmployee(employee)}
-                        onToggle={() => toggleEmployeeStatus(employee)}
-                        onAccess={() => setAccessEmployee(employee)}
-                      />
-                    ))}
-                  </ul>
-                </div>
+                <EmployeeTable
+                  employees={filteredEmployees}
+                  onEdit={setEmployeeModal}
+                  onPago={setCompModalEmployee}
+                  onToggle={toggleEmployeeStatus}
+                  onAccess={setAccessEmployee}
+                />
               )}
             </>
           )}
@@ -1015,58 +1025,38 @@ export default function Personal() {
               {positions.length === 0 ? (
                 <Empty action={<PrimaryButton onClick={() => setPositionModal({})}>Nuevo puesto</PrimaryButton>}>Sin puestos definidos.</Empty>
               ) : (
-                <div className={listCard}>
-                  <TableHead>
-                    <span className="col-span-5">Puesto</span>
-                    <span className="col-span-3">Empleados activos</span>
-                    <span className="col-span-2">Estado</span>
-                    <span className="col-span-2" />
-                  </TableHead>
-                  <ul className="divide-y divide-gray-100">
-                    {positions.map((position, i) => {
+                <DataTable
+                  rows={positions}
+                  rowKey={(position) => position._id}
+                  onRowClick={setPositionModal}
+                  columns={[
+                    { label: 'Puesto', span: 5, render: (position) => (
+                      <span className="flex items-center gap-3 min-w-0">
+                        {positionDot(position)}
+                        <span className={`truncate text-[15px] font-medium ${position.status === 'active' ? 'text-gray-900' : 'text-gray-500'}`}>{position.name}</span>
+                      </span>
+                    ) },
+                    { label: 'Empleados activos', span: 3, render: (position) => {
                       const count = employeeCountByPosition.get(String(position._id)) || 0;
-                      const active = position.status === 'active';
-                      return (
-                        <li key={position._id}>
-                          <div className="flex items-center gap-3 md:grid md:grid-cols-12 md:gap-4 px-3 md:px-2 py-3 md:rounded-xl hover:bg-gray-50">
-                            <button type="button" onClick={() => setPositionModal(position)} className="md:col-span-5 flex items-center gap-3 min-w-0 flex-1 text-left">
-                              <span className="w-10 h-10 rounded-full flex items-center justify-center shrink-0" style={{ backgroundColor: `${position.color || '#64748B'}1f` }}>
-                                <span className="w-3 h-3 rounded-full" style={{ backgroundColor: position.color || '#64748B' }} />
-                              </span>
-                              <span className="min-w-0">
-                                <span className={`block text-[15px] font-medium truncate ${active ? 'text-gray-900' : 'text-gray-500'}`}>{position.name}</span>
-                                <span className="md:hidden block text-[13px] text-gray-500">
-                                  {count > 0 ? `${count} ${count === 1 ? 'empleado' : 'empleados'}` : 'Sin empleados'}{!active && ' · Inactivo'}
-                                </span>
-                              </span>
-                            </button>
-                            <span className="hidden md:block col-span-3 text-sm text-gray-700 tabular-nums">
-                              {count > 0 ? `${count} ${count === 1 ? 'empleado' : 'empleados'}` : <span className="text-gray-300">—</span>}
-                            </span>
-                            <span className="hidden md:block col-span-2"><StateText active={active} /></span>
-                            <div className="md:col-span-2 flex items-center justify-end gap-0.5 shrink-0">
-                              <button type="button" onClick={() => movePosition(i, i - 1)} disabled={i === 0} title="Subir" aria-label="Subir"
-                                className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-25 disabled:hover:bg-transparent">
-                                <Icon name="down" className="w-4 h-4 rotate-180" strokeWidth={2} />
-                              </button>
-                              <button type="button" onClick={() => movePosition(i, i + 1)} disabled={i === positions.length - 1} title="Bajar" aria-label="Bajar"
-                                className="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-700 hover:bg-gray-100 disabled:opacity-25 disabled:hover:bg-transparent">
-                                <Icon name="down" className="w-4 h-4" strokeWidth={2} />
-                              </button>
-                              <MenuButton ariaLabel="Más opciones" className="w-9 h-9 justify-center text-gray-500"
-                                items={[
-                                  { label: 'Editar', onClick: () => setPositionModal(position) },
-                                  { label: active ? 'Desactivar' : 'Activar', onClick: () => togglePositionStatus(position) },
-                                ]}>
-                                <MoreIcon />
-                              </MenuButton>
-                            </div>
-                          </div>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </div>
+                      return <span className="tabular-nums">{count > 0 ? `${count} ${count === 1 ? 'empleado' : 'empleados'}` : <span className="text-gray-300">—</span>}</span>;
+                    } },
+                    { label: 'Estado', span: 2, render: (position) => <StateText active={position.status === 'active'} /> },
+                    { label: '', span: 2, align: 'right', render: (position) => (
+                      <div className="flex items-center justify-end gap-0.5" onClick={(e) => e.stopPropagation()}>{positionActions(position)}</div>
+                    ) },
+                  ]}
+                  mobile={(position) => {
+                    const count = employeeCountByPosition.get(String(position._id)) || 0;
+                    const active = position.status === 'active';
+                    return {
+                      leading: positionDot(position),
+                      title: position.name,
+                      muted: !active,
+                      subtitle: `${count > 0 ? `${count} ${count === 1 ? 'empleado' : 'empleados'}` : 'Sin empleados'}${!active ? ' · Inactivo' : ''}`,
+                      trailing: <div className="flex items-center gap-0.5" onClick={(e) => e.stopPropagation()}>{positionActions(position)}</div>,
+                    };
+                  }}
+                />
               )}
             </>
           )}
@@ -1126,29 +1116,22 @@ export default function Personal() {
                   <div className="hidden md:block"><BigFigure label={`Coste de ${monthLabel}`} value={moneyByCurrency(monthlyCosts.totalsByCurrency)}
                     sub={`${totalShifts} ${totalShifts === 1 ? 'turno' : 'turnos'} · ${Number(totalHours.toFixed(2)).toLocaleString('es-ES')} h · ${rows.length} ${rows.length === 1 ? 'empleado' : 'empleados'}`} /></div>
                   <Section title="Por empleado">
-                    <div className={listCard}>
-                    <TableHead>
-                      <span className="col-span-4">Empleado</span>
-                      <span className="col-span-3">Cómo cobra</span>
-                      <span className="col-span-1 text-right">Turnos</span>
-                      <span className="col-span-2 text-right">Horas</span>
-                      <span className="col-span-2 text-right">Coste</span>
-                    </TableHead>
-                    <ul className="divide-y divide-gray-100">
-                      {rows.map((row) => (
-                        <li key={String(row.employeeId)} className="flex items-center gap-3 md:grid md:grid-cols-12 md:gap-4 px-4 md:px-2 py-3.5 md:py-3">
-                          <div className="md:col-span-4 min-w-0 flex-1">
-                            <p className="text-[15px] font-medium text-gray-900 truncate">{row.employeeName}</p>
-                            <p className="md:hidden text-[13px] text-gray-500 truncate">{plural(row.assignments, 'turno', 'turnos')} · {fmtHours(row.totalHours)}{row.compensation?.paymentType ? ` · ${compTypeLabel(row.compensation.paymentType)}` : ''}</p>
-                          </div>
-                          <span className="hidden md:block col-span-3 text-sm text-gray-600">{compTypeLabel(row.compensation?.paymentType)}</span>
-                          <span className="hidden md:block col-span-1 text-right text-sm tabular-nums text-gray-700">{row.assignments}</span>
-                          <span className="hidden md:block col-span-2 text-right text-sm tabular-nums text-gray-700">{fmtHours(row.totalHours)}</span>
-                          <span className="md:col-span-2 text-right text-sm font-semibold tabular-nums text-gray-900 shrink-0">{formatMoney(row.monthlyCost, row.currency)}</span>
-                        </li>
-                      ))}
-                    </ul>
-                    </div>
+                    <DataTable
+                      rows={rows}
+                      rowKey={(row) => String(row.employeeId)}
+                      columns={[
+                        { label: 'Empleado', span: 4, render: (row) => <span className="block truncate text-[15px] font-medium text-gray-900">{row.employeeName}</span> },
+                        { label: 'Cómo cobra', span: 3, render: (row) => <span className="text-gray-600">{compTypeLabel(row.compensation?.paymentType)}</span> },
+                        { label: 'Turnos', span: 1, align: 'right', render: (row) => <span className="tabular-nums">{row.assignments}</span> },
+                        { label: 'Horas', span: 2, align: 'right', render: (row) => <span className="tabular-nums">{fmtHours(row.totalHours)}</span> },
+                        { label: 'Coste', span: 2, align: 'right', render: (row) => <span className="font-semibold tabular-nums text-gray-900">{formatMoney(row.monthlyCost, row.currency)}</span> },
+                      ]}
+                      mobile={(row) => ({
+                        title: row.employeeName,
+                        subtitle: `${plural(row.assignments, 'turno', 'turnos')} · ${fmtHours(row.totalHours)}${row.compensation?.paymentType ? ` · ${compTypeLabel(row.compensation.paymentType)}` : ''}`,
+                        value: formatMoney(row.monthlyCost, row.currency),
+                      })}
+                    />
                   </Section>
                 </>
               );
@@ -1164,6 +1147,26 @@ export default function Personal() {
               return acc;
             }, {});
             const pendingCount = visibleRows.filter((r) => r.balance > 0).length;
+            const paymentActions = (row) => {
+              const isConfirming = confirmingPayment === String(row.employeeId);
+              const empObj = employees.find((e) => String(e._id) === String(row.employeeId));
+              return (
+                <div className="flex items-center md:justify-end gap-3 flex-wrap">
+                  {empObj && (
+                    <button type="button" onClick={() => setAssignmentsModal(empObj)} className="text-[13px] font-semibold text-gray-600 hover:text-gray-900">Ver turnos</button>
+                  )}
+                  {isConfirming ? (
+                    <span className="inline-flex items-center gap-2">
+                      <span className="text-[13px] text-gray-600 whitespace-nowrap">¿Pagar {formatMoney(row.balance, row.currency)}?</span>
+                      <RowAction tone="primary" onClick={() => registerPayment(String(row.employeeId), row.balance, row.currency)}>Confirmar</RowAction>
+                      <button type="button" onClick={() => setConfirmingPayment(null)} className="text-[13px] font-semibold text-gray-500 hover:text-gray-800">Cancelar</button>
+                    </span>
+                  ) : (
+                    <RowAction tone="good" disabled={row.balance <= 0} onClick={() => setConfirmingPayment(String(row.employeeId))}>Pagado</RowAction>
+                  )}
+                </div>
+              );
+            };
             return (
               <>
                 <HeroFigure label="Pendiente de pagar" value={moneyByCurrency(totalPendingByCurrency)}
@@ -1173,47 +1176,22 @@ export default function Personal() {
                   tone={pendingCount > 0 ? 'warn' : undefined}
                   sub={pendingCount > 0 ? `${pendingCount} ${pendingCount === 1 ? 'empleado' : 'empleados'} con saldo` : 'Todo pagado'} /></div>
                 <Section title="Por empleado" aside={<span className="text-xs text-gray-500 hidden sm:inline">Lo generado menos los pagos registrados</span>}>
-                  <div className={listCard}>
-                  <TableHead>
-                    <span className="col-span-4">Empleado</span>
-                    <span className="col-span-3">Último pago</span>
-                    <span className="col-span-2 text-right">Pendiente</span>
-                    <span className="col-span-3" />
-                  </TableHead>
-                  <ul className="divide-y divide-gray-100">
-                    {visibleRows.map((row) => {
-                      const isConfirming = confirmingPayment === String(row.employeeId);
-                      const empObj = employees.find((e) => String(e._id) === String(row.employeeId));
-                      return (
-                        <li key={String(row.employeeId)} className="px-4 md:px-2 py-3.5 md:py-3 md:grid md:grid-cols-12 md:gap-4 md:items-center">
-                          <div className="md:col-span-4 flex items-center justify-between gap-3 min-w-0">
-                            <div className="min-w-0">
-                              <p className="text-[15px] font-medium text-gray-900 truncate">{row.employeeName}</p>
-                              <p className="md:hidden text-[13px] text-gray-500">Último pago: {row.lastPaidAt ? fmtDate(row.lastPaidAt) : '—'}</p>
-                            </div>
-                            <span className={`md:hidden text-[15px] font-semibold tabular-nums shrink-0 ${row.balance > 0 ? 'text-gray-900' : 'text-gray-400'}`}>{formatMoney(row.balance, row.currency)}</span>
-                          </div>
-                          <span className="hidden md:block col-span-3 text-sm text-gray-500">{row.lastPaidAt ? fmtDate(row.lastPaidAt) : '—'}</span>
-                          <span className={`hidden md:block col-span-2 text-right text-sm font-semibold tabular-nums ${row.balance > 0 ? 'text-gray-900' : 'text-gray-400'}`}>{formatMoney(row.balance, row.currency)}</span>
-                          <div className="md:col-span-3 flex items-center md:justify-end gap-3 mt-2 md:mt-0 flex-wrap">
-                            {empObj && (
-                              <button type="button" onClick={() => setAssignmentsModal(empObj)} className="text-[13px] font-semibold text-gray-600 hover:text-gray-900">Ver turnos</button>
-                            )}
-                            {isConfirming ? (
-                              <span className="inline-flex items-center gap-2">
-                                <span className="text-[13px] text-gray-600 whitespace-nowrap">¿Pagar {formatMoney(row.balance, row.currency)}?</span>
-                                <RowAction tone="primary" onClick={() => registerPayment(String(row.employeeId), row.balance, row.currency)}>Confirmar</RowAction>
-                                <button type="button" onClick={() => setConfirmingPayment(null)} className="text-[13px] font-semibold text-gray-500 hover:text-gray-800">Cancelar</button>
-                              </span>
-                            ) : (
-                              <RowAction tone="good" disabled={row.balance <= 0} onClick={() => setConfirmingPayment(String(row.employeeId))}>Pagado</RowAction>
-                            )}
-                          </div>
-                        </li>
-                      );
+                  <DataTable
+                    rows={visibleRows}
+                    rowKey={(row) => String(row.employeeId)}
+                    columns={[
+                      { label: 'Empleado', span: 4, render: (row) => <span className="block truncate text-[15px] font-medium text-gray-900">{row.employeeName}</span> },
+                      { label: 'Último pago', span: 3, render: (row) => <span className="text-gray-500">{row.lastPaidAt ? fmtDate(row.lastPaidAt) : '—'}</span> },
+                      { label: 'Pendiente', span: 2, align: 'right', render: (row) => <span className={`font-semibold tabular-nums ${row.balance > 0 ? 'text-gray-900' : 'text-gray-400'}`}>{formatMoney(row.balance, row.currency)}</span> },
+                      { label: '', span: 3, render: (row) => paymentActions(row) },
+                    ]}
+                    mobile={(row) => ({
+                      title: row.employeeName,
+                      subtitle: `Último pago: ${row.lastPaidAt ? fmtDate(row.lastPaidAt) : '—'}`,
+                      value: <span className={row.balance > 0 ? 'text-gray-900' : 'text-gray-400'}>{formatMoney(row.balance, row.currency)}</span>,
+                      status: paymentActions(row),
                     })}
-                  </ul>
-                  </div>
+                  />
                   <p className="mt-3 text-xs text-gray-400">Pulsa <b className="font-semibold">Pagado</b> para registrar el pago y dejar su saldo a cero.</p>
                 </Section>
               </>

@@ -1,14 +1,10 @@
-import { MenuButton } from '../../ui/kit';
+import { MoreMenu } from '../../ui/kit';
+import { Avatar, Chip, DataTable, StatusDot } from '../../ui/list';
 import { compLabel, compTypeLabel, initialsOf } from './shared';
 
 /** A coloured dot and the state in words. */
-export function StateText({ active, className = '' }) {
-  return (
-    <span className={`inline-flex items-center gap-1.5 text-xs font-medium ${active ? 'text-emerald-700' : 'text-gray-500'} ${className}`}>
-      <span className={`w-2 h-2 rounded-full ${active ? 'bg-emerald-500' : 'bg-gray-300'}`} />
-      {active ? 'Activo' : 'Inactivo'}
-    </span>
-  );
+export function StateText({ active }) {
+  return <StatusDot tone={active ? 'green' : 'gray'}>{active ? 'Activo' : 'Inactivo'}</StatusDot>;
 }
 
 export function MoreIcon() {
@@ -19,42 +15,40 @@ export function MoreIcon() {
   );
 }
 
-/**
- * One employee: a row on the phone (name, puestos and pay below), a line of
- * the table from md up. Tap opens the edit sheet; ⋯ holds the rest.
- */
-export function EmployeeRow({ employee, onEdit, onPago, onToggle, onAccess }) {
-  const fullName = `${employee.firstName} ${employee.lastName || ''}`.trim();
-  const comp = employee.activeCompensation;
-  const positions = employee.positions || [];
-  const active = employee.status === 'active';
-  const color = positions[0]?.color || '#94a3b8';
+const stop = (e) => e.stopPropagation();
 
-  return (
-    <li>
-      <div role="button" tabIndex={0} onClick={onEdit}
-        onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onEdit(); } }}
-        className="flex items-center gap-3 md:grid md:grid-cols-12 md:gap-4 px-3 md:px-2 py-3 md:rounded-xl cursor-pointer hover:bg-gray-50 active:bg-gray-100">
-        <div className="md:col-span-4 flex items-center gap-3 min-w-0 flex-1">
-          <span className={`w-10 h-10 rounded-full flex items-center justify-center text-sm font-semibold shrink-0 ${active ? 'text-white' : 'text-gray-500 bg-gray-100'}`}
-            style={active ? { backgroundColor: color } : undefined}>
-            {initialsOf(fullName)}
-          </span>
+/**
+ * The employees: a list on the phone (name, puestos and pay below), a table
+ * from md up. Tap opens the edit sheet; the menu holds the rest.
+ */
+export function EmployeeTable({ employees, onEdit, onPago, onToggle, onAccess }) {
+  const nameOf = (e) => `${e.firstName} ${e.lastName || ''}`.trim();
+  const menu = (e) => (
+    <MoreMenu items={[
+      { label: 'Editar', onClick: () => onEdit(e) },
+      { label: e.activeCompensation ? 'Cambiar cómo cobra' : 'Definir cómo cobra', onClick: () => onPago(e) },
+      onAccess && { label: e.member ? 'Acceso a Vetra' : e.pendingInvitation ? 'Invitación pendiente' : 'Dar acceso a Vetra', onClick: () => onAccess(e) },
+      { label: e.status === 'active' ? 'Desactivar' : 'Activar', onClick: () => onToggle(e) },
+    ]} />
+  );
+  const columns = [
+    { label: 'Empleado', span: 4, render: (e) => {
+      const active = e.status === 'active';
+      return (
+        <div className="flex items-center gap-3 min-w-0">
+          <Avatar round color={active ? { bg: e.positions?.[0]?.color || '#94a3b8', fg: '#fff' } : undefined} className="text-gray-500">{initialsOf(nameOf(e))}</Avatar>
           <div className="min-w-0">
-            <p className="flex items-center gap-2 min-w-0">
-              <span className={`text-[15px] font-medium truncate ${active ? 'text-gray-900' : 'text-gray-500'}`}>{fullName}</span>
-              {employee.member && <span className="md:hidden shrink-0 rounded-full bg-emerald-50 px-1.5 py-px text-[10px] font-semibold text-emerald-700">Con acceso</span>}
-              {!employee.member && employee.pendingInvitation && <span className="md:hidden shrink-0 rounded-full bg-amber-50 px-1.5 py-px text-[10px] font-semibold text-amber-700">Invitado</span>}
-            </p>
-            <p className="hidden md:block text-[13px] text-gray-500 truncate">{employee.email || employee.phone || 'Sin contacto'}</p>
-            <p className="md:hidden text-[13px] truncate">
-              {positions.length > 0 && <span className="text-gray-500">{positions.map((p) => p.name).join(', ')} · </span>}
-              {comp ? <span className="text-gray-500">{compLabel(comp)}</span> : <span className="text-amber-700">Sin condiciones de pago</span>}
-              {!active && <span className="text-gray-400"> · Inactivo</span>}
-            </p>
+            <p className={`text-[15px] font-medium truncate ${active ? 'text-gray-900' : 'text-gray-500'}`}>{nameOf(e)}</p>
+            <p className="text-[13px] text-gray-500 truncate">{e.email || e.phone || 'Sin contacto'}</p>
+            {e.notes && <p className="text-[13px] text-gray-400 truncate">“{e.notes}”</p>}
           </div>
         </div>
-        <div className="hidden md:flex md:col-span-3 flex-wrap gap-x-3 gap-y-1 min-w-0">
+      );
+    } },
+    { label: 'Puestos', span: 3, render: (e) => {
+      const positions = e.positions || [];
+      return (
+        <div className="flex flex-wrap gap-x-3 gap-y-1 min-w-0">
           {positions.length === 0 && <span className="text-sm text-gray-300">—</span>}
           {positions.map((position) => (
             <span key={position._id} className="inline-flex items-center gap-1.5 text-sm text-gray-700">
@@ -63,38 +57,51 @@ export function EmployeeRow({ employee, onEdit, onPago, onToggle, onAccess }) {
             </span>
           ))}
         </div>
-        <div className="hidden md:block md:col-span-2 min-w-0">
-          {comp ? (
-            <>
-              <p className="text-sm tabular-nums text-gray-900">{compLabel(comp)}</p>
-              <p className="text-[11px] text-gray-500">{compTypeLabel(comp.paymentType)}</p>
-            </>
-          ) : (
-            <button type="button" onClick={(e) => { e.stopPropagation(); onPago(); }} className="text-[11px] font-semibold px-1.5 py-px rounded bg-amber-50 text-amber-800 hover:bg-amber-100">Sin definir</button>
-          )}
-        </div>
-        <div className="hidden md:block md:col-span-2">
-          <StateText active={active} />
-          {employee.member && <p className="text-[11px] text-emerald-700">Con acceso a Vetra</p>}
-          {!employee.member && employee.pendingInvitation && <p className="text-[11px] text-amber-700">Invitado</p>}
-        </div>
-        <div className="md:col-span-1 flex justify-end" onClick={(e) => e.stopPropagation()}>
-          <MenuButton ariaLabel="Más opciones" className="w-9 h-9 justify-center text-gray-500"
-            items={[
-              { label: 'Editar', onClick: onEdit },
-              { label: comp ? 'Cambiar cómo cobra' : 'Definir cómo cobra', onClick: onPago },
-              onAccess && { label: employee.member ? 'Acceso a Vetra' : employee.pendingInvitation ? 'Invitación pendiente' : 'Dar acceso a Vetra', onClick: onAccess },
-              { label: active ? 'Desactivar' : 'Activar', onClick: onToggle },
-            ]}>
-            <MoreIcon />
-          </MenuButton>
-        </div>
-      </div>
-      {employee.notes && (
-        <p className="hidden md:block -mt-1.5 pb-3 pl-[60px] pr-2 text-[13px] text-gray-500 truncate">“{employee.notes}”</p>
-      )}
-    </li>
-  );
+      );
+    } },
+    { label: 'Cómo cobra', span: 2, render: (e) => {
+      const comp = e.activeCompensation;
+      return comp ? (
+        <>
+          <p className="text-sm tabular-nums text-gray-900">{compLabel(comp)}</p>
+          <p className="text-[11px] text-gray-500">{compTypeLabel(comp.paymentType)}</p>
+        </>
+      ) : (
+        <button type="button" onClick={(ev) => { ev.stopPropagation(); onPago(e); }} className="text-[11px] font-semibold px-1.5 py-px rounded bg-amber-50 text-amber-800 hover:bg-amber-100">Sin definir</button>
+      );
+    } },
+    { label: 'Estado', span: 2, render: (e) => (
+      <>
+        <StateText active={e.status === 'active'} />
+        {e.member && <p className="text-[11px] text-emerald-700">Con acceso a Vetra</p>}
+        {!e.member && e.pendingInvitation && <p className="text-[11px] text-amber-700">Invitado</p>}
+      </>
+    ) },
+    { label: '', span: 1, align: 'right', render: (e) => <div className="flex justify-end" onClick={stop}>{menu(e)}</div> },
+  ];
+  const mobile = (e) => {
+    const active = e.status === 'active';
+    const comp = e.activeCompensation;
+    const positions = e.positions || [];
+    return {
+      leading: <Avatar round color={active ? { bg: e.positions?.[0]?.color || '#94a3b8', fg: '#fff' } : undefined} className="text-gray-500">{initialsOf(nameOf(e))}</Avatar>,
+      title: (
+        <>
+          {nameOf(e)}
+          {e.member && <Chip tone="green" className="ml-2 align-middle !text-[10px]">Con acceso</Chip>}
+          {!e.member && e.pendingInvitation && <Chip tone="amber" className="ml-2 align-middle !text-[10px]">Invitado</Chip>}
+        </>
+      ),
+      muted: !active,
+      subtitle: (
+        <>
+          {positions.length > 0 && `${positions.map((p) => p.name).join(', ')} · `}
+          {comp ? compLabel(comp) : <span className="text-amber-700">Sin condiciones de pago</span>}
+          {!active && ' · Inactivo'}
+        </>
+      ),
+      trailing: <span onClick={stop}>{menu(e)}</span>,
+    };
+  };
+  return <DataTable columns={columns} rows={employees} rowKey={(e) => e._id} mobile={mobile} onRowClick={onEdit} />;
 }
-
-export const MobileEmployeeRow = EmployeeRow;

@@ -1,20 +1,17 @@
 import { useState } from 'react';
 import api from '../../services/api';
 import { useData } from '../../lib/query';
-import { Empty, MenuButton, RowAction, Section } from '../../ui/kit';
-import { MoreIcon } from './MobileEmployeeRow';
+import { Empty, MoreMenu, RowAction, Section } from '../../ui/kit';
+import { Avatar, List, ListRow } from '../../ui/list';
 import { Notice, initialsOf } from './shared';
 import OpenShiftModal from './OpenShiftModal';
 import TimeOffModal from './TimeOffModal';
 import { plural, timeOffLabel, timeOffWhen } from './timeOff';
 import { confirmDialog } from '../../ui/confirm';
 
-const card = 'rounded-2xl border border-gray-200 bg-white overflow-hidden divide-y divide-gray-100';
 const dayText = (iso) => new Date(`${iso}T12:00:00`).toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' }).replace('.', '');
 
-const Avatar = ({ name }) => (
-  <span className="w-10 h-10 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center text-sm font-semibold shrink-0">{initialsOf(name)}</span>
-);
+const PersonAvatar = ({ name }) => <Avatar round>{initialsOf(name)}</Avatar>;
 
 /** Manager's inbox: days off to answer, shift swaps to approve, and what is coming up. */
 export default function RequestsTab({ employees, shifts = [], positions = [], onChanged }) {
@@ -58,9 +55,9 @@ export default function RequestsTab({ employees, shifts = [], positions = [], on
 
       {toApprove.length > 0 && (
         <Section title={`Cambios de turno por aprobar · ${toApprove.length}`}>
-          <ul className={card}>
+          <List>
             {toApprove.map((s) => (
-              <li key={s.id} className="px-4 py-3.5">
+              <li key={s.id} className="py-3.5">
                 <p className="text-[15px] font-medium text-gray-900">
                   {s.type === 'open' ? <>{s.acceptedBy?.name} cubrirá un turno libre</> : <>{s.from?.name} <span className="text-gray-400">{s.type === 'exchange' ? '⇄' : '→'}</span> {s.acceptedBy?.name}</>}
                 </p>
@@ -81,17 +78,17 @@ export default function RequestsTab({ employees, shifts = [], positions = [], on
                 </div>
               </li>
             ))}
-          </ul>
+          </List>
         </Section>
       )}
 
       {pendingOff.length > 0 && (
         <Section title={`Ausencias por responder · ${pendingOff.length}`}>
-          <ul className={card}>
+          <List>
             {pendingOff.map((t) => (
-              <li key={t.id} className="px-4 py-3.5">
+              <li key={t.id} className="py-3.5">
                 <div className="flex items-center gap-3">
-                  <Avatar name={t.employeeName} />
+                  <PersonAvatar name={t.employeeName} />
                   <div className="min-w-0 flex-1">
                     <p className="text-[15px] font-medium text-gray-900 truncate">{t.employeeName}</p>
                     <p className="text-[13px] text-gray-600">{timeOffLabel(t.type)} · {timeOffWhen(t)}</p>
@@ -109,47 +106,38 @@ export default function RequestsTab({ employees, shifts = [], positions = [], on
                 </div>
               </li>
             ))}
-          </ul>
+          </List>
         </Section>
       )}
 
       {waiting.length > 0 && (
         <Section title="Esperando respuesta">
-          <ul className={card}>
+          <List>
             {waiting.map((s) => (
-              <li key={s.id} className="flex items-center gap-3 px-4 py-3">
-                <div className="min-w-0 flex-1">
-                  <p className="text-[15px] text-gray-900">
-                    {s.type === 'open' ? `Turno libre${s.roleLabel ? ` · ${s.roleLabel}` : ''}` : s.type === 'exchange' ? `${s.from?.name} propone cambiar a ${s.to?.name}` : `${s.from?.name} busca quien cubra su turno`}
-                  </p>
-                  <p className="text-[13px] text-gray-500 first-letter:uppercase">{dayText(s.date)} · {s.start}–{s.end}{s.type === 'give' ? ` · ${s.to ? `se lo ha pedido a ${s.to.name}` : 'abierto a todos'}` : ''}</p>
-                </div>
-                <button type="button" disabled={busy === s.id} onClick={async () => await confirmDialog('¿Cerrar esta solicitud?') && act(s.id, () => api.delete(`/staff/swaps/${s.id}`))}
-                  className="text-[13px] font-semibold text-gray-500 hover:text-gray-800">Cerrar</button>
-              </li>
+              <ListRow key={s.id}
+                title={s.type === 'open' ? `Turno libre${s.roleLabel ? ` · ${s.roleLabel}` : ''}` : s.type === 'exchange' ? `${s.from?.name} propone cambiar a ${s.to?.name}` : `${s.from?.name} busca quien cubra su turno`}
+                subtitle={<span className="block first-letter:uppercase">{dayText(s.date)} · {s.start}–{s.end}{s.type === 'give' ? ` · ${s.to ? `se lo ha pedido a ${s.to.name}` : 'abierto a todos'}` : ''}</span>}
+                trailing={
+                  <button type="button" disabled={busy === s.id} onClick={async () => await confirmDialog('¿Cerrar esta solicitud?') && act(s.id, () => api.delete(`/staff/swaps/${s.id}`))}
+                    className="text-[13px] font-semibold text-gray-500 hover:text-gray-800">Cerrar</button>
+                } />
             ))}
-          </ul>
+          </List>
         </Section>
       )}
 
       {upcomingOff.length > 0 && (
         <Section title="Próximas ausencias">
-          <ul className={card}>
+          <List>
             {upcomingOff.map((t) => (
-              <li key={t.id} className="flex items-center gap-3 px-4 py-3">
-                <Avatar name={t.employeeName} />
-                <div className="min-w-0 flex-1">
-                  <p className="text-[15px] font-medium text-gray-900 truncate">{t.employeeName}</p>
-                  <p className="text-[13px] text-gray-600">{timeOffLabel(t.type)} · {timeOffWhen(t)}</p>
-                  {t.shiftsAffected > 0 && <p className="text-[12px] text-amber-700">{plural(t.shiftsAffected, 'turno asignado', 'turnos asignados')} esos días</p>}
-                </div>
-                <MenuButton ariaLabel="Más opciones" className="w-9 h-9 justify-center text-gray-500"
-                  items={[{ label: 'Quitar ausencia', onClick: async () => await confirmDialog('¿Quitar esta ausencia?') && act(t.id, () => api.delete(`/staff/time-off/${t.id}`)) }]}>
-                  <MoreIcon />
-                </MenuButton>
-              </li>
+              <ListRow key={t.id}
+                leading={<PersonAvatar name={t.employeeName} />}
+                title={t.employeeName}
+                subtitle={`${timeOffLabel(t.type)} · ${timeOffWhen(t)}`}
+                status={t.shiftsAffected > 0 ? <span className="text-[12px] text-amber-700">{plural(t.shiftsAffected, 'turno asignado', 'turnos asignados')} esos días</span> : undefined}
+                trailing={<MoreMenu items={[{ label: 'Quitar ausencia', onClick: async () => await confirmDialog('¿Quitar esta ausencia?') && act(t.id, () => api.delete(`/staff/time-off/${t.id}`)) }]} />} />
             ))}
-          </ul>
+          </List>
         </Section>
       )}
 
@@ -159,18 +147,15 @@ export default function RequestsTab({ employees, shifts = [], positions = [], on
             {showHistory ? 'Ocultar historial' : 'Ver historial de cambios'}
           </button>
           {showHistory && (
-            <ul className={`${card} mt-2`}>
+            <List className="mt-2">
               {history.data.map((s) => (
-                <li key={s.id} className="px-4 py-3">
-                  <p className="text-[14px] text-gray-900">
-                    {s.type === 'open' ? `Turno libre → ${s.acceptedBy?.name || '—'}` : `${s.from?.name} ${s.type === 'exchange' ? '⇄' : '→'} ${s.acceptedBy?.name || s.to?.name || 'nadie'}`}
-                  </p>
-                  <p className="text-[12px] text-gray-500 first-letter:uppercase">
+                <ListRow key={s.id}
+                  title={s.type === 'open' ? `Turno libre → ${s.acceptedBy?.name || '—'}` : `${s.from?.name} ${s.type === 'exchange' ? '⇄' : '→'} ${s.acceptedBy?.name || s.to?.name || 'nadie'}`}
+                  subtitle={<span className="block first-letter:uppercase">
                     {dayText(s.date)} · {s.start}–{s.end} · <span className={s.status === 'approved' ? 'text-emerald-700' : 'text-gray-500'}>{{ approved: 'Aprobado', rejected: 'Rechazado', declined: 'Lo rechazó el compañero', cancelled: 'Cancelado' }[s.status]}</span>
-                  </p>
-                </li>
+                  </span>} />
               ))}
-            </ul>
+            </List>
           )}
         </div>
       )}

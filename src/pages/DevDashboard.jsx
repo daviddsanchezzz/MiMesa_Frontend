@@ -10,7 +10,7 @@ import { Empty, FigureLine, RowAction, Section, SectionLink, Segmented, Toggle }
 import { dateShort, dateYear } from '../lib/format';
 import { confirmDialog } from '../ui/confirm';
 import { ErrorBanner, Loading } from '../ui/feedback';
-import { TableHead } from '../ui/list';
+import { Avatar, DataTable, List, ListRow } from '../ui/list';
 
 /*
  * Vetra panel: every client business in one list (owner, team, activity,
@@ -104,37 +104,6 @@ function OwnerText({ owner }) {
   return <span className="inline-flex items-center gap-1.5 text-gray-400"><Dot color="#d1d5db" />Sin dueño</span>;
 }
 
-function BusinessRow({ b, onOpen }) {
-  const people = `${b.team.length} ${b.team.length === 1 ? 'persona' : 'personas'}`;
-  return (
-    <li>
-      <button type="button" onClick={() => onOpen(b)}
-        className="w-full text-left px-2 py-3 flex items-center gap-3 md:grid md:grid-cols-12 md:gap-4 rounded-xl hover:bg-gray-50 active:bg-gray-100 transition-colors">
-        <div className="md:col-span-4 flex items-center gap-3 min-w-0 flex-1">
-          <Initial name={b.name} type={b.businessType} />
-          <div className="min-w-0">
-            <p className="text-[15px] font-medium text-gray-900 truncate">{b.name}</p>
-            <p className="text-[13px] text-gray-500 truncate md:hidden">
-              {PLAN[planState(b)]?.[0]} · {TYPE[b.businessType] || 'Restaurante'} · {people}
-            </p>
-            <p className="hidden md:block text-[13px] text-gray-500 truncate">{TYPE[b.businessType] || 'Restaurante'} · desde {shortDate(b.createdAt)}</p>
-            <p className="text-xs text-gray-600 mt-0.5 md:hidden"><OwnerText owner={b.owner} /></p>
-          </div>
-        </div>
-        <div className="hidden md:block md:col-span-2"><PlanText state={planState(b)} /></div>
-        <div className="hidden md:block md:col-span-3 text-sm text-gray-700 min-w-0"><OwnerText owner={b.owner} /></div>
-        <div className="hidden md:block md:col-span-1 text-right text-sm tabular-nums text-gray-700">{b.team.length}</div>
-        <div className="md:col-span-1 text-right shrink-0">
-          <p className="text-sm font-semibold text-gray-900 tabular-nums">{b.activity.last30d}</p>
-          <p className="text-[11px] text-gray-400 md:hidden">{b.activity.unit} 30 d</p>
-        </div>
-        <div className="hidden md:block md:col-span-1 text-right text-[13px] text-gray-500">{b.lastSeenAt ? ago(b.lastSeenAt) : 'sin entrar'}</div>
-        <Icon name="right" className="md:hidden w-4 h-4 text-gray-300 shrink-0" strokeWidth={2} />
-      </button>
-    </li>
-  );
-}
-
 /** Start a session as that user (support). */
 async function impersonate(userId, startImpersonation) {
   let token = '';
@@ -156,28 +125,28 @@ async function impersonate(userId, startImpersonation) {
 
 function PersonRow({ p, onImpersonate, onDelete, busy }) {
   return (
-    <li className="flex items-center gap-3 py-3">
-      <span className="w-9 h-9 rounded-full bg-gray-100 text-gray-600 flex items-center justify-center text-sm font-semibold shrink-0">
-        {(p.name || p.email || '?').charAt(0).toUpperCase()}
-      </span>
-      <div className="min-w-0 flex-1">
-        <p className="text-[15px] font-medium text-gray-900 truncate">
+    <ListRow
+      leading={<Avatar round size={36}>{(p.name || p.email || '?').charAt(0).toUpperCase()}</Avatar>}
+      title={(
+        <>
           {p.name || p.email}
           {p.role && <span className="ml-1.5 text-xs font-medium text-gray-400">{ROLE[p.role] || p.role}</span>}
           {p.isDev && <span className="ml-1.5 text-xs font-semibold text-violet-700">Vetra</span>}
-        </p>
-        <p className="text-[13px] text-gray-500 truncate">
-          {p.email}{p.emailVerified === false ? ' · sin verificar' : ''} · {p.lastSeenAt ? `entró ${ago(p.lastSeenAt)}` : 'nunca ha entrado'}
-        </p>
-      </div>
-      {onImpersonate && <RowAction disabled={busy} onClick={onImpersonate}>Entrar</RowAction>}
-      {onDelete && (
-        <button type="button" disabled={busy} onClick={onDelete} title="Eliminar usuario" aria-label="Eliminar usuario"
-          className="w-9 h-9 flex items-center justify-center rounded-full text-gray-400 hover:text-rose-600 hover:bg-rose-50 disabled:opacity-50 shrink-0">
-          <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" className="w-[18px] h-[18px]"><path d="M4 6h12M8 6V4.5A1.5 1.5 0 0 1 9.5 3h1A1.5 1.5 0 0 1 12 4.5V6m2 0-.6 9.1A2 2 0 0 1 11.4 17H8.6a2 2 0 0 1-2-1.9L6 6" strokeLinecap="round" strokeLinejoin="round" /></svg>
-        </button>
+        </>
       )}
-    </li>
+      subtitle={`${p.email}${p.emailVerified === false ? ' · sin verificar' : ''} · ${p.lastSeenAt ? `entró ${ago(p.lastSeenAt)}` : 'nunca ha entrado'}`}
+      trailing={(
+        <>
+          {onImpersonate && <RowAction disabled={busy} onClick={onImpersonate}>Entrar</RowAction>}
+          {onDelete && (
+            <button type="button" disabled={busy} onClick={onDelete} title="Eliminar usuario" aria-label="Eliminar usuario"
+              className="w-9 h-9 flex items-center justify-center rounded-full text-gray-400 hover:text-rose-600 hover:bg-rose-50 disabled:opacity-50 shrink-0">
+              <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" strokeWidth="1.6" className="w-[18px] h-[18px]"><path d="M4 6h12M8 6V4.5A1.5 1.5 0 0 1 9.5 3h1A1.5 1.5 0 0 1 12 4.5V6m2 0-.6 9.1A2 2 0 0 1 11.4 17H8.6a2 2 0 0 1-2-1.9L6 6" strokeLinecap="round" strokeLinejoin="round" /></svg>
+            </button>
+          )}
+        </>
+      )}
+    />
   );
 }
 
@@ -295,13 +264,13 @@ function BusinessSheet({ b, modules, onClose, onChanged }) {
 
         <Section title={`Equipo · ${b.team.length}`}>
           {b.team.length ? (
-            <ul className="divide-y divide-gray-100">
+            <List>
               {b.team.map((p) => (
                 <PersonRow key={p.userId} p={p} busy={busy}
                   onImpersonate={p.exists ? () => enterAs(p.userId) : null}
                   onDelete={p.exists ? () => removeUser(p) : null} />
               ))}
-            </ul>
+            </List>
           ) : <p className="text-sm text-gray-500 py-2">Todavía no ha entrado nadie.</p>}
           {b.pendingInvites.length > 0 && (
             <p className="text-[13px] text-gray-500 mt-1">
@@ -471,19 +440,39 @@ export default function DevDashboard() {
           </div>
 
           {list.length ? (
-            <div>
-              <TableHead>
-                <span className="col-span-4">Negocio</span>
-                <span className="col-span-2">Plan</span>
-                <span className="col-span-3">Dueño</span>
-                <span className="col-span-1 text-right">Equipo</span>
-                <span className="col-span-1 text-right">30 días</span>
-                <span className="col-span-1 text-right">Entró</span>
-              </TableHead>
-              <ul className="divide-y divide-gray-100">
-                {list.map((b) => <BusinessRow key={b.id} b={b} onOpen={(x) => setOpenId(x.id)} />)}
-              </ul>
-            </div>
+            <DataTable
+              rowKey={(b) => b.id}
+              rows={list}
+              onRowClick={(b) => setOpenId(b.id)}
+              columns={[
+                {
+                  label: 'Negocio', span: 4,
+                  render: (b) => (
+                    <span className="flex items-center gap-3 min-w-0">
+                      <Initial name={b.name} type={b.businessType} />
+                      <span className="min-w-0">
+                        <span className="block truncate text-[15px] font-medium text-gray-900">{b.name}</span>
+                        <span className="block truncate text-[13px] text-gray-500">{TYPE[b.businessType] || 'Restaurante'} · desde {shortDate(b.createdAt)}</span>
+                      </span>
+                    </span>
+                  ),
+                },
+                { label: 'Plan', span: 2, render: (b) => <PlanText state={planState(b)} /> },
+                { label: 'Dueño', span: 3, render: (b) => <OwnerText owner={b.owner} /> },
+                { label: 'Equipo', span: 1, align: 'right', render: (b) => <span className="tabular-nums">{b.team.length}</span> },
+                { label: '30 días', span: 1, align: 'right', render: (b) => <span className="font-semibold tabular-nums text-gray-900">{b.activity.last30d}</span> },
+                { label: 'Entró', span: 1, align: 'right', render: (b) => <span className="text-[13px] text-gray-500">{b.lastSeenAt ? ago(b.lastSeenAt) : 'sin entrar'}</span> },
+              ]}
+              mobile={(b) => ({
+                leading: <Initial name={b.name} type={b.businessType} />,
+                title: b.name,
+                subtitle: `${PLAN[planState(b)]?.[0]} · ${TYPE[b.businessType] || 'Restaurante'} · ${b.team.length} ${b.team.length === 1 ? 'persona' : 'personas'}`,
+                status: <span className="text-xs text-gray-600"><OwnerText owner={b.owner} /></span>,
+                value: b.activity.last30d,
+                valueSub: `${b.activity.unit} 30 d`,
+                chevron: true,
+              })}
+            />
           ) : (
             <Empty action={!data.businesses.length && (
               <button type="button" onClick={() => setCreating(true)} className="text-sm font-semibold text-violet-700">+ Crear el primero</button>
@@ -497,13 +486,13 @@ export default function DevDashboard() {
               aside={<SectionLink onClick={() => setShowOrphans((v) => !v)}>{showOrphans ? 'Ocultar' : 'Ver'}</SectionLink>}>
               <p className="text-[13px] text-gray-500">Personas registradas que no pertenecen a ningún negocio (incluida la cuenta de Vetra).</p>
               {showOrphans && (
-                <ul className="divide-y divide-gray-100 mt-1">
+                <List className="mt-1">
                   {orphans.map((o) => (
                     <PersonRow key={o.id} p={o} busy={busy}
                       onImpersonate={o.isDev ? null : () => enterAsOrphan(o.id)}
                       onDelete={o.isDev ? null : () => deleteOrphan(o)} />
                   ))}
-                </ul>
+                </List>
               )}
             </Section>
           )}

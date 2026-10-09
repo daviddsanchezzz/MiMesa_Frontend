@@ -22,7 +22,7 @@ import CreateProfessional from './CreateProfessional';
 import ProfessionalGeneral from './ProfessionalGeneral';
 import { confirmLeave } from '../../lib/unsavedChanges';
 import { Loading } from '../../ui/feedback';
-import { TableHead } from '../../ui/list';
+import { DataTable } from '../../ui/list';
 
 const servicesOf = (r, services) =>
   services.filter((s) =>
@@ -160,6 +160,11 @@ function TeamContent() {
       !resources.some((r) => String(r._id) === String(i.links?.resourceId)),
   );
   const active = resources.filter((r) => r.active !== false);
+  const accessOf = (r) => {
+    if (members.some((m) => m.userId === r.userId)) return { text: 'Con acceso', cls: 'text-emerald-700' };
+    if (invitations.some((i) => String(i.links?.resourceId) === String(r._id))) return { text: 'Invitación pendiente', cls: 'text-amber-700' };
+    return { text: 'Sin acceso', cls: 'text-gray-500' };
+  };
   return (
     <div
       className="w-full flex flex-1 min-h-0 flex-col"
@@ -297,83 +302,61 @@ function TeamContent() {
             </p>
           )}
           {resources.length > 0 && (
-            <TableHead at="lg">
-              <span className="col-span-4">Profesional</span>
-              <span className="col-span-5">Servicios</span>
-              <span className="col-span-2">Acceso a Vetra</span>
-              <span className="col-span-1" />
-            </TableHead>
+            <DataTable
+              at="lg"
+              rowKey={(r) => r._id}
+              rows={resources.filter((r) => inactive || r.active !== false)}
+              onRowClick={open}
+              columns={[
+                {
+                  label: 'Profesional', span: 4,
+                  render: (r) => (
+                    <span className="flex items-center gap-3 min-w-0">
+                      <ProfessionalAvatar name={r.name} photo={r.photo} color={colors[r._id]} size={40} />
+                      <span className="min-w-0 font-semibold text-gray-900">
+                        {r.name}
+                        {r.active === false && <span className="ml-2 text-xs text-gray-400">Inactivo</span>}
+                      </span>
+                    </span>
+                  ),
+                },
+                {
+                  label: 'Servicios', span: 5,
+                  render: (r) => {
+                    const list = servicesOf(r, services);
+                    return <span className="block truncate text-gray-600">{list.length ? list.map((x) => x.name).join(', ') : <span className="text-gray-300">—</span>}</span>;
+                  },
+                },
+                {
+                  label: 'Acceso a Vetra', span: 2,
+                  render: (r) => {
+                    const { text, cls } = accessOf(r);
+                    return <span className={cls}>{text}</span>;
+                  },
+                },
+                { label: '', span: 1, align: 'right', render: () => <span className="text-gray-400" aria-hidden="true">›</span> },
+              ]}
+              mobile={(r) => {
+                const count = servicesOf(r, services).length;
+                const { text, cls } = accessOf(r);
+                return {
+                  leading: <ProfessionalAvatar name={r.name} photo={r.photo} color={colors[r._id]} size={40} />,
+                  title: (
+                    <>
+                      {r.name}
+                      {r.active === false && <span className="ml-2 text-xs text-gray-400">Inactivo</span>}
+                    </>
+                  ),
+                  subtitle: (
+                    <>
+                      {count} {count === 1 ? 'servicio' : 'servicios'} · <span className={cls}>{text}</span>
+                    </>
+                  ),
+                  chevron: true,
+                };
+              }}
+            />
           )}
-          <ul className="divide-y divide-gray-100">
-            {resources
-              .filter((r) => inactive || r.active !== false)
-              .map((r) => {
-                const member = members.find((m) => m.userId === r.userId);
-                const pending = invitations.some(
-                  (i) => String(i.links?.resourceId) === String(r._id),
-                );
-                const serviceList = servicesOf(r, services);
-                const serviceCount = serviceList.length;
-                return (
-                  <li key={r._id}>
-                    <button
-                      className="w-full text-left flex items-center gap-3 lg:grid lg:grid-cols-12 lg:gap-4 py-3 lg:px-2 min-h-11 hover:bg-gray-50 rounded-xl"
-                      onClick={() => open(r)}
-                    >
-                      <div className="flex items-center gap-3 min-w-0 flex-1 lg:col-span-4">
-                      <ProfessionalAvatar
-                        name={r.name}
-                        photo={r.photo}
-                        color={colors[r._id]}
-                        size={40}
-                      />
-                      <div className="min-w-0 flex-1">
-                        <p className="font-semibold text-gray-900">
-                          {r.name}
-                          {r.active === false && (
-                            <span className="ml-2 text-xs text-gray-400">
-                              Inactivo
-                            </span>
-                          )}
-                        </p>
-                        <div className="flex flex-wrap items-center gap-x-2 text-xs text-gray-500 mt-1 lg:hidden">
-                          <span>
-                            {serviceCount}{' '}
-                            {serviceCount === 1 ? 'servicio' : 'servicios'}
-                          </span>
-                          <span aria-hidden="true">·</span>
-                          <span
-                            className={
-                              member
-                                ? 'text-emerald-700'
-                                : pending
-                                  ? 'text-amber-700'
-                                  : 'text-gray-500'
-                            }
-                          >
-                            {member
-                              ? 'Con acceso'
-                              : pending
-                                ? 'Invitación pendiente'
-                                : 'Sin acceso'}
-                          </span>
-                        </div>
-                      </div>
-                      </div>
-                      <span className="hidden lg:block lg:col-span-5 text-sm text-gray-600 truncate">
-                        {serviceCount ? serviceList.map((x) => x.name).join(', ') : <span className="text-gray-300">—</span>}
-                      </span>
-                      <span className={`hidden lg:block lg:col-span-2 text-sm ${member ? 'text-emerald-700' : pending ? 'text-amber-700' : 'text-gray-500'}`}>
-                        {member ? 'Con acceso' : pending ? 'Invitación pendiente' : 'Sin acceso'}
-                      </span>
-                      <span className="text-gray-400 lg:col-span-1 lg:text-right" aria-hidden="true">
-                        ›
-                      </span>
-                    </button>
-                  </li>
-                );
-              })}
-          </ul>
           {resources.some((r) => r.active === false) && (
             <label className="flex items-center gap-2 min-h-11 text-sm text-gray-500">
               <input

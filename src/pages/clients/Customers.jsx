@@ -10,7 +10,7 @@ import CustomerListTools from '../../components/CustomerListTools';
 import { queryClient, useData } from '../../lib/query';
 import { useResources } from '../agenda/queries';
 import { ErrorBanner } from '../../ui/feedback';
-import { TableHead } from '../../ui/list';
+import { Chip, DataTable } from '../../ui/list';
 
 const NO_SUMMARY = {};
 const NO_RESOURCES = [];
@@ -212,60 +212,63 @@ export default function Customers() {
       )}
 
       {rows.length > 0 && (
-        <div>
-          <TableHead>
-            <span className="col-span-4">Cliente</span>
-            <span className="col-span-2">Última visita</span>
-            <span className="col-span-3">{cfg.nextLabel}</span>
-            <span className="col-span-1 text-right">Visitas</span>
-            <span className="col-span-2 text-right">{cfg.lastColumn}</span>
-          </TableHead>
-          <ul className="divide-y divide-gray-100">
-            {rows.map((r) => {
-              const { c } = r;
-              return (
-                <li key={c._id}>
-                  <button type="button" onClick={() => navigate(`/customers/${c._id}`)}
-                    className="w-full text-left px-2 -mx-0 py-3 md:grid md:grid-cols-12 md:gap-4 md:items-center flex items-center gap-3 rounded-xl hover:bg-gray-50 active:bg-gray-100 transition-colors">
-                    <div className="md:col-span-4 flex items-center gap-3 min-w-0 flex-1">
-                      <Avatar name={c.name} vip={c.vip} />
-                      <div className="min-w-0">
-                        <p className="text-[15px] font-medium text-gray-900 truncate">{c.name}</p>
-                        <p className="text-[13px] text-gray-500 truncate">{c.phone ? phoneText(c.phone) : c.email || 'Sin contacto'}</p>
-                        <div className="flex flex-wrap items-center gap-1.5 mt-1 md:hidden">
-                          {r.due && <span className="text-[10px] font-semibold px-1.5 py-px rounded bg-emerald-50 text-emerald-800">Le toca volver</span>}
-                          {r.nextText && <span className="text-[10px] font-semibold px-1.5 py-px rounded bg-violet-50 text-violet-800">{r.nextText}</span>}
-                          {!r.nextText && r.last && <span className="text-[11px] text-gray-500">Vino {relDays(r.last)}</span>}
-                          {r.noShows > 0 && <span className="text-[10px] font-semibold px-1.5 py-px rounded bg-rose-50 text-rose-700">{r.noShows} no vino</span>}
-                        </div>
-                      </div>
-                    </div>
-                    <div className="hidden md:block md:col-span-2 text-sm text-gray-700">
-                      {r.last ? relDays(r.last) : <span className="text-gray-300">—</span>}
-                      {r.due && <span className="block text-[11px] font-semibold text-emerald-700">Le toca volver</span>}
-                    </div>
-                    <div className="hidden md:block md:col-span-3 text-sm text-gray-700 truncate">
-                      {r.nextText || <span className="text-gray-300">—</span>}
-                      {r.fav && (
-                        <span className="flex items-center gap-1.5 text-[11px] text-gray-500 mt-0.5">
-                          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: colors[r.fav._id] }} />Suele ir con {r.fav.name}
-                        </span>
-                      )}
-                    </div>
-                    <div className="hidden md:block md:col-span-1 text-right text-sm tabular-nums text-gray-900">
-                      {r.visits}
-                      {r.noShows > 0 && <span className="block text-[11px] text-rose-600">{r.noShows} no vino</span>}
-                    </div>
-                    <div className="hidden md:block md:col-span-2 text-right text-sm tabular-nums text-gray-900">
-                      {isAppointments ? <b className="font-semibold">{euros(r.spent)}</b> : (r.people ? `${r.people} personas` : <span className="text-gray-300">—</span>)}
-                    </div>
-                    <Icon name="right" className="md:hidden w-4 h-4 text-gray-300" strokeWidth={2} />
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
+        <DataTable
+          rows={rows}
+          rowKey={(r) => r.c._id}
+          onRowClick={(r) => navigate(`/customers/${r.c._id}`)}
+          columns={[
+            { label: 'Cliente', span: 4, render: (r) => (
+              <span className="flex items-center gap-3 min-w-0">
+                <Avatar name={r.c.name} vip={r.c.vip} />
+                <span className="min-w-0">
+                  <span className="block text-[15px] font-medium text-gray-900 truncate">{r.c.name}</span>
+                  <span className="block text-[13px] text-gray-500 truncate">{r.c.phone ? phoneText(r.c.phone) : r.c.email || 'Sin contacto'}</span>
+                </span>
+              </span>
+            ) },
+            { label: 'Última visita', span: 2, render: (r) => (
+              <>
+                {r.last ? relDays(r.last) : <span className="text-gray-300">—</span>}
+                {r.due && <span className="block text-[11px] font-semibold text-emerald-700">Le toca volver</span>}
+              </>
+            ) },
+            { label: cfg.nextLabel, span: 3, render: (r) => (
+              <div className="truncate">
+                {r.nextText || <span className="text-gray-300">—</span>}
+                {r.fav && (
+                  <span className="flex items-center gap-1.5 text-[11px] text-gray-500 mt-0.5">
+                    <span className="w-2 h-2 rounded-full" style={{ backgroundColor: colors[r.fav._id] }} />Suele ir con {r.fav.name}
+                  </span>
+                )}
+              </div>
+            ) },
+            { label: 'Visitas', span: 1, align: 'right', render: (r) => (
+              <span className="tabular-nums text-gray-900">
+                {r.visits}
+                {r.noShows > 0 && <span className="block text-[11px] text-rose-600">{r.noShows} no vino</span>}
+              </span>
+            ) },
+            { label: cfg.lastColumn, span: 2, align: 'right', render: (r) => (
+              <span className="tabular-nums text-gray-900">
+                {isAppointments ? <b className="font-semibold">{euros(r.spent)}</b> : (r.people ? `${r.people} personas` : <span className="text-gray-300">—</span>)}
+              </span>
+            ) },
+          ]}
+          mobile={(r) => ({
+            leading: <Avatar name={r.c.name} vip={r.c.vip} />,
+            title: r.c.name,
+            subtitle: r.c.phone ? phoneText(r.c.phone) : r.c.email || 'Sin contacto',
+            status: (r.due || r.nextText || r.last || r.noShows > 0) ? (
+              <span className="flex flex-wrap items-center gap-1.5">
+                {r.due && <Chip tone="green">Le toca volver</Chip>}
+                {r.nextText && <Chip tone="violet">{r.nextText}</Chip>}
+                {!r.nextText && r.last && <span className="text-[11px] text-gray-500">Vino {relDays(r.last)}</span>}
+                {r.noShows > 0 && <Chip tone="rose">{r.noShows} no vino</Chip>}
+              </span>
+            ) : null,
+            chevron: true,
+          })}
+        />
       )}
 
       </div>

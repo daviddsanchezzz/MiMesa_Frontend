@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import api from '../../services/api';
 import { RowAction, Section } from '../../ui/kit';
+import { List, ListRow } from '../../ui/list';
 import { Notice } from './shared';
 import { STATUS_TEXT, timeOffLabel, timeOffWhen } from './timeOff';
 import { confirmDialog } from '../../ui/confirm';
 
-const card = 'rounded-2xl border border-gray-200 bg-white overflow-hidden divide-y divide-gray-100';
 const dayText = (iso) => new Date(`${iso}T12:00:00`).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
 const SWAP_STATUS = { pending_peer: 'Esperando a tu compañero', pending_manager: 'Falta que lo apruebe tu encargado', approved: 'Aprobado', rejected: 'No aprobado', declined: 'Tu compañero no puede', cancelled: 'Cancelado' };
 
@@ -30,9 +30,9 @@ export default function MyRequests({ part = 'top', incoming = [], mine = [], tim
 
       {top && incoming.length > 0 && (
         <Section title={`Te piden cubrir un turno · ${incoming.length}`}>
-          <ul className="rounded-2xl border border-violet-200 bg-violet-50/50 overflow-hidden divide-y divide-violet-100">
+          <List>
             {incoming.map((s) => (
-              <li key={s.id} className="px-4 py-3.5">
+              <li key={s.id} className="py-3.5">
                 <p className="text-[15px] font-semibold text-gray-900">
                   {s.type === 'open' ? `Hace falta alguien${s.roleLabel ? ` en ${s.roleLabel}` : ''}` : s.type === 'exchange' ? `${s.from.name} te propone cambiar` : `${s.from.name} no puede venir`}
                 </p>
@@ -55,49 +55,41 @@ export default function MyRequests({ part = 'top', incoming = [], mine = [], tim
                 </div>
               </li>
             ))}
-          </ul>
+          </List>
         </Section>
       )}
 
       {!top && (openMine.length > 0 || decided.length > 0) && (
         <Section title="Tus cambios de turno">
-          <ul className={card}>
+          <List>
             {[...openMine, ...decided].map((s) => (
-              <li key={s.id} className="flex items-center gap-3 px-4 py-3">
-                <div className="min-w-0 flex-1">
-                  <p className="text-[15px] text-gray-900 first-letter:uppercase">{dayText(s.date)} · {s.start}–{s.end}{s.counter ? ` ⇄ ${dayText(s.counter.date).split(',')[0]} ${s.counter.start}` : ''}</p>
-                  <p className="text-[13px] text-gray-500">
-                    {s.to ? `Para ${s.to.name}` : 'Para cualquiera'}{s.acceptedBy && !s.to ? ` · acepta ${s.acceptedBy.name}` : ''} · {SWAP_STATUS[s.status]}
-                  </p>
-                </div>
-                {['pending_peer', 'pending_manager'].includes(s.status) && (
+              <ListRow key={s.id}
+                title={<span className="block first-letter:uppercase">{dayText(s.date)} · {s.start}–{s.end}{s.counter ? ` ⇄ ${dayText(s.counter.date).split(',')[0]} ${s.counter.start}` : ''}</span>}
+                subtitle={`${s.to ? `Para ${s.to.name}` : 'Para cualquiera'}${s.acceptedBy && !s.to ? ` · acepta ${s.acceptedBy.name}` : ''} · ${SWAP_STATUS[s.status]}`}
+                trailing={['pending_peer', 'pending_manager'].includes(s.status) ? (
                   <button type="button" disabled={busy === s.id} onClick={() => act(s.id, () => api.delete(`/staff/me/swaps/${s.id}`))}
                     className="text-[13px] font-semibold text-gray-500 hover:text-gray-800">Cancelar</button>
-                )}
-              </li>
+                ) : undefined} />
             ))}
-          </ul>
+          </List>
         </Section>
       )}
 
       {!top && timeOff.length > 0 && (
         <Section title="Tus ausencias">
-          <ul className={card}>
+          <List>
             {timeOff.map((t) => (
-              <li key={t.id} className="flex items-center gap-3 px-4 py-3">
-                <div className="min-w-0 flex-1">
-                  <p className="text-[15px] text-gray-900">{timeOffLabel(t.type)} · {timeOffWhen(t)}</p>
-                  <p className={`text-[13px] ${t.status === 'approved' ? 'text-emerald-700' : t.status === 'rejected' ? 'text-rose-700' : 'text-amber-700'}`}>
-                    {STATUS_TEXT[t.status]}{t.decisionNote ? ` · “${t.decisionNote}”` : ''}
-                  </p>
-                </div>
-                {t.status !== 'rejected' && (
+              <ListRow key={t.id}
+                title={`${timeOffLabel(t.type)} · ${timeOffWhen(t)}`}
+                subtitle={<span className={t.status === 'approved' ? 'text-emerald-700' : t.status === 'rejected' ? 'text-rose-700' : 'text-amber-700'}>
+                  {STATUS_TEXT[t.status]}{t.decisionNote ? ` · “${t.decisionNote}”` : ''}
+                </span>}
+                trailing={t.status !== 'rejected' ? (
                   <button type="button" disabled={busy === t.id} onClick={async () => await confirmDialog('¿Cancelar esta ausencia?') && act(t.id, () => api.delete(`/staff/me/time-off/${t.id}`))}
                     className="text-[13px] font-semibold text-gray-500 hover:text-gray-800">Cancelar</button>
-                )}
-              </li>
+                ) : undefined} />
             ))}
-          </ul>
+          </List>
         </Section>
       )}
     </div>

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { useSetMobileHeader } from '../../context/MobileHeaderContext';
 import { bookingsApi, apiError } from '../../services/bookingsApi';
@@ -11,7 +11,7 @@ import { Empty, FigureLine, GhostButton, Hero, PrimaryButton, Section, SectionLi
 import { ModalFooter } from '../../ui/form';
 import { eur } from '../../lib/format';
 import { ErrorBanner, Loading } from '../../ui/feedback';
-import { TableHead } from '../../ui/list';
+import { Chip, DataTable } from '../../ui/list';
 
 const MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
 const eurRound = (n) => eur(Math.round(n || 0));
@@ -196,6 +196,7 @@ export function Breakdown({ p, onPay, onEdit }) {
  */
 export default function AppointmentTeam() {
   const [params, setParams] = useSearchParams();
+  const navigate = useNavigate();
   const { business } = useAuth();
   const tz = business?.timezone || DEFAULT_TZ;
   const today = todayIn(tz);
@@ -263,94 +264,69 @@ export default function AppointmentTeam() {
               <Empty action={<SectionLink to="/equipo">Añadir profesional</SectionLink>}>Todavía no hay profesionales.</Empty>
             ) : (
               <>
-                <TableHead>
-                  <span className="col-span-4">Profesional</span>
-                  <span className="col-span-1 text-right">Citas</span>
-                  <span className="col-span-1 text-right">Horas</span>
-                  <span className="col-span-2 text-right">Facturado</span>
-                  <span className="col-span-1 text-right">Coste</span>
-                  <span className="col-span-1 text-right">Margen</span>
-                  <span className="col-span-2 text-right">Pendiente</span>
-                </TableHead>
-                <ul className="mt-1 divide-y divide-gray-100 rounded-2xl border border-gray-200 overflow-hidden md:mt-0 md:rounded-none md:border-0 md:overflow-visible">
-                  {data.staff.map((p) => {
+                <DataTable
+                  rowKey={(p) => p.id}
+                  rows={data.staff}
+                  onRowClick={(p) => navigate(professionalUrl(p.id))}
+                  columns={[
+                    {
+                      label: 'Profesional', span: 4,
+                      render: (p) => (
+                        <span className="flex items-center gap-3 min-w-0">
+                          <StaffAvatar name={p.name} photo={p.photo} color={colors[p.id]} size={40} />
+                          <span className="min-w-0">
+                            <span className="block truncate text-[15px] font-medium text-gray-900">{p.name}{!p.active && <span className="ml-1.5 align-middle"><Chip>Desactivada</Chip></span>}</span>
+                            <span className={`block truncate text-[13px] ${p.pay ? 'text-gray-500' : 'font-semibold text-violet-700'}`}>{p.pay ? payText(p.pay) : 'Configurar remuneración'}</span>
+                          </span>
+                        </span>
+                      ),
+                    },
+                    { label: 'Citas', span: 1, align: 'right', render: (p) => <span className="tabular-nums">{p.appointments}</span> },
+                    { label: 'Horas', span: 1, align: 'right', render: (p) => <span className="tabular-nums">{num(p.hours)}</span> },
+                    { label: 'Facturado', span: 2, align: 'right', render: (p) => <span className="tabular-nums text-gray-900">{eur(p.billed + p.products)}</span> },
+                    {
+                      label: 'Coste', span: 1, align: 'right',
+                      render: (p) => { const cost = (p.salary || 0) + (p.commission || 0); return <span className="tabular-nums">{cost ? eur(cost) : <span className="text-gray-300">—</span>}</span>; },
+                    },
+                    {
+                      label: 'Margen', span: 1, align: 'right',
+                      render: (p) => <span className={`font-semibold tabular-nums ${p.pay ? (p.leaves >= 0 ? 'text-emerald-600' : 'text-rose-600') : 'text-gray-300'}`}>{p.pay ? eur(p.leaves) : '—'}</span>,
+                    },
+                    {
+                      label: 'Pendiente', span: 2, align: 'right',
+                      render: (p) => (
+                        <span className="inline-flex items-center justify-end gap-3">
+                          <span className={`tabular-nums ${p.toPay > 0 ? 'font-semibold text-amber-700' : 'text-gray-400'}`}>{eur(p.toPay)}</span>
+                          <span aria-hidden="true" className="text-xl leading-5 text-gray-300">›</span>
+                        </span>
+                      ),
+                    },
+                  ]}
+                  mobile={(p) => {
                     const cost = (p.salary || 0) + (p.commission || 0);
-                    return (
-                      <li key={p.id}>
-                        <Link to={professionalUrl(p.id)}
-                          aria-label={`Ver rendimiento de ${p.name}`}
-                          className="group block md:hidden px-4 py-4 hover:bg-gray-50 active:bg-gray-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-inset">
-                          <div className="flex items-start gap-3 min-w-0">
-                            <StaffAvatar name={p.name} photo={p.photo} color={colors[p.id]} size={40} />
-                            <div className="min-w-0 flex-1">
-                              <div className="flex items-start justify-between gap-3">
-                                <div className="min-w-0">
-                                  <p className="text-[15px] font-medium text-gray-900 truncate">
-                                    {p.name}{!p.active && <span className="ml-1.5 text-[11px] font-semibold px-1.5 py-px rounded bg-gray-100 text-gray-500 align-middle">Desactivada</span>}
-                                  </p>
-                                  {p.pay ? (
-                                    <span className="block max-w-full truncate text-left text-[13px] text-gray-500 group-hover:text-violet-700">
-                                      {payText(p.pay)}
-                                    </span>
-                                  ) : (
-                                    <span className="mt-1 inline-flex min-h-7 items-center rounded-full bg-violet-50 px-2.5 text-xs font-semibold text-violet-700 group-hover:bg-violet-100">
-                                      Configurar remuneración
-                                    </span>
-                                  )}
-                                </div>
-                                <div className="flex shrink-0 items-start gap-2">
-                                  {p.pay && (
-                                    <div className="text-right">
-                                      <p className={`text-[15px] font-semibold tabular-nums ${p.leaves >= 0 ? 'text-emerald-600' : 'text-rose-600'}`}>{p.leaves > 0 ? '+' : ''}{eur(p.leaves)}</p>
-                                      <p className="text-[11px] text-gray-400">margen</p>
-                                    </div>
-                                  )}
-                                  <span aria-hidden="true" className="pt-px text-xl leading-5 text-gray-300 transition-transform group-hover:translate-x-0.5 group-hover:text-gray-500 group-focus-visible:translate-x-0.5 group-focus-visible:text-gray-500">›</span>
-                                </div>
-                              </div>
-                              <p className="mt-1.5 text-[13px] text-gray-500 tabular-nums">{citas(p.appointments)} · {eur(p.billed + p.products)} facturado</p>
-                              {p.pay && (
-                                <div className="mt-2 flex flex-wrap items-center gap-2 text-xs">
-                                  <span className="text-gray-500">Coste <strong className="font-semibold tabular-nums text-gray-700">{eur(cost)}</strong></span>
-                                  {p.toPay > 0 ? (
-                                    <span className="rounded-full bg-amber-50 px-2 py-0.5 font-medium text-amber-800 tabular-nums">Pendiente · {eur(p.toPay)}</span>
-                                  ) : p.paid > 0 ? (
-                                    <span className="rounded-full bg-gray-100 px-2 py-0.5 font-medium text-gray-600">Pagado</span>
-                                  ) : null}
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </Link>
-
-                        <Link to={professionalUrl(p.id)}
-                          aria-label={`Ver rendimiento de ${p.name}`}
-                          className="group hidden md:grid md:grid-cols-12 md:gap-4 items-center px-2 py-3 rounded-xl hover:bg-gray-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-500 focus-visible:ring-inset">
-                          <div className="col-span-4 flex items-center gap-3 min-w-0">
-                            <StaffAvatar name={p.name} photo={p.photo} color={colors[p.id]} size={40} />
-                            <div className="min-w-0">
-                              <p className="text-[15px] font-medium text-gray-900 truncate">
-                                {p.name}{!p.active && <span className="ml-1.5 text-[11px] font-semibold px-1.5 py-px rounded bg-gray-100 text-gray-500 align-middle">Desactivada</span>}
-                              </p>
-                              <span className={`block text-[13px] text-left truncate max-w-full ${p.pay ? 'text-gray-500 group-hover:text-violet-700' : 'text-violet-700 font-semibold group-hover:text-violet-900'}`}>
-                                {p.pay ? payText(p.pay) : 'Configurar remuneración'}
-                              </span>
-                            </div>
-                          </div>
-                          <span className="hidden md:block col-span-1 text-right text-sm tabular-nums text-gray-700">{p.appointments}</span>
-                          <span className="hidden md:block col-span-1 text-right text-sm tabular-nums text-gray-700">{num(p.hours)}</span>
-                          <span className="hidden md:block col-span-2 text-right text-sm tabular-nums text-gray-900">{eur(p.billed + p.products)}</span>
-                          <span className="hidden md:block col-span-1 text-right text-sm tabular-nums text-gray-700">{cost ? eur(cost) : <span className="text-gray-300">—</span>}</span>
-                          <span className={`hidden md:block col-span-1 text-right text-sm font-semibold tabular-nums ${p.pay ? (p.leaves >= 0 ? 'text-emerald-600' : 'text-rose-600') : 'text-gray-300'}`}>{p.pay ? eur(p.leaves) : '—'}</span>
-                          <div className="hidden md:flex col-span-2 items-center justify-end gap-3">
-                            <span className={`text-sm tabular-nums ${p.toPay > 0 ? 'font-semibold text-amber-700' : 'text-gray-400'}`}>{eur(p.toPay)}</span>
-                            <span aria-hidden="true" className="text-xl leading-5 text-gray-300 transition-transform group-hover:translate-x-0.5 group-hover:text-gray-500 group-focus-visible:translate-x-0.5 group-focus-visible:text-gray-500">›</span>
-                          </div>
-                        </Link>
-                      </li>
-                    );
-                  })}
-                </ul>
+                    return {
+                      leading: <StaffAvatar name={p.name} photo={p.photo} color={colors[p.id]} size={40} />,
+                      title: <>{p.name}{!p.active && <span className="ml-1.5"><Chip>Desactivada</Chip></span>}</>,
+                      subtitle: p.pay ? payText(p.pay) : <Chip tone="violet">Configurar remuneración</Chip>,
+                      status: (
+                        <span className="block text-[13px] text-gray-500 tabular-nums">
+                          {citas(p.appointments)} · {eur(p.billed + p.products)} facturado
+                          {p.pay && (
+                            <span className="mt-1 flex flex-wrap items-center gap-2 text-xs">
+                              <span>Coste <strong className="font-semibold text-gray-700">{eur(cost)}</strong></span>
+                              {p.toPay > 0 ? <Chip tone="amber">Pendiente · {eur(p.toPay)}</Chip> : p.paid > 0 ? <Chip>Pagado</Chip> : null}
+                            </span>
+                          )}
+                        </span>
+                      ),
+                      ...(p.pay ? {
+                        value: <span className={p.leaves >= 0 ? 'text-emerald-600' : 'text-rose-600'}>{p.leaves > 0 ? '+' : ''}{eur(p.leaves)}</span>,
+                        valueSub: 'margen',
+                      } : {}),
+                      chevron: true,
+                    };
+                  }}
+                />
               </>
             )}
           </Section>

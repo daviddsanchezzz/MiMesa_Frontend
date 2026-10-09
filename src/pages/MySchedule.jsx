@@ -10,6 +10,7 @@ import { timeOffLabel } from './personal/timeOff';
 import PeriodNavigator, { usePeriod } from '../ui/PeriodNavigator';
 import { toIso } from '../lib/periods';
 import { Loading } from '../ui/feedback';
+import { List } from '../ui/list';
 
 const hoursText = (minutes) => {
   const h = Math.floor(minutes / 60);
@@ -122,13 +123,13 @@ export default function MySchedule() {
               })}
             </div>
 
-            <ul className="rounded-2xl border border-gray-200 bg-white overflow-hidden divide-y divide-gray-100">
+            <List>
               {d.days.map((day) => {
                 const isToday = day.date === today;
                 const past = day.date < today;
                 const dt = new Date(`${day.date}T12:00:00`);
                 return (
-                  <li key={day.date} className={`flex gap-4 px-4 py-3.5 ${isToday ? 'bg-violet-50/50' : ''} ${past ? 'opacity-60' : ''}`}>
+                  <li key={day.date} className={`flex gap-4 px-2 py-3.5 rounded-xl ${isToday ? 'bg-violet-50/50' : ''} ${past ? 'opacity-60' : ''}`}>
                     <div className="w-11 shrink-0 text-center pt-0.5">
                       <p className={`text-[11px] font-semibold uppercase ${isToday ? 'text-violet-700' : 'text-gray-400'}`}>{dayShort(day.date)}</p>
                       <p className={`text-[20px] leading-6 font-semibold tabular-nums ${isToday ? 'text-violet-700' : 'text-gray-900'}`}>{dt.getDate()}</p>
@@ -170,7 +171,7 @@ export default function MySchedule() {
                   </li>
                 );
               })}
-            </ul>
+            </List>
             <MyRequests part="bottom" incoming={swapsQ.data?.incoming || []} mine={swapsQ.data?.mine || []} timeOff={offQ.data || []} onChanged={refreshAll} />
             <p className="text-xs text-gray-400">Si algo no te cuadra, habla con tu encargado.</p>
           </div>

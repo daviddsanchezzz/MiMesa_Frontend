@@ -19,36 +19,26 @@ import { ago, money, perUnit, shortDate } from './costes/format';
 /** One ingredient: name and where it was bought on the left, its shape and today's price on the right. */
 function IngredientRow({ ing, onOpen }) {
   return (
-    <li>
-      <button type="button" onClick={onOpen} className="flex w-full items-center gap-3 py-3 text-left active:bg-gray-50 lg:gap-5">
-        <span className="min-w-0 flex-1">
-          <span className="block truncate text-[15px] font-medium text-gray-900">{ing.name}</span>
-          <span className="block truncate text-[13px] text-gray-500">
-            {ing.count ? `${ing.supplier ? `${ing.supplier} · ` : ''}${ago(ing.lastDate)}` : 'Sin compras todavía'}
+    <ListRow onClick={onOpen} className="lg:gap-5" title={ing.name}
+      subtitle={ing.count ? `${ing.supplier ? `${ing.supplier} · ` : ''}${ago(ing.lastDate)}` : 'Sin compras todavía'}
+      trailing={(
+        <>
+          <span className="hidden sm:block"><Sparkline values={ing.spark} width={88} /></span>
+          <span className="w-[104px] shrink-0 text-right lg:w-[120px]">
+            <span className="block text-[15px] font-semibold tabular-nums text-gray-900">{ing.lastPrice === null ? '—' : perUnit(ing.lastPrice, ing.unit)}</span>
+            <span className="mt-0.5 block h-5">{ing.changePct !== null && <Change value={ing.changePct} />}</span>
           </span>
-        </span>
-        <span className="hidden sm:block"><Sparkline values={ing.spark} width={88} /></span>
-        <span className="w-[104px] shrink-0 text-right lg:w-[120px]">
-          <span className="block text-[15px] font-semibold tabular-nums text-gray-900">{ing.lastPrice === null ? '—' : perUnit(ing.lastPrice, ing.unit)}</span>
-          <span className="mt-0.5 block h-5">{ing.changePct !== null && <Change value={ing.changePct} />}</span>
-        </span>
-      </button>
-    </li>
+        </>
+      )} />
   );
 }
 
 /** The ones that rose: what it was, what it is, by how much. */
-function RiserRow({ ing, onOpen, hideOnPhone }) {
+function RiserRow({ ing, onOpen }) {
   return (
-    <li className={hideOnPhone ? 'hidden lg:block' : ''}>
-      <button type="button" onClick={onOpen} className="flex w-full items-center gap-3 py-2.5 text-left">
-        <span className="min-w-0 flex-1">
-          <span className="block truncate text-[15px] font-medium text-gray-900">{ing.name}</span>
-          <span className="block truncate text-[13px] tabular-nums text-gray-500">{money(ing.prevPrice)} → {perUnit(ing.lastPrice, ing.unit)}</span>
-        </span>
-        <Change value={ing.changePct} />
-      </button>
-    </li>
+    <ListRow onClick={onOpen} className="!py-2.5" title={ing.name}
+      subtitle={<span className="tabular-nums">{money(ing.prevPrice)} → {perUnit(ing.lastPrice, ing.unit)}</span>}
+      trailing={<Change value={ing.changePct} />} />
   );
 }
 
@@ -168,14 +158,17 @@ export default function Costes() {
                   <FilterChips value={view} onChange={setView} options={[['todos', 'Todos'], ['suben', 'Suben'], ['bajan', 'Bajan']]} />
                 </div>
                 {shown.length === 0 ? <Empty>{ingredients.length === 0 ? 'Aún no hay ingredientes. Vincula las líneas de tus facturas para crearlos.' : 'Ningún ingrediente coincide.'}</Empty> : (
-                  <ul className="divide-y divide-gray-100">{shown.map((i) => <IngredientRow key={i.id} ing={i} onOpen={() => setOpen(i.id)} />)}</ul>
+                  <List>{shown.map((i) => <IngredientRow key={i.id} ing={i} onOpen={() => setOpen(i.id)} />)}</List>
                 )}
               </div>
 
               <aside className="space-y-8 order-first lg:order-2">
                 <Section title="Han subido" aside={<SectionLink onClick={() => setSettings(true)}>Avisar desde {alertPct} %</SectionLink>}>
                   {risers.length === 0 ? <p className="py-2 text-sm text-gray-500">Ningún ingrediente ha subido un {alertPct} % o más en el último mes.</p> : (
-                    <ul className="divide-y divide-gray-100">{risers.slice(0, 6).map((i, n) => <RiserRow key={i.id} ing={i} hideOnPhone={n >= 3} onOpen={() => setOpen(i.id)} />)}</ul>
+                    <>
+                      <List>{risers.slice(0, 3).map((i) => <RiserRow key={i.id} ing={i} onOpen={() => setOpen(i.id)} />)}</List>
+                      {risers.length > 3 && <List className="hidden border-t border-gray-100 lg:block">{risers.slice(3, 6).map((i) => <RiserRow key={i.id} ing={i} onOpen={() => setOpen(i.id)} />)}</List>}
+                    </>
                   )}
                 </Section>
                 {pending > 0 && (

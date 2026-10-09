@@ -9,6 +9,7 @@ import Change from './Change';
 import { PriceChart } from './Charts';
 import { UNIT_NAME, ago, money, perUnit, shortDate } from './format';
 import { confirmDialog } from '../../ui/confirm';
+import { List, ListRow } from '../../ui/list';
 
 const Stat = ({ label, value }) => (
   <div className="min-w-0">
@@ -69,18 +70,15 @@ export default function IngredientModal({ id, onClose, onChanged }) {
           <section>
             <h4 className="mb-1 text-[13px] font-semibold uppercase tracking-wide text-gray-400">Compras</h4>
             {ing.history.length === 0 ? <p className="py-3 text-sm text-gray-500">Aún no hay compras con precio. Confirma una factura con este ingrediente.</p> : (
-              <ul className="divide-y divide-gray-100">
+              <List>
                 {ing.history.slice(0, 30).map((h) => (
-                  <li key={h.id} className="flex items-center gap-3 py-2.5">
-                    <span className="w-16 shrink-0 text-sm tabular-nums text-gray-500">{shortDate(h.date)}</span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[15px] text-gray-900">{h.supplier || 'Sin proveedor'}</span>
-                      <span className="block truncate text-xs text-gray-400">{h.invoiceNumber ? `Factura ${h.invoiceNumber}` : h.description}{h.quantity ? ` · ${h.quantity.toLocaleString('es-ES')} ${ing.unit}` : ''}</span>
-                    </span>
-                    <span className="shrink-0 text-[15px] font-semibold tabular-nums text-gray-900">{perUnit(h.price, ing.unit)}</span>
-                  </li>
+                  <ListRow key={h.id} className="!py-2.5"
+                    leading={<span className="w-16 shrink-0 text-sm tabular-nums text-gray-500">{shortDate(h.date)}</span>}
+                    title={h.supplier || 'Sin proveedor'}
+                    subtitle={`${h.invoiceNumber ? `Factura ${h.invoiceNumber}` : h.description}${h.quantity ? ` · ${h.quantity.toLocaleString('es-ES')} ${ing.unit}` : ''}`}
+                    value={perUnit(h.price, ing.unit)} />
                 ))}
-              </ul>
+              </List>
             )}
           </section>
 

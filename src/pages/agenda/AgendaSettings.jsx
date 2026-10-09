@@ -12,6 +12,8 @@ import UpgradeHint from '../../components/UpgradeHint';
 import { PRICES } from '../../lib/billing';
 import { confirmDialog } from '../../ui/confirm';
 import { ErrorBanner, Loading } from '../../ui/feedback';
+import { Chip, List, ListRow, RowBody } from '../../ui/list';
+import { MoreMenu } from '../../ui/kit';
 
 const KIND_LABEL = { staff: 'Profesional', space: 'Sala o espacio', equipment: 'Equipo' };
 
@@ -497,30 +499,28 @@ function Services({ services, staff, reload }) {
         {(serviceGroups(services).length > 1 || category) && (
           <h4 className="pt-2 pb-1.5 text-[12px] font-semibold uppercase tracking-wide text-gray-400">{category || 'Sin categoría'} · {list.length}</h4>
         )}
-      <ul className="divide-y divide-gray-100 border-y border-gray-100">
+      <List>
         {list.map((s) => {
           const req = (s.requirements || []).find((r) => r.kind === 'staff');
           const who = !req ? '' : (req.resourceIds || []).length
             ? req.resourceIds.map((id) => staff.find((x) => x._id === id)?.name).filter(Boolean).join(', ')
             : 'Cualquier profesional';
           return (
-            <li key={s._id} className="py-3 flex items-center gap-3">
-              <button type="button" className="min-w-0 flex-1 text-left group" onClick={() => setEditing(s)}>
-                <p className="text-[15px] font-medium text-gray-900 truncate group-hover:text-violet-700">
-                  {s.name}
-                  {s.onlineBooking?.enabled === false && <span className="ml-1.5 align-middle text-[11px] font-normal px-1.5 py-px rounded bg-gray-100 text-gray-500">Solo interno</span>}
-                </p>
-                <p className="text-[13px] text-gray-500 truncate">{s.durationMin} min{who && ` · ${who}`}</p>
+            <li key={s._id} className="flex items-center gap-3">
+              <button type="button" onClick={() => setEditing(s)} className="flex min-w-0 flex-1 items-center gap-3 py-3 text-left">
+                <RowBody
+                  title={<>{s.name}{s.onlineBooking?.enabled === false && <Chip className="ml-1.5 align-middle">Solo interno</Chip>}</>}
+                  subtitle={`${s.durationMin} min${who && ` · ${who}`}`}
+                  value={euros(s.price?.amount)} />
               </button>
-              <span className="text-[15px] font-semibold tabular-nums text-gray-900">{euros(s.price?.amount)}</span>
-              <RowMenu items={[
+              <MoreMenu items={[
                 { label: 'Editar', onClick: () => setEditing(s) },
                 { label: 'Desactivar', danger: true, onClick: () => remove(s) },
               ]} />
             </li>
           );
         })}
-      </ul>
+      </List>
       </section>
       ))}
       {inactive === null ? (
@@ -530,15 +530,12 @@ function Services({ services, staff, reload }) {
       ) : (
         <div className="space-y-1.5">
           <p className="text-xs font-semibold text-gray-500">Desactivados</p>
-          <ul className="divide-y divide-gray-100 border border-gray-100 rounded-xl bg-gray-50">
+          <List>
             {inactive.map((s) => (
-              <li key={s._id} className="px-3 py-2 flex items-center gap-3">
-                <span className="text-sm text-gray-500">{s.name}</span>
-                <span className="text-xs text-gray-400">{s.durationMin} min · {euros(s.price?.amount)}</span>
-                <button type="button" className="ml-auto text-xs font-semibold text-violet-700 hover:text-violet-900" onClick={() => restore(s)}>Recuperar</button>
-              </li>
+              <ListRow key={s._id} muted title={s.name} subtitle={`${s.durationMin} min · ${euros(s.price?.amount)}`}
+                trailing={<button type="button" className="shrink-0 text-xs font-semibold text-violet-700 hover:text-violet-900" onClick={() => restore(s)}>Recuperar</button>} />
             ))}
-          </ul>
+          </List>
         </div>
       )}
       {error && <p className="text-sm text-rose-600">{error}</p>}

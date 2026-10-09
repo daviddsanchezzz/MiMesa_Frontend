@@ -5,6 +5,8 @@ import { btnPrimary, btnSecondary, centsToInput, euros, inputCls, labelCls, pars
 import { confirmDialog } from '../../ui/confirm';
 import { ErrorBanner } from '../../ui/feedback';
 import { ModalFooter } from '../../ui/form';
+import { List, ListRow, RowBody } from '../../ui/list';
+import { MoreMenu } from '../../ui/kit';
 
 const VALIDITY = [[null, 'No caduca'], [90, '3 meses'], [180, '6 meses'], [365, '1 año'], [730, '2 años']];
 
@@ -132,31 +134,33 @@ export default function PacksSettings() {
           <p className="mt-1 text-sm text-gray-500">Por ejemplo «5 sesiones de láser» a un precio cerrado. Lo vendes desde la ficha del cliente.</p>
         </div>
       ) : (
-        <ul className="divide-y divide-gray-100 border-y border-gray-100">
+        <List>
           {active.map((p) => (
-            <li key={p._id} className="py-3 flex items-center gap-3">
-              <button type="button" className="min-w-0 flex-1 text-left group" onClick={() => setEditing(p)}>
-                <p className="text-[15px] font-medium text-gray-900 truncate group-hover:text-violet-700">{p.name}</p>
-                <p className="text-[13px] text-gray-500 truncate">{p.sessions} sesiones · {serviceNames(p)} · {p.validityDays ? `caduca a los ${p.validityDays >= 365 ? `${Math.round(p.validityDays / 365)} ${p.validityDays >= 730 ? 'años' : 'año'}` : `${Math.round(p.validityDays / 30)} meses`}` : 'no caduca'}</p>
+            <li key={p._id} className="flex items-center gap-3">
+              <button type="button" onClick={() => setEditing(p)} className="flex min-w-0 flex-1 items-center gap-3 py-3 text-left">
+                <RowBody
+                  title={p.name}
+                  subtitle={`${p.sessions} sesiones · ${serviceNames(p)} · ${p.validityDays ? `caduca a los ${p.validityDays >= 365 ? `${Math.round(p.validityDays / 365)} ${p.validityDays >= 730 ? 'años' : 'año'}` : `${Math.round(p.validityDays / 30)} meses`}` : 'no caduca'}`}
+                  value={euros(p.price)} />
               </button>
-              <span className="text-[15px] font-semibold tabular-nums text-gray-900">{euros(p.price)}</span>
-              <button type="button" onClick={() => remove(p)} className="w-8 h-8 rounded-lg text-gray-300 hover:text-rose-600 hover:bg-rose-50" aria-label="Quitar bono" title="Quitar bono">✕</button>
+              <MoreMenu items={[
+                { label: 'Editar', onClick: () => setEditing(p) },
+                { label: 'Quitar bono', danger: true, onClick: () => remove(p) },
+              ]} />
             </li>
           ))}
-        </ul>
+        </List>
       )}
 
       {off.length > 0 && (
         <div className="space-y-1.5">
           <p className="text-xs font-semibold text-gray-500">Retirados</p>
-          <ul className="divide-y divide-gray-100 border border-gray-100 rounded-xl bg-gray-50">
+          <List>
             {off.map((p) => (
-              <li key={p._id} className="px-3 py-2 flex items-center gap-3">
-                <span className="text-sm text-gray-500">{p.name}</span>
-                <button type="button" className="ml-auto text-xs font-semibold text-violet-700 hover:text-violet-900" onClick={() => restore(p)}>Volver a vender</button>
-              </li>
+              <ListRow key={p._id} muted title={p.name}
+                trailing={<button type="button" className="shrink-0 text-xs font-semibold text-violet-700 hover:text-violet-900" onClick={() => restore(p)}>Volver a vender</button>} />
             ))}
-          </ul>
+          </List>
         </div>
       )}
       {error && <p className="text-sm text-rose-600">{error}</p>}

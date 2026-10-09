@@ -5,6 +5,7 @@ import api, { API_PUBLIC_BASE } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { publicBookingUrl } from '../lib/publicUrl';
 import { useData } from '../lib/query';
+import { dateShort } from '../lib/format';
 import { Section, SectionLink } from '../ui/kit';
 import Page from '../ui/Page';
 import { inputCls } from './carta/labels';
@@ -38,7 +39,6 @@ function groupDays(openingHours) {
   return groups.map((g) => ({ label: g.days.length === 1 ? DAY_SHORT[g.days[0]] : `${DAY_SHORT[g.days[0]]}–${DAY_SHORT[g.days[g.days.length - 1]]}`, text: rangesText(g.ranges) }));
 }
 
-const niceDate = (iso) => new Date(`${iso}T12:00:00`).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }).replace('.', '');
 
 /** A line the restaurant's web developer can copy as it is. */
 function CopyRow({ name, hint, value, multiline = false }) {
@@ -147,14 +147,14 @@ export default function MiWeb() {
           ))}
         </ul>
         {schedule.seasonal.length > 0 && (
-          <p className="mt-2 text-[13px] text-gray-500">{schedule.seasonal.map((x) => `${x.name}: ${x.open}–${x.close} del ${niceDate(x.from)} al ${niceDate(x.to)}`).join(' · ')}</p>
+          <p className="mt-2 text-[13px] text-gray-500">{schedule.seasonal.map((x) => `${x.name}: ${x.open}–${x.close} del ${dateShort(x.from)} al ${dateShort(x.to)}`).join(' · ')}</p>
         )}
         {schedule.closures.length > 0 && (
           <div className="mt-4">
             <p className="text-xs font-semibold text-gray-500 mb-1">Próximos cierres</p>
             <ul className="text-sm text-gray-700 space-y-0.5">
               {schedule.closures.slice(0, 6).map((c, i) => (
-                <li key={i}>{c.from === c.to ? niceDate(c.from) : `${niceDate(c.from)} – ${niceDate(c.to)}`}{c.shift ? ` · solo ${c.shift}` : ''}{c.reason ? ` · ${c.reason}` : ''}</li>
+                <li key={i}>{c.from === c.to ? dateShort(c.from) : `${dateShort(c.from)} – ${dateShort(c.to)}`}{c.shift ? ` · solo ${c.shift}` : ''}{c.reason ? ` · ${c.reason}` : ''}</li>
               ))}
             </ul>
           </div>

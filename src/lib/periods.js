@@ -48,19 +48,8 @@ export function shiftRange(period, dateRange, direction) {
   return { from: toIso(from), to: toIso(to) };
 }
 
-// "1 oct" (with the year when it isn't this year)
-export function fmtShort(iso, withYear = false) {
-  if (!iso) return '—';
-  const d = parseIso(iso);
-  const showYear = withYear || d.getFullYear() !== new Date().getFullYear();
-  return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', ...(showYear ? { year: 'numeric' } : {}) }).replace('.', '');
-}
-
-// "mié 1 oct"
-export function fmtDay(iso) {
-  if (!iso) return '—';
-  return parseIso(iso).toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' }).replace(/[.,]/g, '');
-}
+import { dateDay as fmtDay, dateShort as fmtShort } from './format';
+export { fmtDay, fmtShort };
 
 export function fmtRange({ from, to }) {
   if (!from || !to) return '';

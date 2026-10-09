@@ -1,4 +1,5 @@
 import { money } from './format';
+import { dateShort } from '../../lib/format';
 
 const TONE = { up: '#e11d48', down: '#059669', flat: '#9ca3af' };
 const toneOf = (values) => {
@@ -40,7 +41,7 @@ export function PriceChart({ points, unit }) {
   const line = points.map((p) => `${x(p.date).toFixed(1)},${y(p.price).toFixed(1)}`).join(' ');
   const area = `${L},${H - B} ${line} ${x(points[points.length - 1].date).toFixed(1)},${H - B}`;
   const iMin = prices.indexOf(min); const iMax = prices.indexOf(max);
-  const fmt = (d) => new Date(`${d}T12:00:00`).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }).replace('.', '');
+  const fmt = dateShort;
   const label = (i, above) => {
     const px = Math.min(W - 54, Math.max(54, x(points[i].date)));
     return <text x={px} y={y(points[i].price) + (above ? -9 : 17)} textAnchor="middle" fontSize="11" fontWeight="600" fill="#4b5563">{money(points[i].price)}</text>;

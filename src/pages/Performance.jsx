@@ -2,8 +2,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { useSetMobileHeader } from '../context/MobileHeaderContext';
+import { moneyCurrency } from '../lib/format';
 
-const money = (value, currency = 'EUR') => new Intl.NumberFormat('es-ES', { style: 'currency', currency }).format(Number(value) || 0);
+const money = (value, currency = 'EUR') => moneyCurrency(Number(value) || 0, currency);
 function Stat({ label, value, emphasis }) { return <div className={`rounded-2xl p-4 border ${emphasis ? 'bg-violet-600 border-violet-600 text-white' : 'bg-white border-gray-200'}`}><p className={`text-xs font-semibold ${emphasis ? 'text-violet-100' : 'text-gray-500'}`}>{label}</p><p className="text-xl font-bold mt-1">{value}</p></div>; }
 
 export default function Performance() {

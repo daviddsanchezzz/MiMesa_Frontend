@@ -20,6 +20,7 @@ import { PositionFormModal } from './personal/PositionFormModal';
 import { CompensationModal } from './personal/CompensationModal';
 import { ShiftEditorModal } from './personal/ShiftEditorModal';
 import { EmployeeAssignmentsModal } from './personal/EmployeeAssignmentsModal';
+import { dateYear } from '../lib/format';
 
 const TAB_LABELS = { planner: 'Planificación', employees: 'Empleados', costs: 'Costes', requests: 'Solicitudes' };
 const TAB_ORDER = ['planner', 'employees', 'costs', 'requests'];
@@ -562,7 +563,7 @@ export default function Personal() {
       await api.patch(`/staff/employees/${employee._id}/status`, { status });
       await loadCore({ silent: true });
       await loadAssignments();
-      if (tab === 'costs') await loadCosts();
+      if (tab === 'costs') await loadMonthlyCosts();
     } catch (err) {
       setError(err?.response?.data?.message || 'No se pudo actualizar el estado');
     }
@@ -652,7 +653,7 @@ export default function Personal() {
     !isExporting && { label: 'Descargar PNG', onClick: () => exportPlanner('png') },
     !isExporting && { label: 'Descargar PDF', onClick: () => exportPlanner('pdf') },
   ].filter(Boolean);
-  const fmtDate = (d) => new Date(d).toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
+  const fmtDate = dateYear;
   const moneyByCurrency = (totals) => {
     const entries = Object.entries(totals || {});
     return entries.length ? entries.map(([cur, val]) => formatMoney(val, cur)).join(' · ') : formatMoney(0);

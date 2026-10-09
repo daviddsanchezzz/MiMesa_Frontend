@@ -3,8 +3,9 @@ import Modal from '../../components/Modal';
 import { bookingsApi, apiError } from '../../services/bookingsApi';
 import { PAY_METHODS, btnPrimary, btnSecondary, centsToInput, euros, inputCls, labelCls, parseEuros } from '../agenda/utils';
 import { Section, SectionLink } from '../../ui/kit';
+import { dateYear } from '../../lib/format';
 
-const niceDate = (d) => new Date(d).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
+const niceDate = dateYear;
 
 function SellModal({ customer, packs, onClose, onSold }) {
   const [packId, setPackId] = useState(packs[0]?._id || '');

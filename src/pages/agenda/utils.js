@@ -54,11 +54,7 @@ export const toMinutes = (hhmm) => {
 
 export const toHHMM = (min) => `${String(Math.floor(min / 60)).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`;
 
-export const euros = (cents) => {
-  const c = Math.round(cents || 0);
-  const digits = c % 100 === 0 ? 0 : 2; // 12 € · 12,50 €
-  return `${(c / 100).toLocaleString('es-ES', { minimumFractionDigits: digits, maximumFractionDigits: digits, useGrouping: 'always' })} €`;
-};
+export { eurCents as euros } from '../../lib/format';
 
 // Opening windows of a schedule on a date (mirror of the backend logic).
 export function windowsForDate(schedule, dateStr) {

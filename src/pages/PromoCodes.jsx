@@ -3,6 +3,7 @@ import api from '../services/api';
 import Modal from '../components/Modal';
 import { useSetMobileHeader } from '../context/MobileHeaderContext';
 import { PrimaryButton, Toggle, MenuButton, Empty } from '../ui/kit';
+import { dateNumeric } from '../lib/format';
 
 const inputCls = 'w-full rounded-xl border border-gray-300 bg-white px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500';
 const labelCls = 'block text-[13px] font-medium text-gray-700 mb-1.5';
@@ -64,7 +65,7 @@ export default function PromoCodes() {
     }
   };
 
-  const fmtDate = (d) => d ? new Date(d).toLocaleDateString('es-ES', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—';
+  const fmtDate = dateNumeric;
   const isExpired = (p) => p.expiresAt && new Date() > new Date(p.expiresAt);
   const isMaxed   = (p) => p.maxUses !== null && p.usedCount >= p.maxUses;
 

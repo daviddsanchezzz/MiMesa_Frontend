@@ -134,11 +134,7 @@ export const emptyShiftForm = () => ({
   startDate: '', endDate: '',
 });
 
-export function fmtDate(d) {
-  if (!d) return '';
-  const [y, m, day] = d.split('-');
-  return `${day}/${m}/${y}`;
-}
+export { dateNumeric as fmtDate } from '../../lib/format';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // BILLING / SUBSCRIPTION SECTION

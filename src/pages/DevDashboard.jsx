@@ -7,6 +7,7 @@ import { useSetMobileHeader } from '../context/MobileHeaderContext';
 import NewClientModal, { InviteLink } from './dev/NewClientModal';
 import Icon from '../ui/Icon';
 import { Empty, FigureLine, RowAction, Section, SectionLink, Segmented, Toggle } from '../ui/kit';
+import { dateShort, dateYear } from '../lib/format';
 
 /*
  * Vetra panel: every client business in one list (owner, team, activity,
@@ -63,11 +64,11 @@ function ago(date) {
   if (h < 24) return `hace ${h} h`;
   const d = Math.round(h / 24);
   if (d < 30) return `hace ${d} ${d === 1 ? 'día' : 'días'}`;
-  return new Date(date).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
+  return dateYear(date);
 }
 
 function shortDate(date) {
-  return date ? new Date(date).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }) : '';
+  return date ? dateShort(date) : '';
 }
 
 function Dot({ color, dashed }) {

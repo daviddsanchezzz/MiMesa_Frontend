@@ -1,3 +1,5 @@
+import { dateShort, dateYear, moneyCurrency } from '../../lib/format.js';
+
 export const INVOICE_STATUS = {
   PROCESSING: { label: 'Procesando', tone: 'violet' },
   REVIEW: { label: 'Por revisar', tone: 'amber' },
@@ -5,32 +7,11 @@ export const INVOICE_STATUS = {
   FAILED: { label: 'Error', tone: 'rose' },
 };
 
-export function formatInvoiceMoney(value, currency = 'EUR') {
-  if (value === null || value === undefined || value === '') return '—';
-  const amount = Number(value);
-  if (!Number.isFinite(amount)) return '—';
-  try {
-    return new Intl.NumberFormat('es-ES', {
-      style: 'currency',
-      currency: currency || 'EUR',
-      currencyDisplay: 'narrowSymbol',
-      useGrouping: true,
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(amount);
-  } catch {
-    return `${amount.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency || 'EUR'}`;
-  }
-}
+export const formatInvoiceMoney = (value, currency = 'EUR') => moneyCurrency(value, currency);
 
 export function formatInvoiceDate(value, { long = false } = {}) {
   if (!value) return 'Sin fecha';
-  const match = String(value).match(/^(\d{4})-(\d{2})-(\d{2})/);
-  if (!match) return String(value);
-  const date = new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]), 12);
-  return date.toLocaleDateString('es-ES', long
-    ? { day: 'numeric', month: 'short', year: 'numeric' }
-    : { day: 'numeric', month: 'short' }).replace('.', '');
+  return long ? dateYear(value) : dateShort(value);
 }
 
 export function inputNumber(value) {

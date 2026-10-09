@@ -9,6 +9,7 @@ import Page from '../ui/Page';
 import Invoices from './invoices/Invoices';
 import InvoiceStatus from './invoices/InvoiceStatus';
 import PeriodNavigator, { usePeriod } from '../ui/PeriodNavigator';
+import { dateDay as niceDate, money } from '../lib/format';
 import { previousLabel, shiftRange } from '../lib/periods';
 
 const inputCls = 'w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white';
@@ -17,13 +18,6 @@ const btnPrimary = 'h-10 px-4 rounded-xl bg-violet-600 hover:bg-violet-700 text-
 const btnQuiet = 'h-10 px-4 rounded-xl text-sm font-semibold text-gray-700 hover:bg-gray-100';
 const btnDanger = 'h-10 px-3 rounded-xl text-sm font-semibold text-rose-600 hover:bg-rose-50 disabled:opacity-50';
 
-const money = (value) => `${Number(value || 0).toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`;
-const niceDate = (value) => {
-  const iso = String(value || '').slice(0, 10);
-  if (!iso) return '—';
-  const d = new Date(`${iso}T12:00:00`);
-  return d.toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' }).replace('.', '');
-};
 const tableHead = 'hidden md:grid grid-cols-12 gap-4 px-2 pb-2 border-b border-gray-200 text-[11px] font-semibold uppercase tracking-wide text-gray-400';
 const todayIso = () => new Date().toISOString().slice(0, 10);
 const formatDecimalInput = (value) => {

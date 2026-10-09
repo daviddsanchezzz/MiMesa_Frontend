@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { ErrorBanner, IconPlus, IconTrash, inputCls, labelCls } from './shared';
+import { dateYear } from '../../lib/format';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // VACACIONES SECTION
@@ -33,7 +34,7 @@ export function VacacionesSection() {
   };
 
   const fmtRange = (startDate, endDate) => {
-    const fmt = (d) => new Date(`${d}T12:00:00Z`).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
+    const fmt = dateYear;
     return startDate === endDate ? fmt(startDate) : `${fmt(startDate)} – ${fmt(endDate)}`;
   };
 

@@ -1,4 +1,5 @@
 
+import { moneyCurrency } from '../../lib/format';
 
 export const inputCls = 'w-full rounded-xl border border-gray-300 px-3.5 py-2.5 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent';
 
@@ -81,21 +82,7 @@ export const shiftAppliesToDate = (shift, date) => {
   return true;
 };
 
-export const formatMoney = (value, currency = 'EUR') => {
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed)) return '';
-  try {
-    return new Intl.NumberFormat('es-ES', {
-      style: 'currency',
-      currency,
-      currencyDisplay: 'narrowSymbol',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(parsed);
-  } catch {
-    return `${parsed.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} ${currency}`;
-  }
-};
+export const formatMoney = (value, currency = 'EUR') => (Number.isFinite(Number(value)) ? moneyCurrency(value, currency) : '');
 
 export const currencySymbol = (currency = 'EUR') => {
   const sample = formatMoney(0, currency);

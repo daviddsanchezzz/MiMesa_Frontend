@@ -1,3 +1,5 @@
+import { dateShort } from '../../lib/format';
+
 export const TIME_OFF_TYPES = [
   ['day_off', 'Día libre'],
   ['vacation', 'Vacaciones'],
@@ -5,8 +7,7 @@ export const TIME_OFF_TYPES = [
 ];
 export const timeOffLabel = (type) => (TIME_OFF_TYPES.find(([k]) => k === type) || [, type])[1];
 
-const SHORT = { day: 'numeric', month: 'short' };
-const fmt = (iso) => new Date(`${iso}T12:00:00`).toLocaleDateString('es-ES', SHORT).replace('.', '');
+const fmt = (iso) => dateShort(iso);
 
 /** "5 oct" · "5 – 9 oct" · "5 oct, 18:00–24:00". */
 export function timeOffWhen(t) {

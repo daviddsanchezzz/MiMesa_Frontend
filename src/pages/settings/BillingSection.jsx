@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import Modal from '../../components/Modal';
 import { paymentGraceUntil, pricesFor } from '../../lib/billing';
 import { BASIC_FEATURES as R_BASIC, CheckIcon, PRO_EXTRAS as R_PRO, APPT_BASIC_FEATURES, APPT_PRO_EXTRAS } from './shared';
+import { dateYear } from '../../lib/format';
 
 export function BillingSection() {
   const { plan, subscriptionStatus, trialEndsAt, currentPeriodEnd, cancelAtPeriodEnd, hasRole, refreshBusiness, isAppointments, business } = useAuth();
@@ -46,10 +47,7 @@ export function BillingSection() {
 
   useEffect(() => { load(); }, []);
 
-  const fmt = (dateStr) => {
-    if (!dateStr) return '—';
-    return new Date(dateStr).toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
-  };
+  const fmt = dateYear;
 
   const handleUpgrade = async (targetPlan = 'basic') => {
     if (!isOwner) return;

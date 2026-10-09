@@ -12,6 +12,7 @@ import ItemModal from './carta/ItemModal';
 import LanguagesModal from './carta/LanguagesModal';
 import ClearMenuModal from './carta/ClearMenuModal';
 import { ALLERGENS, TAGS, eur, languageName, textOf } from './carta/labels';
+import { dateShort as shortDate } from '../lib/format';
 
 const ICONS = Object.fromEntries([...ALLERGENS, ...TAGS].map((x) => [x.key, x.icon]));
 
@@ -41,7 +42,6 @@ function ItemRow({ item, language, manager, onOpen, onSoldOut, drag }) {
 }
 
 const DAY_NAMES = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
-const shortDate = (iso) => new Date(`${iso}T12:00:00`).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }).replace('.', '');
 
 /** When the menú del día is on, in words: "Lun–Vie · del 5 oct al 9 oct". */
 function dailyWhen(d) {

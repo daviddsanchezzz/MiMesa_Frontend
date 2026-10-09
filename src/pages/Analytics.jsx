@@ -2,15 +2,12 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
 import { useData } from '../lib/query';
+import { dateShort } from '../lib/format';
 import { Hero, Section, Segmented } from '../ui/kit';
 import Page from '../ui/Page';
 
 const PERIODS = [[7, '7 días'], [30, '30 días'], [90, '90 días']];
 
-const niceDate = (iso) => {
-  if (!iso) return '';
-  return new Date(`${iso}T12:00:00`).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }).replace('.', '');
-};
 
 /** "+12 % que los 30 días anteriores" in green or red (up is good unless `upIsBad`). */
 function Trend({ value, period, upIsBad = false }) {
@@ -45,7 +42,7 @@ function DayBars({ data }) {
     <div>
       <div className="flex items-end gap-[2px] h-36 border-b border-gray-200">
         {data.map((d) => (
-          <div key={d.date} title={`${niceDate(d.date)}: ${d.total} reservas`}
+          <div key={d.date} title={`${dateShort(d.date)}: ${d.total} reservas`}
             className="flex-1 rounded-t-[3px] min-w-0"
             style={{ height: `${d.total ? Math.max(3, (d.total / max) * 100) : 0}%`, backgroundColor: d.total === max ? '#7c3aed' : '#c4b5fd' }} />
         ))}
@@ -53,7 +50,7 @@ function DayBars({ data }) {
       <div className="flex mt-1.5">
         {data.map((d, i) => (
           <div key={d.date} className="flex-1 min-w-0 text-center">
-            {i % step === 0 && <span className="text-[10px] text-gray-400 whitespace-nowrap">{niceDate(d.date)}</span>}
+            {i % step === 0 && <span className="text-[10px] text-gray-400 whitespace-nowrap">{dateShort(d.date)}</span>}
           </div>
         ))}
       </div>
@@ -93,7 +90,7 @@ export default function Estadisticas() {
 
   return (
     <Page title="Estadísticas"
-      subtitle={data?.range ? `Del ${niceDate(data.range.from)} al ${niceDate(data.range.to)}` : 'Cómo van las reservas'}
+      subtitle={data?.range ? `Del ${dateShort(data.range.from)} al ${dateShort(data.range.to)}` : 'Cómo van las reservas'}
       toolbar={<Segmented full value={period} onChange={setPeriod} options={PERIODS} />}>
 
       {loading && <p className="text-sm text-gray-400">Cargando…</p>}
@@ -131,7 +128,7 @@ export default function Estadisticas() {
 
           <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-x-12 gap-y-9 items-start">
             <Section title="Reservas por día"
-              aside={peakDay && peakDay.total > 0 && <span className="text-xs text-gray-500">El día con más: {niceDate(peakDay.date)} · {peakDay.total}</span>}>
+              aside={peakDay && peakDay.total > 0 && <span className="text-xs text-gray-500">El día con más: {dateShort(peakDay.date)} · {peakDay.total}</span>}>
               {daily.some((d) => d.total > 0)
                 ? <div className="pt-2"><DayBars data={daily} /></div>
                 : <p className="py-8 text-sm text-gray-500">Sin reservas en este período.</p>}

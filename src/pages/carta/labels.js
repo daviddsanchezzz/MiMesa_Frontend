@@ -1,3 +1,5 @@
+import { eur as formatEur } from '../../lib/format.js';
+
 export const ALLERGENS = [
   { key: 'gluten', label: 'Gluten', icon: '🌾' },
   { key: 'crustaceos', label: 'Crustáceos', icon: '🦐' },
@@ -30,7 +32,7 @@ export const LANGUAGES = [
 ];
 export const languageName = (code) => (LANGUAGES.find(([c]) => c === code) || [code, code.toUpperCase()])[1];
 
-export const eur = (n) => (n === null || n === undefined ? 'Consultar' : `${Number(n).toLocaleString('es-ES', { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2, useGrouping: 'always' })} €`);
+export const eur = (n) => (n === null || n === undefined ? 'Consultar' : formatEur(n));
 
 /** The text in the main language, or the first one written. */
 export const textOf = (texts, language) => (texts && (texts[language] || Object.values(texts)[0])) || '';

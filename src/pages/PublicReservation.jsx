@@ -3,6 +3,7 @@ import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import publicApi from '../services/publicApi';
 import TRANSLATIONS from '../i18n';
 import { Elements, CardElement, useStripe, useElements } from '@stripe/react-stripe-js';
+import { loadStripe } from '@stripe/stripe-js';
 
 const ALL_SHIFTS_KEY = '__all__';
 

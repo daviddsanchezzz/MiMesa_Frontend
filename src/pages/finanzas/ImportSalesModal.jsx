@@ -3,12 +3,12 @@ import { toast } from 'sonner';
 import Modal from '../../components/Modal';
 import api from '../../services/api';
 import { FIELDS, buildRows, findHeaderRow, guessMapping, parseDelimited, readTextFile } from '../../lib/tabular';
+import { eur } from '../../lib/format';
 
 const SAVED = 'sales-import:columns';
 const readSaved = () => { try { return JSON.parse(window.localStorage.getItem(SAVED) || '{}'); } catch { return {}; } };
 const writeSaved = (v) => { try { window.localStorage.setItem(SAVED, JSON.stringify(v)); } catch { /* ignore */ } };
 
-const eur = (n) => `${Number(n).toLocaleString('es-ES', { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2, useGrouping: 'always' })} €`;
 const dayLabel = (iso) => new Date(`${iso}T12:00:00`).toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' });
 const BADGE = {
   new: ['Nuevo', 'bg-emerald-50 text-emerald-700'],

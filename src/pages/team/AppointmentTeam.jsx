@@ -8,9 +8,9 @@ import StaffAvatar from '../agenda/StaffAvatar';
 import { DEFAULT_TZ, inputCls, labelCls, staffColors, todayIn } from '../agenda/utils';
 import PeriodNavigator from '../../ui/PeriodNavigator';
 import { Empty, FigureLine, GhostButton, Hero, PrimaryButton, Section, SectionLink } from '../../ui/kit';
+import { eur } from '../../lib/format';
 
 const MONTHS = ['enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio', 'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'];
-const eur = (n) => `${(n || 0).toLocaleString('es-ES', { minimumFractionDigits: Number.isInteger(n || 0) ? 0 : 2, maximumFractionDigits: 2, useGrouping: 'always' })} €`;
 const eurRound = (n) => eur(Math.round(n || 0));
 const citas = (n) => `${n || 0} ${n === 1 ? 'cita' : 'citas'}`;
 const num = (n) => (n || 0).toLocaleString('es-ES', { maximumFractionDigits: 1 });

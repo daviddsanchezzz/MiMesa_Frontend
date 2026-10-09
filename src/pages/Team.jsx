@@ -7,6 +7,7 @@ import Icon from '../ui/Icon';
 import { PrimaryButton, Section, MenuButton, Empty, Segmented } from '../ui/kit';
 import Page from '../ui/Page';
 import ProfessionalAvatar from '../components/ProfessionalAvatar';
+import { confirmDialog } from '../ui/confirm';
 
 /* Constants */
 const ROLE_LABELS = { owner: 'Propietario', manager: 'Encargado', staff: 'Personal' };
@@ -150,7 +151,7 @@ export default function Team() {
 
   /* Remove member */
   const handleRemove = async (memberId, name) => {
-    if (!confirm(`¿Eliminar a ${name || 'este miembro'} del equipo?`)) return;
+    if (!await confirmDialog(`¿Eliminar a ${name || 'este miembro'} del equipo?`)) return;
     try {
       await api.delete(`/members/${memberId}`);
       setMembers(prev => prev.filter(m => m._id !== memberId));

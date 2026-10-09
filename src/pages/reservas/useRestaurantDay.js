@@ -1,12 +1,13 @@
 import { useCallback, useMemo } from 'react';
 import { queryClient, useData } from '../../lib/query';
+import { notify } from '../../lib/notify';
+import { confirmDialog } from '../../ui/confirm';
 
 const EMPTY = [];
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { toMinutes } from '../agenda/utils';
 
-const notify = (message, type = 'success') => window.dispatchEvent(new CustomEvent('app:toast', { detail: { message, type } }));
 const errText = (err, fallback) => err?.response?.data?.message || fallback;
 
 /**
@@ -77,23 +78,23 @@ export default function useRestaurantDay(date) {
     setStatus: (r, status, ok) => run(() => api.put(`/reservations/${r._id}`, { status }), ok),
     seat: (r) => run(() => api.put(`/reservations/${r._id}`, { status: 'seated' }), `${r.guestName}: sentada`),
     accept: (r) => run(() => api.put(`/reservations/${r._id}/accept`), 'Reserva aceptada; le avisamos por email'),
-    reject: (r) => {
-      if (!window.confirm(`¿Rechazar la reserva de ${r.guestName}? Pasará a cancelada.`)) return Promise.resolve(false);
+    reject: async (r) => {
+      if (!await confirmDialog(`¿Rechazar la reserva de ${r.guestName}? Pasará a cancelada.`)) return Promise.resolve(false);
       return run(() => api.put(`/reservations/${r._id}/reject`), 'Reserva rechazada');
     },
     propose: (r, payload) => run(() => api.put(`/reservations/${r._id}/propose-alternative`, payload), 'Propuesta enviada al cliente'),
     noShow: (r) => run(() => api.put(`/reservations/${r._id}/no-show`), 'Marcada como no vino'),
-    cancel: (r) => {
-      if (!window.confirm(`¿Cancelar la reserva de ${r.guestName}?`)) return Promise.resolve(false);
+    cancel: async (r) => {
+      if (!await confirmDialog(`¿Cancelar la reserva de ${r.guestName}?`)) return Promise.resolve(false);
       return run(() => api.put(`/reservations/${r._id}`, { status: 'cancelled' }), 'Reserva cancelada');
     },
-    remove: (r) => {
-      if (!window.confirm(`¿Eliminar la reserva de ${r.guestName}? No se puede deshacer.`)) return Promise.resolve(false);
+    remove: async (r) => {
+      if (!await confirmDialog(`¿Eliminar la reserva de ${r.guestName}? No se puede deshacer.`)) return Promise.resolve(false);
       return run(() => api.delete(`/reservations/${r._id}`), 'Reserva eliminada');
     },
     assign: (r, tableIds) => run(() => api.put(`/reservations/${r._id}`, { tableIds: tableIds || [] }), 'Mesa asignada'),
-    refund: (r) => {
-      if (!window.confirm('¿Devolver la señal al cliente?')) return Promise.resolve(false);
+    refund: async (r) => {
+      if (!await confirmDialog('¿Devolver la señal al cliente?')) return Promise.resolve(false);
       return run(() => api.post(`/reservations/${r._id}/refund`), 'Señal devuelta');
     },
   }), [run, reload]);

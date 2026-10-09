@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import Modal from '../../components/Modal';
 import { bookingsApi, apiError } from '../../services/bookingsApi';
 import { btnPrimary, btnSecondary, centsToInput, euros, inputCls, labelCls, parseEuros } from './utils';
+import { confirmDialog } from '../../ui/confirm';
 
 const VALIDITY = [[null, 'No caduca'], [90, '3 meses'], [180, '6 meses'], [365, '1 año'], [730, '2 años']];
 
@@ -106,7 +107,7 @@ export default function PacksSettings() {
   }, []);
 
   async function remove(p) {
-    if (!window.confirm(`¿Quitar el bono «${p.name}»? Los clientes que ya lo tienen lo conservan.`)) return;
+    if (!await confirmDialog(`¿Quitar el bono «${p.name}»? Los clientes que ya lo tienen lo conservan.`)) return;
     try { await bookingsApi.deletePack(p._id); load(); } catch (err) { setError(apiError(err)); }
   }
   async function restore(p) {

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { toast } from 'sonner';
+import { notify } from '../lib/notify';
 import api, { API_PUBLIC_BASE } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { publicBookingUrl } from '../lib/publicUrl';
@@ -45,7 +45,7 @@ function CopyRow({ name, hint, value, multiline = false }) {
   const [done, setDone] = useState(false);
   async function copy() {
     try { await navigator.clipboard.writeText(value); setDone(true); setTimeout(() => setDone(false), 1800); }
-    catch { toast.error('No se ha podido copiar'); }
+    catch { notify.error('No se ha podido copiar'); }
   }
   return (
     <li className="py-3">
@@ -118,9 +118,9 @@ export default function MiWeb() {
       const own = { reservations: data.reservations, social: data.social, reviews: reviewsForm(data.reviews) };
       setForm(own);
       setSaved(own);
-      toast.success('Guardado');
+      notify.success('Guardado');
     } catch (err) {
-      toast.error(err?.response?.data?.message || 'No se ha podido guardar');
+      notify.error(err?.response?.data?.message || 'No se ha podido guardar');
     } finally {
       setSaving(false);
     }

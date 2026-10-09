@@ -67,7 +67,9 @@ import BusinessLogo from './ui/BusinessLogo';
 const DESKTOP_QUERY = '(min-width: 1024px)';
 import Modal from './components/Modal';
 import ReservationForm from './components/ReservationForm';
-import { Toaster, toast } from 'sonner';
+import { Toaster } from 'sonner';
+import { notify } from './lib/notify';
+import { ConfirmHost } from './ui/confirm';
 
 function LoadingScreen() {
   return (
@@ -180,7 +182,7 @@ function LayoutShell({ children, fullBleed = false, devMode = false }) {
 
   const handleReservationCreated = () => {
     window.dispatchEvent(new CustomEvent('reservation:created'));
-    toast.success('Reserva creada');
+    notify.success('Reserva creada');
   };
   const openNew = () => (isAppointments ? navigate('/agenda?new=1') : setNewRsvModal(true));
   // The + opens the menu; with a single option there is nothing to choose
@@ -191,30 +193,6 @@ function LayoutShell({ children, fullBleed = false, devMode = false }) {
     else if (key === 'expense') navigate('/finanzas?new=expense');
     else setQuickModal(key);
   };
-
-  useEffect(() => {
-    const onToast = (event) => {
-      const detail = event?.detail;
-      if (!detail) return;
-      if (typeof detail === 'string') {
-        toast.success(detail);
-        return;
-      }
-      const message = detail.message || '';
-      if (!message) return;
-      if (detail.type === 'error') {
-        toast.error(message);
-        return;
-      }
-      if (detail.type === 'warning') {
-        toast.warning(message);
-        return;
-      }
-      toast.success(message);
-    };
-    window.addEventListener('app:toast', onToast);
-    return () => window.removeEventListener('app:toast', onToast);
-  }, []);
 
   // Other screens can open "new reservation" (e.g. an empty slot in Reservas).
   useEffect(() => {
@@ -279,7 +257,7 @@ function LayoutShell({ children, fullBleed = false, devMode = false }) {
       {!devMode && quickModal === 'customer' && (
         <Modal title="Nuevo cliente" onClose={() => setQuickModal(null)}>
           <Suspense fallback={null}>
-            <CustomerForm onSave={() => { setQuickModal(null); toast.success('Cliente añadido'); }} onCancel={() => setQuickModal(null)} />
+            <CustomerForm onSave={() => { setQuickModal(null); notify.success('Cliente añadido'); }} onCancel={() => setQuickModal(null)} />
           </Suspense>
         </Modal>
       )}
@@ -294,6 +272,7 @@ function LayoutShell({ children, fullBleed = false, devMode = false }) {
           />
         </Modal>
       )}
+      <ConfirmHost />
       <Toaster
         position={isDesktop ? 'bottom-right' : 'top-center'}
         richColors

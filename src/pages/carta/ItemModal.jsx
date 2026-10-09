@@ -5,6 +5,7 @@ import { Segmented } from '../../ui/kit';
 import { shrinkImage } from '../../lib/image';
 import ExtrasEditor, { fromEditor, toEditor } from './ExtrasEditor';
 import { ALLERGENS, TAGS, chipCls, inputCls, languageName } from './labels';
+import { confirmDialog } from '../../ui/confirm';
 
 const toggle = (list, key) => (list.includes(key) ? list.filter((x) => x !== key) : [...list, key]);
 
@@ -105,7 +106,7 @@ export default function ItemModal({ item, categoryId, categories, languages, can
   }
 
   async function remove() {
-    if (!window.confirm(`¿Borrar «${name[languages[0]] || 'este plato'}» de la carta?`)) return;
+    if (!await confirmDialog(`¿Borrar «${name[languages[0]] || 'este plato'}» de la carta?`)) return;
     try {
       await api.delete(`/menu/items/${item._id}`);
       onSaved();

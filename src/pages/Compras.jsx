@@ -11,6 +11,8 @@ import InvoiceStatus from './invoices/InvoiceStatus';
 import PeriodNavigator, { usePeriod } from '../ui/PeriodNavigator';
 import { dateDay as niceDate, money } from '../lib/format';
 import { previousLabel, shiftRange } from '../lib/periods';
+import { notify } from '../lib/notify';
+import { confirmDialog } from '../ui/confirm';
 
 const inputCls = 'w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 bg-white';
 const labelCls = 'block text-xs font-medium text-gray-500 mb-1';
@@ -390,7 +392,7 @@ export default function Compras() {
       const { data } = await api.post(`/purchases/orders/${orderId}/mark-whatsapp-sent`, { message });
       markSentUI(data);
       if (orderDetail?._id === data._id) setOrderDetail(data);
-      window.dispatchEvent(new CustomEvent('app:toast', { detail: { type: 'success', message: 'Pedido marcado como enviado por WhatsApp' } }));
+      notify.success('Pedido marcado como enviado por WhatsApp');
     } catch (err) {
       setError(err?.response?.data?.message || 'No se pudo marcar el pedido como enviado');
     } finally {
@@ -401,12 +403,12 @@ export default function Compras() {
   const handleDeleteOrder = async (order) => {
     const orderId = String(order?._id || '');
     if (!orderId) return;
-    if (!window.confirm('¿Eliminar este pedido?')) return;
+    if (!await confirmDialog('¿Eliminar este pedido?')) return;
     try {
       await api.delete(`/purchases/orders/${orderId}`);
       setOrderDetail(null);
       setOrders((prev) => prev.filter((item) => String(item._id) !== orderId));
-      window.dispatchEvent(new CustomEvent('app:toast', { detail: { type: 'success', message: 'Pedido eliminado' } }));
+      notify.success('Pedido eliminado');
     } catch (err) {
       setError(err?.response?.data?.message || 'No se pudo eliminar el pedido');
     }
@@ -904,7 +906,7 @@ function ProductModal({ product, suppliers, onClose, onSaved }) {
 
   const remove = async () => {
     if (!product?._id) return;
-    if (!window.confirm('¿Eliminar este producto?')) return;
+    if (!await confirmDialog('¿Eliminar este producto?')) return;
     setSaving(true);
     setError('');
     try {

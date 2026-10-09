@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { toast } from 'sonner';
+import { notify } from '../../lib/notify';
 import { queryClient, useData } from '../../lib/query';
 import invoicesApi from '../../services/invoicesApi';
 import { Section } from '../../ui/kit';
@@ -34,7 +34,7 @@ export function InvoiceNotes({ invoiceId }) {
       queryClient.setQueryData(['invoices', 'notes-of', invoiceId], next);
       queryClient.invalidateQueries({ queryKey: ['ingredients'] });
       setAdding(false);
-    } catch (err) { toast.error(err?.response?.data?.message || 'No se ha podido guardar'); } finally { setBusy(false); }
+    } catch (err) { notify.error(err?.response?.data?.message || 'No se ha podido guardar'); } finally { setBusy(false); }
   }
 
   const issues = comparison?.lines.filter((l) => l.issue) || [];

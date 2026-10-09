@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { toast } from 'sonner';
+import { notify } from '../../lib/notify';
 import Modal from '../../components/Modal';
 import api from '../../services/api';
 import { useData } from '../../lib/query';
@@ -8,6 +8,7 @@ import { inputCls } from '../carta/labels';
 import Change from './Change';
 import { PriceChart } from './Charts';
 import { UNIT_NAME, ago, money, perUnit, shortDate } from './format';
+import { confirmDialog } from '../../ui/confirm';
 
 const Stat = ({ label, value }) => (
   <div className="min-w-0">
@@ -28,11 +29,11 @@ export default function IngredientModal({ id, onClose, onChanged }) {
   function startEdit() { setName(ing.name); setUnit(ing.unit); setEditing(true); }
   async function save() {
     setSaving(true);
-    try { await api.put(`/ingredients/${id}`, { name, unit }); setEditing(false); onChanged?.(); } catch (err) { toast.error(err?.response?.data?.message || 'No se ha podido guardar'); } finally { setSaving(false); }
+    try { await api.put(`/ingredients/${id}`, { name, unit }); setEditing(false); onChanged?.(); } catch (err) { notify.error(err?.response?.data?.message || 'No se ha podido guardar'); } finally { setSaving(false); }
   }
   async function remove() {
-    if (!window.confirm(`¿Borrar «${ing.name}»? Sus líneas de factura vuelven a «Por vincular».`)) return;
-    try { await api.delete(`/ingredients/${id}`); onChanged?.(); onClose(); } catch (err) { toast.error(err?.response?.data?.message || 'No se ha podido borrar'); }
+    if (!await confirmDialog(`¿Borrar «${ing.name}»? Sus líneas de factura vuelven a «Por vincular».`)) return;
+    try { await api.delete(`/ingredients/${id}`); onChanged?.(); onClose(); } catch (err) { notify.error(err?.response?.data?.message || 'No se ha podido borrar'); }
   }
 
   const points = ing ? [...ing.history].reverse().reduce((acc, h) => {

@@ -11,6 +11,7 @@ import { euros } from './agenda/utils';
 import PeriodNavigator, { usePeriod } from '../ui/PeriodNavigator';
 import Page from '../ui/Page';
 import { fmtDay, fmtShort, parseIso, previousLabel, shiftRange, toIso } from '../lib/periods';
+import { confirmDialog } from '../ui/confirm';
 
 // ── Color palette (static — color key stored in DB → Tailwind bg class) ───────
 
@@ -535,7 +536,7 @@ function CategoryManagerModal({ onClose, onRefresh, inline = false }) {
   };
 
   const deleteCat = async (id) => {
-    if (!window.confirm('¿Eliminar esta categoría? Los gastos ya registrados conservarán el valor.')) return;
+    if (!await confirmDialog('¿Eliminar esta categoría? Los gastos ya registrados conservarán el valor.')) return;
     try {
       await api.delete(`/categories/${id}`);
       load();
@@ -778,11 +779,11 @@ function GastosTab({ dateRange, suppliers, categories, refreshTrigger, onCreate,
     }
   };
 
-  const handleDeleteClick = (exp) => {
+  const handleDeleteClick = async (exp) => {
     if (exp.isRecurring) {
       setScopeDialog({ mode: 'delete', expense: exp });
     } else {
-      if (window.confirm('¿Eliminar este gasto?')) handleDelete(exp._id);
+      if (await confirmDialog('¿Eliminar este gasto?')) handleDelete(exp._id);
     }
   };
 

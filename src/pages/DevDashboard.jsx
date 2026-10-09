@@ -8,6 +8,7 @@ import NewClientModal, { InviteLink } from './dev/NewClientModal';
 import Icon from '../ui/Icon';
 import { Empty, FigureLine, RowAction, Section, SectionLink, Segmented, Toggle } from '../ui/kit';
 import { dateShort, dateYear } from '../lib/format';
+import { confirmDialog } from '../ui/confirm';
 
 /*
  * Vetra panel: every client business in one list (owner, team, activity,
@@ -221,8 +222,8 @@ function BusinessSheet({ b, modules, onClose, onChanged }) {
     }
   };
 
-  const removeUser = (p) => {
-    if (!window.confirm(`¿Eliminar la cuenta de ${p.email}? No se puede deshacer.`)) return;
+  const removeUser = async (p) => {
+    if (!await confirmDialog(`¿Eliminar la cuenta de ${p.email}? No se puede deshacer.`)) return;
     run(() => api.delete(`/dev/users/${p.userId}`), 'Usuario eliminado.');
   };
 
@@ -416,7 +417,7 @@ export default function DevDashboard() {
   };
 
   const deleteOrphan = async (o) => {
-    if (!window.confirm(`¿Eliminar la cuenta de ${o.email}? No se puede deshacer.`)) return;
+    if (!await confirmDialog(`¿Eliminar la cuenta de ${o.email}? No se puede deshacer.`)) return;
     setBusy(true);
     try { await api.delete(`/dev/users/${o.id}`); await load(); } catch (err) { setError(err.response?.data?.message || err.message); } finally { setBusy(false); }
   };

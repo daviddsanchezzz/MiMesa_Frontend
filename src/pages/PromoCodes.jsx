@@ -4,6 +4,7 @@ import Modal from '../components/Modal';
 import { useSetMobileHeader } from '../context/MobileHeaderContext';
 import { PrimaryButton, Toggle, MenuButton, Empty } from '../ui/kit';
 import { dateNumeric } from '../lib/format';
+import { confirmDialog } from '../ui/confirm';
 
 const inputCls = 'w-full rounded-xl border border-gray-300 bg-white px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500';
 const labelCls = 'block text-[13px] font-medium text-gray-700 mb-1.5';
@@ -56,7 +57,7 @@ export default function PromoCodes() {
   };
 
   const handleDelete = async (id) => {
-    if (!confirm('¿Eliminar este código?')) return;
+    if (!await confirmDialog('¿Eliminar este código?')) return;
     try {
       await api.delete(`/promos/${id}`);
       setPromos(ps => ps.filter(p => p._id !== id));

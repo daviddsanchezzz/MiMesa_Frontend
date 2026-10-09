@@ -10,6 +10,7 @@ import { useUnsavedChanges } from '../../lib/unsavedChanges';
 import { useAuth } from '../../context/AuthContext';
 import UpgradeHint from '../../components/UpgradeHint';
 import { PRICES } from '../../lib/billing';
+import { confirmDialog } from '../../ui/confirm';
 
 const KIND_LABEL = { staff: 'Profesional', space: 'Sala o espacio', equipment: 'Equipo' };
 
@@ -338,7 +339,7 @@ function Resources({ resources, services, reload, spacesOnly = false }) {
   }
 
   async function remove(r) {
-    if (!window.confirm(`¿Desactivar a ${r.name}? Deja de aparecer en la agenda y en tu página; sus citas pasadas se conservan.`)) return;
+    if (!await confirmDialog(`¿Desactivar a ${r.name}? Deja de aparecer en la agenda y en tu página; sus citas pasadas se conservan.`)) return;
     try { await bookingsApi.deleteResource(r._id); reload(); } catch (err) { setError(apiError(err)); }
   }
 
@@ -467,7 +468,7 @@ function Services({ services, staff, reload }) {
   const [inactive, setInactive] = useState(null); // deactivated services, loaded on demand
 
   async function remove(s) {
-    if (!window.confirm(`¿Desactivar el servicio ${s.name}? Deja de poder reservarse; lo puedes recuperar cuando quieras.`)) return;
+    if (!await confirmDialog(`¿Desactivar el servicio ${s.name}? Deja de poder reservarse; lo puedes recuperar cuando quieras.`)) return;
     try { await bookingsApi.deleteService(s._id); reload(); setInactive(null); } catch (err) { setError(apiError(err)); }
   }
 

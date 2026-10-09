@@ -19,6 +19,7 @@ import StaffAvatar from '../agenda/StaffAvatar';
 import { DEFAULT_TZ, dateInTz, euros, initials, pluralize, staffColors, timeInTz, todayIn, waLink } from '../agenda/utils';
 import { placeText } from '../reservas/useRestaurantDay';
 import { avatarColor, everyText, phoneText, relDays, shortDateTime } from './format';
+import { notify } from '../../lib/notify';
 
 const btn = 'inline-flex items-center justify-center gap-1.5 h-10 px-4 rounded-xl text-sm font-semibold transition-colors';
 
@@ -257,7 +258,7 @@ export default function CustomerFile() {
       {booking && (
         <Modal title="Nueva reserva" onClose={() => setBooking(false)} size="md">
           <ReservationForm reservation={{ guestName: customer.name, guestPhone: customer.phone || '', guestEmail: customer.email || '' }}
-            onSave={() => { setBooking(false); window.dispatchEvent(new CustomEvent('app:toast', { detail: { message: 'Reserva creada' } })); load(); }}
+            onSave={() => { setBooking(false); notify.success('Reserva creada'); load(); }}
             onCancel={() => setBooking(false)} />
         </Modal>
       )}

@@ -3,6 +3,7 @@ import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { ErrorBanner, IconPlus, IconTrash, inputCls, labelCls } from './shared';
 import { dateYear } from '../../lib/format';
+import { confirmDialog } from '../../ui/confirm';
 
 // ═══════════════════════════════════════════════════════════════════════════
 // VACACIONES SECTION
@@ -29,7 +30,7 @@ export function VacacionesSection() {
   };
 
   const handleDelete = async (id) => {
-    if (!confirm('¿Eliminar este período de cierre?')) return;
+    if (!await confirmDialog('¿Eliminar este período de cierre?')) return;
     await api.delete(`/vacations/${id}`); load();
   };
 

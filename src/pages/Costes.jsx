@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { toast } from 'sonner';
+import { notify } from '../lib/notify';
 import api from '../services/api';
 import { useData } from '../lib/query';
 import Icon from '../ui/Icon';
@@ -134,7 +134,7 @@ export default function Costes() {
   const refresh = () => { list.refetch(); inbox.refetch(); };
   const linked = ({ ingredient, linked: n }) => {
     setLinking(null);
-    toast.success(`${n} ${n === 1 ? 'línea vinculada' : 'líneas vinculadas'} a ${ingredient.name}`);
+    notify.success(`${n} ${n === 1 ? 'línea vinculada' : 'líneas vinculadas'} a ${ingredient.name}`);
     refresh();
   };
 

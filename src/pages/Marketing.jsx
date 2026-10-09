@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useSetMobileHeader } from '../context/MobileHeaderContext';
 import Icon from '../ui/Icon';
 import { Section, SectionLink, FigureLine, Empty } from '../ui/kit';
+import { confirmDialog } from '../ui/confirm';
 
 const inputCls = 'w-full rounded-xl border border-gray-300 bg-white px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500';
 const labelCls = 'block text-[13px] font-medium text-gray-700 mb-1.5';
@@ -81,7 +82,7 @@ export default function Marketing() {
     setError(''); setResult(null);
     if (!subject.trim() || !body.trim()) { setError('El asunto y el cuerpo son obligatorios'); return; }
     if (segmented && !segment) { setError('Elige a quién va dirigida la campaña'); return; }
-    if (!confirm(`¿Enviar esta campaña a ${recipients} ${recipients === 1 ? 'persona' : 'personas'}?`)) return;
+    if (!await confirmDialog(`¿Enviar esta campaña a ${recipients} ${recipients === 1 ? 'persona' : 'personas'}?`)) return;
     try {
       setSending(true);
       const r = await api.post('/marketing/send', {

@@ -11,6 +11,7 @@ import { bookingsApi, apiError } from '../../services/bookingsApi';
 import {
   DEFAULT_TZ, btnPrimary, btnSecondary, euros, inputCls, timeInTz, dateInTz, addDays, payMethodLabel, waLink,
 } from './utils';
+import { confirmDialog } from '../../ui/confirm';
 
 // What each status offers (mirrors the backend transitions):
 // main = big buttons, more = small text links under them.
@@ -74,8 +75,8 @@ export default function BookingDetailModal({ booking, staffById, services = [], 
     }
   }
 
-  const changeStatus = (status) => {
-    if (status === 'cancelled' && !window.confirm('¿Cancelar esta cita? El hueco quedará libre.')) return;
+  const changeStatus = async (status) => {
+    if (status === 'cancelled' && !await confirmDialog('¿Cancelar esta cita? El hueco quedará libre.')) return;
     run(() => bookingsApi.setStatus(booking._id, status));
   };
 
@@ -235,7 +236,7 @@ export default function BookingDetailModal({ booking, staffById, services = [], 
             </div>
             {hasRole('manager') && (
               <button type="button" disabled={busy} className="text-xs font-semibold text-blue-800 hover:text-rose-700"
-                onClick={() => { if (window.confirm('¿Deshacer el cobro?')) run(() => bookingsApi.undoCheckout(booking._id)); }}>
+                onClick={async () => { if (await confirmDialog('¿Deshacer el cobro?')) run(() => bookingsApi.undoCheckout(booking._id)); }}>
                 Deshacer
               </button>
             )}

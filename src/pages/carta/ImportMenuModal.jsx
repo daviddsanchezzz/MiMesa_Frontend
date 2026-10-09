@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
-import { toast } from 'sonner';
+import { notify } from '../../lib/notify';
 import Modal from '../../components/Modal';
 import api from '../../services/api';
 import { MENU_FIELDS, buildMenuRows, findHeaderRow, guessMapping, parseDelimited, readTextFile } from '../../lib/tabular';
@@ -73,7 +73,7 @@ export default function ImportMenuModal({ onClose, onDone }) {
       setPlan(data);
       if (apply) {
         writeSaved(Object.fromEntries(Object.entries(mapping).map(([k, i]) => [k, (headers[i] || '').trim().toLowerCase()])));
-        toast.success('Carta actualizada');
+        notify.success('Carta actualizada');
         onDone?.();
       }
     } catch (err) {

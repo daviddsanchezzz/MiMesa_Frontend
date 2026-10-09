@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import Modal from '../../components/Modal';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
+import { confirmDialog } from '../../ui/confirm';
 
 const ROLE_LABELS = { owner: 'Propietario', manager: 'Encargado', staff: 'Personal' };
 const inputCls = 'w-full rounded-xl border border-gray-300 bg-white px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500';
@@ -51,12 +52,12 @@ export default function EmployeeAccessModal({ employee, onClose, onChanged }) {
     `Invitación enviada a ${email.trim()}. Al aceptarla, verá aquí su horario.`,
   );
   const link = () => run(() => api.put(`/staff/employees/${employee._id}/link`, { memberId }), 'Usuario vinculado.');
-  const unlink = () => {
-    if (!window.confirm(`¿Desvincular a ${fullName}? Seguirá en el equipo, pero dejará de ver su horario como empleado.`)) return;
+  const unlink = async () => {
+    if (!await confirmDialog(`¿Desvincular a ${fullName}? Seguirá en el equipo, pero dejará de ver su horario como empleado.`)) return;
     run(() => api.delete(`/staff/employees/${employee._id}/link`), 'Usuario desvinculado.');
   };
-  const revoke = () => {
-    if (!window.confirm(`¿Quitar el acceso a Vetra de ${fullName}? Su ficha, turnos y pagos se conservan.`)) return;
+  const revoke = async () => {
+    if (!await confirmDialog(`¿Quitar el acceso a Vetra de ${fullName}? Su ficha, turnos y pagos se conservan.`)) return;
     run(() => api.delete(`/staff/employees/${employee._id}/access`), 'Acceso retirado.');
   };
   const cancelInvitation = () => run(() => api.delete(`/invitations/${pending._id}`), 'Invitación cancelada.');

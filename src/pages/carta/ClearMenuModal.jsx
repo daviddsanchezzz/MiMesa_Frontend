@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { toast } from 'sonner';
+import { notify } from '../../lib/notify';
 import Modal from '../../components/Modal';
 import api from '../../services/api';
 
@@ -17,7 +17,7 @@ export default function ClearMenuModal({ items, categories, onClose, onDone }) {
     setError('');
     try {
       await api.delete('/menu');
-      toast.success('Carta eliminada');
+      notify.success('Carta eliminada');
       onDone();
     } catch (err) {
       setError(err?.response?.data?.message || 'No se ha podido eliminar la carta');

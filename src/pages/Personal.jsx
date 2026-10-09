@@ -21,6 +21,7 @@ import { CompensationModal } from './personal/CompensationModal';
 import { ShiftEditorModal } from './personal/ShiftEditorModal';
 import { EmployeeAssignmentsModal } from './personal/EmployeeAssignmentsModal';
 import { dateYear } from '../lib/format';
+import { confirmDialog } from '../ui/confirm';
 
 const TAB_LABELS = { planner: 'Planificación', employees: 'Empleados', costs: 'Costes', requests: 'Solicitudes' };
 const TAB_ORDER = ['planner', 'employees', 'costs', 'requests'];
@@ -479,7 +480,7 @@ export default function Personal() {
   const clearWeekAssignments = async () => {
     const current = visibleWeekAssignments || [];
     if (current.length === 0) return;
-    if (!window.confirm('¿Borrar todas las asignaciones de esta semana?')) return;
+    if (!await confirmDialog('¿Borrar todas las asignaciones de esta semana?')) return;
     try {
       await Promise.all(
         current.filter((a) => a?._id).map((a) => api.delete(`/staff/assignments/${a._id}`)),
@@ -504,7 +505,7 @@ export default function Personal() {
       }
 
       if ((visibleWeekAssignments || []).length > 0) {
-        const confirmed = window.confirm(
+        const confirmed = await confirmDialog(
           'Esta semana ya tiene asignaciones. Si continúas se borrarán las actuales y se copiarán las de la semana anterior. ¿Quieres continuar?',
         );
         if (!confirmed) return;

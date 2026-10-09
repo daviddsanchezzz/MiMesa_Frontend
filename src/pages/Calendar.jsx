@@ -5,7 +5,7 @@ import PlanGate from '../components/PlanGate';
 import { statusConfig, Avatar } from '../components/ReservationCard';
 import Modal from '../components/Modal';
 import ReservationForm from '../components/ReservationForm';
-import { toast } from 'sonner';
+import { notify } from '../lib/notify';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const PX_PER_MIN  = 3;
@@ -282,7 +282,7 @@ export default function Calendar() {
       setSelectedRsv(null);
       loadReservations();
     } catch (err) {
-      toast.error(err?.response?.data?.message || 'No se pudo actualizar la reserva');
+      notify.error(err?.response?.data?.message || 'No se pudo actualizar la reserva');
     }
   };
 
@@ -294,7 +294,7 @@ export default function Calendar() {
   const afterSave = ({ mode } = {}) => {
     setEditRsv(null);
     loadReservations();
-    toast.success(mode === 'create' ? 'Reserva creada' : 'Reserva actualizada');
+    notify.success(mode === 'create' ? 'Reserva creada' : 'Reserva actualizada');
   };
 
   // ── Drag to reassign table ──

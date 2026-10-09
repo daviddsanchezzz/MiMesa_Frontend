@@ -3,6 +3,7 @@ import api from '../../services/api';
 import { RowAction, Section } from '../../ui/kit';
 import { Notice } from './shared';
 import { STATUS_TEXT, timeOffLabel, timeOffWhen } from './timeOff';
+import { confirmDialog } from '../../ui/confirm';
 
 const card = 'rounded-2xl border border-gray-200 bg-white overflow-hidden divide-y divide-gray-100';
 const dayText = (iso) => new Date(`${iso}T12:00:00`).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' });
@@ -91,7 +92,7 @@ export default function MyRequests({ part = 'top', incoming = [], mine = [], tim
                   </p>
                 </div>
                 {t.status !== 'rejected' && (
-                  <button type="button" disabled={busy === t.id} onClick={() => window.confirm('¿Cancelar esta ausencia?') && act(t.id, () => api.delete(`/staff/me/time-off/${t.id}`))}
+                  <button type="button" disabled={busy === t.id} onClick={async () => await confirmDialog('¿Cancelar esta ausencia?') && act(t.id, () => api.delete(`/staff/me/time-off/${t.id}`))}
                     className="text-[13px] font-semibold text-gray-500 hover:text-gray-800">Cancelar</button>
                 )}
               </li>

@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useSetMobileHeader } from '../../context/MobileHeaderContext';
 import { queryClient, useData } from '../../lib/query';
 import { confirmLeave, useUnsavedChanges } from '../../lib/unsavedChanges';
+import { notify } from '../../lib/notify';
 import invoicesApi from '../../services/invoicesApi';
 import Icon from '../../ui/Icon';
 import { GhostButton, PageHeader, PrimaryButton, Section } from '../../ui/kit';
@@ -17,6 +18,7 @@ import {
   formToPayload,
   invoiceToForm,
 } from './invoiceUtils';
+import { confirmDialog } from '../../ui/confirm';
 
 const inputCls = 'w-full min-w-0 rounded-xl border border-gray-300 bg-white px-3.5 py-2.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent disabled:bg-gray-50 disabled:text-gray-500';
 const numberCls = `${inputCls} tabular-nums text-right`;
@@ -261,10 +263,6 @@ function validateForm(form) {
   return errors;
 }
 
-function notify(message) {
-  window.dispatchEvent(new CustomEvent('app:toast', { detail: { type: 'success', message } }));
-}
-
 export default function InvoiceDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -302,8 +300,8 @@ export default function InvoiceDetail() {
 
   const goBack = () => { if (confirmLeave()) navigate(listPath); };
 
-  const cancelEdit = () => {
-    if (dirty && !window.confirm('¿Descartar los cambios sin guardar?')) return;
+  const cancelEdit = async () => {
+    if (dirty && !await confirmDialog('¿Descartar los cambios sin guardar?')) return;
     setForceEditing(false);
     setForm(null);
     setBaseline('');
@@ -360,7 +358,7 @@ export default function InvoiceDetail() {
   };
 
   const remove = async () => {
-    if (!window.confirm(`¿Eliminar ${isNote ? 'este albarán' : 'esta factura'} y su documento original? Esta acción no se puede deshacer.`)) return;
+    if (!await confirmDialog(`¿Eliminar ${isNote ? 'este albarán' : 'esta factura'} y su documento original? Esta acción no se puede deshacer.`)) return;
     setDeleting(true);
     try {
       await invoicesApi.remove(id);

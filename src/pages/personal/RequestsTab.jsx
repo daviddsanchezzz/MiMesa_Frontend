@@ -7,6 +7,7 @@ import { Notice, initialsOf } from './shared';
 import OpenShiftModal from './OpenShiftModal';
 import TimeOffModal from './TimeOffModal';
 import { plural, timeOffLabel, timeOffWhen } from './timeOff';
+import { confirmDialog } from '../../ui/confirm';
 
 const card = 'rounded-2xl border border-gray-200 bg-white overflow-hidden divide-y divide-gray-100';
 const dayText = (iso) => new Date(`${iso}T12:00:00`).toLocaleDateString('es-ES', { weekday: 'short', day: 'numeric', month: 'short' }).replace('.', '');
@@ -123,7 +124,7 @@ export default function RequestsTab({ employees, shifts = [], positions = [], on
                   </p>
                   <p className="text-[13px] text-gray-500 first-letter:uppercase">{dayText(s.date)} · {s.start}–{s.end}{s.type === 'give' ? ` · ${s.to ? `se lo ha pedido a ${s.to.name}` : 'abierto a todos'}` : ''}</p>
                 </div>
-                <button type="button" disabled={busy === s.id} onClick={() => window.confirm('¿Cerrar esta solicitud?') && act(s.id, () => api.delete(`/staff/swaps/${s.id}`))}
+                <button type="button" disabled={busy === s.id} onClick={async () => await confirmDialog('¿Cerrar esta solicitud?') && act(s.id, () => api.delete(`/staff/swaps/${s.id}`))}
                   className="text-[13px] font-semibold text-gray-500 hover:text-gray-800">Cerrar</button>
               </li>
             ))}
@@ -143,7 +144,7 @@ export default function RequestsTab({ employees, shifts = [], positions = [], on
                   {t.shiftsAffected > 0 && <p className="text-[12px] text-amber-700">{plural(t.shiftsAffected, 'turno asignado', 'turnos asignados')} esos días</p>}
                 </div>
                 <MenuButton ariaLabel="Más opciones" className="w-9 h-9 justify-center text-gray-500"
-                  items={[{ label: 'Quitar ausencia', onClick: () => window.confirm('¿Quitar esta ausencia?') && act(t.id, () => api.delete(`/staff/time-off/${t.id}`)) }]}>
+                  items={[{ label: 'Quitar ausencia', onClick: async () => await confirmDialog('¿Quitar esta ausencia?') && act(t.id, () => api.delete(`/staff/time-off/${t.id}`)) }]}>
                   <MoreIcon />
                 </MenuButton>
               </li>

@@ -6,17 +6,18 @@ import PushNotificationToggle from '../components/PushNotificationToggle';
 import { isPushSupported } from '../services/pushNotifications';
 import BusinessTypePicker from '../components/BusinessTypePicker';
 import PasswordInput from '../components/PasswordInput';
+import { notify } from '../lib/notify';
 import { useSetMobileHeader } from '../context/MobileHeaderContext';
 import Icon from '../ui/Icon';
 import ProfessionalAvatar from '../components/ProfessionalAvatar';
 import { bookingsApi } from '../services/bookingsApi';
 import { resizeImage } from './agenda/utils';
+import { confirmDialog } from '../ui/confirm';
 
 const inputCls = 'w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-white';
 const labelCls = 'block text-xs font-medium text-gray-600 mb-1.5';
 const ROLE_LABELS = { owner: 'Propietario', manager: 'Encargado', staff: 'Personal' };
 const EMPTY_BUSINESS = { businessType: 'restaurant', name: '', email: '', phone: '', address: '', cif: '' };
-const toast = (message, type = 'success') => window.dispatchEvent(new CustomEvent('app:toast', { detail: { message, type } }));
 
 function Group({ title, hint, children }) {
   return (
@@ -126,9 +127,9 @@ export default function Profile() {
       const { data } = await api.put('/users/me', { name: nameDraft.trim() });
       setUser((u) => ({ ...u, ...data.user }));
       setEditingName(false);
-      toast('Nombre guardado');
+      notify('Nombre guardado');
     } catch (err) {
-      toast(err.response?.data?.message || 'No se pudo guardar el nombre', 'error');
+      notify(err.response?.data?.message || 'No se pudo guardar el nombre', 'error');
     } finally {
       setSavingName(false);
     }
@@ -144,7 +145,7 @@ export default function Profile() {
       await api.put('/users/me/password', { newPassword: passwordForm.newPassword });
       setShowPassword(false);
       setPasswordForm({ newPassword: '', confirmPassword: '' });
-      toast('Contraseña cambiada');
+      notify('Contraseña cambiada');
     } catch (err) {
       setPasswordError(err.response?.data?.message || 'No se pudo cambiar la contraseña');
     } finally {
@@ -160,7 +161,7 @@ export default function Profile() {
       await api.put(`/users/me/memberships/${membershipId}/notifications`, patch);
     } catch (err) {
       setMemberships(prev);
-      toast(err.response?.data?.message || 'No se pudo guardar el aviso', 'error');
+      notify(err.response?.data?.message || 'No se pudo guardar el aviso', 'error');
     }
   };
 
@@ -169,9 +170,9 @@ export default function Profile() {
     try {
       const updated = await bookingsApi.updateMyPhoto(patch);
       setProfessional(updated);
-      toast('Foto profesional actualizada');
+      notify('Foto profesional actualizada');
     } catch (err) {
-      toast(err.response?.data?.message || err.message || 'No se pudo actualizar la foto', 'error');
+      notify(err.response?.data?.message || err.message || 'No se pudo actualizar la foto', 'error');
     } finally {
       setSavingPhoto(false);
     }
@@ -182,22 +183,22 @@ export default function Profile() {
       const photo = await resizeImage(file, { max: 160, square: true });
       await updateProfessionalPhoto({ photo });
     } catch (err) {
-      toast(err.message || 'No se pudo leer la imagen', 'error');
+      notify(err.message || 'No se pudo leer la imagen', 'error');
     }
   };
 
   const activate = async (m) => {
     setBusyBusiness(m.businessId);
-    try { await switchBusiness(m.businessId); await load(); toast(`Ahora estás en ${m.businessName}`); } catch (err) {
-      toast(err.response?.data?.message || 'No se pudo cambiar de negocio', 'error');
+    try { await switchBusiness(m.businessId); await load(); notify(`Ahora estás en ${m.businessName}`); } catch (err) {
+      notify(err.response?.data?.message || 'No se pudo cambiar de negocio', 'error');
     } finally { setBusyBusiness(null); }
   };
 
   const removeBusiness = async (m) => {
-    if (!window.confirm(`¿Eliminar «${m.businessName}»? Se borran sus reservas, clientes y configuración. No se puede deshacer.`)) return;
+    if (!await confirmDialog(`¿Eliminar «${m.businessName}»? Se borran sus reservas, clientes y configuración. No se puede deshacer.`)) return;
     setBusyBusiness(m.businessId);
-    try { await api.delete(`/businesses/${m.businessId}`); await refreshBusiness(); await load(); toast('Negocio eliminado'); } catch (err) {
-      toast(err.response?.data?.message || 'No se pudo eliminar el negocio', 'error');
+    try { await api.delete(`/businesses/${m.businessId}`); await refreshBusiness(); await load(); notify('Negocio eliminado'); } catch (err) {
+      notify(err.response?.data?.message || 'No se pudo eliminar el negocio', 'error');
     } finally { setBusyBusiness(null); }
   };
 
@@ -210,9 +211,9 @@ export default function Profile() {
       setNewBusiness(EMPTY_BUSINESS);
       await refreshBusiness();
       await load();
-      toast('Negocio creado');
+      notify('Negocio creado');
     } catch (err) {
-      toast(err.response?.data?.message || 'No se pudo crear el negocio', 'error');
+      notify(err.response?.data?.message || 'No se pudo crear el negocio', 'error');
     } finally {
       setSavingBusiness(false);
     }

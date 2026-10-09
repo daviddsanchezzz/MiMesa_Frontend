@@ -3,6 +3,7 @@ import api from '../services/api';
 import { useSetMobileHeader } from '../context/MobileHeaderContext';
 import Modal from '../components/Modal';
 import { PageHeader, PrimaryButton, Section, MenuButton, Empty } from '../ui/kit';
+import { confirmDialog } from '../ui/confirm';
 
 const inputCls = 'w-full rounded-xl border border-gray-300 bg-white px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500';
 const labelCls = 'block text-[13px] font-medium text-gray-700 mb-1.5';
@@ -181,7 +182,7 @@ export default function Exceptions({ embedded = false }) {
   };
 
   const removeRow = async (id) => {
-    if (!window.confirm('¿Eliminar esta excepción?')) return;
+    if (!await confirmDialog('¿Eliminar esta excepción?')) return;
     try {
       await api.delete(`/exceptions/${id}`);
       await load();

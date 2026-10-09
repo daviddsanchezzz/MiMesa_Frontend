@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
-import { toast } from 'sonner';
+import { notify } from '../../lib/notify';
 import Modal from '../../components/Modal';
 import api from '../../services/api';
 import { useData } from '../../lib/query';
 import Icon from '../../ui/Icon';
 import { inputCls } from '../carta/labels';
 import { money, perUnit } from './format';
+import { confirmDialog } from '../../ui/confirm';
 
 // Quantities are typed in grams / millilitres / units and stored in kg / l / units
 const SCALE = { kg: 1000, l: 1000, ud: 1 };
@@ -63,13 +64,13 @@ export default function RecipeModal({ itemId, ingredients, onClose, onChanged })
         otherCost: Number(String(other).replace(',', '.')) || 0,
         lines: lines.map((l) => ({ ingredientId: l.ingredientId, quantity: toStored(l.qty, byId.get(l.ingredientId)?.unit || 'kg'), wastePct: Number(l.waste) || 0 })),
       });
-      toast.success('Escandallo guardado');
+      notify.success('Escandallo guardado');
       onChanged?.(); onClose();
-    } catch (err) { toast.error(err?.response?.data?.message || 'No se ha podido guardar'); } finally { setSaving(false); }
+    } catch (err) { notify.error(err?.response?.data?.message || 'No se ha podido guardar'); } finally { setSaving(false); }
   }
   async function clear() {
-    if (!window.confirm('¿Quitar el escandallo de este plato?')) return;
-    try { await api.delete(`/recipes/${itemId}`); onChanged?.(); onClose(); } catch (err) { toast.error(err?.response?.data?.message || 'No se ha podido quitar'); }
+    if (!await confirmDialog('¿Quitar el escandallo de este plato?')) return;
+    try { await api.delete(`/recipes/${itemId}`); onChanged?.(); onClose(); } catch (err) { notify.error(err?.response?.data?.message || 'No se ha podido quitar'); }
   }
 
   const m = calc.margin;

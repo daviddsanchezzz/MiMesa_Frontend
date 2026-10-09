@@ -16,6 +16,7 @@ import {
 } from '../agenda/utils';
 import { useUnsavedChanges } from '../../lib/unsavedChanges';
 import CalendarLink from './CalendarLink';
+import { confirmDialog } from '../../ui/confirm';
 
 export default function ProfessionalGeneral({
   resource,
@@ -227,9 +228,9 @@ export default function ProfessionalGeneral({
         <button
           disabled={busy}
           className="min-h-11 text-sm text-rose-700"
-          onClick={() => {
+          onClick={async () => {
             if (
-              window.confirm(
+              await confirmDialog(
                 resource.active === false
                   ? '¿Reactivar este profesional? Se aplican los límites de tu plan.'
                   : '¿Desactivar este profesional? Sus citas e historial se conservan. Su acceso a Vetra se gestiona por separado.',

@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import Modal from '../../components/Modal';
 import { Segmented } from '../../ui/kit';
 import { DAYS, EmptyState, ErrorBanner, INTERVAL_OPTIONS, IconClock, IconEdit, IconPlus, IconTrash, IconX, colorOf, emptyShiftForm, fmtDate, inputCls, labelCls } from './shared';
+import { confirmDialog } from '../../ui/confirm';
 
 const hhmm = (min) => `${String(Math.floor(min / 60) % 24).padStart(2, '0')}:${String(min % 60).padStart(2, '0')}`;
 const toMin = (t) => { const [h, m] = String(t || '').split(':').map(Number); return h * 60 + m; };
@@ -89,7 +90,7 @@ export function TurnosSection() {
   };
 
   const handleDelete = async (id) => {
-    if (!confirm('¿Eliminar este turno?')) return;
+    if (!await confirmDialog('¿Eliminar este turno?')) return;
     await api.delete(`/shifts/${id}`); load();
   };
 

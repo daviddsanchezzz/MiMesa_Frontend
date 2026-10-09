@@ -3,6 +3,7 @@ import Modal from '../../components/Modal';
 import StaffAvatar from './StaffAvatar';
 import { bookingsApi, apiError } from '../../services/bookingsApi';
 import { btnPrimary, btnSecondary, inputCls, labelCls, timeInTz, dateInTz, longDate, absenceText } from './utils';
+import { confirmDialog } from '../../ui/confirm';
 
 /**
  * Block time for a professional (holidays, doctor, leaving early…).
@@ -77,7 +78,7 @@ export default function AbsenceModal({ staff, me, isManager, date, tz, colors, o
   }
 
   async function cancelBooking(bookingId) {
-    if (!window.confirm('¿Cancelar esta cita? Si tiene email, al cliente le llegará el aviso de cancelación.')) return;
+    if (!await confirmDialog('¿Cancelar esta cita? Si tiene email, al cliente le llegará el aviso de cancelación.')) return;
     setBusy(true);
     setError('');
     try {
@@ -228,7 +229,7 @@ export function AbsenceDetailModal({ absence, person, canRemove, onClose, onRemo
     : `${longDate(absence.fromDate)} · ${absence.allDay ? 'todo el día' : absenceText(absence)}`;
 
   async function remove() {
-    if (!window.confirm('¿Quitar esta ausencia? Ese tiempo volverá a estar disponible para citas.')) return;
+    if (!await confirmDialog('¿Quitar esta ausencia? Ese tiempo volverá a estar disponible para citas.')) return;
     setBusy(true);
     try {
       await bookingsApi.deleteAbsence(absence._id);

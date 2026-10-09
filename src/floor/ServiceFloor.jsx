@@ -13,6 +13,7 @@ import { live, plural } from '../pages/reservas/parts';
 import FloorCanvas from './FloorCanvas';
 import { ElementGlyph, LOOKS, TableGlyph } from './Glyphs';
 import { arrangeUnplaced, boundsOf, placeTable, roomIdOf } from './geometry';
+import { notify } from '../lib/notify';
 
 const NONE = '__none__';
 const EMPTY = [];
@@ -282,7 +283,7 @@ export default function ServiceFloor({ date, today, tz }) {
   const onTable = (t) => {
     if (picked) {
       if (canTake(t, picked)) assign(picked, t);
-      else window.dispatchEvent(new CustomEvent('app:toast', { detail: { type: 'error', message: `${t.name} no está libre o es pequeña para ${picked.people}` } }));
+      else notify.error(`${t.name} no está libre o es pequeña para ${picked.people}`);
       return;
     }
     setSel((cur) => (cur === t._id ? null : t._id));

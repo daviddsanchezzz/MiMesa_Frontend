@@ -5,6 +5,7 @@ import Modal from '../../components/Modal';
 import { paymentGraceUntil, pricesFor } from '../../lib/billing';
 import { BASIC_FEATURES as R_BASIC, CheckIcon, PRO_EXTRAS as R_PRO, APPT_BASIC_FEATURES, APPT_PRO_EXTRAS } from './shared';
 import { dateYear } from '../../lib/format';
+import { confirmDialog } from '../../ui/confirm';
 
 export function BillingSection() {
   const { plan, subscriptionStatus, trialEndsAt, currentPeriodEnd, cancelAtPeriodEnd, hasRole, refreshBusiness, isAppointments, business } = useAuth();
@@ -87,7 +88,7 @@ export function BillingSection() {
   };
 
   const handleCancel = async () => {
-    if (!confirm('¿Confirmas que quieres cancelar? Seguirás teniendo acceso hasta el final del período.')) return;
+    if (!await confirmDialog('¿Confirmas que quieres cancelar? Seguirás teniendo acceso hasta el final del período.')) return;
     setWorking(true); setErr('');
     try {
       await api.post('/stripe/cancel');

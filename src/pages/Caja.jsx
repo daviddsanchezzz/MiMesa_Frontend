@@ -7,6 +7,7 @@ import { Hero, Section, TimeRow, RowAction } from '../ui/kit';
 import { DayNavigator } from '../ui/PeriodNavigator';
 import { queryClient, useData } from '../lib/query';
 import { useResources } from './agenda/queries';
+import { confirmDialog } from '../ui/confirm';
 
 const NONE = [];
 import { bookingTone } from '../lib/status';
@@ -54,9 +55,9 @@ export default function Caja() {
     try { await fn(); await load(); } catch (err) { setError(apiError(err)); } finally { setBusy(false); }
   }
 
-  const closeDay = () => {
+  const closeDay = async () => {
     if (counted !== '' && countedCents === null) return setError('El efectivo contado no es válido');
-    if (data.toCharge.length && !window.confirm(`Quedan ${pluralize(data.toCharge.length, 'cita', 'citas')} sin cobrar. ¿Cerrar la caja igualmente?`)) return;
+    if (data.toCharge.length && !await confirmDialog(`Quedan ${pluralize(data.toCharge.length, 'cita', 'citas')} sin cobrar. ¿Cerrar la caja igualmente?`)) return;
     run(() => bookingsApi.closeCash({ date, countedCash: counted === '' ? null : countedCents, note }).then(() => { setCounted(''); setNote(''); }));
   };
 
@@ -135,7 +136,7 @@ export default function Caja() {
                           <span className="text-sm font-semibold tabular-nums text-gray-900">{euros(p.total + (p.tip || 0))}</span>
                           {hasRole('manager') && !closed && (
                             <button type="button" disabled={busy} title="Deshacer cobro" aria-label="Deshacer cobro"
-                              onClick={() => { if (window.confirm(`¿Deshacer el cobro de ${b.guestName}?`)) run(() => bookingsApi.undoCheckout(b._id)); }}
+                              onClick={async () => { if (await confirmDialog(`¿Deshacer el cobro de ${b.guestName}?`)) run(() => bookingsApi.undoCheckout(b._id)); }}
                               className="w-8 h-8 rounded-full text-gray-300 hover:text-rose-600 hover:bg-rose-50">↺</button>
                           )}
                         </li>
@@ -159,7 +160,7 @@ export default function Caja() {
                         <span className="text-sm font-semibold tabular-nums text-gray-900">{euros(x.amount)}</span>
                         {hasRole('manager') && !closed && (
                           <button type="button" disabled={busy} title="Anular venta" aria-label="Anular venta"
-                            onClick={() => { if (window.confirm(`¿Anular la venta de «${x.name}» a ${x.customerName}?`)) run(() => bookingsApi.voidPackSale(x._id)); }}
+                            onClick={async () => { if (await confirmDialog(`¿Anular la venta de «${x.name}» a ${x.customerName}?`)) run(() => bookingsApi.voidPackSale(x._id)); }}
                             className="w-8 h-8 rounded-full text-gray-300 hover:text-rose-600 hover:bg-rose-50">↺</button>
                         )}
                       </li>
@@ -189,7 +190,7 @@ export default function Caja() {
                   <p className="text-xs text-gray-400">Cerrada a las {timeInTz(closed.createdAt, tz)}. Los cobros de este día ya no se pueden cambiar.</p>
                   {hasRole('manager') && (
                     <button type="button" className={btnSecondary} disabled={busy}
-                      onClick={() => { if (window.confirm('¿Reabrir la caja de este día?')) run(() => bookingsApi.reopenCash(date)); }}>
+                      onClick={async () => { if (await confirmDialog('¿Reabrir la caja de este día?')) run(() => bookingsApi.reopenCash(date)); }}>
                       Reabrir caja
                     </button>
                   )}

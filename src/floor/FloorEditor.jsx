@@ -10,10 +10,11 @@ import {
   ELEMENTS, GRID, SHAPES, arrangeUnplaced, boundsOf, clamp, elementXY, freeSpot, nextTableName, placeElement,
   placeTable, roomIdOf, rotatedHalf, snap, storedXY, tableSize,
 } from './geometry';
+import { notify } from '../lib/notify';
+import { confirmDialog } from '../ui/confirm';
 
 const NONE = '__none__';
 const EMPTY = [];
-const notify = (message, type = 'success') => window.dispatchEvent(new CustomEvent('app:toast', { detail: { message, type } }));
 const errText = (err, fallback) => err?.response?.data?.message || fallback;
 const oid = () => Array.from(crypto.getRandomValues(new Uint8Array(12)), (b) => b.toString(16).padStart(2, '0')).join('');
 
@@ -471,7 +472,7 @@ export default function FloorEditor({ maxTables = Infinity, header }) {
 
   const deleteSel = async () => {
     if (selTable) {
-      if (!window.confirm(`¿Eliminar ${selTable.name}? Las reservas que la tengan asignada se quedan sin mesa.`)) return;
+      if (!await confirmDialog(`¿Eliminar ${selTable.name}? Las reservas que la tengan asignada se quedan sin mesa.`)) return;
       const id = selTable._id;
       const ok = await track(() => api.delete(`/tables/${id}`));
       if (ok !== null) { queryClient.setQueryData(['tables'], (old) => (old || []).filter((t) => t._id !== id)); setSel(null); setSheet(null); }
@@ -585,7 +586,7 @@ export default function FloorEditor({ maxTables = Infinity, header }) {
   const deleteRoom = async () => {
     if (!room) return;
     const n = roomTables.length;
-    if (!window.confirm(`¿Eliminar la sala ${room.name}?${n ? ` Sus ${n} mesas pasan a «Sin sala».` : ''}`)) return;
+    if (!await confirmDialog(`¿Eliminar la sala ${room.name}?${n ? ` Sus ${n} mesas pasan a «Sin sala».` : ''}`)) return;
     const ok = await track(() => api.delete(`/rooms/${room._id}`));
     if (ok !== null) { setRoomId(null); queryClient.invalidateQueries({ queryKey: ['rooms'] }); queryClient.invalidateQueries({ queryKey: ['tables'] }); }
   };

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { toast } from 'sonner';
+import { notify } from '../lib/notify';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { useData } from '../lib/query';
@@ -13,6 +13,7 @@ import LanguagesModal from './carta/LanguagesModal';
 import ClearMenuModal from './carta/ClearMenuModal';
 import { ALLERGENS, TAGS, eur, languageName, textOf } from './carta/labels';
 import { dateShort as shortDate } from '../lib/format';
+import { confirmDialog } from '../ui/confirm';
 
 const ICONS = Object.fromEntries([...ALLERGENS, ...TAGS].map((x) => [x.key, x.icon]));
 
@@ -83,9 +84,9 @@ export default function Carta() {
         total += data.translated;
         if (!data.remaining || !data.translated) break;
       }
-      toast.success(total ? `${total} textos traducidos` : 'No había nada que traducir');
+      notify.success(total ? `${total} textos traducidos` : 'No había nada que traducir');
     } catch (err) {
-      toast.error(err?.response?.data?.message || 'No se ha podido traducir');
+      notify.error(err?.response?.data?.message || 'No se ha podido traducir');
     } finally {
       setTranslating(false);
       q.refetch();
@@ -107,7 +108,7 @@ export default function Carta() {
 
   const refresh = () => q.refetch();
   const done = () => { setModal(null); refresh(); };
-  const fail = (err) => toast.error(err?.response?.data?.message || 'No se ha podido guardar');
+  const fail = (err) => notify.error(err?.response?.data?.message || 'No se ha podido guardar');
 
   async function toggleSoldOut(item) {
     try { await api.patch(`/menu/items/${item._id}/sold-out`, { soldOut: !item.soldOut }); refresh(); } catch (err) { fail(err); }
@@ -158,7 +159,7 @@ export default function Carta() {
     try { await api.put(`/menu/categories/${c._id}`, { hidden: !c.hidden }); refresh(); } catch (err) { fail(err); }
   }
   async function removeCategory(c) {
-    if (!window.confirm(`¿Borrar la categoría «${textOf(c.name, language)}»?`)) return;
+    if (!await confirmDialog(`¿Borrar la categoría «${textOf(c.name, language)}»?`)) return;
     try { await api.delete(`/menu/categories/${c._id}`); refresh(); } catch (err) { fail(err); }
   }
 

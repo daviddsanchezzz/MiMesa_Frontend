@@ -4,6 +4,7 @@ import Modal from '../../components/Modal';
 import { MenuButton } from '../../ui/kit';
 import { Notice, SheetFooter } from './shared';
 import { plural } from './timeOff';
+import { confirmDialog } from '../../ui/confirm';
 
 const when = (iso) => new Date(iso).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }).replace('.', '');
 
@@ -36,7 +37,7 @@ export default function PublishBar({ status, weekStart, onChanged, className = '
     }
   };
   const unpublish = async () => {
-    if (!window.confirm('Tu equipo dejará de ver esta semana hasta que la vuelvas a publicar. ¿Continuar?')) return;
+    if (!await confirmDialog('Tu equipo dejará de ver esta semana hasta que la vuelvas a publicar. ¿Continuar?')) return;
     try { await api.delete(`/staff/schedule/publish?weekStart=${weekStart}`); await onChanged?.(); } catch { /* ignore */ }
   };
 

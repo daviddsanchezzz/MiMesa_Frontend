@@ -6,6 +6,7 @@ import { Section } from '../../ui/kit';
 import { assignPersonColors } from './ShiftStaffChips';
 import { Notice, SheetFooter, initialsOf, staffTimes } from './shared';
 import { timeOffLabel } from './timeOff';
+import { confirmDialog } from '../../ui/confirm';
 
 export function ShiftEditorModal({ day, shift, assignments, timeOff = [], openSwapIds = new Set(), activeEmployees, positions, onClose, onRefresh }) {
   const [saving, setSaving] = useState(false);
@@ -286,8 +287,8 @@ export function ShiftEditorModal({ day, shift, assignments, timeOff = [], openSw
   const personChip = (emp, color, onAdd) => {
     const name = `${emp.firstName || ''} ${emp.lastName || ''}`.trim();
     const away = absence(emp);
-    const onClick = () => {
-      if (away?.status === 'approved' && !window.confirm(`${emp.firstName} tiene ${timeOffLabel(away.type).toLowerCase()} este día. ¿Asignarle el turno igualmente?`)) return;
+    const onClick = async () => {
+      if (away?.status === 'approved' && !await confirmDialog(`${emp.firstName} tiene ${timeOffLabel(away.type).toLowerCase()} este día. ¿Asignarle el turno igualmente?`)) return;
       onAdd(Boolean(away?.status === 'approved'));
     };
     return (
@@ -305,7 +306,7 @@ export function ShiftEditorModal({ day, shift, assignments, timeOff = [], openSw
 
   const findReplacement = async (assignment) => {
     const name = assignment.employeeId?.firstName || 'esa persona';
-    if (!window.confirm(`Se avisará a quien pueda cubrir el turno de ${name}. Seguirá siendo suyo hasta que apruebes el cambio. ¿Buscar sustituto?`)) return;
+    if (!await confirmDialog(`Se avisará a quien pueda cubrir el turno de ${name}. Seguirá siendo suyo hasta que apruebes el cambio. ¿Buscar sustituto?`)) return;
     try {
       await api.post('/staff/swaps', { assignmentId: assignment._id });
       await onRefresh();

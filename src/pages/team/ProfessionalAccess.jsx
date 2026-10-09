@@ -4,6 +4,7 @@ import api from '../../services/api';
 import { bookingsApi, apiError } from '../../services/bookingsApi';
 import Modal from '../../components/Modal';
 import { btnPrimary, btnSecondary, inputCls } from '../agenda/utils';
+import { confirmDialog } from '../../ui/confirm';
 
 export const ROLES = {
   staff: 'Personal',
@@ -123,14 +124,14 @@ export function MemberAccess({ member, onSaved }) {
   async function change(role) {
     if (
       !role &&
-      !window.confirm(
+      !await confirmDialog(
         '¿Revocar este acceso a Vetra? El profesional, sus citas y su historial se conservan.',
       )
     )
       return;
     if (
       role === 'owner' &&
-      !window.confirm('¿Dar control total del negocio a este usuario?')
+      !await confirmDialog('¿Dar control total del negocio a este usuario?')
     )
       return;
     setBusy(true);
@@ -192,7 +193,7 @@ export function PendingAccess({ invitation, onSaved }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   async function cancel() {
-    if (!window.confirm('¿Cancelar esta invitación?')) return;
+    if (!await confirmDialog('¿Cancelar esta invitación?')) return;
     setBusy(true);
     try {
       await api.delete(`/invitations/${invitation._id}`);
@@ -248,7 +249,7 @@ export default function ProfessionalAccess({
   );
   async function unlink() {
     if (
-      !window.confirm(
+      !await confirmDialog(
         '¿Desvincular esta cuenta del profesional? Conserva su acceso al negocio, pero deja de tener esta agenda propia.',
       )
     )

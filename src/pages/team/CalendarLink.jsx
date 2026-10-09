@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { bookingsApi, apiError } from '../../services/bookingsApi';
 import { btnSecondary } from '../agenda/utils';
+import { confirmDialog } from '../../ui/confirm';
 
 /**
  * The secret link that puts a professional's appointments in Google Calendar,
@@ -30,7 +31,7 @@ export default function CalendarLink({ resource }) {
   }
 
   async function reset() {
-    if (!window.confirm('¿Crear un enlace nuevo? El anterior dejará de funcionar y tendrás que volver a añadirlo en tus calendarios.')) return;
+    if (!await confirmDialog('¿Crear un enlace nuevo? El anterior dejará de funcionar y tendrás que volver a añadirlo en tus calendarios.')) return;
     setBusy(true);
     try { setLink(await bookingsApi.resetCalendarLink(resource._id)); } catch (err) { setError(apiError(err)); } finally { setBusy(false); }
   }

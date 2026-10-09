@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import api from '../services/api';
 import { downloadFromApi } from '../services/download';
+import { confirmDialog } from '../ui/confirm';
 
 const inputCls = 'w-full border border-gray-300 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent bg-white';
 const labelCls = 'block text-sm font-medium text-gray-700 mb-1.5';
@@ -41,7 +42,7 @@ export default function CustomerForm({ customer, onSave, onCancel, onDeleted }) 
 
   const handleDelete = async () => {
     if (!customer?._id || saving || deleting) return;
-    const ok = window.confirm(`Vas a borrar a "${customer.name}" y sus datos personales. Su historial se conserva sin nombre ni contacto. No se puede deshacer.`);
+    const ok = await confirmDialog(`Vas a borrar a "${customer.name}" y sus datos personales. Su historial se conserva sin nombre ni contacto. No se puede deshacer.`);
     if (!ok) return;
     setError('');
     setDeleting(true);

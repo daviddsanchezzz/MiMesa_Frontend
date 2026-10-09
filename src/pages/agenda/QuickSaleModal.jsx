@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { toast } from 'sonner';
+import { notify } from '../../lib/notify';
 import Modal from '../../components/Modal';
 import api from '../../services/api';
 import { useData } from '../../lib/query';
@@ -88,7 +88,7 @@ export default function QuickSaleModal({ onClose, onDone }) {
         tip: tipCents || 0,
       });
       if (resourceId) write(LAST_PRO, resourceId);
-      toast.success(pack && !charged ? 'Cobrado con bono' : `Cobrado ${euros(paid.payment.total + paid.payment.tip)}`);
+      notify.success(pack && !charged ? 'Cobrado con bono' : `Cobrado ${euros(paid.payment.total + paid.payment.tip)}`);
       onDone?.(paid);
     } catch (err) {
       setError(apiError(err));

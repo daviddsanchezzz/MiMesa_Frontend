@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
-import { toast } from 'sonner';
+import { notify } from '../../lib/notify';
 import Modal from '../../components/Modal';
 import api from '../../services/api';
 import { FIELDS, buildRows, findHeaderRow, guessMapping, parseDelimited, readTextFile } from '../../lib/tabular';
@@ -78,7 +78,7 @@ export default function ImportSalesModal({ onClose, onDone }) {
       setPlan(data);
       if (apply) {
         writeSaved(Object.fromEntries(Object.entries(mapping).map(([k, i]) => [k, (headers[i] || '').trim().toLowerCase()])));
-        toast.success(`${data.summary.new + data.summary.update} días importados`);
+        notify.success(`${data.summary.new + data.summary.update} días importados`);
         onDone?.();
       }
     } catch (err) {

@@ -2,9 +2,9 @@ import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { useSetMobileHeader } from '../context/MobileHeaderContext';
 import { useData } from '../lib/query';
-import { Empty, GhostButton, MenuButton, PageHeader, PrimaryButton, RowAction, Section, SectionLink } from '../ui/kit';
+import { Empty, GhostButton, MenuButton, PrimaryButton, RowAction, Section, SectionLink } from '../ui/kit';
+import Page from '../ui/Page';
 import CategoryModal from './carta/CategoryModal';
 import DailyMenuModal from './carta/DailyMenuModal';
 import ImportMenuModal from './carta/ImportMenuModal';
@@ -93,7 +93,6 @@ export default function Carta() {
     }
   }
 
-  useSetMobileHeader({ title: 'Carta', action: manager && categories.length ? { label: 'Plato', onClick: () => setModal({ type: 'item' }) } : undefined });
 
   const needle = search.trim().toLocaleLowerCase('es');
   // Each category with its own dishes and, one level down, its subcategories with theirs
@@ -166,9 +165,8 @@ export default function Carta() {
   const subtitle = menu ? `${items.length} ${items.length === 1 ? 'plato' : 'platos'} · ${languages.map(languageName).join(', ')}` : 'Platos, precios y alérgenos';
 
   return (
-    <div className="w-full space-y-6">
-      <PageHeader title="Carta" subtitle={subtitle}
-        actions={manager && categories.length > 0 ? <PrimaryButton onClick={() => setModal({ type: 'item' })}>Nuevo plato</PrimaryButton> : null} />
+    <Page title="Carta" subtitle={subtitle}
+      primary={manager && categories.length > 0 ? { label: 'Nuevo plato', short: 'Plato', onClick: () => setModal({ type: 'item' }) } : undefined}>
 
       {manager && (
         <div className="flex flex-wrap gap-2">
@@ -305,6 +303,6 @@ export default function Carta() {
       {modal?.type === 'daily' && <DailyMenuModal daily={menu.daily} languages={languages} onClose={() => setModal(null)} onSaved={done} />}
       {modal?.type === 'languages' && <LanguagesModal languages={languages} onClose={() => setModal(null)} onSaved={done} />}
       {modal?.type === 'import' && <ImportMenuModal onClose={() => setModal(null)} onDone={done} />}
-    </div>
+    </Page>
   );
 }

@@ -4,13 +4,13 @@ import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { useSetMobileHeader } from '../context/MobileHeaderContext';
 import Icon from '../ui/Icon';
 import PeriodNavigator from '../ui/PeriodNavigator';
 import PublishBar from './personal/PublishBar';
 import RequestsTab from './personal/RequestsTab';
 import { timeOffLabel } from './personal/timeOff';
-import { BigFigure, Empty, FigureLine, GhostButton, MenuButton, PageHeader, PrimaryButton, RowAction, Section, Segmented, Tabs } from '../ui/kit';
+import { BigFigure, Empty, FigureLine, GhostButton, MenuButton, PrimaryButton, RowAction, Section, Segmented } from '../ui/kit';
+import Page from '../ui/Page';
 import { Notice, addDays, compTypeLabel, compareShiftTime, formatMoney, staffTimes, mondayOf, normalizeDateOnly, shiftAppliesToDate, todayIso, weekDays } from './personal/shared';
 import { ShiftStaffChips, assignPersonColors } from './personal/ShiftStaffChips';
 import { EmployeeRow, MoreIcon, StateText } from './personal/MobileEmployeeRow';
@@ -163,12 +163,6 @@ export default function Personal() {
   }, [weekStart, assignments, hasRequests, offQ.dataUpdatedAt, swapsQ.dataUpdatedAt]);
 
   const newEmployeeOrPosition = () => (employeeSubTab === 'employees' ? setEmployeeModal({}) : setPositionModal({}));
-  useSetMobileHeader({
-    title: 'Personal',
-    action: tab === 'employees' && allowedTabs.includes('employees')
-      ? { label: employeeSubTab === 'employees' ? 'Empleado' : 'Puesto', onClick: newEmployeeOrPosition }
-      : false,
-  });
 
   const loadCore = async ({ silent = false } = {}) => {
     if (!silent) setLoading(true);
@@ -665,30 +659,24 @@ export default function Personal() {
   };
 
   const headerAction = tab === 'employees' && allowedTabs.includes('employees')
-    ? <PrimaryButton onClick={newEmployeeOrPosition}>{employeeSubTab === 'employees' ? 'Nuevo empleado' : 'Nuevo puesto'}</PrimaryButton>
-    : null;
+    ? { label: employeeSubTab === 'employees' ? 'Nuevo empleado' : 'Nuevo puesto', short: employeeSubTab === 'employees' ? 'Empleado' : 'Puesto', onClick: newEmployeeOrPosition }
+    : undefined;
 
   return (
-    <div className="w-full space-y-6">
-      <div className="hidden lg:block"><PageHeader title="Personal" subtitle={SUBTITLES[tab]} actions={headerAction} /></div>
-
-      {/* Phone: tabs (and the week) stay put while the page scrolls underneath */}
-      <div className="lg:hidden sticky top-[-1rem] !mt-[-1rem] z-20 -mx-4 px-4 pt-4 pb-3 bg-white border-b border-gray-100 space-y-3">
-        {tabOptions.length > 1 && <Tabs full value={tab} options={tabOptions} onChange={setTab} />}
-        {tab === 'planner' && allowedTabs.includes('planner') && (
-          <div className="flex items-center gap-1">
-            <div className="flex-1 min-w-0">
-              <PeriodNavigator period="week" periods={['week']} dateRange={{ from: weekStart, to: addDays(weekStart, 6) }}
-                onShift={(dir) => setWeekStart((v) => addDays(v, dir * 7))} onPeriodChange={() => {}} onRangeChange={() => {}} />
-            </div>
-            <MenuButton ariaLabel="Más opciones" className="w-9 h-9 justify-center border border-gray-200 text-gray-600"
-              items={[weekStart !== mondayOf(todayIso()) && { label: 'Ir a esta semana', onClick: () => setWeekStart(mondayOf(todayIso())) }, ...plannerMenuItems].filter(Boolean)}>
-              <MoreIcon />
-            </MenuButton>
+    <Page title="Personal" subtitle={SUBTITLES[tab]} sticky primary={headerAction} mobileAction={false}
+      tabs={{ value: tab, options: tabOptions, onChange: setTab }}
+      mobileBar={tab === 'planner' && allowedTabs.includes('planner') && (
+        <div className="flex items-center gap-1">
+          <div className="flex-1 min-w-0">
+            <PeriodNavigator period="week" periods={['week']} dateRange={{ from: weekStart, to: addDays(weekStart, 6) }}
+              onShift={(dir) => setWeekStart((v) => addDays(v, dir * 7))} onPeriodChange={() => {}} onRangeChange={() => {}} />
           </div>
-        )}
-      </div>
-      {tabOptions.length > 1 && <div className="hidden lg:block"><Tabs value={tab} options={tabOptions} onChange={setTab} /></div>}
+          <MenuButton ariaLabel="Más opciones" className="w-9 h-9 justify-center border border-gray-200 text-gray-600"
+            items={[weekStart !== mondayOf(todayIso()) && { label: 'Ir a esta semana', onClick: () => setWeekStart(mondayOf(todayIso())) }, ...plannerMenuItems].filter(Boolean)}>
+            <MoreIcon />
+          </MenuButton>
+        </div>
+      )}>
 
       <Notice>{error}</Notice>
       {loading && <div className="h-28 rounded-2xl bg-gray-100 animate-pulse" />}
@@ -1290,6 +1278,6 @@ export default function Personal() {
           onDeleted={() => { loadBalances(); loadAssignments(); }}
         />
       )}
-    </div>
+    </Page>
   );
 }

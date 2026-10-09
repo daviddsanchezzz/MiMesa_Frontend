@@ -4,9 +4,9 @@ import { toast } from 'sonner';
 import api, { API_PUBLIC_BASE } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { publicBookingUrl } from '../lib/publicUrl';
-import { useSetMobileHeader } from '../context/MobileHeaderContext';
 import { useData } from '../lib/query';
-import { PageHeader, Section, SectionLink } from '../ui/kit';
+import { Section, SectionLink } from '../ui/kit';
+import Page from '../ui/Page';
 import { inputCls } from './carta/labels';
 
 const MODES = [
@@ -100,7 +100,6 @@ function WebAddresses({ businessId, bookingUrl, mode }) {
  * again: they come from Horarios y cierres and Datos del negocio. Only how to book and the social links are set here.
  */
 export default function MiWeb() {
-  useSetMobileHeader({ title: 'Mi web', action: false });
   const q = useData(['site'], () => api.get('/site').then((r) => r.data), { retry: false });
   const { business: me } = useAuth();
   const [form, setForm] = useState(null);
@@ -132,8 +131,7 @@ export default function MiWeb() {
   const setRes = (patch) => setForm((f) => ({ ...f, reservations: { ...f.reservations, ...patch } }));
 
   return (
-    <div className="w-full space-y-9 pb-20">
-      <PageHeader title="Mi web" subtitle="Lo que tu web muestra además de la carta" />
+    <Page title="Mi web" subtitle="Lo que tu web muestra además de la carta" mobileAction={false} className="space-y-9">
 
       <Section title="Horario" aside={<SectionLink to="/horarios">Editar en Horarios y cierres</SectionLink>}>
         <p className="mb-2 text-[13px] text-gray-500">Se toma de tus turnos de reservas, tus vacaciones y tus cierres: abre en la primera reserva y cierra a la última reserva más lo que puede estar una mesa. No hay que ponerlo otra vez.</p>
@@ -228,6 +226,6 @@ export default function MiWeb() {
           </div>
         </div>
       )}
-    </div>
+    </Page>
   );
 }

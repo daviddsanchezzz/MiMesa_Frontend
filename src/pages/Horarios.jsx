@@ -1,6 +1,5 @@
 import { useSearchParams } from 'react-router-dom';
-import { useSetMobileHeader } from '../context/MobileHeaderContext';
-import { PageHeader, Tabs } from '../ui/kit';
+import Page from '../ui/Page';
 import { TurnosSection } from './settings/TurnosSection';
 import { VacacionesSection } from './settings/VacacionesSection';
 import Exceptions from './Exceptions';
@@ -15,15 +14,12 @@ export default function Horarios() {
   const [params, setParams] = useSearchParams();
   const asked = params.get('tab');
   const tab = TABS.some(([k]) => k === asked) ? asked : 'turnos';
-  useSetMobileHeader({ title: 'Horarios y cierres' });
-
   return (
-    <div className="w-full space-y-6">
-      <PageHeader title="Horarios y cierres" subtitle="Cuándo abres y cuándo no" />
-      <Tabs full value={tab} options={TABS} onChange={(key) => setParams({ tab: key }, { replace: true })} />
+    <Page title="Horarios y cierres" subtitle="Cuándo abres y cuándo no"
+      tabs={{ value: tab, options: TABS, onChange: (key) => setParams({ tab: key }, { replace: true }) }}>
       {tab === 'turnos' && <TurnosSection />}
       {tab === 'cierres' && <Exceptions embedded />}
       {tab === 'vacaciones' && <VacacionesSection />}
-    </div>
+    </Page>
   );
 }

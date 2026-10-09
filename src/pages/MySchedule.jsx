@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import api from '../services/api';
-import { useSetMobileHeader } from '../context/MobileHeaderContext';
 import { useData } from '../lib/query';
-import { Empty, PageHeader, PrimaryButton } from '../ui/kit';
+import { Empty } from '../ui/kit';
+import Page from '../ui/Page';
 import MyRequests from './personal/MyRequests';
 import SwapRequestModal from './personal/SwapRequestModal';
 import TimeOffModal from './personal/TimeOffModal';
 import { timeOffLabel } from './personal/timeOff';
-import PeriodNavigator, { StickyBar, usePeriod } from '../ui/PeriodNavigator';
+import PeriodNavigator, { usePeriod } from '../ui/PeriodNavigator';
 import { toIso } from '../lib/periods';
 
 const hoursText = (minutes) => {
@@ -24,7 +24,6 @@ const dayLabel = (iso) => {
 export default function MySchedule() {
   const [timeOffOpen, setTimeOffOpen] = useState(false);
   const [swapShift, setSwapShift] = useState(null);
-  useSetMobileHeader({ title: 'Mi horario', action: { label: 'Pedir libre', onClick: () => setTimeOffOpen(true) } });
   const { period, dateRange, onPeriodChange, onShift, onRangeChange } = usePeriod('week');
   const today = toIso();
   const q = useData(['staff', 'me', 'schedule', dateRange.from], () => api.get(`/staff/me/schedule?weekStart=${dateRange.from}`).then((r) => r.data), { retry: false });
@@ -36,13 +35,9 @@ export default function MySchedule() {
   const todayShifts = d?.linked ? (d.days.find((x) => x.date === today)?.shifts || []) : [];
 
   return (
-    <div className="w-full space-y-6">
-      <div className="hidden lg:block"><PageHeader title="Mi horario" subtitle="Tus turnos de la semana y con quién trabajas."
-        actions={d?.linked ? <PrimaryButton icon={null} onClick={() => setTimeOffOpen(true)}>Pedir libre</PrimaryButton> : null} /></div>
-
-      <StickyBar>
-        <PeriodNavigator period={period} dateRange={dateRange} onPeriodChange={onPeriodChange} onShift={onShift} onRangeChange={onRangeChange} periods={['week']} />
-      </StickyBar>
+    <Page title="Mi horario" subtitle="Tus turnos de la semana y con quién trabajas." sticky
+      primary={d?.linked ? { label: 'Pedir libre', short: 'Pedir libre', icon: null, onClick: () => setTimeOffOpen(true) } : undefined} mobileAction={false}
+      toolbar={<PeriodNavigator period={period} dateRange={dateRange} onPeriodChange={onPeriodChange} onShift={onShift} onRangeChange={onRangeChange} periods={['week']} />}>
 
       {q.isLoading && <p className="text-sm text-gray-400">Cargando…</p>}
       {q.isError && (
@@ -183,6 +178,6 @@ export default function MySchedule() {
 
       {timeOffOpen && <TimeOffModal onClose={() => setTimeOffOpen(false)} onSaved={refreshAll} />}
       {swapShift && <SwapRequestModal shift={swapShift.shift} dateText={swapShift.dateText} onClose={() => setSwapShift(null)} onSaved={refreshAll} />}
-    </div>
+    </Page>
   );
 }

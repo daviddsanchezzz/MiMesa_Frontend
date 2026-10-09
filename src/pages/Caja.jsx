@@ -1,10 +1,10 @@
 import { useCallback, useMemo, useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { useSetMobileHeader } from '../context/MobileHeaderContext';
+import Page from '../ui/Page';
 import { bookingsApi, apiError } from '../services/bookingsApi';
 import CheckoutModal from './agenda/CheckoutModal';
 import { Hero, Section, TimeRow, RowAction } from '../ui/kit';
-import { DayNavigator, PAGE_BODY, StickyBar } from '../ui/PeriodNavigator';
+import { DayNavigator } from '../ui/PeriodNavigator';
 import { queryClient, useData } from '../lib/query';
 import { useResources } from './agenda/queries';
 
@@ -30,8 +30,6 @@ export default function Caja() {
   const [counted, setCounted] = useState('');
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
-
-  useSetMobileHeader({ title: 'Caja' });
 
   // Cached (lib/query); charging, undoing or closing refreshes it.
   const cashQ = useData(['bookings', 'cash', date], () => bookingsApi.cashDay(date));
@@ -68,15 +66,11 @@ export default function Caja() {
   const methodSum = PAY_METHODS.reduce((sum, m) => sum + (t?.[m.key] || 0), 0) || 1;
 
   return (
-    <div className={`w-full ${PAGE_BODY}`} style={{ overflowX: 'clip' }}>
-      <div className="hidden lg:block mb-1">
-        <h1 className="text-2xl font-semibold tracking-tight text-gray-900">Caja</h1>
-      </div>
-      <StickyBar>
+    <Page title="Caja" sticky className="[overflow-x:clip]"
+      toolbar={(
         <DayNavigator date={date} today={today} onChange={setDate} canNext={date < today}
           label={`${new Date(`${date}T12:00:00`).toLocaleDateString('es-ES', { weekday: 'long', day: 'numeric', month: 'long' })}${closed ? ' · cerrada' : ''}`} />
-      </StickyBar>
-      <div className="h-5" />
+      )}>
 
       {error && <p className="text-sm text-rose-600 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2 mb-4">{error}</p>}
       {!data && !error && <p className="text-sm text-gray-400">Cargando…</p>}
@@ -230,6 +224,6 @@ export default function Caja() {
         <CheckoutModal booking={charging} tz={tz} onClose={() => setCharging(null)}
           onPaid={() => { setCharging(null); load(); }} />
       )}
-    </div>
+    </Page>
   );
 }

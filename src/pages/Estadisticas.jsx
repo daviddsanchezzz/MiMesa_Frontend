@@ -1,10 +1,10 @@
 import api from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { useSetMobileHeader } from '../context/MobileHeaderContext';
 import { useData } from '../lib/query';
 import { publicBookingUrl } from '../lib/publicUrl';
-import { Empty, Hero, PageHeader } from '../ui/kit';
-import PeriodNavigator, { PAGE_BODY, StickyBar, usePeriod } from '../ui/PeriodNavigator';
+import { Empty, Hero } from '../ui/kit';
+import Page from '../ui/Page';
+import PeriodNavigator, { usePeriod } from '../ui/PeriodNavigator';
 import { previousLabel, shiftRange } from '../lib/periods';
 import { euros, waLink } from './agenda/utils';
 
@@ -69,7 +69,6 @@ function WeekdayBars({ data }) {
 
 export default function Estadisticas() {
   const { business } = useAuth();
-  useSetMobileHeader({ title: 'Estadísticas' });
   const { period, dateRange, onPeriodChange, onShift, onRangeChange } = usePeriod('month');
   // Month and week compare with the one before; a custom range lets the server pick the same length right before
   const compare = period === 'custom' ? null : shiftRange(period, dateRange, -1);
@@ -88,12 +87,8 @@ export default function Estadisticas() {
   const empty = d && s.appointments === 0 && s.scheduled === 0;
 
   return (
-    <div className={`w-full space-y-7 ${PAGE_BODY}`}>
-      <div className="hidden lg:block"><PageHeader title="Estadísticas" subtitle="Qué servicios funcionan, cuándo vienen y quién vuelve." /></div>
-
-      <StickyBar>
-        <PeriodNavigator period={period} dateRange={dateRange} onPeriodChange={onPeriodChange} onShift={onShift} onRangeChange={onRangeChange} />
-      </StickyBar>
+    <Page title="Estadísticas" subtitle="Qué servicios funcionan, cuándo vienen y quién vuelve." sticky
+      toolbar={<PeriodNavigator period={period} dateRange={dateRange} onPeriodChange={onPeriodChange} onShift={onShift} onRangeChange={onRangeChange} />}>
 
       {q.isLoading && <p className="text-sm text-gray-400">Cargando…</p>}
       {q.isError && (
@@ -234,6 +229,6 @@ export default function Estadisticas() {
           </div>
         </div>
       )}
-    </div>
+    </Page>
   );
 }

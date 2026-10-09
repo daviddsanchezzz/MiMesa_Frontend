@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
-import { useSetMobileHeader } from '../context/MobileHeaderContext';
 import { useData } from '../lib/query';
-import { Hero, PageHeader, Section, Segmented } from '../ui/kit';
+import { Hero, Section, Segmented } from '../ui/kit';
+import Page from '../ui/Page';
 
 const PERIODS = [[7, '7 días'], [30, '30 días'], [90, '90 días']];
 
@@ -76,7 +76,6 @@ function BarRow({ label, value, max, color = '#8b5cf6' }) {
 }
 
 export default function Estadisticas() {
-  useSetMobileHeader({ title: 'Estadísticas' });
   const [period, setPeriod] = useState(30);
   const q = useData(['analytics', 'overview', period], () => api.get(`/analytics/overview?period=${period}`).then((r) => r.data), { retry: false });
   const data = q.data || null;
@@ -93,11 +92,9 @@ export default function Estadisticas() {
   const peakDay = daily.length ? daily.reduce((a, b) => (a.total >= b.total ? a : b)) : null;
 
   return (
-    <div className="w-full space-y-8">
-      <PageHeader title="Estadísticas"
-        subtitle={data?.range ? `Del ${niceDate(data.range.from)} al ${niceDate(data.range.to)}` : 'Cómo van las reservas'}
-        mobileActions
-        actions={<Segmented value={period} onChange={setPeriod} options={PERIODS} size="sm" />} />
+    <Page title="Estadísticas"
+      subtitle={data?.range ? `Del ${niceDate(data.range.from)} al ${niceDate(data.range.to)}` : 'Cómo van las reservas'}
+      toolbar={<Segmented full value={period} onChange={setPeriod} options={PERIODS} />}>
 
       {loading && <p className="text-sm text-gray-400">Cargando…</p>}
 
@@ -188,6 +185,6 @@ export default function Estadisticas() {
           </div>
         </>
       )}
-    </div>
+    </Page>
   );
 }

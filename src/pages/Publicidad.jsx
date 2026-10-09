@@ -2,7 +2,7 @@ import { useState } from 'react';
 import Marketing from './Marketing';
 import PromoCodes from './PromoCodes';
 import { useAuth } from '../context/AuthContext';
-import { PageHeader, Tabs } from '../ui/kit';
+import Page from '../ui/Page';
 
 const TABS = [
   { key: 'marketing', label: 'Email' },
@@ -18,15 +18,11 @@ export default function Publicidad() {
   const [tab, setTab] = useState(initial);
 
   return (
-    <div className="w-full space-y-6">
-      <div className="hidden lg:block">
-        <PageHeader title="Publicidad" subtitle={isAppointments ? 'Campañas de email a tus clientes que aceptaron recibirlas.' : 'Campañas de email a tus suscriptores y códigos de descuento para reservar online.'} />
-      </div>
-
-      {tabs.length > 1 && <Tabs value={tab} options={tabs.map(t => [t.key, t.label])} onChange={setTab} />}
+    <Page title="Publicidad" subtitle={isAppointments ? 'Campañas de email a tus clientes que aceptaron recibirlas.' : 'Campañas de email a tus suscriptores y códigos de descuento para reservar online.'}
+      tabs={{ value: tab, options: tabs.map((t) => [t.key, t.label]), onChange: setTab }}>
 
       {tab === 'marketing' && <Marketing />}
       {tab === 'promos'    && <PromoCodes />}
-    </div>
+    </Page>
   );
 }

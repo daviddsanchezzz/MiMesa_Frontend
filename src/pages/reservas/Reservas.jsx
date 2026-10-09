@@ -2,8 +2,8 @@ import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import api from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
-import { useSetMobileHeader } from '../../context/MobileHeaderContext';
 import { Segmented, Empty } from '../../ui/kit';
+import Page from '../../ui/Page';
 import { useData } from '../../lib/query';
 import Icon from '../../ui/Icon';
 import DayStrip from '../agenda/DayStrip';
@@ -116,8 +116,6 @@ export default function Reservas() {
   const day = { ...selectedDay, reservations: selectedDay.reservations.filter((r) => r.date === date) };
   const cancelledCount = day.reservations.filter((r) => !live(r)).length;
 
-  useSetMobileHeader({ title: 'Reservas', action: false });
-
   useEffect(() => {
     const d = params.get('date');
     if (isDate(d)) {
@@ -144,17 +142,14 @@ export default function Reservas() {
   };
 
   return (
-    <div className="w-full space-y-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <h1 className="hidden lg:block text-2xl font-semibold tracking-tight text-gray-900">Reservas</h1>
-        <Segmented value={view} onChange={setView} options={[['list', 'Lista'], ['calendar', 'Calendario'], ['map', 'Plano']]} />
-        {view === 'list' && cancelledCount > 0 && (
-          <label className="ml-auto flex min-h-8 items-center gap-1.5 text-xs text-gray-500 whitespace-nowrap">
-            <input type="checkbox" checked={showCancelled} onChange={(e) => setShowCancelled(e.target.checked)} />
-            Canceladas ({cancelledCount})
-          </label>
-        )}
-      </div>
+    <Page title="Reservas" mobileAction={false}
+      toolbar={<Segmented full value={view} onChange={setView} options={[['list', 'Lista'], ['calendar', 'Calendario'], ['map', 'Plano']]} />}>
+      {view === 'list' && cancelledCount > 0 && (
+        <label className="-mb-2 flex min-h-8 items-center justify-end gap-1.5 text-xs text-gray-500 whitespace-nowrap">
+          <input type="checkbox" checked={showCancelled} onChange={(e) => setShowCancelled(e.target.checked)} />
+          Canceladas ({cancelledCount})
+        </label>
+      )}
 
       {view === 'list' ? (
         <>
@@ -173,6 +168,6 @@ export default function Reservas() {
           <ReservationsLegacy hideTabs />
         </Suspense>
       )}
-    </div>
+    </Page>
   );
 }

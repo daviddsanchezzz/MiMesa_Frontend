@@ -2,10 +2,10 @@ import { useState, useEffect, useCallback } from 'react';
 import api from '../services/api';
 import { bookingsApi } from '../services/bookingsApi';
 import { useAuth } from '../context/AuthContext';
-import { useSetMobileHeader } from '../context/MobileHeaderContext';
 import Modal from '../components/Modal';
 import Icon from '../ui/Icon';
-import { PageHeader, PrimaryButton, Section, MenuButton, Empty, Segmented } from '../ui/kit';
+import { PrimaryButton, Section, MenuButton, Empty, Segmented } from '../ui/kit';
+import Page from '../ui/Page';
 import ProfessionalAvatar from '../components/ProfessionalAvatar';
 
 /* Constants */
@@ -80,7 +80,6 @@ export default function Team() {
 
   const isOwner   = hasRole('owner');
   const isManager = hasRole('manager');
-  useSetMobileHeader({ title: 'Accesos', action: isManager ? { label: 'Invitar', onClick: () => setShowModal(true) } : false });
 
   const fetchAll = useCallback(async () => {
     try {
@@ -191,12 +190,8 @@ export default function Team() {
 
   return (
     <>
-      <div className="w-full space-y-8">
-        <PageHeader
-          title="Accesos"
-          subtitle={`${members.length} ${members.length === 1 ? 'persona' : 'personas'} en tu negocio`}
-          actions={isManager && <PrimaryButton onClick={() => setShowModal(true)}>Invitar persona</PrimaryButton>}
-        />
+      <Page title="Accesos" subtitle={`${members.length} ${members.length === 1 ? 'persona' : 'personas'} en tu negocio`}
+        primary={isManager ? { label: 'Invitar persona', short: 'Invitar', onClick: () => setShowModal(true) } : undefined} mobileAction={false}>
 
         <ErrorBanner msg={pageError} />
 
@@ -314,7 +309,7 @@ export default function Team() {
             ))}
           </dl>
         </Section>
-      </div>
+      </Page>
 
       {/* Invite modal */}
       {showModal && (

@@ -10,6 +10,7 @@ import {
 import { euros } from './agenda/utils';
 import PeriodNavigator, { usePeriod } from '../ui/PeriodNavigator';
 import Page from '../ui/Page';
+import { ActionList, Attention, Columns, Split } from '../ui/layout';
 import { fmtDay, fmtShort, parseIso, previousLabel, shiftRange, toIso } from '../lib/periods';
 import { confirmDialog } from '../ui/confirm';
 import { inputCls, selectCls, btnDanger, btnPrimary, btnQuiet } from '../ui/form';
@@ -224,12 +225,6 @@ function Stat({ label, value, delta, hint }) {
   );
 }
 
-function ActionPill({ icon, children, onClick, to }) {
-  const cls = 'flex-1 lg:flex-none lg:px-6 inline-flex items-center justify-center gap-2 h-11 rounded-2xl border border-gray-200 bg-white text-sm font-semibold text-gray-800 active:bg-gray-50 hover:bg-gray-50';
-  const inner = <><Icon name={icon} className="w-[18px] h-[18px] text-violet-600" />{children}</>;
-  return to ? <Link to={to} className={cls}>{inner}</Link> : <button type="button" onClick={onClick} className={cls}>{inner}</button>;
-}
-
 function ResumenTab({ period, dateRange, categories, refreshTrigger, onViewIncome, onViewExpenses, onAddExpense }) {
   const { isModuleEnabled } = useAuth();
   const hasPurchases = isModuleEnabled('purchases'); // invoices live in Compras
@@ -326,23 +321,15 @@ function ResumenTab({ period, dateRange, categories, refreshTrigger, onViewIncom
           })()] : []),
         ].slice(0, 3)} />
 
-      <div className="flex gap-2.5">
-        {hasPurchases && <ActionPill icon="camera" to="/compras/facturas/nueva">Subir factura</ActionPill>}
-        <ActionPill icon="plus" onClick={onAddExpense}>Añadir gasto</ActionPill>
-      </div>
-
-      {hasPurchases && toReview > 0 && (
-        <Link to="/compras/facturas" className="flex items-center gap-3 rounded-2xl bg-amber-50 px-4 py-3.5 active:bg-amber-100">
-          <span className="w-9 h-9 rounded-xl bg-white text-amber-600 flex items-center justify-center shrink-0"><Icon name="receipt" className="w-5 h-5" /></span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-[15px] font-semibold text-gray-900">{toReview} {toReview === 1 ? 'factura por revisar' : 'facturas por revisar'}</span>
-            <span className="block text-[13px] text-gray-600">Confírmalas para que cuenten en tus gastos.</span>
-          </span>
-          <Icon name="right" className="w-4 h-4 text-amber-500" strokeWidth={2} />
-        </Link>
-      )}
-
-      <div className="space-y-7 xl:space-y-0 xl:grid xl:grid-cols-2 xl:gap-x-14 xl:gap-y-8 xl:items-start">
+      <Columns asideFirst aside={(
+        <>
+          <ActionList title="Acciones" items={[hasPurchases && { icon: 'camera', label: 'Subir factura', to: '/compras/facturas/nueva' }, { icon: 'plus', label: 'Añadir gasto', onClick: onAddExpense }]} />
+          {hasPurchases && toReview > 0 && (
+            <Attention icon="receipt" title={`${toReview} ${toReview === 1 ? 'factura por revisar' : 'facturas por revisar'}`} hint="Confírmalas para que cuenten en tus gastos." to="/compras/facturas" />
+          )}
+        </>
+      )}>
+      <Split>
       {/* Where the money goes */}
       <Section className={PANEL} title="En qué se va el dinero" aside={cats.length > 0 && <SectionLink onClick={onViewExpenses}>Ver gastos</SectionLink>}>
         {cats.length === 0 ? (
@@ -385,7 +372,8 @@ function ResumenTab({ period, dateRange, categories, refreshTrigger, onViewIncom
           </List>
         )}
       </Section>
-      </div>
+      </Split>
+      </Columns>
     </div>
   );
 }

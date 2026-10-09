@@ -239,7 +239,7 @@ export function PageHeader({ title, subtitle, actions, mobileActions = false, cl
 export function PrimaryButton({ children, onClick, type = 'button', disabled, icon = 'plus', className = '' }) {
   return (
     <button type={type} onClick={onClick} disabled={disabled}
-      className={`inline-flex items-center justify-center gap-1.5 h-10 px-4 rounded-xl bg-violet-600 text-white text-sm font-semibold hover:bg-violet-700 disabled:opacity-60 ${className}`}>
+      className={`inline-flex items-center justify-center gap-1.5 h-10 px-4 whitespace-nowrap rounded-xl bg-violet-600 text-white text-sm font-semibold hover:bg-violet-700 disabled:opacity-60 ${className}`}>
       {icon && <Icon name={icon} className="w-4 h-4" strokeWidth={2} />}{children}
     </button>
   );
@@ -339,14 +339,14 @@ function HeroBar({ segments, note }) {
 
 /**
  * The figure that opens a screen: label, one big number (with a small pill for the change), an
- * optional bar that splits it, and up to three smaller figures. No box on a phone — it sits on the
- * page; from a laptop up it becomes a card, and on a wide screen it lies in a row.
+ * optional bar that splits it, and up to three smaller figures. Never in a box: it sits on the page with a hairline
+ * under it, and on a wide screen it lies in a row.
  * stats: [{ label, value, sub, tone }]; bar: { segments: [{ label, text, value, color }], note }.
  */
 export function Hero({ label, value, unit, tone, pill, bar, stats = [], children, className = '' }) {
   const cols = stats.length >= 3 ? 'grid-cols-3' : 'grid-cols-2';
   return (
-    <section className={`lg:rounded-3xl lg:border lg:border-gray-200 lg:bg-white lg:p-7 lg:shadow-[0_1px_2px_rgba(16,24,40,0.04)] xl:flex xl:items-center xl:justify-between xl:gap-12 ${className}`}>
+    <section className={`lg:border-b lg:border-gray-100 lg:pb-8 xl:flex xl:items-center xl:justify-between xl:gap-12 ${className}`}>
       <div className="min-w-0 xl:w-[40%] xl:shrink-0">
         <p className="text-[11px] font-semibold uppercase tracking-[0.08em] text-gray-400">{label}</p>
         <div className="mt-1.5 flex flex-wrap items-baseline gap-x-3 gap-y-1.5">

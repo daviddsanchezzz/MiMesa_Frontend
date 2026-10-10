@@ -105,7 +105,10 @@ export default function ReservationForm({ reservation, onSave, onCancel, initial
     }).slice(0, 6);
   }, [customers, customerQuery, isEdit, selectedCustomer]);
 
+  const [pickerClosed, setPickerClosed] = useState(false);   // «Nuevo cliente» chosen: the list gives way to the phone
+  const phoneRef = useRef(null);
   const handleCustomerQueryChange = (value) => {
+    setPickerClosed(false);
     setCustomerQuery(value);
     setForm((f) => ({ ...f, guestName: value }));
   };
@@ -167,8 +170,14 @@ export default function ReservationForm({ reservation, onSave, onCancel, initial
                 autoComplete="off"
                 className={inputCls}
               />
-              {customerMatches.length > 0 && (
+              {!isEdit && !pickerClosed && customerQuery.trim().length >= 2 && (
                 <ul className="absolute z-10 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden divide-y divide-gray-100">
+                  <li>
+                    <button type="button" onClick={() => { setPickerClosed(true); setTimeout(() => phoneRef.current?.focus(), 0); }} className="w-full text-left px-4 py-2.5 hover:bg-gray-50">
+                      <span className="block text-sm font-semibold text-violet-700">+ Nuevo cliente «{customerQuery.trim()}»</span>
+                      <span className="block text-xs text-gray-500">Se guarda al crear la reserva</span>
+                    </button>
+                  </li>
                   {customerMatches.map((c) => (
                     <li key={c._id}>
                       <button type="button" onClick={() => selectCustomer(c)} className="w-full text-left px-4 py-2.5 hover:bg-gray-50">
@@ -182,7 +191,7 @@ export default function ReservationForm({ reservation, onSave, onCancel, initial
             </div>
             {(isEdit || customerQuery.trim().length >= 2) && (
               <div className="grid grid-cols-2 gap-2">
-                <input className={inputCls} type="tel" placeholder={isEdit ? 'Teléfono' : 'Teléfono *'} value={form.guestPhone}
+                <input ref={phoneRef} className={inputCls} type="tel" placeholder={isEdit ? 'Teléfono' : 'Teléfono *'} value={form.guestPhone}
                   onChange={(e) => setForm((f) => ({ ...f, guestPhone: e.target.value }))} />
                 <input className={inputCls} type="email" placeholder="Email (opcional)" value={form.guestEmail}
                   onChange={(e) => setForm((f) => ({ ...f, guestEmail: e.target.value }))} />

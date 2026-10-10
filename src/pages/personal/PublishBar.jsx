@@ -43,26 +43,20 @@ export default function PublishBar({ status, weekStart, onChanged, className = '
 
   return (
     <>
-      <div className={`flex items-center gap-3 rounded-2xl border px-4 py-3 ${tone} ${className}`}>
-        <div className="min-w-0 flex-1">
-          <p className="text-[15px] font-semibold text-gray-900">
-            {state === 'draft' && 'Borrador'}
-            {state === 'dirty' && `${plural(status.changes, 'cambio', 'cambios')} sin publicar`}
-            {state === 'live' && 'Publicada'}
-          </p>
-          <p className="text-[13px] text-gray-600">
-            {state === 'draft' && 'Tu equipo todavía no ve esta semana.'}
-            {state === 'dirty' && `Tu equipo ve la versión del ${when(status.publishedAt)}.`}
-            {state === 'live' && `Tu equipo la ve desde el ${when(status.publishedAt)}.`}
-          </p>
-        </div>
-        {state !== 'live' ? (
-          <button type="button" onClick={() => { setError(''); setOpen(true); }}
-            className="shrink-0 h-9 px-4 rounded-full bg-violet-600 text-white text-[13px] font-semibold hover:bg-violet-700">
-            {state === 'draft' ? 'Publicar' : 'Publicar cambios'}
+      <div className={`flex items-center gap-2 px-1 text-[13px] text-gray-500 ${className}`}>
+        <span className={`h-1.5 w-1.5 shrink-0 rounded-full ${state === 'live' ? 'bg-emerald-500' : 'bg-amber-400'}`} aria-hidden="true" />
+        <p className="min-w-0 flex-1 truncate">
+          {state === 'draft' && 'Borrador · tu equipo aún no la ve'}
+          {state === 'dirty' && `${plural(status.changes, 'cambio', 'cambios')} sin publicar`}
+          {state === 'live' && `Publicada el ${when(status.publishedAt)}`}
+        </p>
+        {state !== 'live' && (
+          <button type="button" onClick={() => { setError(''); setOpen(true); }} className="shrink-0 font-semibold text-violet-700 hover:underline">
+            Publicar
           </button>
-        ) : (
-          <MenuButton ariaLabel="Más opciones" className="w-9 h-9 justify-center text-gray-500" items={[{ label: 'Volver a borrador', onClick: unpublish }]}>
+        )}
+        {state === 'live' && (
+          <MenuButton ariaLabel="Más opciones" className="w-8 h-8 justify-center text-gray-400" items={[{ label: 'Volver a borrador', onClick: unpublish }]}>
             <svg viewBox="0 0 16 16" fill="currentColor" className="w-4 h-4" aria-hidden="true"><path d="M2 8a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0Zm4.5 0a1.5 1.5 0 1 1 3 0 1.5 1.5 0 0 1-3 0ZM12.5 6.5a1.5 1.5 0 1 0 0 3 1.5 1.5 0 0 0 0-3Z" /></svg>
           </MenuButton>
         )}
@@ -81,9 +75,11 @@ export default function PublishBar({ status, weekStart, onChanged, className = '
             <label className="flex items-start gap-3 rounded-xl border border-gray-200 p-3 cursor-pointer">
               <input type="checkbox" checked={notify} onChange={(e) => setNotify(e.target.checked)} className="mt-0.5 rounded border-gray-300 text-violet-600 focus:ring-violet-500" />
               <span>
-                <span className="block text-sm font-semibold text-gray-900">Avisar al equipo</span>
+                <span className="block text-sm font-semibold text-gray-900">Avisar al equipo por email</span>
                 <span className="block text-[13px] text-gray-500">
-                  {state === 'draft' ? 'Les llegará una notificación y un email.' : 'Solo se avisa a quien ve cambiar su horario, con lo que cambia.'}
+                  {notify
+                    ? (state === 'draft' ? 'Les llegará una notificación y un email.' : 'Solo a quien ve cambiar su horario, con lo que cambia.')
+                    : 'Se publica sin enviar ningún aviso; lo verán al abrir “Mi horario”.'}
                 </span>
               </span>
             </label>

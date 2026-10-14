@@ -220,16 +220,6 @@ export default function Agenda() {
       <div className="flex flex-wrap items-center gap-2 shrink-0">
         <h1 className="hidden lg:block text-2xl font-semibold tracking-tight text-gray-900 mr-auto">Agenda</h1>
         <Segmented full value={activeView} onChange={chooseView} options={views} />
-        {ready && activeView !== 'list' && (
-          <div className="ml-auto lg:ml-0 flex items-center gap-2">
-            {activeView !== 'list' && (
-              <button type="button" onClick={() => setExpanded(true)} title="Pantalla completa" aria-label="Ver el calendario a pantalla completa"
-                className="inline-flex items-center gap-1.5 h-8 px-2.5 sm:px-3 rounded-full border border-gray-200 text-xs font-semibold text-gray-700 hover:bg-gray-50">
-                <ExpandIcon /><span className="hidden sm:inline">Ampliar</span>
-              </button>
-            )}
-          </div>
-        )}
       </div>
 
       {error && <ErrorBanner>{error}</ErrorBanner>}
@@ -256,7 +246,15 @@ export default function Agenda() {
         </div>
       ) : (
         <>
-          {scopeChips(true)}
+          <div className="shrink-0 flex items-start gap-2">
+            <div className="min-w-0 flex-1 flex flex-col">{scopeChips(true)}</div>
+            {activeView !== 'list' && (
+              <button type="button" onClick={() => setExpanded(true)} title="Pantalla completa" aria-label="Ver el calendario a pantalla completa"
+                className="shrink-0 inline-flex items-center justify-center gap-1.5 h-8 w-8 sm:w-auto sm:px-3 rounded-full border border-gray-200 bg-white text-xs font-semibold text-gray-700 hover:bg-gray-50">
+                <ExpandIcon /><span className="hidden sm:inline">Ampliar</span>
+              </button>
+            )}
+          </div>
           <div className="shrink-0">
             <DayStrip date={date} today={today} counts={counts} closedDays={closedDays} onChange={setDate} />
           </div>

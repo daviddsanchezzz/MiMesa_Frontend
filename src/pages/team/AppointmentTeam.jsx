@@ -19,11 +19,12 @@ const citas = (n) => `${n || 0} ${n === 1 ? 'cita' : 'citas'}`;
 const num = (n) => (n || 0).toLocaleString('es-ES', { maximumFractionDigits: 1 });
 
 const PAY_OPTIONS = [
+  { key: 'owner', label: 'Dueño, sin nómina', hint: 'Se queda con el beneficio del negocio: no cuenta como coste', unit: null },
   { key: 'monthly', label: 'Sueldo fijo', hint: 'Un importe al mes', unit: '€ al mes' },
   { key: 'hourly', label: 'Por horas', hint: 'Según las horas de su horario', unit: '€ la hora' },
   { key: 'commission', label: 'Solo comisión', hint: 'Cobra un % de lo que factura', unit: null },
 ];
-const TYPE_FROM_API = { monthly_fixed: 'monthly', hourly: 'hourly', commission_only: 'commission' };
+const TYPE_FROM_API = { monthly_fixed: 'monthly', hourly: 'hourly', commission_only: 'commission', owner: 'owner' };
 
 export function payText(pay) {
   if (!pay) return 'Sin definir cómo cobra';
@@ -31,6 +32,7 @@ export function payText(pay) {
   if (pay.type === 'monthly_fixed') parts.push(`${eur(pay.amount)}/mes`);
   if (pay.type === 'hourly') parts.push(`${eur(pay.amount)}/hora`);
   if (pay.type === 'commission_only') parts.push('Solo comisión');
+  if (pay.type === 'owner') return 'Dueño · sin nómina';
   if (pay.commissionPercent) parts.push(`${pay.commissionPercent}% servicios`);
   if (pay.productCommissionPercent) parts.push(`${pay.productCommissionPercent}% productos`);
   return parts.join(' · ');
@@ -64,7 +66,7 @@ export function PayModal({ person, onClose, onSaved }) {
     try {
       await bookingsApi.setTeamPay(person.id, {
         type,
-        amount: type === 'commission' ? 0 : Number(String(amount).replace(',', '.')) || 0,
+        amount: type === 'commission' || type === 'owner' ? 0 : Number(String(amount).replace(',', '.')) || 0,
         commissionPercent: commission === '' ? null : Number(String(commission).replace(',', '.')),
         productCommissionPercent: productCommission === '' ? null : Number(String(productCommission).replace(',', '.')),
       });
@@ -105,7 +107,7 @@ export function PayModal({ person, onClose, onSaved }) {
             {type === 'hourly' && <p className="text-xs text-gray-500 mt-1">Las horas salen de su horario en la agenda.</p>}
           </div>
         )}
-        <Section title="Comisión">
+        {type !== 'owner' && <Section title="Comisión">
           <div className="grid grid-cols-2 gap-3 pt-1">
             <div>
               <label className={labelCls}>Servicios (%)</label>
@@ -117,7 +119,7 @@ export function PayModal({ person, onClose, onSaved }) {
             </div>
           </div>
           <p className="text-xs text-gray-500 mt-2">Si un servicio tiene su propio % de comisión, se usa ese para ese servicio.</p>
-        </Section>
+        </Section>}
         {error && <ErrorBanner>{error}</ErrorBanner>}
       </div>
     </Modal>

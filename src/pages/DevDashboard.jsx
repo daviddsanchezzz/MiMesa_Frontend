@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { useSetMobileHeader } from '../context/MobileHeaderContext';
 import NewClientModal, { InviteLink } from './dev/NewClientModal';
 import Icon from '../ui/Icon';
-import { Empty, FigureLine, RowAction, Section, SectionLink, Segmented, Toggle } from '../ui/kit';
+import { Empty, FigureLine, Hero, RowAction, Section, SectionLink, Segmented, Toggle } from '../ui/kit';
 import { dateShort, dateYear } from '../lib/format';
 import { confirmDialog } from '../ui/confirm';
 import { ErrorBanner, Loading } from '../ui/feedback';
@@ -413,15 +413,13 @@ export default function DevDashboard() {
 
       {data && (
         <>
-          <FigureLine items={[
-            { value: s.active, label: `activos de ${s.businesses}` },
-            s.pending ? { value: s.pending, label: 'por activar', tone: 'warn' } : null,
-            { value: s.paid, label: 'de pago', tone: s.paid ? 'good' : undefined },
-            { value: s.trialing || 0, label: 'en prueba' },
-            s.expired ? { value: s.expired, label: 'sin plan' } : null,
-            { value: s.activity30d, label: 'citas y reservas en 30 días' },
-            { value: s.activeLast7d, label: 'entraron esta semana' },
-          ]} />
+          <Hero label="Negocios activos" value={s.active} unit={`de ${s.businesses}`}
+            pill={s.pending ? <span className="rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700">{s.pending} por activar</span> : null}
+            stats={[
+              { label: 'De pago', value: s.paid, tone: s.paid ? 'good' : undefined, sub: `${s.trialing || 0} en prueba${s.expired ? ` · ${s.expired} sin plan` : ''}` },
+              { label: 'Citas y reservas', value: s.activity30d, sub: 'últimos 30 días' },
+              { label: 'Entraron', value: s.activeLast7d, sub: 'esta semana' },
+            ]} />
 
           <div className="space-y-3">
             <label className="relative block">

@@ -43,7 +43,7 @@ export default function NewClientModal({ onClose, onCreated }) {
   const [templates, setTemplates] = useState([]);
   const [form, setForm] = useState({
     name: '', businessType: 'appointments', template: 'peluqueria', phone: '', address: '', plan: 'trial',
-    ownerName: '', ownerEmail: '',
+    ownerName: '', ownerEmail: '', attendsClients: true,
   });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -65,7 +65,7 @@ export default function NewClientModal({ onClose, onCreated }) {
     try {
       const { data } = await api.post('/dev/clients', {
         business: { name: form.name, businessType: form.businessType, template: form.template || undefined, phone: form.phone, address: form.address, plan: form.plan },
-        owner: { name: form.ownerName, email: form.ownerEmail },
+        owner: { name: form.ownerName, email: form.ownerEmail, attendsClients: form.attendsClients },
       });
       setResult(data);
       onCreated?.(data);
@@ -134,6 +134,12 @@ export default function NewClientModal({ onClose, onCreated }) {
           <div><label className={label}>Nombre *</label><input required className={input} value={form.ownerName} onChange={set('ownerName')} placeholder="Marta Soler" /></div>
           <div><label className={label}>Email *</label><input required type="email" className={input} value={form.ownerEmail} onChange={set('ownerEmail')} placeholder="marta@email.com" /></div>
         </div>
+        {form.businessType === 'appointments' && (
+          <label className="flex items-start gap-2.5 text-sm text-gray-700 cursor-pointer">
+            <input type="checkbox" checked={form.attendsClients} onChange={(e) => setForm((f) => ({ ...f, attendsClients: e.target.checked }))} className="mt-0.5 rounded border-gray-300 text-violet-600 focus:ring-violet-500" />
+            <span>Atiende clientes él mismo<span className="block text-xs text-gray-500">Se crea como primer profesional, con su propia agenda. Si solo gestiona el negocio, desmárcalo.</span></span>
+          </label>
+        )}
         <p className="text-xs text-gray-500">Le llegará un email para elegir su contraseña y aceptar las condiciones. Entrará directamente como propietario.</p>
         <button type="submit" disabled={saving} className="w-full bg-violet-600 hover:bg-violet-700 disabled:opacity-60 text-white py-2.5 rounded-xl text-sm font-semibold">
           {saving ? 'Creando…' : 'Crear e invitar'}
